@@ -15,10 +15,8 @@ namespace TLDRevamp.Net
     /// Saved: every loaded car that differs from its prefab, and every shared car the session knows a tuning for (also
     /// when it is far and not loaded here); a loaded car back to its prefab's values is dropped. Applied: once a second
     /// to a saved car the game has placed anew, unless the session keeps that car's tuning (Entities.CarTune does then).
-    /// A/B: Enabled false = before (nothing written or applied).
     public static class CarTuneSave
     {
-        public static bool Enabled = true;
         public static long FilesRead, FilesWritten, Applied;
         public static int Count => _saved.Count;
         public const int MaxCars = 4096;
@@ -38,7 +36,7 @@ namespace TLDRevamp.Net
             if (id == 0 || id == _world) return;
             _world = id;
             _saved.Clear(); _done.Clear();
-            if (!Enabled || !OwnsWorld) return;
+            if (!OwnsWorld) return;
             var save = Entities.WorldSaveFile;
             if (save == null) return;
             var f = ReadFile(save + ".tune");
@@ -51,7 +49,7 @@ namespace TLDRevamp.Net
         /// Once a second (Runner): saved tunings onto cars the game has placed anew.
         public static void Tick()
         {
-            if (!Enabled || !OwnsWorld || Time.realtimeSinceStartup < _at) return;
+            if (!OwnsWorld || Time.realtimeSinceStartup < _at) return;
             _at = Time.realtimeSinceStartup + 1f;
             if (mainscript.s == null || savedatascript.s == null) return;
             EnsureWorld();
@@ -94,7 +92,7 @@ namespace TLDRevamp.Net
             [HarmonyPostfix]
             private static void Postfix(string _text, bool __runOriginal)
             {
-                if (!Enabled || !__runOriginal || !OwnsWorld) return;
+                if (!__runOriginal || !OwnsWorld) return;
                 try
                 {
                     Refresh();
@@ -140,7 +138,7 @@ namespace TLDRevamp.Net
             FilesWritten++;
         }
 
-        public static string Stats() => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"cars\":" + _saved.Count + ",\"read\":" + FilesRead +
+        public static string Stats() => "{\"cars\":" + _saved.Count + ",\"read\":" + FilesRead +
                                         ",\"written\":" + FilesWritten + ",\"applied\":" + Applied + "}";
     }
 }

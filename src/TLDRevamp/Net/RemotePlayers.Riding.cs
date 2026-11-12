@@ -13,7 +13,6 @@ namespace TLDRevamp.Net
     public static partial class RemotePlayers
     {
         public static bool RidingFrames = true;   // A/B: false = body and limbs use their separate playback paths
-        public static bool DriverHandsOnWheel = true;   // A/B: false = a driver's hands follow only their own pose stream
         internal static void RidingTick(int id)
         {
             if (!All.TryGetValue(id, out var rp) || !rp.Has || rp.Go == null || rp.Mp == null || rp.Mp.anim == null) return;
@@ -23,7 +22,7 @@ namespace TLDRevamp.Net
             // data for (it plays ~0.1 s behind): a hand switching to the key was left at the body for that tenth otherwise
             var latest = rp.Riding.Latest; var sample = rp.RidingShownFrame == Time.frameCount ? rp.RidingSample : null;
             byte hands = (byte)((latest != null ? latest.WheelHands : 0) | (sample != null ? sample.WheelHands : 0));
-            if (DriverHandsOnWheel && rp.SeatNet != 0 && rp.SeatIdx >= 0) DriverHands(rp, hands, latest, sample);
+            if (rp.SeatNet != 0 && rp.SeatIdx >= 0) DriverHands(rp, hands, latest, sample);
             else rp.HandId[0] = rp.HandId[1] = null;
         }
         private static void RidingFrame(Rp rp)
@@ -101,7 +100,7 @@ namespace TLDRevamp.Net
         /// as carscript does with player.MoveNearestHand for a local driver.
         internal static void DriverReach(carscript car, Transform to, float seconds)
         {
-            if (!DriverHandsOnWheel || car == null || to == null) return;
+            if (car == null || to == null) return;
             foreach (var rp in All.Values)
             {
                 if (rp.SeatNet == 0 || rp.Mp == null || rp.Mp.anim == null) continue;
@@ -123,7 +122,7 @@ namespace TLDRevamp.Net
         internal static PlayerLook.DriverHandsOut LocalDriverHands(fpscontroller pl, playeranimationscript a)
         {
             var o = new PlayerLook.DriverHandsOut();
-            if (!DriverHandsOnWheel || !pl.Bsitting || pl.seat == null || !pl.seat.driverSeat0 || pl.seat.Car == null) return o;
+            if (!pl.Bsitting || pl.seat == null || !pl.seat.driverSeat0 || pl.seat.Car == null) return o;
             var c = pl.seat.Car;
             var stick = c.TransmissionHandPos != null ? c.TransmissionHandPos : c.Engine != null && c.Engine.gearstick != null ? c.Engine.gearstick.TransmissionHandPos : null;
             var key = IgnitionPos(c);

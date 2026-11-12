@@ -101,7 +101,6 @@ namespace TLDRevamp.Fixes
 
         private static readonly AccessTools.FieldRef<roadGenScript, roadGenScript.dotChunkClass> Dccc = AccessTools.FieldRefAccess<roadGenScript, roadGenScript.dotChunkClass>("dccc");
         private static readonly AccessTools.FieldRef<roadGenScript, int> ConnectIndex = AccessTools.FieldRefAccess<roadGenScript, int>("connectIndex");
-        public static bool ReuseRoads = true;
         public static bool ReplicaVerify = false;
         public static long RoadsReused, RoadsNew, ReplicaChecks, ReplicaMismatches;
 
@@ -112,7 +111,7 @@ namespace TLDRevamp.Fixes
         private static void Replay(roadGenScript gen, Vector3d c1, Vector3d c2, Vector3d roadSelf, Call[] calls)
         {
             var dcc = gen.chunks[roadSelf];
-            var stash = ReuseRoads ? DotChunkMemo.StashFor(gen, roadSelf) : null;
+            var stash = DotChunkMemo.StashFor(gen, roadSelf);
             foreach (var c in calls)
             {
                 Dccc(gen) = dcc;

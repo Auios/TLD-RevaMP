@@ -15,13 +15,12 @@ namespace TLDRevamp.Net
     /// the car record, of which the owner takes only "clean").
     public static partial class Entities
     {
-        public static bool BloodSync = true;   // A/B: false = before v0.69.2 (blood never washes off a copy; a copy's wash stays local)
         public static long BloodCleanedOnCopy, BloodCleanSent, BloodCleanApplied;
 
         /// The record says clean, this car is bloody: wash it (the game's own way, as a sponge would).
         private static void BloodFollow(tosaveitemscript it, itemDataClass d)
         {
-            if (!BloodSync || it == null || it.car == null || d.car == null || d.car.Count == 0 || d.car[0] == null) return;
+            if (it == null || it.car == null || d.car == null || d.car.Count == 0 || d.car[0] == null) return;
             var w = it.car.blood;
             if (w == null || !w.ON || d.car[0].blood || w.destroyOnRepair) return;
             w.GotClean();
@@ -31,7 +30,7 @@ namespace TLDRevamp.Net
         /// Owner: an edit that washed our car's blood off.
         private static void BloodEditApply(tosaveitemscript it, itemDataClass d)
         {
-            if (!BloodSync || it == null || it.car == null || it.car.blood == null || d.car == null || d.car.Count == 0 || d.car[0] == null) return;
+            if (it == null || it.car == null || it.car.blood == null || d.car == null || d.car.Count == 0 || d.car[0] == null) return;
             var w = it.car.blood;
             if (!w.ON || d.car[0].blood || w.destroyOnRepair) return;
             w.GotClean();
@@ -44,7 +43,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(washtriggerscript __instance)
             {
-                if (!BloodSync || !InSession || _applyingState || __instance == null) return;
+                if (!InSession || _applyingState || __instance == null) return;
                 var car = __instance.GetComponentInParent<carscript>();
                 if (car == null || car.blood != __instance) return;
                 var it = car.GetComponent<tosaveitemscript>();

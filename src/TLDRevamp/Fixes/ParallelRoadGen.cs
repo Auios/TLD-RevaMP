@@ -33,11 +33,6 @@ namespace TLDRevamp.Fixes
         /// Recompute each batched road on the main thread with the game's own Height/Biome and compare.
         public static bool Verify = false;
         public static int MinBatch = 2;
-        /// Stability guard (works with Enabled on or off): a road whose endpoint/self chunk isn't loaded can't be
-        /// generated (the game's Generate throws KeyNotFoundException). Uncaught, that exception escapes
-        /// mapSettingScript.Update every frame and stops objects/terrain generating (player fell through the world,
-        /// 2026-09-24). Such roads are left ungenerated and dropped from RoadsNear's result.
-        public static bool GuardMissingChunks = true;
         public static long GuardSkips;
 
         public static long Batches, RoadsBatched, RoadsSync, Fallbacks, VerifyChecks, VerifyMismatches;
@@ -114,7 +109,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix]
         private static bool GeneratePrefix(roadGenScript.roadClass __instance, roadGenScript _roadgen)
         {
-            if (GuardMissingChunks && !ChunksLoaded(_roadgen, __instance))
+            if (!ChunksLoaded(_roadgen, __instance))
             {
                 // The original would throw here and stall world generation; leave the road ungenerated instead
                 GuardSkips++;

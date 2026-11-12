@@ -21,11 +21,9 @@ namespace TLDRevamp.Fixes
     /// game is about to stream out anyway (beyond itemRemoveDist of every generation centre) are stored first.
     /// Driving never gets here (buildings go at ~9.4 km, items at 300 m); teleports and long joins do.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.PoiItemsStore.Enabled
     [HarmonyPatch(typeof(poiGenScript), nameof(poiGenScript.RemovePoi))]
     public static class PoiItemsStore
     {
-        public static bool Enabled = true;
         public static long Stored, Buildings, LooseStored;
         private static readonly List<tosaveitemscript> _loose = new List<tosaveitemscript>();
         private static readonly List<tosaveitemscript> _items = new List<tosaveitemscript>();
@@ -33,7 +31,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix, HarmonyPriority(Priority.Low)]   // after ItemSpawnSpread's flush: spread spawns exist by now
         private static void Prefix(poiGenScript.poiClass _poi)
         {
-            if (!Enabled || _poi == null || _poi.pobj == null || _poi.pobj.isFixPOI || savedatascript.s == null) return;
+            if (_poi == null || _poi.pobj == null || _poi.pobj.isFixPOI || savedatascript.s == null) return;
             _items.Clear();
             _poi.pobj.GetComponentsInChildren(true, _items);
             int n = 0;
@@ -74,7 +72,7 @@ namespace TLDRevamp.Fixes
             _loose.Clear();
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"stored\":" + Stored + ",\"buildings\":" + Buildings + ",\"looseStored\":" + LooseStored + "}";
+        public static string Stats => "{\"stored\":" + Stored + ",\"buildings\":" + Buildings + ",\"looseStored\":" + LooseStored + "}";
 
         /// Every building generator's distances (bridge `poigens`): which ones go before their items are stored.
         public static string Gens()

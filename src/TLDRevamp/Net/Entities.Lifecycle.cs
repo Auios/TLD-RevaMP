@@ -52,7 +52,7 @@ namespace TLDRevamp.Net
                         }
                     return;
                 }
-                bool byPlayer = _playerDeleted.Remove(__instance) && PlayerDeleteSync;
+                bool byPlayer = _playerDeleted.Remove(__instance);
                 NoteMemberDestroyed(__instance);   // a part of an object we own: the others lose it too (Entities.MemberGone)
                 if (byPlayer) RequestMemberGone(__instance);   // a part of someone else's: its owner deletes it
                 foreach (var e in ByNet.Values)
@@ -129,14 +129,6 @@ namespace TLDRevamp.Net
                 }
             }
         }
-
-        /// The dev menu's delete (dev mode: X on what the player looks at, cheatedStuff.Delete — every item has one) destroys the
-        /// object on this machine whoever simulates it. Only the owner's deletion went out: a copy deleted here counted as lost
-        /// to streaming (fetched again; a part that came off a car isn't fetched, so it was gone here only), a part of another
-        /// player's car deleted here stayed on everyone else's car (playtest 2026-10-18: "deleting previously owned wheel ...
-        /// on other client"). Now the player's delete goes out as a deletion: an object as RemoveItem (which the server takes
-        /// from anyone), a member of another player's object as MemberGone, which the server passes to its owner.
-        public static bool PlayerDeleteSync = true;   // A/B: false = before v0.69.2
         public static long PlayerDeletesSent, MemberDeletesSent, MemberDeletesForwarded, MemberDeletesApplied;
         private static readonly HashSet<tosaveitemscript> _playerDeleted = new HashSet<tosaveitemscript>();
 
@@ -168,16 +160,10 @@ namespace TLDRevamp.Net
                 return;
             }
         }
-
-        /// A member that came off the object (its own shared object since: PartDetached), or rides one that did (the tyre on a
-        /// wheel taken off). The game deletes an object with what is in its hierarchy; these are elsewhere, objects of their own.
-        /// Before v0.69.2 deleting a car deleted, on every other machine, each part that had ever come off it — a wheel bolted
-        /// onto another car since, a tyre lying in the grass — while the deleter kept them.
-        public static bool KeepPartsOnRemove = true;   // A/B: false = before v0.69.2
         public static long PartsKeptOnRemove, PartsOrphaned, PartsOrphanedNoRecord;
         private static bool CameOff(Ent e, int i)
         {
-            if (!KeepPartsOnRemove || e.Split == null || e.Items == null) return false;
+            if (e.Split == null || e.Items == null) return false;
             if (e.Split.Contains(i)) return true;
             var it = i < e.Items.Count ? e.Items[i] : null;
             if (it == null) return FarOnSplit(e, i);
@@ -254,7 +240,7 @@ namespace TLDRevamp.Net
             foreach (var it in list)
             {
                 if (it == null || it.gameObject == null) { if (!ReferenceEquals(it, null)) _reshareWaits.Remove(it); continue; }
-                if (ReshareWhenStarted && !SaveReady(it))
+                if (!SaveReady(it))
                 {
                     _reshareWaits.TryGetValue(it, out int waited);
                     if (waited < 120) { _reshareWaits[it] = waited + 1; _reshare.Add(it); ReshareWaited++; continue; }
@@ -271,7 +257,6 @@ namespace TLDRevamp.Net
         }
 
         internal static void QueueReshare(tosaveitemscript it) { if (it != null) _reshare.Add(it); }
-        public static bool ReshareWhenStarted = true;   // A/B: false = before v0.69.2 (shared in the frame after, started or not)
 
         /// The game can save it and everything active under it (savedatascript.SaveToDictionary needs useThisForDistance,
         /// set when the item starts; an inactive member never starts).
@@ -422,8 +407,7 @@ namespace TLDRevamp.Net
                 foreach (var pn in new List<uint>(se.Parts))
                 {
                     if (!Server.TryGetValue(pn, out var part)) continue;
-                    if (KeepPartsOnRemove) OrphanPart(se, part);
-                    else { Server.Remove(pn); _serverLocked.Remove(part); ForgetServerNet(pn); }
+                    OrphanPart(se, part);
                 }
             // Row 2: removed objects no longer occupy the players' knowledge and audience sets (registrycheck.py, 2026-11-17).
             // OrphanPart above still sees who knew the car before its removal.
@@ -473,7 +457,7 @@ namespace TLDRevamp.Net
                 ByNet.Remove(net);
                 return;
             }
-            DestroyMembers(e, e.Root);   // not what came off it (KeepPartsOnRemove)
+            DestroyMembers(e, e.Root);   // not what came off it
             UnityEngine.Object.Destroy(e.Root.gameObject);   // its OnDestroy removes it from this machine's save
             ByNet.Remove(net);
         }

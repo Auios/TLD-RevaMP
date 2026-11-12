@@ -146,7 +146,7 @@ The public release v0.69.1 carries 28. The numbers above that were raised on dev
 
 ## 31
 
-- an attach carries the attached object's pose in its point's parent frame (Entities.AttachPose)
+- an attach carries the attached object's pose in its point's parent frame
 
 ## 30
 

@@ -16,7 +16,6 @@ namespace TLDRevamp.Net
     /// ShareKickDrops times within a minute is kicked. The host's own shares are never limited.
     public static partial class Entities
     {
-        public static bool ShareQuota = true;
         public static int ShareBurst = 600, ShareMaxRecordBytes = 256 << 10, ShareKickDrops = 2000;
         public static float ShareRefillPerS = 30f;
         public static long SharesDropped, SharesKicked;
@@ -27,7 +26,7 @@ namespace TLDRevamp.Net
 
         private static bool ShareAllowed(int from, int recordBytes)
         {
-            if (!ShareQuota || from == 0) return true;
+            if (from == 0) return true;
             float now = Time.realtimeSinceStartup;
             if (!_shareBuckets.TryGetValue(from, out var b)) _shareBuckets[from] = b = new Bucket { Tokens = ShareBurst, At = now, DropsSince = now };
             b.Tokens = Mathf.Min(ShareBurst, b.Tokens + (now - b.At) * ShareRefillPerS); b.At = now;

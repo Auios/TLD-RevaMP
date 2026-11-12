@@ -57,16 +57,13 @@ namespace TLDRevamp.Net
         /// A/B: false = the longest recent gap is the interval and the delay falls 2 % of an interval per state (before 0.69.2).
         public static bool TypicalInterval = true;
         public static float MinInterval = 0.01f, RecoverShare = 0.15f;
-        /// Let go (CatchUp): the display runs up to CatchUpRate x real time until it is back at its own delay behind the
-        /// newest state, at most CatchUpS. Before, the last ~0.1-0.4 s of it hanging in the hand were played back first.
-        public static bool CatchUpOnRelease = true;
         public static float CatchUpRate = 4f, CatchUpS = 0.4f;
         private float _target;
         private double _catchUntil = double.NegativeInfinity;
         /// Let go: stop replaying the held part. The delay drops to what the stream needs now, and the display catches up.
         public void CatchUp(double now)
         {
-            if (!CatchUpOnRelease || _target <= 0f) return;
+            if (_target <= 0f) return;
             if (_delay > _target) _delay = _target;
             _catchUntil = now + CatchUpS;
         }
@@ -109,7 +106,7 @@ namespace TLDRevamp.Net
         public float DelayMs => _delay * 1000f;
         public float JitterMs { get; private set; }
         public double RenderTime => _renderT;
-        /// Shown this much further back than its own delay asks (Entities.LinkedDelay: copies joined to each other —
+        /// Shown this much further back than its own delay asks (copies joined to each other —
         /// a trailer and the car towing it, a car on a bed — are shown at the same moment of their owner's time).
         public double Hold;
         /// The owner time this copy's own delay would show at local time `now` (before Hold).

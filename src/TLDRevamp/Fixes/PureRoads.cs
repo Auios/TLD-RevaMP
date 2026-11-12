@@ -34,14 +34,11 @@ namespace TLDRevamp.Fixes
     /// true inside AddPois, up to BudgetMs of lookups per frame: the rest go next frame, which changes when they appear,
     /// never where).
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.PureRoads.Enabled (buildings use the shadow), .Compare (with
-    /// Enabled off: every placement the live generator makes is also looked up in the shadow and compared), .BudgetMs,
+    /// Runtime controls (bridge `set`): TLDRevamp.Fixes.PureRoads.Compare (compare height lookups), .BudgetMs,
     /// .EvictChunks. Diagnostics: bridge `call TLDRevamp.Fixes.PureRoads.Stats` / `.Settings`.
     [HarmonyPatch]
     public static class PureRoads
     {
-        /// On by default since it was measured equal to the waiting rule: 4,778 placements compared, 0 different (exact).
-        public static bool Enabled = true;
         public static bool Compare = false;
         /// Measured (one copy alone, CPUs 0-15, 60 FPS, ~1,800 km/h, 3+3 rounds on/off): 2 ms keeps AddPois under 3.8 ms per
         /// frame, as the waiting rule (4 ms: frames up to 8.9 ms, a road generated on top of the budget).
@@ -86,7 +83,7 @@ namespace TLDRevamp.Fixes
         /// Buildings from the shadow: not in old terrain, whose buildings are the 2023 plan (WorldGen.Old2023.OldBuildings).
         internal static bool Usable(roadGenScript g) => ShadowUsable(g) && !WorldGen.Old2023.OldWorld.Active;
 
-        internal static bool Applies(roadGenScript g) => Enabled && Usable(g);
+        internal static bool Applies(roadGenScript g) => Usable(g);
 
         // ------------------------------------------------------------------ the shadow
 
@@ -99,7 +96,7 @@ namespace TLDRevamp.Fixes
                 g.emptySideRoadChance.ToString("R", ic), g.marginPercent.ToString("R", ic), g.minDistPercent.ToString("R", ic),
                 g.maxTries.ToString(ic), g.offsetty.ToString("R", ic), g.temporaryHeightSmoothing ? "T" : "t",
                 g.temporaryMaxHeightDifference.ToString("R", ic), g.terrainSettings.GetInstanceID().ToString(ic),
-                g.mapSetting.GetInstanceID().ToString(ic), ChunkLinks.Enabled ? "L" : "l", WorldGen.MainRoadOnlyRoads.Enabled ? "O" : "o",
+                g.mapSetting.GetInstanceID().ToString(ic), "L", WorldGen.MainRoadOnlyRoads.Enabled ? "O" : "o",
                 WorldGen.Old2023.OldWorld.Active ? "2023" : "beta");
         }
 
@@ -489,20 +486,13 @@ namespace TLDRevamp.Fixes
                         if (t != null && t.pos.Equals(gpos)) return t;
             return null;
         }
-
-        /// Two candidates can land on one spot (PoiSpotOrder: the smaller candidate wins and replaces the other, unless that
-        /// one is spawned already). With no waiting, a building in sight could be spawned before a candidate that beats it
-        /// for its spot is looked up (the frame budget). So a building from a candidate is spawned only once no candidate
-        /// in the building chunks within 2 of it (at least 20 km around the spot; a building lands far less than that from
-        /// its candidate) is still waiting in a needed chunk: lookups, which finish within a frame or two.
-        public static bool HoldSpawns = true;
         public static long SpawnsHeld;
 
         [HarmonyPatch(typeof(poiGenScript), nameof(poiGenScript.Spawn))]
         [HarmonyPrefix]
         private static bool BeforeSpawn(poiGenScript __instance, poiGenScript.poiClass _poi, ref GameObject __result)
         {
-            if (!HoldSpawns || _poi == null || _poi.pobj != null || !PoiSpotOrder.Enabled || !Applies(__instance.roadgen)
+            if (_poi == null || _poi.pobj != null || !Applies(__instance.roadgen)
                 || !PoiSpotOrder.FromCandidate(_poi) || !PendingNear(__instance, _poi.pos)) return true;
             SpawnsHeld++;
             __result = null;
@@ -571,18 +561,6 @@ namespace TLDRevamp.Fixes
 
         // ------------------------------------------------------------------ comparing with the live generator
 
-        /// With Enabled off: the live generator's answer next to the shadow's, by the point AlignPosToRoad / the height use.
-        internal static void CompareAlign(roadGenScript g, Vector3d pos, bool notJustChunks, poiGenScript.alignToRoadEmu align, List<roadGenScript.roadClass> live)
-        {
-            if (!Compare || Enabled || !Usable(g)) return;
-            try
-            {
-                var pure = Near(g, pos, notJustChunks, align);
-                Check("align " + align, pos, live, pure);
-            }
-            catch (Exception e) { Fail("compare", e); }
-        }
-
         private static void CompareHeight(mapSettingScript map, Vector3d pos, List<roadGenScript.roadClass> live)
         {
             try
@@ -634,7 +612,7 @@ namespace TLDRevamp.Fixes
                 if (s.G != null)
                     foreach (var ch in s.G.chunks.Values) { chunks++; foreach (var r in ch.roads) { roads++; if (r.generated) gen++; } }
             var ic = System.Globalization.CultureInfo.InvariantCulture;
-            return "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"compare\":" + (Compare ? "true" : "false") + ",\"heightPatched\":" + HeightPatched +
+            return "{\"compare\":" + (Compare ? "true" : "false") + ",\"heightPatched\":" + HeightPatched +
                    ",\"lookups\":" + Lookups + ",\"step1\":" + Step1 + ",\"step2\":" + Step2 + ",\"step3\":" + Step3 + ",\"notFound\":" + NotFound +
                    ",\"generated\":" + Generated + ",\"pruned\":" + Pruned + ",\"chunksFinished\":" + ChunksFinished + ",\"unfinished\":" + Unfinished +
                    ",\"resets\":" + Resets + ",\"evicted\":" + Evicted + ",\"heldForBudget\":" + HeldForBudget + ",\"spawnsHeld\":" + SpawnsHeld +

@@ -25,15 +25,6 @@ namespace TLDRevamp.Fixes
         public static int MaxEntries = 20000;
 
         public static long Hits, Misses, VerifyChecks, VerifyMismatches, Clears;
-
-        /// Reuse (v0.19.0): the ring chunks are removed and recreated in the same UpdChunks call every frame; each
-        /// recreation allocated a chunk object, 3 lists, a dictionary, a Random + int[56] and ~9 dots with lists
-        /// (measured: roads ≈ 40 KB/frame of garbage standing still, 60% of all managed allocation → GC every ~2 s).
-        /// A chunk removed in this call is handed back to the game's own chunks.Add (same dictionary operations, same
-        /// order) reset to exactly the fresh state: memo dots, cleared lists/flags/dictionary, Random state copied.
-        /// Only roadGenScript touches dotChunkClass/dotClass objects, and only through `chunks` or transient fields.
-        /// On by default since v0.20.0: exact (90,742 verified reuses, 0 mismatches), driving A/B GCs −39%, FPS +1.4%.
-        public static bool Reuse = true;
         public static bool ReuseVerify = false;
         public static long Reused, ReuseChecks, ReuseMismatches;
         public static string LastReuseMismatch = "";
@@ -74,7 +65,7 @@ namespace TLDRevamp.Fixes
             {
                 if (Verify) { __state = Pending.Compare; return true; }
                 Hits++;
-                if (Reuse && Pool.TryGetValue(gen, out var pool) && pool.TryGetValue(_cPos, out var old) && old.dots.Count == e.Dots.Length)
+                if (Pool.TryGetValue(gen, out var pool) && pool.TryGetValue(_cPos, out var old) && old.dots.Count == e.Dots.Length)
                 {
                     pool.Remove(_cPos);
                     _resetGen = gen; _resetPos = _cPos;
@@ -145,7 +136,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix]
         private static void BeforeUpdChunks(roadGenScript __instance)
         {
-            if (!Reuse || !Enabled) return;
+            if (!Enabled) return;
             var pool = Pool.GetValue(__instance, _ => new Dictionary<Vector3d, roadGenScript.dotChunkClass>());
             pool.Clear();
             // Unconsumed stashes from last frame: drop them (they would only hold references)
@@ -199,7 +190,7 @@ namespace TLDRevamp.Fixes
                 dcc.dots[i].connectedDotIDsInSameChunk.Clear();
             }
             // Keep last frame's road objects for RoadConnectMemo's replay (reused only if never generated)
-            if (RoadConnectMemo.ReuseRoads && dcc.roads.Count > 0 && _resetGen != null)
+            if (dcc.roads.Count > 0 && _resetGen != null)
             {
                 var stash = StashFor(_resetGen, _resetPos);
                 stash.Clear();
@@ -266,7 +257,7 @@ namespace TLDRevamp.Fixes
         }
 
         public static string Stats =>
-            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"reuse\":" + (Reuse ? "true" : "false") + ",\"reused\":" + Reused +
+            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"reused\":" + Reused +
             ",\"reuseChecks\":" + ReuseChecks + ",\"reuseMismatches\":" + ReuseMismatches + ",\"lastReuseMismatch\":" + Json.Str(LastReuseMismatch) + ",\"hits\":" + Hits + ",\"misses\":" + Misses + ",\"clears\":" + Clears +
             ",\"verifyChecks\":" + VerifyChecks + ",\"verifyMismatches\":" + VerifyMismatches + ",\"lastMismatch\":" + Json.Str(LastMismatch) + "}";
     }

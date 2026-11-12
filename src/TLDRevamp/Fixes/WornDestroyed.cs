@@ -10,18 +10,16 @@ namespace TLDRevamp.Fixes
     /// handling (pickupable.Drop2); a worn one now has too: off the player as TakeOff would, logged with its name. And the
     /// hide list drops a renderer that is gone before it is used, whatever destroyed it.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.WornDestroyed.Enabled
     [HarmonyPatch]
     public static class WornDestroyed
     {
-        public static bool Enabled = true;
         public static long WornLost, RenderersDropped;
 
         [HarmonyPatch(typeof(pickupable), "OnDestroy")]
         [HarmonyPrefix]
         private static void Destroyed(pickupable __instance)
         {
-            if (!Enabled || __instance == null || !__instance.gameObject.scene.isLoaded || __instance.wear == null) return;
+            if (__instance == null || !__instance.gameObject.scene.isLoaded || __instance.wear == null) return;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || pl.weared == null || pl.wearedRenderer == null) return;
             int i = (int)__instance.wear.tipus;
@@ -38,7 +36,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix]
         private static void DropGone(makeinvisible __instance)
         {
-            if (!Enabled || __instance.R == null) return;
+            if (__instance.R == null) return;
             for (int k = 0; k < __instance.R.Count; k++)
                 if (__instance.R[k] == null) { RenderersDropped += __instance.R.RemoveAll(r => r == null); return; }
         }
@@ -62,7 +60,7 @@ namespace TLDRevamp.Fixes
             pl.Wear(w);
             int n1 = pl.wearedRenderer.R.Count;
             Object.Destroy(w.gameObject);
-            return "{\"worn\":" + Json.Str(name) + ",\"tipus\":" + Json.Str(w.wear.tipus.ToString()) + ",\"enabled\":" + (Enabled ? "true" : "false") +
+            return "{\"worn\":" + Json.Str(name) + ",\"tipus\":" + Json.Str(w.wear.tipus.ToString()) +
                    ",\"hideListBefore\":" + n0 + ",\"hideListWorn\":" + n1 + "}";
         }
 

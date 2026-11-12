@@ -19,13 +19,11 @@ namespace TLDRevamp.Fixes
     /// Selected placements wait in an id queue, with one shared budget for PlaceStuff and Runner.Update in a frame.
     /// Multiplayer uses the same store and rebind path; network messages keep their original ordering.
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.FarItemLookup.Enabled / .Verify (every lookup in the selection
+    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.FarItemLookup.Verify (every lookup in the selection
     /// loop also runs the game's IndexOfID and compares found and index) / .Spread / .SpreadMultiplayer / .BudgetMs
     [HarmonyPatch]
     public static class FarItemLookup
     {
-        /// On by default: exact (Verify: 19 passes over 175 stored items, 0 differences); O(N) per pass instead of O(N²).
-        public static bool Enabled = true;
         public static bool Verify = false;
         public static long Calls, VerifyChecks, VerifyMismatches;
         public static int Patched;
@@ -69,7 +67,7 @@ namespace TLDRevamp.Fixes
         private static void Prefix(itemPlaceRemoveScript __instance)
         {
             _active = _indexReady = _spreading = false;
-            if (Patched == 0 || (!Enabled && !Spread)) return;
+            if (Patched == 0) return;
             _active = true;
             Sw.Restart();
             Calls++;
@@ -84,12 +82,9 @@ namespace TLDRevamp.Fixes
             else Flush();
             var items = save.data.itemData.items;
             LastStored = items.Count;
-            if (Enabled)
-            {
-                Index.Clear();
-                for (int n = 0; n < items.Count; n++) Index[items[n].id] = n;
-                _indexReady = true;
-            }
+            Index.Clear();
+            for (int n = 0; n < items.Count; n++) Index[items[n].id] = n;
+            _indexReady = true;
         }
 
         [HarmonyPatch(typeof(itemPlaceRemoveScript), nameof(itemPlaceRemoveScript.PlaceStuff)), HarmonyPostfix]
@@ -224,7 +219,7 @@ namespace TLDRevamp.Fixes
         }
 
         public static string Stats =>
-            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"patched\":" + Patched + ",\"calls\":" + Calls + ",\"lastMs\":" + LastMs.ToString("F3") +
+            "{\"patched\":" + Patched + ",\"calls\":" + Calls + ",\"lastMs\":" + LastMs.ToString("F3") +
             ",\"maxMs\":" + MaxMs.ToString("F3") + ",\"stored\":" + LastStored + ",\"selected\":" + LastSelected +
             ",\"verifyChecks\":" + VerifyChecks + ",\"verifyMismatches\":" + VerifyMismatches + ",\"spread\":" + (Spread ? "true" : "false") +
             ",\"spreadMultiplayer\":" + (SpreadMultiplayer ? "true" : "false") + ",\"multiplayerPasses\":" + MultiplayerPasses +

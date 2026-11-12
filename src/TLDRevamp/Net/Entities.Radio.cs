@@ -13,7 +13,6 @@ namespace TLDRevamp.Net
         // ---- the host
         private static int[] _radioLast = new int[0];
         private static float[] _radioStartLast = new float[0];
-        private static float _radioAcc;
         private sealed class RadioAnchor
         {
             public AudioClip Clip; public double Position, Stamp, Rate;
@@ -32,11 +31,9 @@ namespace TLDRevamp.Net
                 var ch = i < fm.Count ? fm[i] : am[i - fm.Count];
                 int c = ch != null && !ch.custom ? ch.GetCurrentIndex() : -1;
                 if (c != _radioLast[i]) { _radioLast[i] = c; changed = true; }
-                if (ch != null && !ch.custom && Fixes.SessionClocks.RadioEnabled && ch.startTime != _radioStartLast[i]) { _radioStartLast[i] = ch.startTime; changed = true; }
+                if (ch != null && !ch.custom && ch.startTime != _radioStartLast[i]) { _radioStartLast[i] = ch.startTime; changed = true; }
             }
-            _radioAcc += dt;
-            if (!changed && (Fixes.SessionClocks.RadioEnabled ? ModObjects.ClockTime - _radioSentAt < RadioResendS : _radioAcc < RadioResendS)) return;
-            _radioAcc = 0f;
+            if (!changed && ModObjects.ClockTime - _radioSentAt < RadioResendS) return;
             _radioSentAt = ModObjects.ClockTime;
             WriteRadio();
             ServerSendAll(W, true, 0);
@@ -51,7 +48,7 @@ namespace TLDRevamp.Net
 
         private static void ServerRadioTo(int playerId)
         {
-            if (!Fixes.SessionClocks.RadioEnabled || mainscript.s == null || mainscript.s.radioChs == null || mainscript.s.radioChsAM == null) return;
+            if (mainscript.s == null || mainscript.s.radioChs == null || mainscript.s.radioChsAM == null) return;
             WriteRadio(); ServerSendTo(playerId, W, true); RadioSent++;
         }
 
@@ -63,7 +60,7 @@ namespace TLDRevamp.Net
                 var ch = chs[i];
                 int c = ch != null && !ch.custom ? ch.GetCurrentIndex() : -1;
                 w.U16((ushort)(c + 1));
-                w.F32(c >= 0 ? Fixes.SessionClocks.RadioEnabled ? Mathf.Max(0f, Time.time - ch.startTime) : ch.cTime : 0f);
+                w.F32(c >= 0 ? Mathf.Max(0f, Time.time - ch.startTime) : 0f);
             }
         }
 
@@ -89,7 +86,7 @@ namespace TLDRevamp.Net
                 if (ch == null || ch.custom || ch.currentClip == null) continue;
                 if (!_radioAnchors.TryGetValue(ch, out var anchor)) _radioAnchors[ch] = anchor = new RadioAnchor();
                 anchor.Clip = ch.currentClip; anchor.Position = times[i]; anchor.Stamp = stamp; anchor.Rate = rate;
-                if (Fixes.SessionClocks.RadioEnabled) FollowStation(ch);
+                FollowStation(ch);
             }
         }
 
@@ -117,7 +114,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static bool Prefix(mainscript.radioCH __instance)
             {
-                if (!InSession || IsHost || !Fixes.SessionClocks.RadioEnabled || __instance.custom) return true;
+                if (!InSession || IsHost || __instance.custom) return true;
                 Fixes.SessionClocks.RadioLocalAdvancesBlocked++;
                 return false;
             }
@@ -140,8 +137,7 @@ namespace TLDRevamp.Net
                 {
                     if (ch == null) continue;
                     if (ch.custom) _radioCustom.Add(ch);
-                    else if (Fixes.SessionClocks.RadioEnabled) FollowStation(ch);
-                    else ch.cTime = Time.unscaledTime - ch.startTime;   // A/B: mainscript.RADIO2
+                    else FollowStation(ch);
                 }
                 if (_radioCustom.Count > 0)
                 {
@@ -158,7 +154,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static bool Prefix(List<mainscript.radioCH> _radio)
             {
-                if (!InSession || IsHost || !Fixes.SessionClocks.RadioEnabled || _radio == null) return true;
+                if (!InSession || IsHost || _radio == null) return true;
                 foreach (var ch in _radio)
                     if (ch != null) { if (ch.custom) ch.cTime = Time.unscaledTime - ch.startTime; else FollowStation(ch); }
                 return false;

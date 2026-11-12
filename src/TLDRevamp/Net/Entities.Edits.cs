@@ -174,7 +174,6 @@ namespace TLDRevamp.Net
         /// often a player edits (Entities.EditCheck).
         public static bool EditsComeBack = true;   // A/B: false = an edit from a player who already owns the object is dropped (before)
         public static long EditsReturned;
-        public static bool EditRangeCheck = true;
         public static float EditRangeM = 15f;
         public static long EditsOutOfReach;
         private static void ServerEdit(int from, NetReader r)
@@ -196,7 +195,7 @@ namespace TLDRevamp.Net
                 return;
             }
             int idx = (int)r.VarU32(), kinds = (int)r.VarU32(), len = (int)r.VarU32();
-            if (EditValidation && from != 0 && !TakeToken(_editBuckets, from, EditRatePerS, EditBurst))
+            if (from != 0 && !TakeToken(_editBuckets, from, EditRatePerS, EditBurst))
             {
                 EditsRejected++;
                 Refuse(ref EditRefusedRate, "edit rate", $"edit from player {from}: over {EditRatePerS:F0} a second");
@@ -204,7 +203,7 @@ namespace TLDRevamp.Net
                 EditBackLater(se, idx, r.Bad);
                 return;
             }
-            if (EditRangeCheck && from != 0 && !AtObject(from, se))
+            if (from != 0 && !AtObject(from, se))
             {
                 EditsRejected++;
                 Refuse(ref EditsOutOfReach, "edit reach", $"edit from player {from}: they aren't at net {net}");
@@ -213,7 +212,7 @@ namespace TLDRevamp.Net
                 return;
             }
             if (r.Bad || len < 0 || len > r.Remaining || idx < 0) { SessionLog.Event("edit-refused", net, item: idx, from: from, result: "malformed record"); EditsRejected++; return; }
-            if (EditValidation && from != 0)
+            if (from != 0)
             {
                 var rec = new byte[len]; Buffer.BlockCopy(r.Buf, r.Pos, rec, 0, len);
                 string why = CheckEdit(se, idx, kinds, rec);
@@ -319,7 +318,7 @@ namespace TLDRevamp.Net
         {
             if (_tankFilledAt.Count > 256) _tankFilledAt.Clear();
             _tankFilledAt[t] = Time.realtimeSinceStartup;
-            if (!CopyFluidsFollowOwner || t.setpoi || !IsProxy(t)) return;
+            if (t.setpoi || !IsProxy(t)) return;
             var it = ItemOf(t, t.tosaveid, t.setid);
             if (TankAddEdits && it != null && !_tankTold.ContainsKey(it.idInSave) && CopyTankTruth.TryGetValue(it.idInSave, out var truth)) _tankTold[it.idInSave] = truth;
             MarkEdit(it, fromTank: true, kind: "tank");
@@ -372,17 +371,10 @@ namespace TLDRevamp.Net
             private static void Postfix(ediblescript __instance)
             {
                 if (!InSession) return;
-                if (SpawnFoodNoEdit && __instance == _foodStarting) { FoodStartsSkipped++; return; }
+                if (__instance == _foodStarting) { FoodStartsSkipped++; return; }
                 MarkEdit(__instance.tosave, kind: "food");
             }
         }
-
-        /// A food item's Start shows its bites (UpdParts) and "sends" them when syncScript.IsHostOrSingle() — true on every
-        /// machine here (the game's own MP isn't connected). So every food copy that came into a joiner's world was an edit
-        /// to its owner: lobby3.py, P2 at the join: 10 edits sent, the host refused 5 (P2 not at them: "they aren't at net
-        /// N"); a joiner within 15 m had its copy's bites written over the owner's and the owner's state of it ignored for
-        /// EditHold. Nobody changed anything: no edit (A/B: false = before).
-        public static bool SpawnFoodNoEdit = true;
         public static long FoodStartsSkipped;
         private static ediblescript _foodStarting;
 

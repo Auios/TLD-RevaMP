@@ -13,7 +13,7 @@ namespace TLDRevamp.Fixes
     /// terrain, the player and every loose body around them fell for those frames, and the new tile then appeared above
     /// them — a mesh collider doesn't push anything back up through its surface.
     ///
-    /// Same grid (ReuseTiles): the detailed terrain has 100 m tiles of resolution 40 at both ends of the slider — only
+    /// Same grid: the detailed terrain has 100 m tiles of resolution 40 at both ends of the slider — only
     /// its reach changes (300-500 m) — so the restart destroyed ~177 tiles to build the same ~177 again. A restart that
     /// would build the same tile size and resolution now keeps its tiles where they are, in the generator's own
     /// dictionary: nothing is destroyed or rebuilt, and the game's next CheckPlace/CheckRemove grow or shrink the ring.
@@ -26,12 +26,9 @@ namespace TLDRevamp.Fixes
     ///
     /// Both only when the world is the same: same map, same seed — the draw-distance restart, not a new game.
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.TerrainRestartKeep.Enabled / .ReuseTiles
     [HarmonyPatch]
     public static class TerrainRestartKeep
     {
-        public static bool Enabled = true;
-        public static bool ReuseTiles = true;   // A/B: false = keep-until-replaced for every restart (d667850)
         public static float KeepMaxS = 30f;
         public static long Restarts, Reused, ReusedTiles, Kept, Replaced, Unneeded, TimedOut, Errors;
         public static string LastError = "";
@@ -67,12 +64,12 @@ namespace TLDRevamp.Fixes
         {
             __state = null;
             var gen = __instance;
-            if (!Enabled || gen.terrains == null || _mapSetting == null || _mapSetting != gen.mapSetting ||
+            if (gen.terrains == null || _mapSetting == null || _mapSetting != gen.mapSetting ||
                 _mapSetting.seed != gen.seed || _mapSetting.useAsync2 || settingsscript.s == null) return;
             try
             {
                 Restarts++;
-                if (ReuseTiles && SameGrid(gen))
+                if (SameGrid(gen))
                 {
                     __state = new Reuse { Tiles = gen.terrains, Parent = gen.parent };
                     Reused++; ReusedTiles += gen.terrains.Count;
@@ -126,7 +123,7 @@ namespace TLDRevamp.Fixes
 
         private static void Sweep(terrainGenScript gen, Keep keep)
         {
-            if (!Enabled || !gen.isActiveAndEnabled || Time.realtimeSinceStartup - keep.Since > KeepMaxS)
+            if (!gen.isActiveAndEnabled || Time.realtimeSinceStartup - keep.Since > KeepMaxS)
             {
                 TimedOut += keep.Tiles.Count;
                 DropAll(keep);
@@ -194,8 +191,7 @@ namespace TLDRevamp.Fixes
         public static string Stats()
         {
             var sb = new System.Text.StringBuilder();
-            sb.Append("{\"enabled\":").Append(Enabled ? "true" : "false").Append(",\"reuse\":").Append(ReuseTiles ? "true" : "false")
-              .Append(",\"restarts\":").Append(Restarts).Append(",\"reused\":").Append(Reused).Append(",\"reusedTiles\":").Append(ReusedTiles).Append(",\"kept\":").Append(Kept)
+            sb.Append("{\"restarts\":").Append(Restarts).Append(",\"reused\":").Append(Reused).Append(",\"reusedTiles\":").Append(ReusedTiles).Append(",\"kept\":").Append(Kept)
               .Append(",\"replaced\":").Append(Replaced).Append(",\"unneeded\":").Append(Unneeded).Append(",\"timedOut\":").Append(TimedOut)
               .Append(",\"errors\":").Append(Errors).Append(",\"lastError\":").Append(Json.Str(LastError)).Append(",\"generators\":[");
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;

@@ -17,12 +17,11 @@ namespace TLDRevamp.Fixes
     /// distance in place (OrderBy is stable too: equal distances keep the query's order). attachHits is private and read
     /// only in the lines right after, within the same call. Exact.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.LookRayNoAlloc.Enabled (the original calls when off) / .Verify
+    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.LookRayNoAlloc.Verify
     /// (also runs the original two lines and compares hit by hit).
     [HarmonyPatch(typeof(fpscontroller), nameof(fpscontroller.RayStuff))]
     public static class LookRayNoAlloc
     {
-        public static bool Enabled = true;
         public static bool Verify = false;
         public static long Calls, VerifyChecks, VerifyMismatches, Patched;
 
@@ -50,7 +49,6 @@ namespace TLDRevamp.Fixes
 
         private static RaycastHit[] Cast(Vector3 origin, Vector3 direction, float maxDistance, int layerMask)
         {
-            if (!Enabled) return Physics.RaycastAll(origin, direction, maxDistance, layerMask);
             Calls++;
             _o = origin; _d = direction; _range = maxDistance; _mask = layerMask;
             int n = Physics.RaycastNonAlloc(origin, direction, Buffer, maxDistance, layerMask);
@@ -62,7 +60,7 @@ namespace TLDRevamp.Fixes
 
         private static IEnumerable<RaycastHit> Sort(IEnumerable<RaycastHit> source, System.Func<RaycastHit, float> key)
         {
-            if (!Enabled || !(source is RaycastHit[] a)) return source.OrderBy(key).ToArray();
+            if (!(source is RaycastHit[] a)) return source.OrderBy(key).ToArray();
             for (int i = 1; i < a.Length; i++)
             {
                 var h = a[i]; float d = h.distance; int j = i - 1;
@@ -86,7 +84,7 @@ namespace TLDRevamp.Fixes
         }
 
         public static string Stats =>
-            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"patched\":" + Patched + ",\"calls\":" + Calls + ",\"lengths\":" + ByLength.Count +
+            "{\"patched\":" + Patched + ",\"calls\":" + Calls + ",\"lengths\":" + ByLength.Count +
             ",\"verifyChecks\":" + VerifyChecks + ",\"verifyMismatches\":" + VerifyMismatches + "}";
     }
 }

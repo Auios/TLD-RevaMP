@@ -8,8 +8,6 @@ namespace TLDRevamp.Net
     /// Motion takes the short path to nearby viewers; the owner's reliable record still settles and saves it.
     public static partial class Entities
     {
-        public static bool LiveUsableSync = true;
-        public static bool LiveTunePath = true;   // A/B: false = before v0.69.2 (a knob blended in without "tuned": a radio's frequency stayed)
         public static long LiveUsablesSent, LiveUsablesRelayed, LiveUsablesApplied, LiveUsablesStale, LiveUsablesRefused;
         private const float LiveQuietS = 0.3f, LiveStepS = 1f / 60f, LiveDelayS = 0.1f;
         private static bool _applyingLive;
@@ -131,7 +129,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static void Prefix(usablescript __instance, bool syncinmulti)
             {
-                if (syncinmulti && (LiveUsableSync || __instance.setidPoi) && InSession && !_applyingState && !_applyingLive && !_applyingPoi &&
+                if (syncinmulti && InSession && !_applyingState && !_applyingLive && !_applyingPoi &&
                     !_localUsables.ContainsKey(__instance) && !_usableBefore.TryGetValue(__instance, out _))
                     _usableBefore.Add(__instance, new UsableBefore { Value = UsableBits(__instance), Raw = UsableState(__instance) });
             }
@@ -140,7 +138,7 @@ namespace TLDRevamp.Net
         /// Zero input stays silent; sub-quantum motion still postpones the exact final record until it settles.
         private static bool MarkLiveUsable(usablescript u)
         {
-            if (!InSession || !LiveUsableSync && !u.setidPoi) return false;
+            if (!InSession) return false;
             if (_applyingState || _applyingLive || _applyingPoi) return true;
             tosaveitemscript it = null; Ent e = null; int idx = 0;
             UsableKey key;
@@ -183,7 +181,6 @@ namespace TLDRevamp.Net
             (_dragUsable != null && _dragUsable.U == u) || (_localUsables.TryGetValue(u, out var s) && Time.realtimeSinceStartup - s.HookAt < LiveQuietS);
         private static bool LiveItemMoving(tosaveitemscript it)
         {
-            if (!LiveUsableSync) return false;
             float now = Time.realtimeSinceStartup;
             foreach (var s in _localUsables.Values) if (s.Item == it && s.Final && now - s.ChangedAt < LiveQuietS) return true;
             foreach (var s in _remoteUsables.Values) if (s.U != null && s.Entity != null && s.Entity.Items.Contains(it) && ItemOf(s.U, s.U.tosaveid, s.U.setid) == it && now - s.At < LiveQuietS) return true;
@@ -245,7 +242,7 @@ namespace TLDRevamp.Net
             if (k.Building) { ServerPoiMotion(from, r, k, seq, stamp, poi, false); return; }
             if (r.Bad || r.Remaining != 0 || !Finite(stamp) || Math.Abs(SessionLog.St - stamp) > 10 || !Server.TryGetValue(k.Net, out var se) || k.Epoch != se.Epoch)
             { RefuseLive(ref EditRefusedValues, "live address/clock", from, k.Net); return; }
-            if (from != 0 && EditRangeCheck && !AtObject(from, se))
+            if (from != 0 && !AtObject(from, se))
             { RefuseLive(ref EditsOutOfReach, "live reach", from, k.Net); return; }
             var u = ServerUsable(se, k);
             if (u == null || v.Turn < 0 || v.Turn > u.maxTurnState || !Sane(u.minX) || !Sane(u.maxX) || !Sane(u.minY) || !Sane(u.maxY) || !Sane(u.tunedFloatMin) || !Sane(u.tunedFloatMax))
@@ -272,7 +269,7 @@ namespace TLDRevamp.Net
         {
             ReadLiveUsable(r, out var k, out ushort seq, out double stamp, out var v, out var poi);
             if (k.Building) { ReceivePoiMotion(r, k, seq, stamp, poi, false); return; }
-            if (!LiveUsableSync || r.Bad || !Finite(stamp) || !LiveAfterRecord(k, stamp)) { LiveUsablesStale++; return; }
+            if (r.Bad || !Finite(stamp) || !LiveAfterRecord(k, stamp)) { LiveUsablesStale++; return; }
             if (!LiveNewer(_liveIn, k, seq, stamp)) return;
             var u = LiveUsableOf(k, out var e);
             if (u == null || LocalUsableHeld(u)) return;
@@ -295,14 +292,13 @@ namespace TLDRevamp.Net
             _applyingLive = true;
             try
             {
-                UsableMerge.ApplyRendered(u, v.Slide, v.XRot, v.YRot, v.Turn, v.Tuned, inputEvent, u.setidPoi || LiveTunePath);
+                UsableMerge.ApplyRendered(u, v.Slide, v.XRot, v.YRot, v.Turn, v.Tuned, inputEvent, true);
                 if (_localUsables.TryGetValue(u, out var local)) ResetUsableBaseline(local);
             }
             finally { _applyingLive = false; }
         }
         private static bool LiveRecordUsables(Ent e, int item, double stamp)
         {
-            if (!LiveUsableSync) return true;
             foreach (var s in _localUsables.Values) if (s.Entity == e && s.Key.Item == item && LocalUsableHeld(s.U)) return false;
             foreach (var kv in _liveIn) if (kv.Key.Net == e.NetId && kv.Key.Epoch == e.Epoch && kv.Key.Item == item && kv.Value.Stamp > stamp) return false;
             return true;
@@ -336,7 +332,7 @@ namespace TLDRevamp.Net
                 var s = kv.Value;
                 if ((!s.Key.Building && s.Item == null) || !LiveBinding(s.Key, s.Entity, s.U))
                 { _deadUsables.Add(kv.Key); continue; }
-                if (s.Dirty && LiveUsableSync && now >= s.SendAt)
+                if (s.Dirty && now >= s.SendAt)
                 {
                     // Preserve the cadence through uneven frames. Starting a full interval after a late frame
                     // also discards the next short frame's input; still send only the current value once per tick.
@@ -347,7 +343,7 @@ namespace TLDRevamp.Net
                     if (s.Key.Building) { PoiObserved(s.Key.Poi).Sent.Add(now); PoiUsablesSent++; }
                     SessionLog.Event("live-sent", s.Key.Net, item: s.Key.Item, slot: s.Key.Usable, from: MyId, epoch: s.Key.Epoch, sample: true);
                 }
-                if (s.Final && (!LiveUsableSync || now - s.ChangedAt >= LiveQuietS))
+                if (s.Final && now - s.ChangedAt >= LiveQuietS)
                 {
                     s.Final = false;
                     if (s.Key.Building) SendPoiFinal(s);
@@ -359,7 +355,7 @@ namespace TLDRevamp.Net
             foreach (var kv in _remoteUsables)
             {
                 var s = kv.Value;
-                if ((!LiveUsableSync && !kv.Key.Building) || !LiveBinding(kv.Key, s.Entity, s.U) || LocalUsableHeld(s.U))
+                if (!LiveBinding(kv.Key, s.Entity, s.U) || LocalUsableHeld(s.U))
                 { _doneUsables.Add(kv.Key); continue; }
                 double render = SessionLog.St - s.ClockOffset - LiveDelayS;
                 if (s.Motion.Sample(render, out var start, out var target, out float t))
@@ -401,7 +397,7 @@ namespace TLDRevamp.Net
             _usableBefore = new ConditionalWeakTable<usablescript, UsableBefore>();
             EditDirty.Clear(); EditKinds.Clear(); _editFlushAt = 0; _resyncFirst = 0;
         }
-        public static string LiveUsableStats() => "{\"on\":" + (LiveUsableSync ? "true" : "false") + ",\"sent\":" + LiveUsablesSent + ",\"relayed\":" + LiveUsablesRelayed +
+        public static string LiveUsableStats() => "{\"sent\":" + LiveUsablesSent + ",\"relayed\":" + LiveUsablesRelayed +
             ",\"applied\":" + LiveUsablesApplied + ",\"stale\":" + LiveUsablesStale + ",\"refused\":" + LiveUsablesRefused + "}";
 
         // ---------------------------------------------------------------- bridge: real input calls, per-frame observations in the session clock

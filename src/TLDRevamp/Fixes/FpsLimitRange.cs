@@ -7,18 +7,15 @@ namespace TLDRevamp.Fixes
     /// the menu loads the saved value into it (RefreshMenu, from settingsscript.FStart), so a saved value above the old
     /// maximum is kept, not clamped. 0 is no limit: Unity treats a target of 0 or less as the platform default.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.FpsLimitRange.Enabled
     [HarmonyPatch(typeof(settingsscript), nameof(settingsscript.RefreshMenu))]
     public static class FpsLimitRange
     {
-        public static bool Enabled = true;
         public static float Min = 0f, Max = 1000f;
         private static bool _logged;
 
         [HarmonyPrefix]
         private static void Prefix(settingsscript __instance)
         {
-            if (!Enabled) return;
             var sliders = __instance.tabGraphics != null ? __instance.tabGraphics.sliders : null;
             if (sliders == null || sliders.Length <= 2 || sliders[2] == null) return;
             var s = sliders[2];

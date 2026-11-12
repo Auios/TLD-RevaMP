@@ -13,10 +13,9 @@ namespace TLDRevamp.Fixes
     /// Fix: the candidates in an order that doesn't depend on that: by the chunk that holds them (the game's own loop
     /// order, south to north, west to east), the chunk's own roads first in their own order (as the game has them when
     /// its links come later, the usual case), then its links by their ends. Used for the list AlignPosToRoad picks from
-    /// (AlignNearestRoad.Candidates_). Runtime switch (bridge `set`): TLDRevamp.Fixes.RoadTieOrder.Enabled.
+    /// (AlignNearestRoad.Candidates_).
     public static class RoadTieOrder
     {
-        public static bool Enabled = true;
         public static long Sorts, Moved;
 
         private static int Compare(roadGenScript.roadClass a, roadGenScript.roadClass b)
@@ -36,7 +35,7 @@ namespace TLDRevamp.Fixes
         /// In place, stable for equal keys (the same road twice from the road index stays adjacent).
         public static void Sort(List<roadGenScript.roadClass> list)
         {
-            if (!Enabled || list == null || list.Count < 2) return;
+            if (list == null || list.Count < 2) return;
             Sorts++;
             var before = list.ToArray();
             // insertion sort: stable, and the lists are short (tens)
@@ -49,6 +48,6 @@ namespace TLDRevamp.Fixes
             for (int i = 0; i < before.Length; i++) if (!ReferenceEquals(before[i], list[i])) { Moved++; break; }
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"sorts\":" + Sorts + ",\"moved\":" + Moved + "}";
+        public static string Stats => "{\"sorts\":" + Sorts + ",\"moved\":" + Moved + "}";
     }
 }

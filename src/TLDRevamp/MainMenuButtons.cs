@@ -13,7 +13,6 @@ namespace TLDRevamp
     [HarmonyPatch]
     public static class MainMenuButtons
     {
-        public static bool Enabled = true;   // A/B (bridge `set`, next menu): false = the game's menu as it was
         public const string ModsName = "ButtonRevampMods";
         public const float Width = 160f, FontSize = 44f;
         public static string Last = "not built";
@@ -28,7 +27,7 @@ namespace TLDRevamp
 
         public static void TryBuild(menuhandler menu)
         {
-            if (!Enabled || menu == null) return;
+            if (menu == null) return;
             try
             {
                 var settings = Find(menu.transform, "ButtonSettings");

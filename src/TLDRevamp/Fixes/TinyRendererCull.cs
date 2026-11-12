@@ -13,7 +13,7 @@ namespace TLDRevamp.Fixes
     /// sub-threshold parts (at 1–2 px essentially invisible) are skipped. Needs a visual check.
     ///
     /// Work is spread: new objects arrive via the tosaveitemscript.FStart hook (registered RegisterPerFrame per frame, one
-    /// initial scan when first enabled); PerFrame renderers re-evaluated per frame (round robin). No periodic scene scans
+    /// initial scan when first enabled); up to PerFrame renderers re-evaluated when their distance bound expires. No periodic scene scans
     /// (they caused 99th-percentile spikes).
     /// Runtime switches (bridge `set`): TLDRevamp.Fixes.TinyRendererCull.Enabled / .ThresholdPx / .PerFrame
     [HarmonyPatch]
@@ -51,20 +51,12 @@ namespace TLDRevamp.Fixes
 
 
         public static int Tracked, Hidden;
-
-        /// Re-check a part only when it could have crossed its threshold distance: a part at distance d with threshold
-        /// distance d* = (pixels per metre at 1 m) × size / ThresholdPx can't change state before camera and part have
-        /// closed |d − d*| at relative speed VMaxMs, so its next check is |d − d*| / VMaxMs later (at most MaxWaitS).
-        /// Everything is re-checked at once when the camera jumps (teleport, world rebase) or the view's scale changes
-        /// (zoom, resolution, threshold). Spawn, 744 parts: 0.43 ms/frame re-checking 800 parts every frame.
-        /// false = every part round robin, PerFrame per frame (before v0.69.2).
-        public static bool Adaptive = true;
         public static float VMaxMs = 120f, MaxWaitS = 0.5f;
         public static long Checks, Frames;   // parts evaluated / frames (bridge: Checks / Frames = parts per frame)
 
         private static readonly List<Renderer> Rends = new List<Renderer>();
         private static readonly List<float> Radius = new List<float>(); // world-space bounding radius at registration
-        private static readonly List<float> Due = new List<float>();    // Adaptive: realtime of the part's next check
+        private static readonly List<float> Due = new List<float>();    // realtime of the part's next check
         private static Vector3 _lastCamPos;
         private static float _lastK = -1f, _lastNow;
         private static readonly HashSet<int> KnownRoots = new HashSet<int>(); // registered objects
@@ -116,25 +108,7 @@ namespace TLDRevamp.Fixes
             // pixels per metre at distance 1: screenHeight / (2 tan(fov/2))
             float k = Screen.height / (2f * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad));
             Frames++;
-            if (Adaptive) { TickAdaptive(camPos, k); return; }
-            _lastK = -1f;   // switching Adaptive on later starts with every part due
-            int n = Mathf.Min(PerFrame, Rends.Count);
-            Checks += n;
-            for (int i = 0; i < n; i++)
-            {
-                if (_cursor >= Rends.Count) _cursor = 0;
-                var r = Rends[_cursor];
-                if (r == null) { RemoveAt(_cursor); continue; }
-                float dist = Vector3.Distance(camPos, r.bounds.center);
-                float px = dist > 0.01f ? Radius[_cursor] * 2f * k / dist : float.MaxValue;
-                bool hide = px < ThresholdPx;
-                if (r.forceRenderingOff != hide)
-                {
-                    r.forceRenderingOff = hide;
-                    Hidden += hide ? 1 : -1;
-                }
-                _cursor++;
-            }
+            TickAdaptive(camPos, k);
         }
 
         private static void TickAdaptive(Vector3 camPos, float k)
@@ -169,7 +143,7 @@ namespace TLDRevamp.Fixes
         }
 
         /// Test (bridge `call TLDRevamp.Fixes.TinyRendererCull.VerifyNow`): every tracked part's state against the
-        /// exact test right now, changing nothing. Off by up to one round robin pass at most without Adaptive.
+        /// exact test right now, changing nothing.
         public static string VerifyNow()
         {
             var cam = mainscript.s?.player == null ? null : mainscript.s.player.Cam != null ? mainscript.s.player.Cam : mainscript.s.player.mainCam;
@@ -236,7 +210,7 @@ namespace TLDRevamp.Fixes
         public static string Stats =>
             "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"thresholdPx\":" + ThresholdPx + ",\"tracked\":" + Rends.Count +
             ",\"pending\":" + Pending.Count +
-            ",\"hidden\":" + Hidden + ",\"roots\":" + KnownRoots.Count + ",\"adaptive\":" + (Adaptive ? "true" : "false") +
+            ",\"hidden\":" + Hidden + ",\"roots\":" + KnownRoots.Count +
             ",\"checks\":" + Checks + ",\"frames\":" + Frames + "}";
     }
 }

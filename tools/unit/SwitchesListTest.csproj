@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- offline check of the runtime-switch list (src/TLDRevamp/Switches.cs): dotnet run (project tools/unit/SwitchesListTest.csproj), from the checkout root -->
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup><Compile Include="SwitchesListTest.cs" /></ItemGroup>
+</Project>

@@ -345,7 +345,7 @@ namespace TLDRevamp.Net
         /// `mp glue <itemNet> <carNet> [dx] [keep]`: the game's glue (attachablescript.Attach(RaycastHit)) onto the top of
         /// car `carNet`, dx m to its right, the item turned at random first — or, with keep, straight from where it is (held:
         /// the glue key). The glue puts its nearest point on the spot, so its pose depends on how it was turned: what
-        /// AttachPose carries.
+        /// the attach message carries.
         public static string Glueables()
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;

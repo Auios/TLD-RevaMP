@@ -41,8 +41,6 @@ namespace TLDRevamp.Fixes
         public static bool Verify = false;
         public static int MaxInFlight = 4;
         public static int MaxPlacePerFrame = 1;
-        /// Also compute tiles whose POIs cut terrain holes (building foundations) on workers. Off = old main-thread fallback.
-        public static bool WorkerHoles = true;
 
         public static long Dispatched, Placed, DroppedStale, DroppedUnneeded, Fallbacks, Errors, VerifyChecks, VerifyMismatches;
         public static long WorkerTicks;
@@ -135,7 +133,6 @@ namespace TLDRevamp.Fixes
                 Roads = gen.roadAffectsThis ? mapSettingScript.RoadsNear(_gpos) : null,
                 Pois = gen.poiAffectsThis ? mapSettingScript.POIsNear(_gpos, gen.tileSize) : null,
             };
-            if (!WorkerHoles && HasHoles(job.Pois)) { Fallbacks++; return true; } // old behaviour: keep original for hole tiles
             job.StandIn = StandIn(gen);
 
             st.Pending.Add(_gpos);
@@ -154,14 +151,6 @@ namespace TLDRevamp.Fixes
                 catch { }
             });
             __result = true; // like the original: one new tile per DoPlace call
-            return false;
-        }
-
-        private static bool HasHoles(List<poiGenScript.poiClass> pois)
-        {
-            if (pois == null) return false;
-            for (int i = 0; i < pois.Count; i++)
-                if (pois[i].terrainHoleQuads != null && pois[i].terrainHoleQuads.Count > 0) return true;
             return false;
         }
 

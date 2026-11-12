@@ -16,15 +16,12 @@ namespace TLDRevamp.Fixes
     /// While its body is kinematic, a creature's Move() and Jump() are skipped; Move's input is cleared as Move would have.
     /// The turn (Rot), the AI and the sounds are unchanged; when it is unfrozen it walks on from where it is.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.FrozenCreatures.Enabled
     public static class FrozenCreatures
     {
-        public static bool Enabled = true;
         public static long Skipped;
 
         private static bool Frozen(movecreaturescript m)
         {
-            if (!Enabled) return false;
             var rb = m.RB;
             return rb != null && rb.isKinematic;
         }

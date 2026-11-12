@@ -12,7 +12,6 @@ namespace TLDRevamp.Net
     /// (rays, forces, push points) acts on physics bodies, so all of it is in that frame.
     public static partial class Entities
     {
-        public static bool SeatAimAtPhysics = true;   // A/B: false = the rays from the drawn camera (before v0.69.2)
         public static long SeatAimFrames;
 
         /// The body our seat rides, when it is drawn interpolated (one of our copies: the game interpolates no body,
@@ -20,7 +19,7 @@ namespace TLDRevamp.Net
         internal static bool SeatAimFrame(out Transform drawn, out Rigidbody body)
         {
             drawn = null; body = null;
-            if (!SeatAimAtPhysics || !InSession) return false;
+            if (!InSession) return false;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || !pl.Bsitting || pl.seat == null) return false;
             body = pl.seat.GetComponentInParent<Rigidbody>();

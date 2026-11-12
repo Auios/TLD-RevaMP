@@ -43,8 +43,6 @@ namespace TLDRevamp.VR.Native
         internal static bool NoTaa = true;
         private static readonly List<Behaviour> _taaLayers = new List<Behaviour>();
         private static float _taaScanAt, _idleScanAt;
-        /// Post-processing layers no volume can ever reach are switched off in the headset.
-        internal static bool SkipIdlePost = true;
         private static readonly List<Behaviour> _idleLayers = new List<Behaviour>();
 
         internal static int MirrorPasses, MirrorPassesSkipped;
@@ -131,7 +129,7 @@ namespace TLDRevamp.VR.Native
         /// on their layers (checked every 2 s) turns them back on, and they all come back when VR stops.
         private static void TickIdlePost(bool vr)
         {
-            if (!vr || !SkipIdlePost)
+            if (!vr)
             {
                 foreach (var l in _idleLayers) if (l != null) l.enabled = true;
                 _idleLayers.Clear();

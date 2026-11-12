@@ -14,18 +14,15 @@ namespace TLDRevamp.Fixes
     /// While its body is kinematic, a bat's Upd() (the steer and the turn toward its own target) is skipped. Picking
     /// targets and its sounds (Update) are unchanged; when it is unfrozen it flies on from where it is.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.FrozenFlyers.Enabled
     [HarmonyPatch(typeof(randomFlyer), "Upd")]
     public static class FrozenFlyers
     {
-        public static bool Enabled = true;
         public static long Skipped;
         private static readonly AccessTools.FieldRef<randomFlyer, Rigidbody> Rb = AccessTools.FieldRefAccess<randomFlyer, Rigidbody>("rb");
 
         [HarmonyPrefix]
         private static bool Prefix(randomFlyer __instance)
         {
-            if (!Enabled) return true;
             var rb = Rb(__instance);
             if (rb == null || !rb.isKinematic) return true;
             Skipped++;

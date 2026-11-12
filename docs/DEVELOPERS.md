@@ -119,8 +119,7 @@ Joining loads the host's world and never touches the joiner's own saves. The hos
 While the join loads, a muted loading screen covers the game and shows each stage and the object counts, until the
 host's world and the nearby terrain, roads, ground and shared objects are really there
 (`src/TLDRevamp/Net/JoinLoading.cs`). **Escape** cancels the join. After 60 seconds without progress the screen offers
-*Continue anyway* as well as *Cancel*. The screen is always on (tests can switch it with the bridge:
-`set TLDRevamp.Net.JoinLoading.Enabled False`).
+*Continue anyway* as well as *Cancel*. The screen is always on.
 
 ### The join checks
 
@@ -163,9 +162,9 @@ host checks what each joiner generates from (`src/TLDRevamp/Net/WorldCheck.cs`, 
   chunks, which depended on which of the two the game handled first (`ChunkLinks`), and main road only buildings
   (`MainRoadOnlyRoads`). In every terrain, a building whose nearest point is a junction picked whichever of the
   equally near roads came first in a list ordered by arrival (`RoadTieOrder`), and of two buildings landing on one
-  spot the first placed stayed (`PoiSpotOrder`: the candidate with the smaller x, then z, wins). In a session these
-  are on whatever the player set; the settings rows say
-  so, and the player's own choice counts again after the session. A host whose world was generated with them off has
+  spot the first placed stayed (`PoiSpotOrder`: the candidate with the smaller x, then z, wins). The order fixes are always on.
+  In a session scenery, terrain and scenery generation are also forced on; their settings rows say so, and the
+  player's own choice counts again after the session. A host whose world was generated with them off has
   every generated tile and scenery chunk checked again against the roads and buildings there
   (`SceneryTileSync.RefreshAll`).
 - **Buildings find their road from the seed** (`PureRoads`, crossroads and main road only). The roads are already a
@@ -174,10 +173,10 @@ host checks what each joiner generates from (`src/TLDRevamp/Net/WorldCheck.cs`, 
   same settings, never drawn or placed, driven through the game's own `UpdChunks` / `ConnectChunks` /
   `roadClass.Generate` for exactly the road chunks a building looks at, until they are finished. A building's road
   (`AlignPosToRoad`) and the road its height blends to are looked up there, so they are the same whatever the player
-  loaded before, and buildings no longer wait for the live roads (`PoiRoadsSettled` and main road only's wait are the
-  fallback with `PureRoads.Enabled` off). Measured equal to the waiting rule: 4,778 placements compared on two
+  loaded before, and buildings no longer wait for the live roads (`PoiRoadsSettled` and main road only's wait remain the
+  fallback where the shadow is unavailable). Measured equal to the waiting rule: 4,778 placements compared on two
   copies (`PureRoads.Compare`), 0 different. A building from a candidate is spawned only once no candidate within
-  two building chunks of it is still waiting for its lookup (`PureRoads.HoldSpawns`), so the shared-spot rule never
+  two building chunks of it is still waiting for its lookup, so the shared-spot rule never
   meets a spawned loser. Lookups get `PureRoads.BudgetMs` (2 ms) per frame, shadow roads included (a lookup not
   finished goes on next frame: when a building appears changes, never where); shadow chunks more than
   `EvictChunks` road chunks from every player are dropped and made again from the seed when needed. Bridge
@@ -192,8 +191,7 @@ host checks what each joiner generates from (`src/TLDRevamp/Net/WorldCheck.cs`, 
   10,046 scenery chunks and ground tiles at 48 spots, 0 different; about +0.07 ms per frame for the terrain
   generator at ~1,800 km/h.
 
-A/B switches (bridge `set`): `TLDRevamp.Net.WorldCheck.Refuse` (off: a different game is announced at Ready, as
-before) and `.Force`. Bridge `worldcheck` shows the game build, the data hash, the generator patches, whether the
+Bridge `worldcheck` shows the game build, the data hash, the generator patches, whether the
 fixes are forced and the counters.
 
 ### What is shared
@@ -291,6 +289,11 @@ controls with a persistent on-screen warning. The repro recorder saves numeric m
 for two-copy bridge replay. See [TELEMETRY.md](TELEMETRY.md) for the limits, the interpretation, the measured costs and
 the bridge controls (`net ownership|ghost|ghostall|links on|off|state`), and [REPRO-FORMAT.md](REPRO-FORMAT.md) for the
 recording format and the runner.
+
+**Runtime switches** are listed in one place, `src/TLDRevamp/Switches.cs`: each with its kind (a test flips it, opt-in or
+a value to tune, a player setting) and what its other value does. The bridge's `switches [text]` shows them with their
+values now, `set <path> <value>` changes one. When an experiment is finished its switch goes, with the old behaviour;
+`tools/unit/SwitchesListTest` fails when a listed switch no longer exists.
 
 ## Building from source
 

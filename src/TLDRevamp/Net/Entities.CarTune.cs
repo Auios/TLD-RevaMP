@@ -14,11 +14,10 @@ namespace TLDRevamp.Net
     /// per car, and applies it again whenever the game places the car anew (away and back, the far store, the owner's own
     /// car streamed out and in), before the owner could mistake the prefab's values for a change. A copy's wheels are
     /// placed from its own colliders (ProxyWheelGraphics), so with the owner's tuning applied they sit where the owner's do.
-    /// Kept with the world save too (CarTuneSave). A/B: CarTuneSync false = before (nothing sent, nothing applied).
+    /// Kept with the world save too (CarTuneSave).
     public static partial class Entities
     {
         public const byte CarTune = 113;   // both: u32 net, CarTuning
-        public static bool CarTuneSync = true;
         public static float CarTuneEveryS = 0.5f;
         /// An owner sends a tuned car's tuning again this often (and once soon after it took the car over): a CarTune the
         /// server refused (sent while a claim was still provisional) or lost is replaced by the next one.
@@ -126,7 +125,7 @@ namespace TLDRevamp.Net
         /// Every CarTuneEveryS: known tunings onto cars placed anew, then the owner's own cars checked for a change.
         private static void CarTuneTick()
         {
-            if (!CarTuneSync || Time.realtimeSinceStartup < _tuneAt) return;
+            if (Time.realtimeSinceStartup < _tuneAt) return;
             _tuneAt = Time.realtimeSinceStartup + CarTuneEveryS;
             _tuneGone.Clear();
             foreach (var kv in _tuneHere)
@@ -177,7 +176,7 @@ namespace TLDRevamp.Net
             var bytes = new byte[len]; System.Buffer.BlockCopy(r.Buf, off, bytes, 0, len);
             var th = new TuneHere { T = t, Bytes = bytes, Key = t.Key() };
             _tuneHere[net] = th;
-            if (!CarTuneSync || !ByNet.TryGetValue(net, out var e) || !Resolve(e) || !IsTunableCar(e)) return;   // the tick applies it once placed
+            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || !IsTunableCar(e)) return;   // the tick applies it once placed
             int matched = ApplyTuning(e.Root.car, t);
             th.Done = e.Root.transform;
             th.Key = CaptureTuning(e.Root.car).Key();
@@ -190,7 +189,6 @@ namespace TLDRevamp.Net
         /// Only the car's owner tunes it; the latest is kept for whoever gets the car later. False: dropped, not passed on.
         private static bool ServerKeepTune(int from, NetReader r)
         {
-            if (!CarTuneSync) return false;
             uint net = r.U32();
             int off = r.Pos, len = r.Remaining;
             if (r.Bad || len > MaxTuneBytes || !Server.TryGetValue(net, out var se) || se.OwnerId != from || CarTuning.FromBytes(r.Buf, off, len) == null)
@@ -206,7 +204,7 @@ namespace TLDRevamp.Net
 
         private static void SendTuneTo(int playerId, SEnt se)
         {
-            if (se.Tune == null || !CarTuneSync) return;
+            if (se.Tune == null) return;
             W.Reset(); W.U8(CarTune); W.U32(se.NetId); W.Bytes(se.Tune, 0, se.Tune.Length);
             ServerSendTo(playerId, W, true);
             TunesReplayed++;

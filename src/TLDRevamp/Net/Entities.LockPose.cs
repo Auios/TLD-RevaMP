@@ -160,10 +160,6 @@ namespace TLDRevamp.Net
             e.PoseLocked = locked; e.LockFrame = frame; e.LockContainer = container; e.LockItem = item; e.LockMount = mount;
             if (changed) EnsurePoseLock(e);
         }
-
-        // Apply the owner's decision, rather than waiting for this machine's container scans/5 m release heuristic.
-        // Retrying also covers the item arriving before its parent, and objects placed again by world streaming.
-        public static bool LockPlaceOwners = true;   // A/B: false = before (a copy stored here first kept its own spot)
         public static float LockPlaceToleranceM = 0.05f;
         public static long LockPlacesCorrected;
         private static void EnsurePoseLock(Ent e)
@@ -184,7 +180,7 @@ namespace TLDRevamp.Net
                 // already stored in that mount here — this machine's own scan got there first (a copy that came in, a
                 // player who joined later) — at its own spot: the owner's spot in it (lobby3 G: a lamp in the passenger
                 // room 0.63 m apart on two screens). Stored and parented, it stays where it is put.
-                if (wanted != null && LockPlaceOwners && e.Root.ragdollPos == null)
+                if (wanted != null && e.Root.ragdollPos == null)
                 {
                     var ft = ByNet[e.LockFrame].Root.transform;
                     var at = ft.position + ft.rotation * e.LockLocalPos;

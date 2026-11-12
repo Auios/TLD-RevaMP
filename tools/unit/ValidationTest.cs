@@ -71,7 +71,7 @@ namespace TLDRevamp.Net
         static SEnt Car()
         {
             Server.Clear(); Known.Clear(); RecordCodec.Records.Clear(); _nextNet = 100; Broadcasts = 0; _partOffToldAt.Clear();
-            PartOffMotionSlack = true; Time.realtimeSinceStartup = 10;
+            Time.realtimeSinceStartup = 10;
             mainscript.s = new mainscript(); Mp.Server = new TestServer(); Plugin.Log.Warning = null;
             itemdatabase.s = new itemdatabase();
             var prefab = new tosaveitemscript(); prefab.partslotscripts.Add(new object());
@@ -152,22 +152,20 @@ namespace TLDRevamp.Net
             check(Mp.Server.Notice == null, "a second refusal for the same car right after: no second notice");
             Time.realtimeSinceStartup = 10 + PartOffToldS; ServerPartOff(2, Off(rot: new Quaternion()));
             check(Mp.Server.Notice != null, "the owner is told again after PartOffToldS");
-            foreach (bool enabled in new[] { false, true })
             {
-                car = Car(); PartOffMotionSlack = enabled;
+                car = Car();
                 // Last maintenance pose at t=10; an unseen car driving at 20 m/s crashes at t=14.9.
                 Time.realtimeSinceStartup = 14.9f;
                 ServerPartOff(2, Off(pos: new Vector3d(120, 5, 40)));
-                check(Server.Count == (enabled ? 2 : 1), "far moving crash reproduces fixed-distance refusal and accepts with motion slack=" + enabled);
-                check(car.Where.x == 20 && car.SplitOff.Contains(1) == enabled, "detach does not move the server car or consume refused membership");
-                if (enabled) check(Server[100].Where.x == 120 && Mp.Server.Notice == null, "accepted crash retains reported part pose without a refusal notice");
+                check(Server.Count == 2, "far moving crash accepts with motion slack");
+                check(car.Where.x == 20 && car.SplitOff.Contains(1), "detach does not move the server car or consume refused membership");
+                check(Server[100].Where.x == 120 && Mp.Server.Notice == null, "accepted crash retains reported part pose without a refusal notice");
             }
-            foreach (bool enabled in new[] { false, true })
             foreach (double distance in new[] { 50.0, 50.01 })
             {
-                Car(); PartOffMotionSlack = enabled;
+                Car();
                 ServerPartOff(2, Off(pos: new Vector3d(20 + distance, 5, 40)));
-                check(Server.Count == (distance == 50 ? 2 : 1), "fresh pose retains 50 m boundary, switch=" + enabled);
+                check(Server.Count == (distance == 50 ? 2 : 1), "fresh pose retains 50 m boundary");
             }
             foreach (int axis in new[] { 0, 1, 2 })
             foreach (double distance in new[] { 190.0, 190.01 })

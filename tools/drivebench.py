@@ -88,8 +88,8 @@ def scenario_drive(b):
     return stats
 
 
-# Every mod fix that affects play (world gen, wheels, rendering). Not toggled: ParallelRoadGen.GuardMissingChunks
-# (stability guard), ImpactSoundLimiter (sound), ParkedCarSleep (off by default).
+# Every mod fix that affects play (world gen, wheels, rendering).
+# Not toggled: ImpactSoundLimiter (sound), ParkedCarSleep (off by default).
 ALL_FIXES = seeded.ALL_FIXES + ["TLDRevamp.Fixes.ObjGenFast.Enabled", "TLDRevamp.Fixes.RoadConnectMemo.Enabled",
              "TLDRevamp.Fixes.ChunksNeededInPlace.Enabled", "TLDRevamp.Fixes.SleepingWheelSkip.Enabled",
              "TLDRevamp.Fixes.GrassCameraThrottle.Enabled", "TLDRevamp.Fixes.BinocularLensCamera.Enabled",

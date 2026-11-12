@@ -50,15 +50,13 @@ namespace TLDRevamp.Fixes
     /// trigger. Only trailers (attachgripscript); the Brakas transporter's bed is part of a rigid truck and its carried
     /// car rests on that box, so it is left as it is.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.TrailerLockBox.Enabled (applies to trailers started after the change)
     public static class TrailerLockBox
     {
-        public static bool Enabled = true;
         public static long Made;
 
         public static void Apply(tosaveitemscript trailer)
         {
-            if (!Enabled || trailer == null) return;
+            if (trailer == null) return;
             foreach (var m in trailer.GetComponentsInChildren<mountStuff>(true))
                 if (m.col != null && !m.col.isTrigger) { m.col.isTrigger = true; Made++; }
         }

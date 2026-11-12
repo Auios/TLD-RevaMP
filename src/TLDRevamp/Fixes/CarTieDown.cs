@@ -14,17 +14,15 @@ namespace TLDRevamp.Fixes
     /// off, the car driven off the bed). Only the machine that simulates both does it (a copy moved for another player
     /// has a kinematic body).
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.CarTieDown.Enabled
     [HarmonyPatch(typeof(mountStuff), nameof(mountStuff.FreezeUpdVehicle))]
     public static class CarTieDown
     {
-        public static bool Enabled = true;
         public static long Tied;
 
         [HarmonyPostfix]
         private static void Postfix(mountStuff __instance)
         {
-            if (!Enabled || __instance.sType != mountStuff.storageType.trunk || __instance.storedcars.Count == 0) return;
+            if (__instance.sType != mountStuff.storageType.trunk || __instance.storedcars.Count == 0) return;
             var t = __instance.GetComponent<Holder>();
             if (t == null) t = __instance.gameObject.AddComponent<Holder>();
             t.Mount = __instance;
@@ -50,13 +48,13 @@ namespace TLDRevamp.Fixes
                 if (_carrier == null) _carrier = Mount != null ? Mount.GetComponentInParent<Rigidbody>() : null;
                 _drop.Clear();
                 foreach (var kv in _tied)
-                    if (!Enabled || kv.Key == null || kv.Value == null || !Holds(kv.Key)) _drop.Add(kv.Key);
+                    if (kv.Key == null || kv.Value == null || !Holds(kv.Key)) _drop.Add(kv.Key);
                 foreach (var car in _drop)
                 {
                     if (_tied.TryGetValue(car, out var j) && j != null) Destroy(j);
                     _tied.Remove(car);
                 }
-                if (!Enabled || Mount == null || _carrier == null) return;
+                if (Mount == null || _carrier == null) return;
                 foreach (var car in Mount.storedcars)
                 {
                     if (car == null || _tied.ContainsKey(car) || !Holds(car)) continue;

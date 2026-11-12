@@ -17,7 +17,6 @@ namespace TLDRevamp.Net
         public static float ClaimEpochGraceS = 3f;
         public static long PartOffAlreadyOff;
         public static bool GluedPartOff = true;         // A/B: false = only a part bolted into a slot can come off for everyone (before)
-        public static bool PartOffMotionSlack = true;   // A/B: false = fixed 50 m from the last accepted car pose
         public static bool SplitParentsCarry = true;    // A/B: false = only a split member bolted back onto its car is a slot parent
         public static bool PrefabChildSave = true;      // A/B: false = only a save script on the prefab's top object has slots
 
@@ -45,7 +44,7 @@ namespace TLDRevamp.Net
         {
             if (!Finite(pos) || !Finite(rot)) return "non-finite pose";
             double reach = 50;
-            if (PartOffMotionSlack && car.HasState && car.ReceivedStateEpoch == car.Epoch)
+            if (car.HasState && car.ReceivedStateEpoch == car.Epoch)
             {
                 // Beyond InterestM the owner sends poses every 5 s, but a crash reports PartOff immediately.
                 // DrivenAt is the server receipt time of that pose. Allow travel at the game's speed cap,

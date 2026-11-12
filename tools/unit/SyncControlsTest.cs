@@ -68,7 +68,7 @@ namespace TLDRevamp.Net
         static readonly object _editBuckets = new object();
         const byte DetachReq = 37, PartOff = 26, DetachSync = 42;
         const int MyId = 1;
-        static bool InSession = true, EditValidation = true, EditRangeCheck = true, Near = true, Token = true;
+        static bool InSession = true, Near = true, Token = true;
         static float EditRatePerS = 20, EditBurst = 40;
         static long DetachReqsSent, EditsOutOfReach, AutoDetachesIgnored, SuppressedFallOff, PartsReported, DetachSyncsSent, DetachSyncsApplied, DetachesStored;
         static bool _applyingDetach, PlayerActing = true, StoredAttach = true;

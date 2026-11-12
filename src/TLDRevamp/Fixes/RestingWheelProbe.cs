@@ -16,11 +16,10 @@ namespace TLDRevamp.Fixes
     /// step again at once. What can lag by up to RefreshSteps steps (0.5 s at 50 Hz) on a resting car: a smoke/grass
     /// setting change.
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.RestingWheelProbe.Enabled / .RestSpeed / .RestSpin / .RefreshSteps
+    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.RestingWheelProbe.RestSpeed / .RestSpin / .RefreshSteps
     [HarmonyPatch(typeof(talajnezo), "FixedUpdate")]
     public static class RestingWheelProbe
     {
-        public static bool Enabled = true;
         public static float RestSpeed = 0.005f;   // m/s, as SleepingWheelSkip
         public static float RestSpin = 0.005f;    // rad/s
         public static int RefreshSteps = 25;
@@ -32,7 +31,6 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix]
         private static bool Prefix(talajnezo __instance)
         {
-            if (!Enabled) return true;
             Calls++;
             var t = __instance;
             var car = t.Car;
@@ -50,6 +48,6 @@ namespace TLDRevamp.Fixes
             return false;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"calls\":" + Calls + ",\"skipped\":" + Skipped + "}";
+        public static string Stats => "{\"calls\":" + Calls + ",\"skipped\":" + Skipped + "}";
     }
 }

@@ -40,7 +40,7 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
         private static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
         private static readonly Dictionary<HitchFakes.Car, float> DamageGraceUntil = new Dictionary<HitchFakes.Car, float>();
-        private static bool InSession = true, PlayerActing = true, _applyingAttach, _applyingDetach, EditRangeCheck = true, Near = true;
+        private static bool InSession = true, PlayerActing = true, _applyingAttach, _applyingDetach, Near = true;
         private static int MyId;
         private static bool IsHost = true;
         private const byte Add = 22, Owner = 25, DetachSync = 42;
@@ -405,9 +405,8 @@ namespace TLDRevamp.Net
             // Unity may defer Transform updates after Rigidbody.position. Exercise translation and rotation together.
             foreach (bool receivedGrip in new[] { false, true })
             foreach (bool deferred in new[] { false, true })
-            foreach (bool enabled in new[] { false, true })
             {
-                RecoverySetup(0, 0, false); HitchTransferredGripPose = enabled;
+                RecoverySetup(0, 0, false);
                 var tr = ByNet[20]; tr.Root.transform.position = new Vector3(10, 2, -8);
                 tr.Root.transform.rotation = new Quaternion(0, 0, 1, 0);
                 tr.Root.RB.DeferredTransform = deferred; tr.HitchWaiting = true; HitchFreezeBodies(tr);
@@ -420,9 +419,9 @@ namespace TLDRevamp.Net
                 ApplyHitchFrozen(Reader(Copy(pose)));
                 var expected = new Vector3(100, 30, -40) + q * lp;
                 bool correct = (tr.Root.attachable.transform.position - expected).sqrMagnitude < 0.0001f;
-                check(enabled ? correct : correct == (receivedGrip && !deferred), "drawbar uses destination pose with rotation; received=" + receivedGrip + ", deferred=" + deferred + ", enabled=" + enabled);
+                check(correct, "drawbar uses destination pose with rotation; received=" + receivedGrip + ", deferred=" + deferred);
             }
-            HitchTransferredGripPose = true; Time.realtimeSinceStartup = 0;
+            Time.realtimeSinceStartup = 0;
         }
     }
 }

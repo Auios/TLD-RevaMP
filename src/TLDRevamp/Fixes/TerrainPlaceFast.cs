@@ -15,11 +15,10 @@ namespace TLDRevamp.Fixes
     /// original), same result order. DoPlace checks "tile exists" first — RoadsDoneAtPlace has no side effects and
     /// Tile() returns false for an existing tile, so skipping both changes nothing — and skips a repeated coordinate
     /// (it gives the same answer as its first visit, which didn't stop the loop).
-    /// Runtime switches: TLDRevamp.Fixes.TerrainPlaceFast.Enabled / .Verify
+    /// Runtime switches: TLDRevamp.Fixes.TerrainPlaceFast.Verify
     [HarmonyPatch]
     public static class TerrainPlaceFast
     {
-        public static bool Enabled = true;
         public static bool Verify = false;
         public static long VerifyChecks, VerifyMismatches, Removes, Places;
 
@@ -36,7 +35,6 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix]
         private static bool CheckRemove(terrainGenScript __instance)
         {
-            if (!Enabled) return true;
             var needed = CoordsNeeded(__instance);
             var remove = CoordsToRemove(__instance);
             Needed.Clear();
@@ -61,7 +59,6 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix]
         private static bool DoPlace(terrainGenScript __instance)
         {
-            if (!Enabled) return true;
             var gen = __instance;
             var needed = CoordsNeeded(gen);
             var roadGens = gen.roadAffectsThis ? gen.setting.mapSetting.roadGens : null;
@@ -81,7 +78,7 @@ namespace TLDRevamp.Fixes
         }
 
         public static string Stats =>
-            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"removes\":" + Removes + ",\"places\":" + Places +
+            "{\"removes\":" + Removes + ",\"places\":" + Places +
             ",\"verifyChecks\":" + VerifyChecks + ",\"verifyMismatches\":" + VerifyMismatches + "}";
     }
 }

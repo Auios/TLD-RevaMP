@@ -168,7 +168,7 @@ namespace TLDRevamp.Net
             public byte[] Record; public bool HasState; public Vector3d Pos; public Quaternion Rot;
             public Vector3d Where;                                                   // for interest: last state, else the record's position
             public bool Driven; public float DrivenAt;                                // the owner's player sits in its driver seat
-            public int ClaimedBy = -1; public float ClaimedAt = -100f;               // the last granted claim (Entities.Seat: DriverSeatGuard)
+            public int ClaimedBy = -1; public float ClaimedAt = -100f;               // the last granted claim (Entities.Seat)
             public uint ClaimedFromEpoch;                                             // the epoch that claim replaced (ClaimEpochOk)
             public bool Stored;                                                       // in the owner's inventory
             internal bool AtRest;
@@ -207,7 +207,6 @@ namespace TLDRevamp.Net
         private static readonly NetWriter WS = new NetWriter();
         private static float _driverCheck;
         public static long StatesSent, StatesIn, StatesStale, StatesNonFinite, Spawned, OwnerChanges;
-        public static bool NewOwnerNewClock = true;   // A/B: false = before (a copy kept the old owner's interpolator)
         public static long OwnerClockResets;
 
         internal static bool IsHost => Mp.Server != null;
@@ -462,20 +461,20 @@ namespace TLDRevamp.Net
             {
                 _wokeAt = Time.realtimeSinceStartup;
                 _worldWakeStamp = ModObjects.ClockTime; _worldStamp = -1; _worldFollowing = false;
-                _worldAwaitingWake = !IsHost && Fixes.SessionClocks.WorldEnabled;
-                float wt = Fixes.SessionClocks.WorldEnabled ? WorldTimeNow() : mainscript.s != null ? mainscript.s.GetCurrentT() : -1f;
+                _worldAwaitingWake = !IsHost;
+                float wt = WorldTimeNow();
                 if (wt >= 0f) { W.Reset(); W.U8(SleepSync); W.F32(wt); W.F64(ModObjects.ClockTime); W.F32(-1f); ToServer(W, true); }
             }
             // while asleep, the clock goes out as it runs (the game turns it ~8 hours in a few seconds): the others' sky
             // followed only once the sleep was over, and the host's periodic clock pauses while it sleeps (playtest
             // 2026-10-18, "daytime sync takes longer for client")
-            if (sleepingNow && SleepClockLive)
+            if (sleepingNow)
             {
                 _sleepClockAcc += dt;
                 if (_sleepClockAcc >= SleepClockS)
                 {
                     _sleepClockAcc = 0f;
-                    float wt = Fixes.SessionClocks.WorldEnabled ? WorldTimeNow() : mainscript.s.GetCurrentT();
+                    float wt = WorldTimeNow();
                     // the same wire form as the wake-up one above: SleepSync carries the session stamp since protocol 34
                     if (wt >= 0f && Finite(wt)) { W.Reset(); W.U8(SleepSync); W.F32(wt); W.F64(ModObjects.ClockTime); W.F32(Fixes.CloudClock.MySleepProgress()); ToServer(W, true); SleepClocksSent++; }
                 }
@@ -682,9 +681,8 @@ namespace TLDRevamp.Net
             if (pl == null || !pl.Bsitting || pl.seat == null || !pl.seat.driverSeat0) return false;   // driverSeat1 is shotgun
             // the car itself, not what lies in it: a lamp stored on the back seat reported "driven" with every state while
             // the host sat at the wheel, and the server refused anyone's grab of it as a takeover (takeover.py B)
-            return pl.seat.transform.root == root.transform.root && (!DrivenOnlyCar || root.transform == root.transform.root);
+            return pl.seat.transform.root == root.transform.root && root.transform == root.transform.root;
         }
-        public static bool DrivenOnlyCar = true;   // A/B: false = everything in the driven car counts as driven (v0.68.1)
 
         private static void CheckDriverSeat()
         {
@@ -718,7 +716,7 @@ namespace TLDRevamp.Net
                 {
                     uint localRoot = r.U32(); int n = (int)r.VarU32();
                     if (r.Bad || n < 0 || n > r.Remaining) return;
-                    if (!ShareAllowed(from, n)) return;   // Entities.ShareQuota
+                    if (!ShareAllowed(from, n)) return;
                     var rec = new byte[n]; Buffer.BlockCopy(r.Buf, r.Pos, rec, 0, n); r.Pos += n;
                     var se = new SEnt { NetId = _nextNet++, OwnerId = from, Epoch = 1, Record = rec };
                     ShareFacts(rec, se);
@@ -912,7 +910,6 @@ namespace TLDRevamp.Net
         public static long WorldTimeJumps;
         private static float _wokeAt = -100f;
         public static long WorldTimeStaleIgnored;
-        public static bool SleepClockLive = true;   // A/B: false = before v0.69.2 (the others' clock jumps when the sleep ends)
         public static float SleepClockS = 0.25f;
         public static long SleepClocksSent;
         private static float _sleepClockAcc;
@@ -923,7 +920,7 @@ namespace TLDRevamp.Net
             // just woke: a clock sent before our jump reached the server (the periodic one, in flight) would undo the
             // sleep here for up to 10 s — the server's next clock has our jump in it
             if (!force && Time.realtimeSinceStartup - _wokeAt < 3f) { WorldTimeStaleIgnored++; return; }
-            float len = sw.dt + sw.nt, diff = wt - (Fixes.SessionClocks.WorldEnabled ? WorldTimeNow() : sw.t);
+            float len = sw.dt + sw.nt, diff = wt - WorldTimeNow();
             if (len > 0f) { if (diff > len * 0.5f) diff -= len; else if (diff < -len * 0.5f) diff += len; }
             if (!force && Mathf.Abs(diff) < 1f) return;   // within a second: leave it (no sky jitter)
             sw.tekeres += diff;
@@ -931,33 +928,21 @@ namespace TLDRevamp.Net
             WorldTimeJumps++;
         }
 
-        private static float _timeSyncAcc;
         /// Small stamped anchors keep local frame clamps and pauses from accumulating into sky drift.
         private static void ServerTimeTick(float dt)
         {
             if (Mp.Server == null || napszakvaltakozas.s == null) return;
-            _timeSyncAcc += dt;
-            if (Fixes.SessionClocks.WorldEnabled ? ModObjects.ClockTime - _worldSentAt < 2 : _timeSyncAcc < 10f) return;
-            _timeSyncAcc = 0f;
+            if (ModObjects.ClockTime - _worldSentAt < 2) return;
             if (mainscript.s != null && mainscript.s.sleeping) return;   // the host's sleep: its jump goes out when it ends
-            if (Fixes.SessionClocks.WorldEnabled)
-            {
-                _worldSentAt = ModObjects.ClockTime;
-                WriteWorldClock(false); ServerSendAll(W, false, 0); Fixes.SessionClocks.WorldSent++;
-            }
-            else
-            {
-                W.Reset(); W.U8(SleepSync); W.F32(napszakvaltakozas.s.t); W.F64(ModObjects.ClockTime);
-                ServerSendAll(W, true, 0);
-            }
+            _worldSentAt = ModObjects.ClockTime;
+            WriteWorldClock(false); ServerSendAll(W, false, 0); Fixes.SessionClocks.WorldSent++;
         }
 
         public static void ServerOnJoin(int playerId)
         {
             if (napszakvaltakozas.s != null)
             {
-                if (Fixes.SessionClocks.WorldEnabled) { WriteWorldClock(true); Fixes.SessionClocks.WorldSent++; }
-                else { W.Reset(); W.U8(SleepSync); W.F32(napszakvaltakozas.s.t); W.F64(ModObjects.ClockTime); }
+                WriteWorldClock(true); Fixes.SessionClocks.WorldSent++;
                 ServerSendTo(playerId, W, true);
             }
             // the world's objects follow by distance as soon as their position is known (ServerInterestTick)
@@ -1180,7 +1165,7 @@ namespace TLDRevamp.Net
                     if (HitchTrailer(e)) e.HitchWaiting = false;
                     e.LastVel = sv;   // the world velocity (a car-frame state's sample has the frame's own)
                     // loose only: a container's item riding a car it can't read the speed of sends its moves at 0 m/s
-                    e.Ip?.Add(s, Time.realtimeSinceStartupAsDouble, CopyJumpSnaps && !ReadLockedState && e.CarriedBy == 0 && !held && !stored);
+                    e.Ip?.Add(s, Time.realtimeSinceStartupAsDouble, !ReadLockedState && e.CarriedBy == 0 && !held && !stored);
                     if (letGo) e.Ip?.CatchUp(Time.realtimeSinceStartupAsDouble);   // the fall now, not after the held part
                     if (letGo) ClaimLetGoInCar(e, stored);   // let go in our car: ours from where it was let go, before the next physics step
                     TelemetryReceived(e, st, sp, sq, sv);
@@ -1201,9 +1186,9 @@ namespace TLDRevamp.Net
                     if (ByNet.TryGetValue(partNet, out var had))
                     {
                         // the car fetched again (its copy was lost here) after this part came off: the part is still its own
-                        // object here (KeepPartsOnRemove), and the car's new copy, made from the car's first record, has it
+                        // object here, and the car's new copy, made from the car's first record, has it
                         // bolted on a second time — that one goes, and the group's place is the part's again
-                        if (KeepPartsOnRemove && carrierNet == 0 && had.Root != null && car.Items[idx] != null && car.Items[idx] != had.Root && (car.Split == null || !car.Split.Contains(idx)))
+                        if (carrierNet == 0 && had.Root != null && car.Items[idx] != null && car.Items[idx] != had.Root && (car.Split == null || !car.Split.Contains(idx)))
                         {
                             (car.Split ?? (car.Split = new HashSet<int>())).Add(idx);
                             if (car.PartsColOff && LodKeepsPartsOff) SetPartColliders(car, true);
@@ -1385,7 +1370,7 @@ namespace TLDRevamp.Net
                     // owner's. A new owner whose game started later than the old one's was dropped state by state, the copy
                     // frozen where the old owner left it while everyone else saw it move (lobby3.py C: P2 -> a third player,
                     // the host's copy 134 m behind after 12 s, 1092 states in, none shown)
-                    if (NewOwnerNewClock && e.Proxy && owner != MyId && owner != e.OwnerId && e.Ip != null) { e.Ip = new PoseInterpolator(); OwnerClockResets++; }
+                    if (e.Proxy && owner != MyId && owner != e.OwnerId && e.Ip != null) { e.Ip = new PoseInterpolator(); OwnerClockResets++; }
                     e.OwnerId = owner; e.HitchAuthorityOwner = owner; e.Epoch = epoch; OwnerChanges++; e.OwnerAt = Time.realtimeSinceStartup;
                     SetProxy(e, owner != MyId);
                     if (HitchTrailer(e) && e.HitchWaiting) HitchFreezeBodies(e);
@@ -1662,8 +1647,6 @@ namespace TLDRevamp.Net
         }
 
         public static long CopyMembersMissing, ShareMembersDropped;
-        /// A copy's jump its owner's velocities cannot cover is placed, not swept (PoseInterpolator.JumpBaseM).
-        public static bool CopyJumpSnaps = true;   // A/B: false = before v0.69.2
         public static long MembersRebound, Rebound, FarRecordUpdates, FarRechunked, PartsAppliedStored, PartsDeduped;
         public static bool FarMoveAttached = true;   // A/B: false = before v0.66.2 (meetagain.py)
         public static long FarAttachedMoved;

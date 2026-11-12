@@ -41,7 +41,6 @@ namespace TLDRevamp
         // Time Physics.SyncTransforms() right after the game's rebase (measurement: splits "loop" from "physics sync").
         public static bool TimeSync = true;
         public static bool PerObject = true;   // per-object timing (slow: regex per call); off → only loop + sync timing
-        public static bool ActualShiftFlags = true;   // A/B: old black boxes flagged every periodic check as a shift
         public static long Checks, Shifts;
         public static double LastLoopMs, LastSyncMs, LastCheckMs, MaxShiftMs;
         private static Vector3d _originBefore;

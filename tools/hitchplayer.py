@@ -3,9 +3,9 @@
 at the car's tow ball (`mount pickgrip` + `mount playermount`: fpscontroller's drop + slot craft as the player's own
 action). The user, 2026-10-24: "sometimes won't couple". A Car01 on the host, the trailer 0.7 m short of its ball.
   S  the host alone (a session of one: the mount commands take network ids)
-  C  the joiner's copy of the loose trailer has its drawbar on the trailer (Entities.HitchProxyGripFollows)
+  C  the joiner's copy of the loose trailer has its drawbar on the trailer
   J  the joiner hitches the host's trailer to the host's car (the non-owner side), ROUNDS times
-     (Entities.DrawbarPickupClaim: the pick-up takes the trailer over), then once with a quick press
+     (the pick-up takes the trailer over), then once with a quick press
   H  the host hitches it after the joiner carried the drawbar last
 Each try: hitched on both machines within WAIT s, with the hitch events of both games.
   tools/hitchplayer.py [--no-build] [--rounds N]   (two players: run2.sh / TLD_SECOND)"""

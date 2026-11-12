@@ -7,7 +7,7 @@ namespace TLDRevamp.Fixes
     /// off entirely took main-thread rendering 6.6 → 4.7 ms (+12% FPS). Hypothesis: the cost is the camera's per-frame scene pass.
     ///
     /// Throttle (NOT bit-exact; visual trade-off to be judged by the user): render the displacement texture only every
-    /// EveryN frames (manual Camera.Render), and optionally clamp its far plane. Grass bending updates at FPS/EveryN.
+    /// EveryN frames in Unity's camera loop, and optionally clamp its far plane. Grass bending updates at FPS/EveryN.
     ///
     /// Runtime switches (bridge `set`): TLDRevamp.Fixes.GrassCameraThrottle.Enabled / .EveryN / .FarClip (0 = keep)
     public static class GrassCameraThrottle
@@ -17,19 +17,14 @@ namespace TLDRevamp.Fixes
         public static bool Enabled = true;
         public static int EveryN = 3;
         public static float FarClip = 0f;
-        /// Render it in Unity's own camera loop (the camera enabled on every EveryN-th frame only, as vanilla renders it
-        /// every frame) instead of a manual Camera.Render() in Update: a manual render in the middle of Update makes the
-        /// main thread wait for the render thread (GrassCameraThrottle.Tick 2 ms/frame at spawn although the grass
-        /// render itself is 0.32 ms). false = manual render (before v0.69.2).
-        public static bool InLoop = true;
 
         public static long Rendered, Skipped;
 
         private static Camera _cam;
         private static float _origFar;
-        private static bool _taken; // we disabled the camera and render it manually
+        private static bool _taken; // we control which frames the camera renders
 
-        /// Called once per frame from the mod's runner (LateUpdate timing is not needed: Render() is immediate).
+        /// Called once per frame from the mod's runner, before Unity renders its cameras.
         public static void Tick()
         {
             var gc = mainscript.s != null ? mainscript.s.grassCam : null;
@@ -46,13 +41,8 @@ namespace TLDRevamp.Fixes
             if (!_taken) { _cam.enabled = false; _taken = true; }
             _cam.farClipPlane = FarClip > 0f ? FarClip : _origFar;
             bool now = Time.frameCount % Mathf.Max(1, EveryN) == 0;
-            if (InLoop) _cam.enabled = now;
-            else if (_cam.enabled) _cam.enabled = false;
-            if (now)
-            {
-                if (!InLoop) _cam.Render();
-                Rendered++;
-            }
+            _cam.enabled = now;
+            if (now) Rendered++;
             else Skipped++;
         }
 

@@ -237,8 +237,8 @@ last pose and zero velocity; late old-epoch packets cannot reclaim authority. A 
 to finish before the server releases the hitch. Required car/trailer Add records go to the new owner before the
 control messages even outside the ordinary 3 km interest range. Deleting a tow car clears its trailers' saved hitch
 records and unmounts loaded and far-store copies, leaving them claimable; a pending transfer is fenced and thawed.
-`HitchTransferTimeout`, `HitchEnsureKnown`, `HitchReleaseOnRemove` and `HitchTransferredGripPose` are default-on A/B
-switches for these recovery paths and destination-based drawbar placement. These changes retain the existing wire format.
+`HitchTransferTimeout`, `HitchEnsureKnown` and `HitchReleaseOnRemove` are default-on A/B
+switches for these recovery paths. Drawbar placement uses the destination pose. These changes retain the existing wire format.
 Bridge tests: `mount hitchrequest <car> <trailer>`, `mount unhitch <car> <trailer>`, `mount hitchstate <trailer>`,
 `mount hitchhealth <car>` and `mount hitchevents`. `mount hitch` also uses the owner route in a session.
 
@@ -324,7 +324,7 @@ items spawned differently, "black shiny cars without anything on them".
   taken out of its group and shared as an object of its own, stored there, as everything stored after the share
   already was. As a group member it had no way out: no pose of its own, and another player picking it up claimed the
   whole car instead (or nothing, with someone in it); the playtest's host saw things taken from the trunk never leave.
-- **Mounted objects go with what they're on** (`Entities.HandoffKeepsMounted`): the distance hand-off skips an object
+- **Mounted objects go with what they're on**: the distance hand-off skips an object
   attached to another shared object; `CascadeOwner` gives it the new owner of what it's on. Handed off by where it was
   last seen, the client's rims went to the host while the client's car (in a crash lease) stayed the client's.
 - **Per-frame loops walk the placed objects only** (2026-11-10, `Entities.LoopPlacedOnly`, `Entities.Placed()`,
@@ -408,7 +408,7 @@ the real one looks to a bystander. INVALID runs noted in bench/NOTES.md (a faile
   validated by the server.
   An attach (`Entities.AttachSync`) is the game's own save record (where the attach point is) plus, since protocol
   31, the attached object's pose in the frame of what the point hangs on: the game's loader leaves the object where it
-  is, so other copies stayed where their last smoothed pose had them (0.9 m off with MountAnything). A/B: `AttachPose`.
+  is, so other copies stayed where their last smoothed pose had them (0.9 m off with MountAnything).
 
 ### Visible state changes (2026-10-19, protocol 37)
 
@@ -552,7 +552,7 @@ raw state reliably in 52. Both paths reject delayed unreliable motion after that
 each accepted building state for joiners/interest catch-up, and `KnownPoiUsables` still silently restores unloaded
 buildings after both FStart and save_poi.Load. No ownership lease is added to a building control.
 
-`mp liveusables [on|off]` controls live sending (default on); buildings still send reliable changes with it off.
+`mp liveusables` shows the live usable counters.
 `mp usables <net>`, `mp dragusable <net> <item> <usable> <seconds> [hz]` and `mp usableprobe ...` remain available.
 For buildings use `mp poius [radius]`, `mp poiu <gen> <x> <y> <z> <index>`, `mp poidrag <address> <seconds> [hz]`
 and `mp poiprobe <address> <seconds>` / `mp poiprobe`. The driver uses the real game Rot/Slide calls every frame;

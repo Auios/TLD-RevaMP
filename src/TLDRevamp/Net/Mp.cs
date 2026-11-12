@@ -18,14 +18,11 @@ namespace TLDRevamp.Net
         public static MpClient Client;
         public static readonly List<MpClient> Bots = new List<MpClient>();
 
-        /// A/B: false = host without checking the port first, as before JoinChecks.PortTaken (a second host on a taken port).
-        public static bool PortCheck = true;
-
         public static string Host(ushort port, string password = "")
         {
             Stop();
             // a port another program holds: Steam would host on it anyway, and joiners would reach the other one
-            if (PortCheck && JoinChecks.PortTaken(port))
+            if (JoinChecks.PortTaken(port))
             {
                 Plugin.Log.LogWarning("Not hosting: " + JoinChecks.PortTakenReason(port));
                 throw new InvalidOperationException(JoinChecks.PortTakenReason(port));
@@ -170,10 +167,6 @@ namespace TLDRevamp.Net
         /// a car within 40 m of another player's). To the host and every client they cost what a driving player costs.
         public static byte[] BotCarRecord;
         public static bool BotCars, BotTorques = true;
-        /// bots report themselves seated in their car's driver seat, as a driving player does (before v0.57.89 they were
-        /// "standing" players: their positions went out at 20 Hz instead of a seated player's 2 Hz — at 16 players
-        /// ~4,500 extra messages a second in the load test that real sessions don't have)
-        public static bool BotsSeated = true;
         /// Test: bots send the host player's own pose (limbs, hum, pee) as theirs — what the host does shows on every bot's model.
         public static bool BotPoses;
         /// Test (Entities.Cargo): a bot that owns a loose item and keeps it at Offset in the car nearest the host's
@@ -714,7 +707,7 @@ namespace TLDRevamp.Net
                     Notice(p.Name + " joined the game");
                     if (p.GameBuild != Plugin.GameBuild)
                     {
-                        // only with WorldCheck.Refuse off (A/B): the worlds can differ (buildings)
+                        // older joiners may not have supplied a world hash: the worlds can differ (buildings)
                         GameBuildMismatches++;
                         Plugin.Log.LogWarning($"[anomaly] game build differs: {p.Name} has The Long Drive {(p.GameBuild.Length > 0 ? p.GameBuild : "(unknown)")}, the host {Plugin.GameBuild}");
                         Notice(p.Name + " has a different version of The Long Drive than the host. Buildings and other parts of the world can differ between you; update the game on both (Steam beta branch).");
@@ -1606,7 +1599,7 @@ namespace TLDRevamp.Net
             uint sNet = 0; int sIdx = 0; var foot = default(Protocol.Footing);
             if (Bot == null) { Entities.LocalSeat(out sNet, out sIdx); Entities.LocalFooting(out foot); }
             else if (Player != null) { sNet = Player.Core.SeatNet; sIdx = Player.Core.SeatIdx; }
-            else if (Mp.BotsSeated && _carNet != 0 && Mp.BotDriverSeat >= 0) { sNet = _carNet; sIdx = Mp.BotDriverSeat; }
+            else if (_carNet != 0 && Mp.BotDriverSeat >= 0) { sNet = _carNet; sIdx = Mp.BotDriverSeat; }
             Protocol.WriteSeat(_w, sNet, sIdx, foot);
             T.Send(_conn, _w, SteamTransport.SendUnreliable);
             if (Player != null) return;   // its cars and items: PlayerBot.Tick
@@ -1724,7 +1717,6 @@ namespace TLDRevamp.Net
             }
         }
         public static long StatesDropped, Poses, Outfits;
-        public static bool Models = true;
 
         public static void Joined(int id, string name, ulong steamId = 0)
         {
@@ -1738,7 +1730,7 @@ namespace TLDRevamp.Net
             }
             var rp = new Rp { Id = id, Name = name, SteamId = steamId };
             SessionLog.Event("join", from: id);
-            var prefab = Models && syncScript.s != null ? syncScript.s.playerPrefab : null;
+            var prefab = syncScript.s != null ? syncScript.s.playerPrefab : null;
             if (prefab != null)
             {
                 rp.Go = UnityEngine.Object.Instantiate(prefab, Vector3.zero, Quaternion.Euler(0f, -90f, 0f));
@@ -1775,18 +1767,10 @@ namespace TLDRevamp.Net
             All[id] = rp;
             ModObjects.OnPlayerJoined(id, name);
         }
-
-        /// What the game's animals sense of a player (sensoryscript.Scan): the local player carries a 0.2 m solid sphere on
-        /// its head with a stimulscript ("Stimul": visible, threat 10) on layer 25 — a layer that collides with nothing
-        /// in the world. The prefab of a remote body has none, so a rabbit simulated on one machine never noticed the
-        /// other players walking up to it (rabbitflee: |flightFight| 10 for the host, 0.01 for the laptop — the same
-        /// as nobody there). The remote body gets the same sphere on its head (the pose's head target). Solid like the
-        /// original: the rabbit's vision ray ignores triggers. Not one of rp.Cols, so Tick leaves it on.
-        public static bool BodyStimulus = true;
         public static long StimuliAdded;
         private static void AddStimulus(Rp rp)
         {
-            if (!BodyStimulus || rp.Mp == null) return;
+            if (rp.Mp == null) return;
             var head = rp.Mp.anim != null && rp.Mp.anim.HHTarget != null ? rp.Mp.anim.HHTarget : rp.Mp.THead;
             var src = FindLocalStimulus();
             if (head == null || src == null) return;

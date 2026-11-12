@@ -16,11 +16,9 @@ namespace TLDRevamp.Fixes
     /// Format(format, value, site), which returns the string it made last time at that call site when the format, the
     /// float (bit for bit) and the culture are the same, and calls string.Format exactly as before otherwise. Exact.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.AxisLabelCache.Enabled
     [HarmonyPatch(typeof(inputscript), "DriveStuff")]
     public static class AxisLabelCache
     {
-        public static bool Enabled = true;
         public static long Formatted, Reused, Patched;
 
         private static readonly MethodInfo StringFormat = AccessTools.Method(typeof(string), nameof(string.Format), new[] { typeof(string), typeof(object) });
@@ -53,7 +51,7 @@ namespace TLDRevamp.Fixes
             var s = Sites[site];
             int bits = BitConverter.SingleToInt32Bits(value);
             var culture = CultureInfo.CurrentCulture;
-            if (Enabled && s.Text != null && bits == s.Bits && ReferenceEquals(format, s.Format) && ReferenceEquals(culture, s.Culture))
+            if (s.Text != null && bits == s.Bits && ReferenceEquals(format, s.Format) && ReferenceEquals(culture, s.Culture))
             {
                 Reused++;
                 return s.Text;
@@ -64,6 +62,6 @@ namespace TLDRevamp.Fixes
             return text;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"patched\":" + Patched + ",\"formatted\":" + Formatted + ",\"reused\":" + Reused + "}";
+        public static string Stats => "{\"patched\":" + Patched + ",\"formatted\":" + Formatted + ",\"reused\":" + Reused + "}";
     }
 }

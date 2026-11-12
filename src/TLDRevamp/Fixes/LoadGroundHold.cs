@@ -10,11 +10,10 @@ namespace TLDRevamp.Fixes
     /// (Net.JoinLoading); this is loading a world here, solo or to host.
     ///
     /// After a world loads, our player stays frozen until something solid is under the feet (a ray down, GroundM), at most
-    /// HoldMaxS. Runtime switch (bridge `set`): TLDRevamp.Fixes.LoadGroundHold.Enabled
+    /// HoldMaxS.
     [HarmonyPatch(typeof(fpscontroller), "Update")]
     public static class LoadGroundHold
     {
-        public static bool Enabled = true;
         public static float GroundM = 3f, HoldMaxS = 60f;
         public static long Holds, Released, TimedOut;
         private static mapSettingScript _map;
@@ -29,7 +28,7 @@ namespace TLDRevamp.Fixes
             if (map != _map) { _map = map; _done = false; _holding = false; _since = Time.realtimeSinceStartup; }
             if (_done || map == null || !map.firstRun) return;   // before firstRun the game holds the player itself
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (!Enabled || pl == null || __instance != pl || pl.RB == null || pl.Bsitting || Net.JoinLoading.Showing || Net.Mp.Client != null)
+            if (pl == null || __instance != pl || pl.RB == null || pl.Bsitting || Net.JoinLoading.Showing || Net.Mp.Client != null)
             {
                 End();
                 return;
@@ -65,6 +64,6 @@ namespace TLDRevamp.Fixes
             return false;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"holds\":" + Holds + ",\"released\":" + Released + ",\"timedOut\":" + TimedOut + ",\"holding\":" + (_holding ? "true" : "false") + "}";
+        public static string Stats => "{\"holds\":" + Holds + ",\"released\":" + Released + ",\"timedOut\":" + TimedOut + ",\"holding\":" + (_holding ? "true" : "false") + "}";
     }
 }

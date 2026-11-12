@@ -19,10 +19,9 @@ namespace TLDRevamp.Net
     ///    MainRoadOnlyRoads) are on for everyone while
     ///    in a session, whatever the player set (SessionBegins/SessionEnds). A host whose world was generated with
     ///    them off has everything around it checked again (SceneryTileSync.RefreshAll).
-    /// The host refuses a joiner that differs (WorldCheckRules.Refusal). A/B (bridge `set`): Refuse, Force.
+    /// The host refuses a joiner that differs (WorldCheckRules.Refusal).
     public static class WorldCheck
     {
-        public static bool Refuse = true, Force = true;
         public static long Refused, Forced, Refreshes;
 
         /// The world's data files, hashed once per change (a few hundred MB: on a worker thread at start, cached by
@@ -151,42 +150,39 @@ namespace TLDRevamp.Net
         /// Hello: what this machine generates the world from.
         public static void Write(NetWriter w) => WorldCheckRules.Write(w, GameData, GenPatches());
 
-        /// The host: why this joiner is refused, or null (and null with Refuse off: it is announced at Ready instead).
+        /// The host: why this joiner is refused, or null.
         public static string Check(string joinerBuild, string joinerData, string joinerPatches, bool comparePatches)
         {
             string mine = GenPatches();
             if (!comparePatches) joinerPatches = mine;   // the API mods differ: the host offers them first (OfferMods), the patches are compared on the next Hello
             string why = WorldCheckRules.Refusal(Plugin.GameBuild, joinerBuild, GameData, joinerData, mine, joinerPatches);
             if (why == null) return null;
-            Plugin.Log.LogWarning($"[anomaly] world differs: game {joinerBuild}/{Plugin.GameBuild}, data {joinerData}/{GameData}, generator patches '{joinerPatches.Replace('\n', ';')}' / '{GenPatches().Replace('\n', ';')}'" + (Refuse ? " - refused" : " - let in (Refuse off)"));
-            if (!Refuse) return null;
+            Plugin.Log.LogWarning($"[anomaly] world differs: game {joinerBuild}/{Plugin.GameBuild}, data {joinerData}/{GameData}, generator patches '{joinerPatches.Replace('\n', ';')}' / '{GenPatches().Replace('\n', ';')}'" + " - refused");
             Refused++;
             return why;
         }
 
         // ---- the order-independence fixes, on for the session
 
-        private static bool _forced, _scenery, _terrain, _objGen, _links, _pois, _poiRing, _poiChunks, _spots, _ties, _pure, _hold, _far, _mainRoad, _waitLinks, _lineAhead;
+        private static bool _forced, _scenery, _terrain, _objGen, _far, _mainRoad, _waitLinks, _lineAhead;
         public static bool Forcing => _forced;
 
         /// A session starts (Mp.Host; a joiner from Welcome, before the host's world loads).
         public static void SessionBegins(bool host)
         {
-            if (!Force || _forced) return;
-            _scenery = Fixes.SceneryTileSync.Enabled; _terrain = Fixes.TerrainSync.Enabled; _objGen = Fixes.ObjGenFast.Enabled; _links = Fixes.ChunkLinks.Enabled;
-            _pois = Fixes.PoiRoadsSettled.Enabled; _poiRing = Fixes.PoiRoadsSettled.NeedForPois; _poiChunks = Fixes.PoiRoadsSettled.PoiRing; _spots = Fixes.PoiSpotOrder.Enabled; _ties = Fixes.RoadTieOrder.Enabled;
-            _pure = Fixes.PureRoads.Enabled; _hold = Fixes.PureRoads.HoldSpawns; _far = Fixes.TerrainHorizon.PureFar;
+            if (_forced) return;
+            _scenery = Fixes.SceneryTileSync.Enabled; _terrain = Fixes.TerrainSync.Enabled; _objGen = Fixes.ObjGenFast.Enabled;
+            _far = Fixes.TerrainHorizon.PureFar;
             _mainRoad = WorldGen.MainRoadOnlyRoads.Enabled; _waitLinks = WorldGen.MainRoadOnlyRoads.PoisWaitForLinks; _lineAhead = WorldGen.MainRoadOnlyRoads.LineAhead;
             bool wasOff = !_scenery || !_terrain || !_objGen;
-            Fixes.SceneryTileSync.Enabled = Fixes.TerrainSync.Enabled = Fixes.ObjGenFast.Enabled = Fixes.ChunkLinks.Enabled = true;
-            Fixes.PoiRoadsSettled.Enabled = Fixes.PoiRoadsSettled.NeedForPois = Fixes.PoiRoadsSettled.PoiRing = Fixes.PoiSpotOrder.Enabled = Fixes.RoadTieOrder.Enabled = true;
-            Fixes.PureRoads.Enabled = Fixes.PureRoads.HoldSpawns = Fixes.TerrainHorizon.PureFar = true;
+            Fixes.SceneryTileSync.Enabled = Fixes.TerrainSync.Enabled = Fixes.ObjGenFast.Enabled = true;
             WorldGen.MainRoadOnlyRoads.Enabled = WorldGen.MainRoadOnlyRoads.PoisWaitForLinks = WorldGen.MainRoadOnlyRoads.LineAhead = true;
+            Fixes.TerrainHorizon.PureFar = true;
             _forced = true;
-            if (wasOff || !_links || !_pois || !_poiRing || !_poiChunks || !_spots || !_ties || !_pure || !_hold || !_far || !_mainRoad || !_waitLinks || !_lineAhead)
+            if (wasOff || !_far || !_mainRoad || !_waitLinks || !_lineAhead)
             {
                 Forced++;
-                Plugin.Log.LogInfo($"world check: generation fixes on for the session (scenery {_scenery}, terrain {_terrain}, scenery generation {_objGen}, chunk links {_links}, buildings from the seed {_pure}/{_hold}, distant ground {_far}, buildings wait for roads {_pois}/{_poiRing}, main road {_mainRoad}/{_waitLinks}/{_lineAhead})");
+                Plugin.Log.LogInfo($"world check: generation fixes on for the session (scenery {_scenery}, terrain {_terrain}, scenery generation {_objGen}, distant ground {_far}, main road {_mainRoad}/{_waitLinks}/{_lineAhead})");
             }
             // the host's world exists already and was generated with them off: check everything generated against what is there now
             if (host && wasOff)
@@ -201,9 +197,8 @@ namespace TLDRevamp.Net
         {
             if (!_forced) return;
             _forced = false;
-            Fixes.SceneryTileSync.Enabled = _scenery; Fixes.TerrainSync.Enabled = _terrain; Fixes.ObjGenFast.Enabled = _objGen; Fixes.ChunkLinks.Enabled = _links;
-            Fixes.PoiRoadsSettled.Enabled = _pois; Fixes.PoiRoadsSettled.NeedForPois = _poiRing; Fixes.PoiRoadsSettled.PoiRing = _poiChunks; Fixes.PoiSpotOrder.Enabled = _spots; Fixes.RoadTieOrder.Enabled = _ties;
-            Fixes.PureRoads.Enabled = _pure; Fixes.PureRoads.HoldSpawns = _hold; Fixes.TerrainHorizon.PureFar = _far;
+            Fixes.SceneryTileSync.Enabled = _scenery; Fixes.TerrainSync.Enabled = _terrain; Fixes.ObjGenFast.Enabled = _objGen;
+            Fixes.TerrainHorizon.PureFar = _far;
             WorldGen.MainRoadOnlyRoads.Enabled = _mainRoad; WorldGen.MainRoadOnlyRoads.PoisWaitForLinks = _waitLinks; WorldGen.MainRoadOnlyRoads.LineAhead = _lineAhead;
         }
 
@@ -223,9 +218,9 @@ namespace TLDRevamp.Net
         /// Bridge `worldcheck`.
         public static string Status() =>
             "{\"gameBuild\":" + Json.Str(Plugin.GameBuild) + ",\"gameData\":" + Json.Str(GameData) + ",\"genPatches\":" + Json.Str(GenPatches()) +
-            ",\"refuse\":" + (Refuse ? "true" : "false") + ",\"force\":" + (Force ? "true" : "false") + ",\"forcing\":" + (_forced ? "true" : "false") +
+            ",\"forcing\":" + (_forced ? "true" : "false") +
             ",\"refused\":" + Refused + ",\"forced\":" + Forced + ",\"refreshes\":" + Refreshes +
-            ",\"scenery\":" + B(Fixes.SceneryTileSync.Enabled) + ",\"terrain\":" + B(Fixes.TerrainSync.Enabled) + ",\"objGen\":" + B(Fixes.ObjGenFast.Enabled) + ",\"chunkLinks\":" + B(Fixes.ChunkLinks.Enabled) +
+            ",\"scenery\":" + B(Fixes.SceneryTileSync.Enabled) + ",\"terrain\":" + B(Fixes.TerrainSync.Enabled) + ",\"objGen\":" + B(Fixes.ObjGenFast.Enabled) +
             ",\"mainRoad\":[" + B(WorldGen.MainRoadOnlyRoads.Enabled) + "," + B(WorldGen.MainRoadOnlyRoads.PoisWaitForLinks) + "," + B(WorldGen.MainRoadOnlyRoads.LineAhead) + "]}";
 
         private static string B(bool b) => b ? "true" : "false";

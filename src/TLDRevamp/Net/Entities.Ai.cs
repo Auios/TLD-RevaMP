@@ -81,7 +81,7 @@ namespace TLDRevamp.Net
                 if (!InSession || _breakFxReplay || !IsProxy(__instance)) return true;
                 if (RabbitBreakOnCopy(__instance, force)) return false;   // a rabbit's bite: summed (Entities.Rabbits)
                 // nothing to break: TryBreak(0) on the owner only woke and turned its creature (DamageFrom)
-                if (force <= 0f && CopyTouchFilter) { ZeroHitsIgnored++; return false; }
+                if (force <= 0f) { ZeroHitsIgnored++; return false; }
                 if (_blastDepth == 0) ForwardHit(__instance, 2, force, _hitDir);   // inside a blast the owner replays the blast
                 return false;
             }
@@ -97,7 +97,7 @@ namespace TLDRevamp.Net
                 // rabbit's copy brushing the next one: the owner sees that same touch with its own bodies. Forwarded, each
                 // went to the owner as a hit: the "Playing" save's joiner sent 1124 in its first minutes (force 0, every one
                 // waking the host's rabbit and turning it, DamageFrom), with nobody near them. As for collisions (CopyBreakCollision).
-                if (InSession && !_breakFxReplay && CopyTouchFilter && IsProxy(__instance) && (RB == null || IsProxy(RB))) { CopyTouchesIgnored++; return false; }
+                if (InSession && !_breakFxReplay && IsProxy(__instance) && (RB == null || IsProxy(RB))) { CopyTouchesIgnored++; return false; }
                 if (RB != null) _hitDir = RB.position - __instance.transform.position;
                 if (HitTrace > 0 && InSession && IsProxy(__instance))
                     Plugin.Log.LogInfo("[hittrace] touched by " + (RB != null ? RB.name + " proxy " + IsProxy(RB) : "no body"));
@@ -111,7 +111,6 @@ namespace TLDRevamp.Net
                 return __exception;
             }
         }
-        public static bool CopyTouchFilter = true;   // A/B: false = before (a copy's every trigger touch went to its owner)
         public static long CopyTouchesIgnored, ZeroHitsIgnored;
 
         [HarmonyPatch(typeof(breakablescript), nameof(breakablescript.TryBreakExplosion))]

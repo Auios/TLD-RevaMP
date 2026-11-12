@@ -121,7 +121,7 @@ namespace TLDRevamp.Net
             return WorldOverlayLogic.SendState(e.LockPose.Locked, e.SentAtRest, e.QuietTail.Active, changed);
         }
         // RidesBolted also increments a gameplay counter; inspecting it must not change that counter.
-        private static bool OverlayBolted(Ent e) => RidesParent(e) && (e.PartIndex >= 0 || e.Items.Count <= 1 || BoltedGroupRides);
+        private static bool OverlayBolted(Ent e) => RidesParent(e) && (e.PartIndex >= 0 || e.Items.Count <= 1 || true);
         internal static string OverlayMode(Ent e)
         {
             if (e.TelemetrySnapFrame == Time.frameCount) return "snap";

@@ -29,7 +29,7 @@ static class StreamingTest
     static void NewWorld(int count = 3)
     {
         Time.frameCount++;
-        FarItemLookup.Spread = FarItemLookup.SpreadMultiplayer = FarItemLookup.Enabled = true;
+        FarItemLookup.Spread = FarItemLookup.SpreadMultiplayer = true;
         FarItemLookup.BudgetMs = 0; FarItemLookup.Patched = 1; FarItemLookup.Verify = true;   // a map lookup that differs from IndexOfID throws (LogWarning)
         PlaceWithParts.Enabled = PlaceWithParts.ReuseIndex = true;
         TLDRevamp.Net.Mp.Client = new object(); TLDRevamp.Net.Mp.Server = null;

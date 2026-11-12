@@ -21,16 +21,15 @@ namespace TLDRevamp.Fixes
     /// dots joined into roads, have their links to the chunks above and right made, and have every road generated: the
     /// roads it can be aligned to are then all there, on every machine. A building that can land near enough to be seen
     /// (the game's building distance + NeedMarginM; where it can land: Near) doesn't wait for the player to come closer:
-    /// the road chunks it waits for are needed too (NeedForPois), only those and only while it waits. A whole extra ring of needed chunks cost
+    /// the road chunks it waits for are needed too, only those and only while it waits. A whole extra ring of needed chunks cost
     /// +0.6 ms per frame while travelling (road piece placement walks every needed chunk); farther buildings wait unseen.
     /// Main road only worlds have their own rule (WorldGen.MainRoadOnlyRoads.PoisWaitForLinks).
-    /// Since PureRoads (buildings find their road from the seed) both rules only act with PureRoads.Enabled off: the
+    /// Since PureRoads (buildings find their road from the seed) both rules act only where the shadow is unavailable: the
     /// fallback, and the reference PureRoads.Compare checks the seed's answer against.
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.PoiRoadsSettled.Enabled / .NeedForPois / .NeedMarginM.
+    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.PoiRoadsSettled.NeedMarginM.
     [HarmonyPatch]
     public static class PoiRoadsSettled
     {
-        public static bool Enabled = true, NeedForPois = true, PoiRing = true;
         public static long PoiChunksAdded;
         public static float NeedMarginM = 1500f, WantForS = 5f;
         public static long Held, ChunksAdded;
@@ -51,7 +50,7 @@ namespace TLDRevamp.Fixes
             // can land in sight too (a side road building 10 km from its spot, 2026-11-03 tour), and without its chunk it
             // waits on one machine while another that came that way has it. Its candidates are made (GenChunk, from the
             // seed) and wait for their roads like any other.
-            if (Enabled && NeedForPois && PoiRing && __instance.roadgen != null && __instance.roadgen.hasSideRoad && __instance.chunksNeeded != null)
+            if (__instance.roadgen != null && __instance.roadgen.hasSideRoad && __instance.chunksNeeded != null)
                 try
                 {
                     var need = __instance.chunksNeeded;
@@ -108,7 +107,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPostfix]
         private static void Settled(roadGenScript __instance, Vector3d _gpos, ref bool __result)
         {
-            if (_inAddPois == 0 || !Enabled || !Applies(__instance) || PureRoads.Applies(__instance)) return;   // PureRoads: no waiting
+            if (_inAddPois == 0 || !Applies(__instance) || PureRoads.Applies(__instance)) return;   // PureRoads: no waiting
             try
             {
                 var g = __instance;
@@ -120,7 +119,6 @@ namespace TLDRevamp.Fixes
                         var k = mainscript.GetChunkPos(c, dx, dz, g.chunkSize);
                         if (Finished(g, k)) continue;
                         held = true;
-                        if (!NeedForPois) break;
                         if (!nearKnown) { near = Near(g, _gpos); nearKnown = true; }
                         if (!near) break;
                         if (!Needed.Contains(k)) Want[k] = Time.realtimeSinceStartup;
@@ -190,7 +188,7 @@ namespace TLDRevamp.Fixes
         private static void NeedWanted(roadGenScript __instance)
         {
             var g = __instance;
-            if (!Enabled || !NeedForPois || !Applies(g) || g.chunksNeeded == null || Want.Count == 0) return;
+            if (!Applies(g) || g.chunksNeeded == null || Want.Count == 0) return;
             try
             {
                 float now = Time.realtimeSinceStartup;
@@ -261,8 +259,7 @@ namespace TLDRevamp.Fixes
                 var pg = map != null && map.poiGens != null && map.poiGens.Count > 0 ? map.poiGens[0] : null;
                 double near = Math.Min(_nearest, _nearestShown);
                 var ci = System.Globalization.CultureInfo.InvariantCulture;
-                return "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"needForPois\":" + (NeedForPois ? "true" : "false") +
-                    ",\"held\":" + Held + ",\"chunksAdded\":" + ChunksAdded + ",\"wanted\":" + Want.Count + ",\"poiChunksAdded\":" + PoiChunksAdded +
+                return "{\"held\":" + Held + ",\"chunksAdded\":" + ChunksAdded + ",\"wanted\":" + Want.Count + ",\"poiChunksAdded\":" + PoiChunksAdded +
                     ",\"nearestHeldM\":" + (near < double.MaxValue ? near.ToString("0", ci) : "-1") +
                     ",\"buildingsShownWithinM\":" + (pg != null ? pg.lodDistance.ToString("0", ci) : "-1") +
                     ",\"buildingsRemovedBeyondM\":" + (pg != null ? pg.removeDistance.ToString("0", ci) : "-1") + "}";

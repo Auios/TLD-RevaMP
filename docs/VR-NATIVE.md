@@ -79,5 +79,5 @@ tools/vrnative_live.py down      # VR off, quit, sensor back to normal
 Bridge: `vrnative` (state), `vrnative body` (every height from the feet to the head the network sends), `vrnative
 items [r]`, `vrnative sim ...` (a test places a hand and presses its buttons), and the switches `comfort|hands|height|
 mirror|sharedmirrors on|off`, `scale <0.5..1.5>`. Frame-cost measurements: `cost` (this code's main-thread time),
-`post list|layer|fx`, `idlepost`, `sky on|off|faces n`, `cull list|cull <camera|all> <layer> on|off|cull restore`,
+`post list|layer|fx`, `sky faces n`, `cull list|cull <camera|all> <layer> on|off|cull restore`,
 `visible [n]` (shaders drawn now), `hide <shader part>|show`. VR runs alone on the machine.

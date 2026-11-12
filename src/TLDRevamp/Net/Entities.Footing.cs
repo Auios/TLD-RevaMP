@@ -8,7 +8,6 @@ namespace TLDRevamp.Net
     /// others: 3 m behind the roof at 30 km/h (standride.py, 2026-10-08). Seated players have their seat instead.
     public static partial class Entities
     {
-        public static bool StandFrames = true;   // A/B: false = world positions only (before v0.65.46)
         public static long FootingSent;
         private static uint _telemetryFooting;
 
@@ -17,7 +16,6 @@ namespace TLDRevamp.Net
         {
             f = default;
             _telemetryFooting = 0;
-            if (!StandFrames) return;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || pl.Bsitting) { FootWhy = "seated"; return; }
             // what is under the feet: the game's ground sensor, else a short ray down (the sensor is a trigger that keeps
@@ -150,16 +148,6 @@ namespace TLDRevamp.Net
 
         /// The shared object `net`'s transform here (null when it isn't loaded).
         public static Transform FootRootOf(uint net) => ByNet.TryGetValue(net, out var e) && e.Root != null ? e.Root.transform : null;
-
-        /// Our player standing on another player's vehicle is carried by physics (the floor's contact, fpscontroller.Move),
-        /// but drawn at its physics pose (the game's bodies have no interpolation, mainscript.RBI()), while the copy under
-        /// it is drawn interpolated, up to a physics step behind its colliders (BodyMotionTick; BusBack follows,
-        /// MoveLimbs). The camera rides the player: the bus shook back and forth around it by up to a step's travel
-        /// (playtest 2026-10-24: "when you are standing in the bus it still jitters you"). While we stand on such a copy
-        /// our body is interpolated too: both drawn at the same point between the same two physics steps. Standing in the
-        /// back of a Bus01 at ~9 m/s, the camera in the bus's frame, frame to frame (stand3.py, mp standseries): jerk along
-        /// the bus p50 170-180 mm, p90 190 mm before; 4-5 mm, p90 11-12 mm with it, the world going by as evenly.
-        public static bool StandInterpolated = true;   // A/B: false = our player drawn at its physics pose (before v0.69.2)
         public static long StandInterpFrames;
         private static bool _standInterp;
 
@@ -170,7 +158,7 @@ namespace TLDRevamp.Net
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var rb = pl != null ? pl.RB : null;
             if (rb == null) { _standInterp = false; return; }
-            bool want = StandInterpolated && InSession && !pl.Bsitting && !rb.isKinematic && _telemetryFooting != 0 &&
+            bool want = InSession && !pl.Bsitting && !rb.isKinematic && _telemetryFooting != 0 &&
                         ByNet.TryGetValue(_telemetryFooting, out var e) && e.Proxy && e.MovedByBody && e.Root != null &&
                         e.Root.RB != null && e.Root.RB.interpolation == RigidbodyInterpolation.Interpolate;
             if (want)
@@ -187,7 +175,7 @@ namespace TLDRevamp.Net
             if (rb != null) rb.interpolation = mainscript.RBI();
         }
 
-        /// The other way to draw both at one pose (A/B against StandInterpolated): the copy we stand on drawn at its physics
+        /// The other way to draw both at one pose: the copy we stand on drawn at its physics
         /// pose, like our player (AboardDrawnAtPhysics does it for a seat). Off: the world outside then moves in physics
         /// steps (frame-to-frame speed p90 ~50% off its median, against 6-28% interpolated) and the camera still jumped
         /// now and then (up to 410 mm along, 228 mm up; stand3.py).

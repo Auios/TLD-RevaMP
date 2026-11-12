@@ -50,10 +50,6 @@ namespace TLDRevamp.Net
         /// Vehicles' limb sets keep the frame-relative form (their frame is the moving car).
         public static bool RagdollDelta = true;
         public static float RagdollKeyEveryS = 2f;          // a fresh Key while streaming: bounds what a lost Key costs a copy
-        /// A/B: a copy's limbs follow the frame their states came with, not the copy's root. The root of a creature's copy
-        /// is also placed by its AI state (Entities.Ai) at the owner's root, which a dead munkas's body had left: every limb
-        /// showed 2.5-2.8 m off on the other screen (two copies, 2026-10-22; in every format).
-        public static bool RagdollOwnFrame = true;
         public static float RagdollDeltaMaxShare = 0.5f;    // a Delta bigger than this share of a Key goes as a Key (twitching rabbit, 2026-10-22: 0.25 2.6 KB/s, 0.5 1.1, 0.75 1.9)
         public static long RagdollKeysSent, RagdollDeltasSent, RagdollFramesSent, RagdollLimbsSent, RagdollBlockBytes;
         public static long RagdollDeltasNoKey, RagdollHashMismatch, RagdollKeysIn, RagdollDeltasIn, RagdollLateKeys, RagdollReleasedOnNone;
@@ -355,7 +351,7 @@ namespace TLDRevamp.Net
                 }
                 var g = e.Rag; var t = e.Root.transform; bool byBody = LimbsByBody(e);
                 var framePos = t.position; var frameRot = t.rotation;
-                if (RagdollOwnFrame && e.Root.car == null && g.FrameHas)
+                if (e.Root.car == null && g.FrameHas)
                 {
                     // the frame the states came with, eased like the limbs (global: floating-origin shifts don't move it)
                     g.FrameS = new Vector3d(g.FrameS.x + (g.FrameT.x - g.FrameS.x) * k, g.FrameS.y + (g.FrameT.y - g.FrameS.y) * k, g.FrameS.z + (g.FrameT.z - g.FrameS.z) * k);

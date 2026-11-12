@@ -10,11 +10,6 @@ namespace TLDRevamp.Net
         public static bool HitchTransferTimeout = true;   // A/B: false = wait indefinitely for the old simulator/result
         public static bool HitchEnsureKnown = true;       // A/B: false = rely on ordinary distance-based Add delivery
         public static bool HitchReleaseOnRemove = true;   // A/B: false = keep the deleted car's hitch record
-        public static bool HitchTransferredGripPose = true;   // A/B: false = place the drawbar through the old root transform
-        /// A/B: false = a loose trailer's copy leaves its drawbar where it was. The drawbar is its own root object on a joint
-        /// to the trailer; on a copy both bodies are kinematic, so the joint holds nothing: the trailer followed its owner's
-        /// states and the drawbar stayed behind (hitchplayer.py J1: 4.3 m from the hand that picked it up, dropped at once).
-        public static bool HitchProxyGripFollows = true;
         public static long ProxyGripsMoved;
         private const float HitchTimeoutS = 5f;
         private static bool _hitchApplying;
@@ -120,7 +115,7 @@ namespace TLDRevamp.Net
             bool known = Server.TryGetValue(op.Trailer, out var tr) && Server.ContainsKey(op.Car);
             Server.TryGetValue(op.Car, out var car);
             string why = HitchAuthority.Refusal(known, known && HitchTrailer(tr), known && car.Car,
-                known && (!EditRangeCheck || from == 0 || AtObject(from, tr) && AtObject(from, car)),
+                known && (from == 0 || AtObject(from, tr) && AtObject(from, car)),
                 known && (op.TrailerEpoch != tr.Epoch || op.CarEpoch != car.Epoch), known && (tr.Stored || tr.Held && tr.OwnerId != from), false,
                 known && op.Connect && (tr.HitchCar != 0 || tr.AttachParent != 0));
             if (why == null && (op.Slot < 0 || op.Slot > 4096 || op.Car == op.Trailer)) why = "slot index";
@@ -273,7 +268,7 @@ namespace TLDRevamp.Net
                 var origin = tr.Root.transform.position; var turn = q * Quaternion.Inverse(tr.Root.transform.rotation);
                 var destination = mainscript.UnityPosFromGlobal(p);
                 var grip = tr.Root.GetComponent<attachgripscript>();
-                if (!hasGrip && HitchTransferredGripPose && grip != null && grip.GripPos != null)
+                if (!hasGrip && grip != null && grip.GripPos != null)
                 {
                     // Timeout/unloaded acknowledgements have no drawbar pose: move the prefab's grip with the root too.
                     hasGrip = true; gripPos = tr.Root.transform.InverseTransformPoint(grip.GripPos.position);
@@ -284,7 +279,7 @@ namespace TLDRevamp.Net
                 for (int i = 0; i < bodies.Count; i++) { bodies[i].position = poses[i]; bodies[i].rotation = rotations[i]; }
                 // Rigidbody.position need not update Transform immediately. Compute from the received root pose.
                 if (hasGrip && tr.Root.attachable != null) tr.Root.attachable.transform.SetPositionAndRotation(
-                    HitchTransferredGripPose ? gripDestination : tr.Root.transform.TransformPoint(gripPos), q * gripRot);
+                    gripDestination, q * gripRot);
             }
             var g = tr.Root != null ? tr.Root.GetComponent<attachgripscript>() : null;
             if (!hasGrip && g != null && g.GripPos != null && tr.Root.attachable != null)
@@ -493,7 +488,7 @@ namespace TLDRevamp.Net
                 {
                     HitchRemoveJoint(at); HitchFreezeBodies(tr);
                     if (tr.Proxy && at.attached && at.point != null) at.transform.position = at.point.position;
-                    else if (tr.Proxy && !at.attached && HitchProxyGripFollows) ProxyGripToTrailer(tr);
+                    else if (tr.Proxy && !at.attached) ProxyGripToTrailer(tr);
                 }
                 else { HitchThaw(tr); HitchRestore(tr); }
             }

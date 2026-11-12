@@ -59,8 +59,7 @@ are not object state.
 
 Limits, checked by the host before anything is passed on: records up to `MaxRecordBytes` (8 KB by default), edits
 and events up to 1 KB, 60 messages a second per player (bursts of 120), 1,000 objects per player, finite positions,
-records and poses only from the current owner. Bridge: `mp mods` (counters, objects); switch
-`set TLDRevamp.Net.ModObjects.Enabled False` keeps mod objects local (A/B).
+records and poses only from the current owner. Bridge: `mp mods` (counters, objects).
 
 Two things about this game that every BepInEx mod meets (found with the head unit example mod):
 - The game destroys BepInEx's manager object when its scene loads, so a plugin's own `Update`, `OnGUI` and the like
@@ -257,7 +256,7 @@ aliases in this batch. The existing seed/load/napszak fields are host snapshots;
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,
 UseHarmony (all of a
 mod's patches or none: a patch naming what the beta lacks would throw inside the game's own method), Events,
-GameUtil, CopyComponent — ModHost.LoaderFeatures; not its item registration, which builds on the public game's item
+GameUtil, CopyComponent; not its item registration, which builds on the public game's item
 categories). DbLoad runs
 for every mod with LoadInDB once per item database, in the order of the mods' IDs, so every machine changes and adds
 items the same way. That holds only when every player has the same TLD Loader mods: a host refuses a joiner whose mods differ by

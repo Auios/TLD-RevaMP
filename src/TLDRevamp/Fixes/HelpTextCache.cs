@@ -14,11 +14,9 @@ namespace TLDRevamp.Fixes
     /// is unchanged since the last build, so the arrays already hold equal strings; RefreshHelpTexts then hands them to
     /// the help texts exactly as before. Exact: the arrays keep their contents, only their identity is reused.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.HelpTextCache.Enabled
     [HarmonyPatch(typeof(mainscript), "RefreshHelpTextLanguage")]
     public static class HelpTextCache
     {
-        public static bool Enabled = true;
         public static long Built, Skipped;
 
         private struct Key { public object Keys; public UnityEngine.KeyCode Code; public bool Axis, Invert; public int Joy, JoyAxis; public string AxisName; }
@@ -30,7 +28,6 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix]
         private static bool Prefix(mainscript __instance)
         {
-            if (!Enabled) { _count = -1; return true; }
             if (Unchanged(__instance)) { Skipped++; return false; }
             Built++;
             _building = true;
@@ -84,6 +81,6 @@ namespace TLDRevamp.Fixes
             _count = n; _inputs = inputs; _owner = m; _lang = ls.l; _words = ls.l?.ww;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"built\":" + Built + ",\"skipped\":" + Skipped + "}";
+        public static string Stats => "{\"built\":" + Built + ",\"skipped\":" + Skipped + "}";
     }
 }

@@ -23,7 +23,6 @@ namespace TLDRevamp.Net
             public Quaternion LastSentRot = Quaternion.identity;
         }
         partial class SEnt { public bool Hitch; }
-        static bool BoltedGroupRides = true;
         static uint _telemetryFooting, _telemetryLook;
         static float RestSpeed = .05f;
         static readonly Dictionary<uint, int> _hitchTransfers = new Dictionary<uint, int>(), _hitchCommands = new Dictionary<uint, int>();

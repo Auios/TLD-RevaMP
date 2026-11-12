@@ -17,7 +17,7 @@ namespace TLDRevamp.Fixes
     /// and the items fell (Volkan, 2026-11-10: "items in building fall under the ground since the buildings ground only
     /// loads later"; his autosave held a car, a bus front and ~30 items 320-410 m under the gas station). Now what it
     /// stands on must be within reach (NearM): the item's lowest collider to the nearest hit below. Out of reach it is held
-    /// too, at most HoldMaxS, then let go as before. A/B: Near false = anything within RayM counts (before).
+    /// too, at most HoldMaxS, then let go as before.
     ///
     /// A car and the trailer hitched to it are let go together, when both have ground (HitchPairs): one let go alone
     /// while the other stays frozen is dragged by the joint. While a world loads nothing is let go (LoadFreeze).
@@ -26,7 +26,7 @@ namespace TLDRevamp.Fixes
     [HarmonyPatch(typeof(tosaveitemscript), nameof(tosaveitemscript.DistUnFreezeRB))]
     public static class UnfreezeOnGround
     {
-        public static bool Enabled = true, Near = true;
+        public static bool Enabled = true;
         public static float RayM = 1000f, NearM = 1.5f, HoldMaxS = 120f;
         public static long Held, Released, HeldFar, TimedOut;
         private static readonly RaycastHit[] _hits = new RaycastHit[16];
@@ -99,8 +99,8 @@ namespace TLDRevamp.Fixes
             // root, and its whole hierarchy's colliders (a car's ~200) were measured for each such item every second —
             // the streamer's once-a-second hitch grew from ~120 to ~300 ms (DevTest, 2026-11-10)
             bool loose = it.transform.parent == null;
-            if (nearest < float.MaxValue && (!Near || !loose || nearest <= Reach(it, id, p) + NearM)) return true;
-            return nearest < float.MaxValue && Near && loose && Footprint && Supported(it);
+            if (nearest < float.MaxValue && (!loose || nearest <= Reach(it, id, p) + NearM)) return true;
+            return nearest < float.MaxValue && loose && Footprint && Supported(it);
         }
 
         /// The ray goes down from the item's middle: a plank lying across a repair pit, or a trailer standing over one, has
@@ -190,7 +190,7 @@ namespace TLDRevamp.Fixes
             return r;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"near\":" + (Near ? "true" : "false") + ",\"held\":" + Held + ",\"heldFar\":" + HeldFar +
+        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"held\":" + Held + ",\"heldFar\":" + HeldFar +
                                       ",\"released\":" + Released + ",\"timedOut\":" + TimedOut + ",\"waiting\":" + _held.Count +
                                       ",\"footprint\":" + (Footprint ? "true" : "false") + ",\"footprintCarried\":" + FootprintCarried + ",\"hitchPairs\":" + (HitchPairs ? "true" : "false") + ",\"heldForPartner\":" + HeldForPartner + ",\"partnersLetGo\":" + PartnersLetGo + "}";
     }

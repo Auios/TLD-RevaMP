@@ -18,10 +18,8 @@ namespace TLDRevamp.Fixes
     ///    clock carries it on, and every other machine runs the same curve (CloudClockMath.SleepCurve between reports).
     /// Only in a session: alone, the game's own timer is the world's. The host's clouds stay where they were when it
     /// starts hosting; a joiner's move once, with the time of day.
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.CloudClock.Enabled (the wobble), .SleepSpeed (the scroll speed).
     public static class CloudClock
     {
-        public static bool Enabled = true, SleepSpeed = true;
         public static long Steps, HostTotals, SleepCurves, SleepCurvesEnded;
         public static double WorldTotal;
         public static float SleepCurveShown = -1f;
@@ -78,14 +76,14 @@ namespace TLDRevamp.Fixes
                     _hostPending = false; HostTotals++;
                 }
                 _lastT = __instance.t;
-                if (Enabled && speed > 0)
+                if (speed > 0)
                 {
                     // the game adds this step's advance to CloudPerlin before it reads it: start that far behind
                     Perlin(__instance) = (float)CloudClockMath.Phase(WorldTotal, speed) - Time.deltaTime * speed * ms.sleepModifier;
                     Steps++;
                 }
 
-                if (!SleepSpeed || ms.sleeping) { _curve = false; SleepCurveShown = -1f; return; }   // our own sleep: the game's curve
+                if (ms.sleeping) { _curve = false; SleepCurveShown = -1f; return; }   // our own sleep: the game's curve
                 double since = Time.realtimeSinceStartupAsDouble - _sleepAt;
                 if (_sleepProgress >= 0f && since < 5)
                 {
@@ -113,8 +111,7 @@ namespace TLDRevamp.Fixes
         internal static string Stats()
         {
             var ci = System.Globalization.CultureInfo.InvariantCulture;
-            return "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"sleepSpeed\":" + (SleepSpeed ? "true" : "false") +
-                   ",\"worldTotal\":" + WorldTotal.ToString("F2", ci) + ",\"steps\":" + Steps + ",\"hostTotals\":" + HostTotals +
+            return "{\"worldTotal\":" + WorldTotal.ToString("F2", ci) + ",\"steps\":" + Steps + ",\"hostTotals\":" + HostTotals +
                    ",\"sleepCurves\":" + SleepCurves + ",\"sleepCurvesEnded\":" + SleepCurvesEnded + ",\"curve\":" + SleepCurveShown.ToString("F3", ci) + "}";
         }
     }

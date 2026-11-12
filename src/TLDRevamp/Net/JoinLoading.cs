@@ -10,7 +10,6 @@ namespace TLDRevamp.Net
     /// Unity adapter for the pure join gate; idle paths return before sampling or allocating.
     public static partial class JoinLoading
     {
-        public static bool Enabled = true;
         internal static JoinLoadingState State = new JoinLoadingState();
         internal static bool Visible => State.Visible;
         private static readonly HashSet<uint> Expected = new HashSet<uint>();
@@ -46,7 +45,7 @@ namespace TLDRevamp.Net
             _manifest = _ended = _scene = _geometry = _placed = false;
             _count = 0; _pending = -1; _sampleAt = 0; _floorSince = -1;
             _cursor = Cursor.lockState; _cursorVisible = Cursor.visible; _paused = AudioListener.pause;
-            State.Begin(Enabled, Time.realtimeSinceStartupAsDouble, AudioListener.volume, SetVolume, Completed);
+            State.Begin(true, Time.realtimeSinceStartupAsDouble, AudioListener.volume, SetVolume, Completed);
             if (Visible)
             {
                 AudioListener.pause = true; BlockMenuInput();

@@ -6,7 +6,6 @@ namespace TLDRevamp.Fixes
     /// POI candidates outlive the road generation area at low draw distances; count that waiting separately.
     public static class PoiBacklog
     {
-        public static bool Enabled = true;
         public static long Samples, DeferredObserved;
         public static int Candidates, Ready, WaitingForRoads, Deferred;
 
@@ -37,7 +36,7 @@ namespace TLDRevamp.Fixes
                 }
             }
             DeferredObserved += Deferred;
-            return Enabled ? Ready + WaitingForRoads : Candidates;
+            return Ready + WaitingForRoads;
         }
 
         private readonly struct RoadChunks : IPoiRoadChunks
@@ -53,7 +52,7 @@ namespace TLDRevamp.Fixes
             }
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"samples\":" + Samples +
+        public static string Stats => "{\"samples\":" + Samples +
             ",\"candidates\":" + Candidates + ",\"ready\":" + Ready + ",\"waitingForRoads\":" + WaitingForRoads +
             ",\"deferred\":" + Deferred + ",\"deferredObserved\":" + DeferredObserved + "}";
     }

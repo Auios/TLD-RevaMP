@@ -367,17 +367,10 @@ namespace TLDRevamp
             if (mainscript.s.player.transform.position.sqrMagnitude > 6250000f) mainscript.s.VisszaRakas();
             if (pl.RB != null) pl.RB.position = pl.transform.position;
             Physics.SyncTransforms();
-            if (TpStoreLeft) StoreLeftBehind();
+            StoreLeftBehind();
             _tpCalmUntil = Time.realtimeSinceStartup + 0.5f;
             TpCalm(pl);
         }
-
-        /// A teleport leaves in one frame what a driver leaves over minutes: the game stores items beyond itemRemoveDist
-        /// once a second (itemPlaceRemoveScript.DoUpd), and in that second the ground under them can already be gone —
-        /// farworld run 14: the far player's car (all 33 items) was stored 1.21 m low, half a second of falling through
-        /// the unloaded site. Driving away, the game stores them at 300 m, long before the ground goes. Here the game's
-        /// own pass runs at once, with the generation centres where the player now is.
-        public static bool TpStoreLeft = true;
         public static long TpStores;
 
         private static void StoreLeftBehind()
@@ -990,7 +983,6 @@ namespace TLDRevamp
                         case "rpose": return Net.RemotePlayers.PoseJson();
                         case "poiusables": return Net.Entities.PoiUsableStats();
                         case "liveusables":
-                            if (ma.Length > 1) Net.Entities.LiveUsableSync = ma[1] == "on";
                             return Net.Entities.LiveUsableStats();
                         case "usables": return Net.Entities.Usables(uint.Parse(ma[1]));
                         case "dragusable": return Net.Entities.DragUsable(uint.Parse(ma[1]), int.Parse(ma[2]), int.Parse(ma[3]), float.Parse(ma[4], mic), ma.Length > 5 ? float.Parse(ma[5], mic) : 60f);
@@ -1488,6 +1480,7 @@ namespace TLDRevamp
                 }
                 // The host's password is never read out through the bridge: a diagnostic that carries it would
                 // carry it into a log, a report or a test's output.
+                case "switches": return Switches.Status(arg.Trim());   // every runtime switch with its value now (Switches.cs)
                 case "get":
                     if (SecretPath(arg)) return "{\"value\":\"<set>\"}";
                     return "{\"value\":" + Reflect.Get(arg) + "}";
@@ -1577,7 +1570,7 @@ namespace TLDRevamp
                     if (arg.Length > 0) QualitySettings.SetQualityLevel(int.Parse(arg), true);
                     return "{\"level\":" + QualitySettings.GetQualityLevel() + ",\"shadowDistance\":" + QualitySettings.shadowDistance + ",\"vSync\":" + QualitySettings.vSyncCount + ",\"targetFps\":" + Application.targetFrameRate + "}";
                 case "help":
-                    return "{\"commands\":\"alive ping stats scene breakdown net items [show|hide|labels] items [filter] physics spawnpile clearpile loopprof start|stop [n] reset report <note> screenshot overlay on|off bg on|off ground x z profile start [Type.Method ...]|stop [n] " + VR.VrBridgeCommandPolicy.Syntax + " terrainhorizon [x z] terrainhorizonstats vr devaccess get <Type.member.path> set <path> <value> call <path.Method> [args] timescale <f> teleport x y z quality [n]\"}";
+                    return "{\"commands\":\"alive ping stats scene breakdown net items [show|hide|labels] items [filter] physics spawnpile clearpile loopprof start|stop [n] reset report <note> screenshot overlay on|off bg on|off ground x z profile start [Type.Method ...]|stop [n] " + VR.VrBridgeCommandPolicy.Syntax + " terrainhorizon [x z] terrainhorizonstats vr devaccess switches [text] get <Type.member.path> set <path> <value> call <path.Method> [args] timescale <f> teleport x y z quality [n]\"}";
                 default: return "{\"error\":\"unknown command, try help\"}";
             }
         }

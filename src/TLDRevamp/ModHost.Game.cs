@@ -41,7 +41,7 @@ namespace TLDRevamp
         /// world seed, whether the world came from a save, and its day/night cycle.
         static partial void GameAliases(bool worldUp)
         {
-            if (!GameAliasesOn || !LoaderFeatures) return;
+            if (!GameAliasesOn) return;
             if (!_aliasLooked)
             {
                 _aliasLooked = true;
@@ -171,7 +171,7 @@ namespace TLDRevamp
             }
             private static void Raise(MethodInfo m, params object[] a)
             {
-                if (m == null || !LoaderFeatures || Mods.Count == 0) return;
+                if (m == null || Mods.Count == 0) return;
                 try { m.Invoke(null, a); Raised++; } catch (Exception e) { Plugin.Log.LogWarning("ModHost: TLD Loader event " + m.Name + ": " + (e.InnerException ?? e).Message); }
             }
 

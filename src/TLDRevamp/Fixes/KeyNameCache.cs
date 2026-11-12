@@ -14,11 +14,9 @@ namespace TLDRevamp.Fixes
     /// prefix returns the string made last time for this key while all of those are the same, else runs the original
     /// and remembers its result. Exact (the private field the original also writes, s, already holds that string).
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.KeyNameCache.Enabled
     [HarmonyPatch(typeof(inputscript.oneKey), nameof(inputscript.oneKey.GetName))]
     public static class KeyNameCache
     {
-        public static bool Enabled = true;
         public static long Named, Reused;
 
         private sealed class Last { public KeyCode Key; public bool Axis, Invert; public int Joy, JoyAxis; public string AxisName; public object Words; public string Name; }
@@ -29,7 +27,7 @@ namespace TLDRevamp.Fixes
         private static bool Prefix(inputscript.oneKey __instance, ref string __result, out Last __state)
         {
             __state = null;
-            if (!Enabled || ls.l == null) return true;
+            if (ls.l == null) return true;
             var k = __instance;
             var last = Cache.GetValue(k, _ => new Last());
             if (last.Name != null && last.Key == k.key && last.Axis == k.axis && last.Invert == k.invertAxis && last.Joy == k.joy &&
@@ -53,6 +51,6 @@ namespace TLDRevamp.Fixes
             __state.AxisName = k.inputAxis; __state.Words = ls.l?.ww; __state.Name = __result;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"named\":" + Named + ",\"reused\":" + Reused + "}";
+        public static string Stats => "{\"named\":" + Named + ",\"reused\":" + Reused + "}";
     }
 }

@@ -129,17 +129,10 @@ namespace TLDRevamp.Net
             ClaimsSent++; CargoClaimed++;
             return true;
         }
-
-        /// A copy let go by a holder in no car of ours (standing outside, reaching into the bed or onto a seat): its
-        /// release pose in the box of a car simulated here, or its body meeting that car there — ours at once, before the
-        /// next physics step. The near scan came a frame late: the kinematic copy, collisions back on, sank into the seat
-        /// in the step between and the car took the whole hit (lobby3 run 12, 2026-10-23: a bot let a radio go onto P2's
-        /// car01 seat — the car Δv 40.5 m/s, thrown at 78 m/s, a mirror off, the radio 150 m away on both screens).
-        public static bool LetGoInCarClaims = true;
         public static long LetGoInCarClaimed;
         private static bool ClaimLetGoInCar(Ent e, bool stored)
         {
-            if (!LetGoInCarClaims || !CargoClaims || _localCars.Count == 0 || !e.Proxy || e.Root == null || e.Root.car != null || e.Ip == null || !LooseItem(e)) return false;
+            if (!CargoClaims || _localCars.Count == 0 || !e.Proxy || e.Root == null || e.Root.car != null || e.Ip == null || !LooseItem(e)) return false;
             if (!e.Ip.Newest(Time.realtimeSinceStartupAsDouble, out var gp, out _, out _)) return false;
             var p = mainscript.UnityPosFromGlobal(gp);
             foreach (var car in _localCars)
@@ -478,8 +471,8 @@ namespace TLDRevamp.Net
         private static uint RidingCar(Ent e, Transform t, Quaternion q, out Vector3 lp, out Quaternion lq, bool resting = false)
         {
             lp = default; lq = Quaternion.identity;
-            if (resting && RidingRestsInWorld) { if (e.RideCar != 0) { LogRidingSwitch(e, 0, t, "at rest"); e.RideCar = 0; RidingSwitches++; } return 0; }
-            if (!RidingFrames || !CarriedFrames || e.Root == null || e.Root.car != null || e.Root.P == null || !LooseItem(e)) { e.RideCar = 0; return 0; }
+            if (resting) { if (e.RideCar != 0) { LogRidingSwitch(e, 0, t, "at rest"); e.RideCar = 0; RidingSwitches++; } return 0; }
+            if (!RidingFrames || e.Root == null || e.Root.car != null || e.Root.P == null || !LooseItem(e)) { e.RideCar = 0; return 0; }
             Ent car = null;
             if (e.RideCar != 0 && ByNet.TryGetValue(e.RideCar, out var was) && was.Root != null && was.Root.car != null &&
                 RidingBox(was.Root.car).Contains(was.Root.transform.InverseTransformPoint(t.position)))
@@ -498,19 +491,10 @@ namespace TLDRevamp.Net
             RidingSent++;
             return id;
         }
-
-        /// The box an item riding a car stays in (RidingCar): the car's colliders, each measured in its own frame (CarLocalBounds
-        /// takes each one's world box, so it grows and shrinks with the car's tilt when it is measured), RidingRoomM around
-        /// and RidingHeadroomM above — an item lies ON a seat, a bed, the roof. Car01's box measured level reached 0.80 m up,
-        /// below its seat cushions (items there at 0.78-0.91 m): a radio on the rear seat dropped out of its car's frame at
-        /// 13 m/s, for the 10 s until the box was measured again, and the other player saw it 3.5 m off its seat (stress
-        /// campaign 2026-10-25, mpstress C, 1 run in 3). A/B `StableRidingBox` (false: CarLocalBounds, as 593c7cf).
-        public static bool StableRidingBox = true;
         public static float RidingRoomM = 0.2f, RidingHeadroomM = 0.6f;
         private static readonly System.Collections.Generic.Dictionary<carscript, Bounds> _ridingBox = new System.Collections.Generic.Dictionary<carscript, Bounds>();
         private static Bounds RidingBox(carscript car)
         {
-            if (!StableRidingBox) return CarLocalBounds(car);
             if (Time.time - _ridingBoxAt > 10f) { _ridingBoxAt = Time.time; _ridingBox.Clear(); }   // parts come off: measured again
             if (_ridingBox.TryGetValue(car, out var b)) return b;
             var t = car.transform; bool any = false;

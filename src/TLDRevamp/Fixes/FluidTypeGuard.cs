@@ -11,11 +11,9 @@ namespace TLDRevamp.Fixes
     /// checked, an unknown type is dropped and logged with the item and the call stack. The two readers drop one that got
     /// in some other way instead of throwing.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.FluidTypeGuard.Enabled
     [HarmonyPatch]
     public static class FluidTypeGuard
     {
-        public static bool Enabled = true;
         public static long Dropped;
 
         private static int Drop(List<mainscript.fluid> fluids)
@@ -41,7 +39,7 @@ namespace TLDRevamp.Fixes
         private static void Loading(save_tankscript __instance, tankscript _script)
         {
             var table = mainscript.s != null ? mainscript.s.fluids : null;
-            if (!Enabled || table == null || __instance.type == null || __instance.amount == null) return;
+            if (table == null || __instance.type == null || __instance.amount == null) return;
             int n = System.Math.Min(__instance.type.Length, __instance.amount.Length), bad = 0;
             for (int i = 0; i < n; i++) if (__instance.type[i] < 0 || __instance.type[i] >= table.Length) bad++;
             if (bad == 0) return;
@@ -65,14 +63,14 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix]
         private static void Reading(mainscript.fluidcontainer __instance)
         {
-            if (Enabled) Drop(__instance.fluids);
+            Drop(__instance.fluids);
         }
 
         [HarmonyPatch(typeof(tankcapscript), nameof(tankcapscript.GetCapString))]
         [HarmonyPrefix]
         private static void Cap(tankcapscript __instance)
         {
-            if (Enabled && __instance.Tank != null && __instance.Tank.F != null && Drop(__instance.Tank.F.fluids) > 0 && Dropped <= 20)
+            if (__instance.Tank != null && __instance.Tank.F != null && Drop(__instance.Tank.F.fluids) > 0 && Dropped <= 20)
                 Plugin.Log.LogWarning("  in the tank of " + __instance.transform.root.name);
         }
 
@@ -98,7 +96,7 @@ namespace TLDRevamp.Fixes
             try { tank.F.GetColor(); } catch (System.Exception ex) { readEx = ex.GetType().Name; }
             int left = 0; foreach (var f in tank.F.fluids) if ((int)f.type >= mainscript.s.fluids.Length) left++;
             tank.F.fluids.RemoveAll(f => (int)f.type >= mainscript.s.fluids.Length);   // the test's own leftovers
-            return "{\"tank\":" + Json.Str(tank.transform.root.name) + ",\"enabled\":" + (Enabled ? "true" : "false") +
+            return "{\"tank\":" + Json.Str(tank.transform.root.name) +
                    ",\"loadException\":" + Json.Str(loadEx) + ",\"droppedOnLoad\":" + (d1 - d0) +
                    ",\"readException\":" + Json.Str(readEx) + ",\"droppedOnRead\":" + (Dropped - d1) + ",\"unknownLeft\":" + left + "}";
         }

@@ -22,18 +22,16 @@ namespace TLDRevamp.Fixes
     /// area is reached, now on every machine and whatever the route. Both third chunks are inside the 3x3 the game keeps
     /// around any chunk it links; one that isn't there yet is made by the game's own UpdDotChunk (its dots come from the
     /// seed). Main road only worlds link through WorldGen.MainRoadOnlyRoads and are left alone.
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.ChunkLinks.Enabled.
     [HarmonyPatch(typeof(roadGenScript), nameof(roadGenScript.ConnectDots))]
     public static class ChunkLinks
     {
-        public static bool Enabled = true;
         public static long Links, Changed, Made;
 
         [HarmonyPrefix]
         [HarmonyPriority(Priority.First)]   // before RoadConnectMemo, which remembers the call by its inputs
         private static void Prefix(roadGenScript __instance, Vector3d _c1, Vector3d _c2, ref List<roadGenScript.dotClass> plussz)
         {
-            if (!Enabled || _c1.Equals(_c2) || !__instance.hasSideRoad) return;
+            if (_c1.Equals(_c2) || !__instance.hasSideRoad) return;
             double size = __instance.chunkSize;
             long dx = (long)System.Math.Round((_c1.x - _c2.x) / size), dz = (long)System.Math.Round((_c1.z - _c2.z) / size);
             Vector3d third;
@@ -63,6 +61,6 @@ namespace TLDRevamp.Fixes
             plussz = chunk.dots;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"links\":" + Links + ",\"changed\":" + Changed + ",\"made\":" + Made + "}";
+        public static string Stats => "{\"links\":" + Links + ",\"changed\":" + Changed + ",\"made\":" + Made + "}";
     }
 }

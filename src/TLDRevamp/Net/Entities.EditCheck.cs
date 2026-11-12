@@ -16,7 +16,6 @@ namespace TLDRevamp.Net
     /// (Entities.Anomaly), the first 5 of each reason are logged. The host's own edits are trusted (its world is the save).
     public static partial class Entities
     {
-        public static bool EditValidation = true;   // A/B: false = before v0.69.2 (only "is the sender at the object")
         public const int KindsKnown = KindUsable | KindTank | KindPart | KindColor | KindFood | KindAmmo | KindPlate | KindBusDoor | KindBlood;
         /// An item's edits leave at most every 0.15 s (EditTick): a door dragged is ~7 a second, pouring the same.
         public static float EditRatePerS = 20f, EditBurst = 40f;
@@ -203,7 +202,7 @@ namespace TLDRevamp.Net
         /// Server: a building usable change — from a player at that building, within the rate, with sane values.
         private static bool CheckPoiUsable(int from, PoiKey k, PoiState st)
         {
-            if (!EditValidation || from == 0) return true;
+            if (from == 0) return true;
             if (!TakeToken(_poiBuckets, from, PoiRatePerS, PoiBurst)) { Refuse(ref PoiRefusedRate, "poi rate", $"building usable from player {from}: over {PoiRatePerS:F0} a second"); return false; }
             if (k.Gen < 0 || k.Gen > 255 || k.U < 0 || k.U > 4096 || !Finite(k.X) || !Finite(k.Y) || !Finite(k.Z) ||
                 !Sane(st.XRot) || !Sane(st.YRot) || !Sane(st.Slide) || !Sane(st.Tuned) || st.Turn < -1 || st.Turn > 1024)
@@ -270,7 +269,7 @@ namespace TLDRevamp.Net
         }
 
         public static string EditCheckJson() =>
-            "{\"validation\":" + (EditValidation ? "true" : "false") + ",\"refused\":{\"outOfReach\":" + EditsOutOfReach + ",\"rate\":" + EditRefusedRate + ",\"kinds\":" + EditRefusedKinds +
+            "{\"refused\":{\"outOfReach\":" + EditsOutOfReach + ",\"rate\":" + EditRefusedRate + ",\"kinds\":" + EditRefusedKinds +
             ",\"values\":" + EditRefusedValues + ",\"poiReach\":" + PoiRefusedReach + ",\"poiRate\":" + PoiRefusedRate + ",\"poiValues\":" + PoiRefusedValues + "},\"last\":" + Json.Str(EditRefusedLast) +
             ",\"anomalies\":" + Anomalies + "}";
     }

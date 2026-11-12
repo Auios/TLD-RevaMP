@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The passenger-entry flip (two machines, the user's exact flow): the laptop PICKS UP the host's car (the same
-call the E-press makes). Nobody rides it, so it's the laptop's now, as an item picked up is (Entities.CarCopyLift;
+call the E-press makes). Nobody rides it, so it's the laptop's now, as an item picked up is (
 before v0.69.2 it had to stay the host's): both machines must agree who owns it, and its copy must not drift."""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))

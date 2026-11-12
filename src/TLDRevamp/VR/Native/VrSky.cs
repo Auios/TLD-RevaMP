@@ -33,8 +33,6 @@ namespace TLDRevamp.VR.Native
         private static int _savedMask, _next;
         private static bool _applied, _noShader;
         internal static int Faces;
-        /// Off: the game's own sky camera, even in single-pass (its clouds then show in the left eye only).
-        internal static bool Enabled = true;
         /// Cube faces rendered each frame: the sky moves slowly, so the whole cube every few frames is enough.
         internal static int FacesPerFrame = 1;
         internal static string Error = "";
@@ -47,7 +45,7 @@ namespace TLDRevamp.VR.Native
         {
             var pl = VrNative.Player;
             var sky = pl != null ? pl.skyCamera : null;
-            if (!Enabled || !Wanted || sky == null || _noShader) { Restore(); return; }
+            if (!Wanted || sky == null || _noShader) { Restore(); return; }
             if (_applied && sky != _sky) Restore();
             if (!_applied && !Apply(sky)) return;
 

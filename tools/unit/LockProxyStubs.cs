@@ -25,7 +25,6 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         static long GameFrozenReleased, RagdollLimbsRestored, OwnerClockResets;
-        static bool NewOwnerNewClock = true;
         static readonly Dictionary<TestCar, float> DamageGraceUntil = new Dictionary<TestCar, float>();
         static readonly Dictionary<object, Ent> ProxyWheelOwner = new Dictionary<object, Ent>();
         static readonly Dictionary<object, int> ProxyWheelIndex = new Dictionary<object, int>();
@@ -44,7 +43,6 @@ namespace TLDRevamp.Net
         static void PlaceAtNewest(Ent e) { }
         static bool HostGrabLetGo = true;
         static TestPickup _grabRefusedHere;
-        static bool PickupSkipsLock = true;
         static long PickupLocksSkipped;
         static bool ClaimTrace;
         static void TraceClaim(Ent e, ClaimReason reason) { }
@@ -53,7 +51,6 @@ namespace TLDRevamp.Net
         static void DetachContact(Ent e) { }
         static void AttachContact(Ent e) { }
         static Rigidbody[] HitchBodies(Ent e) => Array.Empty<Rigidbody>();
-        static bool DrawbarPickupClaim, CarCopyLift;
         static bool Ridden(Ent e) => false;
         static object[] WheelsOf(Ent e) => Array.Empty<object>();
         static void BindProxyEngine(Ent e) { }

@@ -62,7 +62,6 @@ namespace TLDRevamp.Net
                 "already-owned pickup sends no claim or held/clock notification");
             SetProxy(item, true); item.Root.car = new TestCar(); Uploaded = null;
             PickupPrefix(p);
-            IdleTrafficTest.Check(item.Proxy && Uploaded == null, "pickup interaction cannot claim a whole car");
             ByNet.Clear(); ProxyItems.Clear();
 
             foreach (ClaimReason reason in Enum.GetValues(typeof(ClaimReason)))
@@ -118,20 +117,16 @@ namespace TLDRevamp.Net
 
             // a copy handed from one remote player to another: the new owner's clock may be behind the old one's
             // (lobby3 C: the host's copy froze 134 m behind while a third player drove)
-            foreach (bool on in new[] { true, false })
             {
-                NewOwnerNewClock = on;
                 var copy = new Ent { NetId = 11, Epoch = 1, OwnerId = 2, Proxy = true }; copy.Root.P = new TestPickup(); ByNet[11] = copy;
                 copy.Ip.Add(new PoseInterpolator.Sample { T = 900, Pos = new Vector3d(0, 0, 0), Rot = Quaternion.identity }, 10);
                 packet.Reset(); packet.U8(Owner); packet.U32(11); packet.VarU32(3); packet.U32(2);
                 ApplyOwner(ClaimReader(packet));
                 copy.Ip.Add(new PoseInterpolator.Sample { T = 40, Pos = new Vector3d(1, 0, 0), Rot = Quaternion.identity }, 10.05);
-                IdleTrafficTest.Check(copy.OwnerId == 3 && copy.Proxy && copy.Ip.TelemetryAccepted == on,
-                    on ? "a copy handed to another remote player takes the new owner's states (its clock behind the old owner's)"
-                       : "A/B off: the old owner's interpolator drops them (the bug)");
+                IdleTrafficTest.Check(copy.OwnerId == 3 && copy.Proxy && copy.Ip.TelemetryAccepted,
+                    "a copy handed to another remote player takes the new owner's states (its clock behind the old owner's)");
                 ByNet.Clear();
             }
-            NewOwnerNewClock = true;
 
             CargoClaims = true;
             var car = new Ent { NetId = 7, OwnerId = MyId }; ByNet[7] = car;

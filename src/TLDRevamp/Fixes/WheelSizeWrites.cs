@@ -14,13 +14,9 @@ namespace TLDRevamp.Fixes
     /// same values as with the game's code. Its mass rule ("mass from the wheel's data; if the collider then reads 0,
     /// 20") stays the game's own: a 0 is written (the collider holds 20), read back, and 20 written again.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.WheelSizeWrites.Enabled
     [HarmonyPatch(typeof(wheelgraphicsscript), nameof(wheelgraphicsscript.WheelSize))]
     public static class WheelSizeWrites
     {
-        /// On by default: car park (tools/carpark.py --ab, 16 cars, 2+2 windows twice): 87.35 → 88.50 and 86.55 → 87.35
-        /// fps (+1%); every write was redundant (0 writes / 723k skipped); the parked cars stay awake all the same.
-        public static bool Enabled = true;
         public static long Calls, Writes, Skipped;
         public static int Patched;
 
@@ -39,29 +35,29 @@ namespace TLDRevamp.Fixes
         }
 
         [HarmonyPrefix]
-        private static void Count() { if (Enabled) Calls++; }
+        private static void Count() { Calls++; }
 
         public static void Radius(WheelCollider w, float r)
         {
-            if (Enabled && w.radius == r) { Skipped++; return; }
+            if (w.radius == r) { Skipped++; return; }
             w.radius = r; Writes++;
         }
 
         public static void Mass(WheelCollider w, float m)
         {
-            if (Enabled && w.mass == m) { Skipped++; return; }
+            if (w.mass == m) { Skipped++; return; }
             w.mass = m; Writes++;
         }
 
         public static void Forward(WheelCollider w, WheelFrictionCurve c)
         {
-            if (Enabled && Same(w.forwardFriction, c)) { Skipped++; return; }
+            if (Same(w.forwardFriction, c)) { Skipped++; return; }
             w.forwardFriction = c; Writes++;
         }
 
         public static void Sideways(WheelCollider w, WheelFrictionCurve c)
         {
-            if (Enabled && Same(w.sidewaysFriction, c)) { Skipped++; return; }
+            if (Same(w.sidewaysFriction, c)) { Skipped++; return; }
             w.sidewaysFriction = c; Writes++;
         }
 
@@ -70,6 +66,6 @@ namespace TLDRevamp.Fixes
             a.asymptoteValue == b.asymptoteValue && a.stiffness == b.stiffness;
 
         public static string Stats =>
-            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"patched\":" + Patched + ",\"calls\":" + Calls + ",\"writes\":" + Writes + ",\"skipped\":" + Skipped + "}";
+            "{\"patched\":" + Patched + ",\"calls\":" + Calls + ",\"writes\":" + Writes + ",\"skipped\":" + Skipped + "}";
     }
 }

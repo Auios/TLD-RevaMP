@@ -17,11 +17,9 @@ namespace TLDRevamp.Fixes
     /// same string (the game's own literals, read from the method) only when one of them changed or the text was changed
     /// by something else; otherwise the text keeps the equal string it has. Exact.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.SteamMenuDebugText.Enabled
     [HarmonyPatch(typeof(SteamP2PMenuHandlerScript), "UpdateRefresh")]
     public static class SteamMenuDebugText
     {
-        public static bool Enabled = true;
         public static long Built, Skipped, Patched;
 
         private static readonly FieldInfo Field = AccessTools.Field(typeof(SteamP2PMenuHandlerScript), "deguText");
@@ -60,13 +58,13 @@ namespace TLDRevamp.Fixes
             bool steam = SteamP2PNetworkingUnderTheHoodScript.IsSteam(), connected = SteamP2PNetworkingUnderTheHoodScript.IsConnected(),
                  host = SteamP2PNetworkingUnderTheHoodScript.IsHost(), password = SteamP2PNetworkingUnderTheHoodScript.HasCorrectPassword();
             int state = (steam ? 1 : 0) | (connected ? 2 : 0) | (host ? 4 : 0) | (password ? 8 : 0);
-            if (Enabled && state == _last && ReferenceEquals(target, _target) && ReferenceEquals(target.text, _text)) { Skipped++; return; }
+            if (state == _last && ReferenceEquals(target, _target) && ReferenceEquals(target.text, _text)) { Skipped++; return; }
             Built++;
             _text = Labels[0] + steam.ToString() + Labels[1] + connected.ToString() + Labels[2] + host.ToString() + Labels[3] + password.ToString();
             _last = state; _target = target;
             target.text = _text;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"patched\":" + Patched + ",\"built\":" + Built + ",\"skipped\":" + Skipped + "}";
+        public static string Stats => "{\"patched\":" + Patched + ",\"built\":" + Built + ",\"skipped\":" + Skipped + "}";
     }
 }

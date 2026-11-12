@@ -45,9 +45,6 @@ namespace TLDRevamp.Net
         public const byte ModSetting = 89;    // s→c: varint n, n × (str key, str value)
 
         public static bool IsModMessage(byte t) => t >= ModShare && t <= ModClock || t >= ModState && t <= ModSetting;
-
-        /// Switch (A/B, bridge `set TLDRevamp.Net.ModObjects.Enabled False`): mods' objects stay local.
-        public static bool Enabled = true;
         public static int MaxObjectsPerPlayer = 1000;
         public static float RecordMinInterval = 0.2f;   // the owner merges record changes to at most 5 a second per object
         public static float PoseKeepAliveS = 2f;
@@ -90,7 +87,7 @@ namespace TLDRevamp.Net
 
         public void Share(SharedObject so)
         {
-            if (!Enabled || !InSession || !_started) return;   // local for now; shared when this machine hosts (SessionStart)
+            if (!InSession || !_started) return;   // local for now; shared when this machine hosts (SessionStart)
             SendShare(so);
         }
 
@@ -218,7 +215,7 @@ namespace TLDRevamp.Net
                 W.Reset(); W.U8(ModClock); W.F64(Time.realtimeSinceStartupAsDouble);
                 ToServer(W, true);
             }
-            bool now = Enabled && Entities.InSession && mainscript.s != null && mainscript.s.player != null;
+            bool now = Entities.InSession && mainscript.s != null && mainscript.s.player != null;
             if (now && !_started) SessionStart();
             if (!_started) return;
             if (I.IsHost) ServerTick(Time.unscaledDeltaTime);
@@ -583,7 +580,6 @@ namespace TLDRevamp.Net
 
         public static void ServerReceive(int from, byte type, NetReader r)
         {
-            if (!Enabled && type != ModClock) return;
             // reliable traffic: shares, records, edits, events, claims (60/s, bursts of 120); poses have their own budget
             if (type == ModPose ? !Spend(PoseBudget, from, 25f * 20f, 1000f) : type == ModState ? !Spend(StateBudget, from, 400f, 800f) : type != ModClock && !Spend(MsgBudget, from, 60f, 120f))
             {
@@ -1044,7 +1040,7 @@ namespace TLDRevamp.Net
         public static string StatusJson()
         {
             var sb = new StringBuilder("{");
-            sb.Append($"\"enabled\":{(Enabled ? "true" : "false")},\"started\":{(_started ? "true" : "false")},\"mods\":{MpApi.Mods.Count},\"types\":{MpApi.Types.Count},");
+            sb.Append($"\"started\":{(_started ? "true" : "false")},\"mods\":{MpApi.Mods.Count},\"types\":{MpApi.Types.Count},");
             sb.Append($"\"shared\":{Shared},\"added\":{Added},\"addMissingType\":{AddMissingType},\"addFailed\":{AddFailed},\"records\":{Records},\"edits\":{Edits},\"editsRefused\":{EditsRefused},");
             sb.Append($"\"poses\":{Poses},\"events\":{Events},\"ownerChanges\":{OwnerChanges},\"removes\":{Removes},\"dropped\":{Dropped},\"lastDrop\":{Json.Str(LastDrop)},");
             sb.Append($"\"states\":{States},\"statesIn\":{StatesIn},\"statesForwarded\":{StatesForwarded},\"statesHeld\":{StatesHeld},\"placed\":{Placed},\"storedHere\":{StoredHere},\"storesSent\":{StoresSent},\"placesSent\":{PlacesSent},\"settingsIn\":{SettingsIn},\"settingsSent\":{SettingsSent},");

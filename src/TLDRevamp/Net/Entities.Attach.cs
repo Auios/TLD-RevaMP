@@ -88,19 +88,11 @@ namespace TLDRevamp.Net
             var at = e.Root != null ? e.Root.attachable : null;
             return at != null && at.attached && at.parentAtAttach && e.Root.transform.parent != null;
         }
-
-        /// Bolted in, it moves with what it's bolted onto: its owner streams no pose, its copies follow their parent. Before
-        /// v0.69.2 only a part or a single item: a shared object of several items — a wheel spawned with its tyre (the dev
-        /// menu's "TireFelni Variant" is rim + tyre) — bolted onto a car went on streaming its own pose at 20 Hz while it
-        /// rode the car, and every copy set it from that stream each frame instead of letting its hub carry it (two-copy test:
-        /// 602 states in 30 s of driving for one wheel; riding, none).
-        public static bool BoltedGroupRides = true;   // A/B: false = before v0.69.2
         public static long BoltedGroupSkips;
         internal static bool RidesBolted(Ent e)
         {
             if (!RidesParent(e)) return false;
             if (e.PartIndex >= 0 || e.Items.Count <= 1) return true;
-            if (!BoltedGroupRides) return false;
             BoltedGroupSkips++;
             return true;
         }
@@ -187,36 +179,16 @@ namespace TLDRevamp.Net
             if (type == AttachReq) AttachReqsSent++; else AttachesSent++;
             SessionLog.Event(type == AttachReq ? "attach-request" : "attach-sent", pe.NetId, parentNet, item: parentIdx, slot: rec.index, from: MyId, epoch: pe.Epoch);
         }
-
-        /// The attached object's own pose, in the frame of what its attach point hangs on (a slot, a collider, the item or
-        /// building it's on; the point itself for one on the world). The record above says only where the point is: the
-        /// game's loader keeps the object where it is (save_attachable.Load sets tempDontMoveAtAttach — right for a
-        /// save, whose item record has the pose), and the attaching machine's glue put it by its nearest collider point,
-        /// turned the way it was held. Every other copy stayed wherever its last smoothed pose had left it, turned its
-        /// own way: 0.9 m off with MountAnything (which sent the pose as its own event). The official MP sends it with
-        /// the record too (syncScript.SendAttachable: lpos/lrot). The frame is the point's parent, not the point: a
-        /// point the loader makes on a collider or item starts unrotated in world space, so its turn relative to a car
-        /// differs on a machine whose car was facing another way at that moment.
-        /// Position in mm (varint), rotation as in states (smallest three). Pose always sent; the switch is applying it.
-        public static bool AttachPose = true;   // A/B: false = before v0.69.2 (the copy stays where it was)
         public static long AttachPosesSent, AttachPosesApplied, AttachPosesBad;
         public static float AttachPoseOffLast, AttachPoseOffMax, AttachPoseAngLast;   // copy vs. the attacher's pose when it arrived (m, °)
 
         private static Transform AttachFrame(attachablescript at) => at.point == null ? null : at.point.parent != null ? at.point.parent : at.point;
-
-        /// A part crafted into a slot goes where the slot puts it, on every machine: partslotscript.Craft moves it there itself
-        /// (SmoothCraft for craftSmoothMaxTime, 0.5 s, then SnapPart). The attach hook runs at the start of that move, so the
-        /// pose it carried was the part's pose before it — where the player held it, or where it lay. A copy that was already
-        /// in the slot when it arrived (a non-owner's bolt coming back as the owner's AttachSync, its own move long over) was
-        /// put back there and stayed, parented to the hub: playtest 2026-10-18, "wheels not on axles properly", six "wheel
-        /// bug?" marks; with 0.6 s of latency the bolter's wheel sat 0.5-2.8 m off its axle (two-copy test). Slots: no pose.
-        public static bool SlotPoseSkip = true;   // A/B: false = before v0.69.2 (a slot attach applies the craft's starting pose)
         public static long SlotPosesSkipped;
 
         private static void WriteAttachPose(NetWriter w, attachablescript at)
         {
             var f = AttachFrame(at);
-            if (f == null || (SlotPoseSkip && at.slot != null)) { w.U8(0); return; }
+            if (f == null || at.slot != null) { w.U8(0); return; }
             var t = at.transform; var iq = Quaternion.Inverse(f.rotation);
             var lp = iq * (t.position - f.position); var lq = iq * t.rotation;
             var path = DoorAttachFrame(f) ? AttachFramePath(at, f) : null;
@@ -261,7 +233,6 @@ namespace TLDRevamp.Net
             Vector3 p = f.position + f.rotation * lp; Quaternion q = f.rotation * lq;
             AttachPoseOffLast = (t.position - p).magnitude; AttachPoseAngLast = Quaternion.Angle(t.rotation, q);
             if (AttachPoseOffLast > AttachPoseOffMax) AttachPoseOffMax = AttachPoseOffLast;
-            if (!AttachPose) return;
             t.SetPositionAndRotation(p, q);
             if (_storedDoorAttaches.TryGetValue(pe.NetId, out var door)) door.BoundPoint = at.point;
             AttachPosesApplied++;
@@ -361,7 +332,7 @@ namespace TLDRevamp.Net
             if (framePath != null) KeepDoorAttach(partNet, framePath, pointLp, poseLp, poseLq);
             else _storedDoorAttaches.Remove(partNet);
             SessionLog.Event("attach-received", partNet, parentNet, item: parentIdx, slot: index, to: MyId);
-            if (hasPose && SlotPoseSkip && indexType == 2) { hasPose = false; SlotPosesSkipped++; }   // an older sender's, a kept one
+            if (hasPose && indexType == 2) { hasPose = false; SlotPosesSkipped++; }   // an older sender's, a kept one
             if (ByNet.TryGetValue(partNet, out var pd) && !Resolve(pd) && StoredAttach && AttachStored(pd, attachType, indexType, index, parentNet, parentIdx, poigen, poiid, lpos, gpos))
                 return;
             if (!ByNet.TryGetValue(partNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null)
@@ -525,7 +496,7 @@ namespace TLDRevamp.Net
         }
 
         public static string AttachStats() => "{\"attachesStored\":" + AttachesStored + ",\"detachesStored\":" + DetachesStored + ",\"placedForAttach\":" + PartsPlacedForAttach + ",\"heldClearedOnAttach\":" + HeldClearedOnAttach + ",\"sent\":" + AttachesSent + ",\"applied\":" + AttachesApplied + ",\"same\":" + AttachesSame + ",\"failed\":" + AttachesFailed
-                                              + ",\"poseOn\":" + (AttachPose ? "true" : "false") + ",\"slotPoseSkip\":" + (SlotPoseSkip ? "true" : "false") + ",\"slotPosesSkipped\":" + SlotPosesSkipped + ",\"boltedGroupRides\":" + (BoltedGroupRides ? "true" : "false") + ",\"boltedGroupSkips\":" + BoltedGroupSkips +",\"posesSent\":" + AttachPosesSent + ",\"posesApplied\":" + AttachPosesApplied + ",\"posesBad\":" + AttachPosesBad
+                                              + ",\"slotPosesSkipped\":" + SlotPosesSkipped + ",\"boltedGroupSkips\":" + BoltedGroupSkips +",\"posesSent\":" + AttachPosesSent + ",\"posesApplied\":" + AttachPosesApplied + ",\"posesBad\":" + AttachPosesBad
                                               + ",\"poseOffLast\":" + Json.Num(AttachPoseOffLast) + ",\"poseOffMax\":" + Json.Num(AttachPoseOffMax) + ",\"poseAngLast\":" + Json.Num(AttachPoseAngLast)
                                               + ",\"fails\":" + Json.Str(AttachFails) + ",\"detachSent\":" + DetachSyncsSent + ",\"detachApplied\":" + DetachSyncsApplied + ",\"unmountTrace\":" + Json.Str(UnmountTrace) + "}";
     }

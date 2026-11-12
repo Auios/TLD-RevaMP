@@ -55,7 +55,7 @@ namespace TLDRevamp
         private static void RebaseAfter(mainscript __instance, Vector3d __state)
         {
             var after = __instance.visszarakva;
-            if (!RebaseLab.ActualShiftFlags || after.x != __state.x || after.y != __state.y || after.z != __state.z)
+            if (after.x != __state.x || after.y != __state.y || after.z != __state.z)
                 History[Slot()].Flags |= 1;
         }
         [HarmonyPatch(typeof(itemPlaceRemoveScript), nameof(itemPlaceRemoveScript.Upd)), HarmonyPrefix]

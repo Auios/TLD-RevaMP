@@ -13,7 +13,6 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         public const byte IgnitionKey = 96;   // u32 net, u8 held: a non-owner holding a car's key (reliable)
-        public static bool KeyForward = true;   // A/B: false = before v0.69.2 (a non-owner's key turn stays on their copy)
         public static float KeyResendS = 0.5f, KeyHoldTimeoutS = 1.5f;
         public static long KeyHoldsSent, KeyHoldsApplied, KeyHoldsRefused;
 
@@ -28,7 +27,7 @@ namespace TLDRevamp.Net
             private static bool Prefix(carscript __instance)
             {
                 if (!InSession || !IsProxy(__instance)) return true;
-                if (KeyForward && __instance.ignitionUsable != null && __instance.ignitionUsable.Holding()) _keySeen[__instance] = Time.time;
+                if (__instance.ignitionUsable != null && __instance.ignitionUsable.Holding()) _keySeen[__instance] = Time.time;
                 return false;
             }
         }
@@ -88,8 +87,8 @@ namespace TLDRevamp.Net
         {
             uint net = r.U32(); byte held = r.U8(); ushort ms = r.U16();
             if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId == from || !se.Car) { KeyHoldsRefused++; return; }
-            if (EditValidation && from != 0 && !TakeToken(_editBuckets, from, EditRatePerS, EditBurst)) { KeyHoldsRefused++; return; }
-            if (EditRangeCheck && from != 0 && !AtObject(from, se)) { KeyHoldsRefused++; Refuse(ref EditsOutOfReach, "key reach", $"ignition key from player {from}: they aren't at net {net}"); return; }
+            if (from != 0 && !TakeToken(_editBuckets, from, EditRatePerS, EditBurst)) { KeyHoldsRefused++; return; }
+            if (from != 0 && !AtObject(from, se)) { KeyHoldsRefused++; Refuse(ref EditsOutOfReach, "key reach", $"ignition key from player {from}: they aren't at net {net}"); return; }
             W.Reset(); W.U8(IgnitionKey); W.U32(net); W.U8(held); W.U16(ms);
             ServerSendTo(se.OwnerId, W, true);
         }

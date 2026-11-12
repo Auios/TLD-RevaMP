@@ -13,10 +13,8 @@ namespace TLDRevamp.Net
     /// (PoseInterpolator.Hold): the others are shown that much further back. The display clock steers there within its
     /// ±5 % rate, so nothing jumps.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Net.Entities.LinkedDelay
     public static partial class Entities
     {
-        public static bool LinkedDelay = true;   // A/B: false = every copy on its own delay (before v0.67.1)
         public static float LinkedDelayEveryS = 0.2f, LinkedHoldMaxS = 0.5f;
         public static long LinkedGroups, LinkedHeld;
         public static float LinkedLastHoldMs;
@@ -31,7 +29,6 @@ namespace TLDRevamp.Net
             _linkedAt = Time.time;
             foreach (var e in _linkedHeld) if (e.Ip != null) e.Ip.Hold = 0;
             _linkedHeld.Clear();
-            if (!LinkedDelay) return;
             double now = Time.realtimeSinceStartupAsDouble;
             var done = new HashSet<Transform>();
             foreach (var g in Fixes.TrailerGrip.All)

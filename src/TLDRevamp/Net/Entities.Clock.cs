@@ -32,7 +32,6 @@ namespace TLDRevamp.Net
             if (_hostRateAt < 0 || _hostScale != Time.timeScale)
             {
                 _hostRateAt = now; _hostScaledAt = scaled; _hostScale = Time.timeScale; _hostRate = _hostScale;
-                _timeSyncAcc = 10f; _radioAcc = RadioResendS;
                 _worldSentAt = _radioSentAt = -100;
             }
             else if (now - _hostRateAt >= 2)
@@ -58,7 +57,6 @@ namespace TLDRevamp.Net
             double stamp = r.F64(); float position = r.F32(), rate = r.F32(); ushort epoch = r.U16(); bool snap = r.Bool();
             double total = r.Remaining >= 8 ? r.F64() : double.NaN; float sleepProgress = r.Remaining >= 4 ? r.F32() : float.NaN;
             if (r.Bad || IsHost || !Finite(position) || !Finite(rate) || rate < 0f || double.IsNaN(stamp) || double.IsInfinity(stamp)) return;
-            if (!Fixes.SessionClocks.WorldEnabled) { ApplyWorldTime(position, snap); return; }
             if (!ClockMath.AcceptWorldSample(stamp, _worldStamp, _worldWakeStamp, snap, _worldAwaitingWake, epoch, _worldSeenEpoch)) { Fixes.SessionClocks.WorldStale++; return; }
             _worldStamp = stamp; _worldPosition = position; _worldRate = rate;
             _worldSnap |= snap || !_worldHasEpoch || epoch != _worldSeenEpoch;
@@ -75,7 +73,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static void Prefix(napszakvaltakozas __instance)
             {
-                if (!InSession || IsHost || !Fixes.SessionClocks.WorldEnabled || _worldStamp < 0 || mainscript.s == null) { _worldFollowing = false; return; }
+                if (!InSession || IsHost || _worldStamp < 0 || mainscript.s == null) { _worldFollowing = false; return; }
                 if (mainscript.s.sleeping || _wasSleeping) { _worldFollowing = false; return; }
                 double now = ModObjects.ClockTime, length = __instance.dt + __instance.nt;
                 double target = ClockMath.Wrap(ClockMath.Project(_worldPosition, _worldStamp, now, _worldRate), length);
@@ -93,10 +91,10 @@ namespace TLDRevamp.Net
             _hostRateAt = -1; _hostScale = -1; _hostRate = 1f;
             _worldStamp = _worldWakeStamp = -1; _worldFollowing = _worldSnap = false; _worldInstance = null;
             _worldHasEpoch = _worldAwaitingWake = false; _worldEpoch = _worldSeenEpoch = 0;
-            _timeSyncAcc = 0f; _wasSleeping = false; _wokeAt = -100f;
+            _wasSleeping = false; _wokeAt = -100f;
             _sleepProgress = -1f; _sleepProgressAt = -100;
             _worldSentAt = _radioSentAt = -100;
-            _radioLast = new int[0]; _radioStartLast = new float[0]; _radioAcc = 0f; _radioAnchors.Clear(); _radioStamp = -1;
+            _radioLast = new int[0]; _radioStartLast = new float[0]; _radioAnchors.Clear(); _radioStamp = -1;
         }
     }
 }

@@ -15,7 +15,6 @@ namespace TLDRevamp.Net
     public static partial class Tpa
     {
         public static bool Enabled = true;
-        public static bool FloorAware = true;   // A/B: false = before v0.69.2 (the lowest surface with room at the spot: a roof, the ground under a floor)
         public static int CooldownS = 300;
         public static readonly int[] Choices = { -1, 0, 60, 300, 900 };   // -1 = off; also used by Settings → Revamp
         public const float AnswerS = 60f;
@@ -108,8 +107,7 @@ namespace TLDRevamp.Net
             // on the floor they stand on (gy: their body's position, at or over their feet), not the lowest surface with
             // room at the spot: in the spawn house that was its roof (tpatest: asker 3.6 m over the host), under a raised
             // floor the ground beneath it
-            if (FloorAware) DebugBridge.PlaceTpa(gx, gz, gy);
-            else DebugBridge.PlaceAt(gx, gz);
+            DebugBridge.PlaceTpa(gx, gz, gy);
             _arrivalWaitingGround = DebugBridge.TpBusy;
             _arrivalGroundReady = !_arrivalWaitingGround;
             Last = "placed on foot";
@@ -207,15 +205,15 @@ namespace TLDRevamp.Net
                 else
                 {
                     var offset = mainscript.GlobalFromUnityPos(p.transform.position) - _arrivalTarget;
-                    bool higher = !p.Bsitting && FloorAware && offset.y < -.4 &&
+                    bool higher = !p.Bsitting && offset.y < -.4 &&
                         TpaPlacement.HigherFloor(_arrivalTarget, p.transform.position);
-                    if (!p.Bsitting && FloorAware && TpaArrival.Retry(_arrivalGroundReady, offset.x, offset.y, offset.z, Time.realtimeSinceStartupAsDouble - _arrivalStarted, _worldUntil - Time.realtimeSinceStartupAsDouble, higher))
+                    if (!p.Bsitting && TpaArrival.Retry(_arrivalGroundReady, offset.x, offset.y, offset.z, Time.realtimeSinceStartupAsDouble - _arrivalStarted, _worldUntil - Time.realtimeSinceStartupAsDouble, higher))
                     {
                         DebugBridge.PlaceTpa(_arrivalTarget.x, _arrivalTarget.z, _arrivalTarget.y, true);
                         _arrivalWaitingGround = DebugBridge.TpBusy;
                         _arrivalAt = Time.realtimeSinceStartupAsDouble + .5;
                     }
-                    else if (!p.Bsitting && FloorAware && offset.y < -.4 && !TpaArrival.Arrived(_arrivalGroundReady, offset.x, offset.y, offset.z) && Time.realtimeSinceStartupAsDouble < _worldUntil)
+                    else if (!p.Bsitting && offset.y < -.4 && !TpaArrival.Arrived(_arrivalGroundReady, offset.x, offset.y, offset.z) && Time.realtimeSinceStartupAsDouble < _worldUntil)
                         _arrivalAt = Time.realtimeSinceStartupAsDouble + .5;
                     else
                     {

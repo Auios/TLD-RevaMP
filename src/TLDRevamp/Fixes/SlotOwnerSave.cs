@@ -14,11 +14,9 @@ namespace TLDRevamp.Fixes
     /// search missed is recorded as what it is — slot `index` of the slot's own item (type 1, index type 2), which the
     /// game's loader crafts back into that slot. Readable by the unmodded game too.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.SlotOwnerSave.Enabled
     [HarmonyPatch(typeof(save_attachable), nameof(save_attachable.Save), new[] { typeof(attachablescript), typeof(uint) })]
     public static class SlotOwnerSave
     {
-        public static bool Enabled = true;
         public static long Fixed;
 
         /// What the part is attached to: the game's search, or — for a slot outside its owner's hierarchy — the slot's item.
@@ -26,7 +24,7 @@ namespace TLDRevamp.Fixes
         {
             if (at == null || !at.attached) return null;
             var t = at.AttachedToTosave();
-            if (t != null || !Enabled) return t;
+            if (t != null) return t;
             var s = at.slot;
             return s != null && s.tosaveitem != null && s.tosaveitem.partslotscripts != null && s.tosaveitem.partslotscripts.Contains(s) ? s.tosaveitem : null;
         }
@@ -34,7 +32,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPostfix]
         private static void Postfix(save_attachable __instance, attachablescript _script)
         {
-            if (!Enabled || __instance.attachType != 4 || _script == null || _script.point == null || _script.AttachedToTosave() != null) return;
+            if (__instance.attachType != 4 || _script == null || _script.point == null || _script.AttachedToTosave() != null) return;
             var owner = Owner(_script);
             if (owner == null || owner == _script.tosave) return;
             __instance.attachType = 1;

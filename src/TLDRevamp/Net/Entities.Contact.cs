@@ -111,15 +111,9 @@ namespace TLDRevamp.Net
         internal static void ServerSleepSync(int from, float worldTime, double stamp, float sleepProgress = float.NaN)
         {
             if (!float.IsNaN(sleepProgress)) { _sleepProgress = sleepProgress; _sleepProgressAt = ModObjects.ClockTime; Fixes.CloudClock.SleepProgress(sleepProgress); }
-            if (Fixes.SessionClocks.WorldEnabled)
-            {
-                if (from != 0) ApplyWorldTime((float)ClockMath.Project(worldTime, stamp, ModObjects.ClockTime, _hostRate), true);
-                _worldEpoch++;
-                WriteWorldClock(true); ServerSendAll(W, true, 0); Fixes.SessionClocks.WorldSent++;
-                return;
-            }
-            W.Reset(); W.U8(SleepSync); W.F32(worldTime); W.F64(stamp);
-            ServerSendAll(W, true, from);   // except==from: the sleeper is already there (Deliver covers the host)
+            if (from != 0) ApplyWorldTime((float)ClockMath.Project(worldTime, stamp, ModObjects.ClockTime, _hostRate), true);
+            _worldEpoch++;
+            WriteWorldClock(true); ServerSendAll(W, true, 0); Fixes.SessionClocks.WorldSent++;
         }
 
 

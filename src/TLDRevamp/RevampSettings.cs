@@ -225,7 +225,7 @@ namespace TLDRevamp
                 () => Sandstorms.Frequency, v => Sandstorms.SetFrequency(v));
             Header("Multiplayer",
                 "Voice and text chat with the other players, and what your game allows when you host. Host or join from the game's Multiplayer button (or F11).");
-            // the loading screen when joining is always on (2026-11-11: not a choice in the menu); tests still `set` JoinLoading.Enabled
+            // the loading screen when joining is always on (2026-11-11: not a choice in the menu)
             Choice("voice", "Voice chat", new[] { "Push to talk", "Open microphone", "Off" }, 0,
                 "Push to talk: hold the game's \"Voice chat\" key (Settings → Controls; K if you never set one)." +
                 "\nOpen microphone: Steam sends your voice whenever you speak." +

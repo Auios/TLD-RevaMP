@@ -29,8 +29,6 @@ namespace TLDRevamp
         private sealed class Row { public GameObject Go; public RevampSettings.Entry Entry; public float X, Before, After; public bool Header, Button, Inline; public string Section; }
         /// A section of at most this many settings stays on the main page instead of getting a button of its own.
         public static int InlineMax = 1;
-        /// A/B (bridge `set`): false = every section in one long list (before 2026-11-11).
-        public static bool Submenus = true;
         private static readonly List<Ui> Built = new List<Ui>();
         /// After a change made outside the tab (a key captured): every built Revamp tab shows the new values.
         internal static void RefreshOpen() { foreach (var ui in Built) if (ui.Tab != null) Refresh(ui); }
@@ -311,7 +309,7 @@ namespace TLDRevamp
         private static void Layout(Ui ui)
         {
             if (ui.Content == null || ui.Rows.Count == 0) return;
-            bool main = !Submenus || ui.Page == null;
+            bool main = ui.Page == null;
             foreach (var go in ui.MainOnly) if (go != null && go.activeSelf != main) go.SetActive(main);
             if (ui.Back != null && ui.Back.activeSelf == main) ui.Back.SetActive(!main);
             if (ui.Title != null) ui.Title.text = main ? "Revamp" : ui.Page;
@@ -321,7 +319,7 @@ namespace TLDRevamp
             foreach (var kv in ui.SectionButtons)
             {
                 if (kv.Value == null) continue;
-                bool show = Submenus && main;
+                bool show = main;
                 if (kv.Value.activeSelf != show) kv.Value.SetActive(show);
                 if (!show) continue;
                 Place(kv.Value, (n % 2) * 460f, y - (n / 2) * 100f, 440f, 80f);
@@ -331,7 +329,7 @@ namespace TLDRevamp
             foreach (var row in ui.Rows)
             {
                 if (row.Go == null) continue;
-                bool onPage = !Submenus || (main ? row.Inline : row.Section == ui.Page && row.Entry.Kind != RevampSettings.Kind.Header);   // the page's title names it
+                bool onPage = main ? row.Inline : row.Section == ui.Page && row.Entry.Kind != RevampSettings.Kind.Header;   // the page's title names it
                 bool shown = onPage && (row.Entry.Visible == null || row.Entry.Visible());
                 if (row.Go.activeSelf != shown) row.Go.SetActive(shown);
                 if (!shown) continue;

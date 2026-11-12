@@ -14,10 +14,8 @@ namespace TLDRevamp.Fixes
     /// materials, same place: the picture stays the same (checked by screenshot diff); only the per-frame skinning goes.
     /// Kept in step: a later BakeCollider (a Place again) re-points the child; the grass setting's material swap
     /// (GrassMaterialRemoveScript.Upd on the skinned renderer) is copied. A road under an LODGroup is left as it was.
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.BakedRoads.Enabled (off: new road pieces skin as before).
     public static class BakedRoads
     {
-        public static bool Enabled = true;
         public static long Baked, Rebaked, SkippedLod, MaterialSyncs;
         private const string ChildName = "TLDRevamp baked road";
 
@@ -27,7 +25,7 @@ namespace TLDRevamp.Fixes
             [HarmonyPostfix]
             private static void Postfix(roadscript __instance)
             {
-                if (Enabled) Use(__instance);
+                Use(__instance);
             }
         }
 
@@ -115,6 +113,6 @@ namespace TLDRevamp.Fixes
         }
 
         internal static string Stats() =>
-            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"baked\":" + Baked + ",\"rebaked\":" + Rebaked + ",\"skippedLod\":" + SkippedLod + ",\"materialSyncs\":" + MaterialSyncs + "}";
+            "{\"baked\":" + Baked + ",\"rebaked\":" + Rebaked + ",\"skippedLod\":" + SkippedLod + ",\"materialSyncs\":" + MaterialSyncs + "}";
     }
 }

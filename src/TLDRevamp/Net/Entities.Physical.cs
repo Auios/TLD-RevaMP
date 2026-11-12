@@ -196,8 +196,7 @@ namespace TLDRevamp.Net
             }
         }
 
-        /// A/B switch: a display copy's body found dynamic is made kinematic again (false: it stayed so, skipped below).
-        public static bool CopyBodyHeal = true; public static int CopyBodiesHealed;
+        public static int CopyBodiesHealed;
         /// A copy is moved by its owner's states, its bodies kinematic. One the game made dynamic on this machine alone (its
         /// pickup of an unclaimed car copy: the playtest bike) was skipped by BodyMotionTick for good — it lay where it was
         /// dropped, its shown time frozen. Not while this player holds it: the game's Drop runs first.
@@ -232,7 +231,7 @@ namespace TLDRevamp.Net
                 // every 4 s on the other machines, busstool.py K). Nothing of it collides: placed by its transform (Tick)
                 if (StoredByTransform && e.Stored) { if (e.MovedByBody) StopBodyMotion(e); continue; }
                 var rb = e.Root.GetComponent<Rigidbody>();
-                if (rb != null && !rb.isKinematic && CopyBodyHeal) HealCopyBody(e);
+                if (rb != null && !rb.isKinematic) HealCopyBody(e);
                 if (rb == null || !rb.isKinematic) continue;
                 // held in a car (no collisions while held): placed each frame in the car's shown pose (Entities.Tick). Moved
                 // from the physics step it was a step or two behind the car: 0.5 m at 50 km/h (heldincar.py)

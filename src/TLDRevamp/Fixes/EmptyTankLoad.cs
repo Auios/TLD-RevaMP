@@ -12,11 +12,9 @@ namespace TLDRevamp.Fixes
     /// After the game's LoadStuff, every tank of the item with no record is emptied — exactly what its save says. Also
     /// used for network resyncs (Entities.Resync): an owner's emptied tank arrives as "no record" the same way.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.EmptyTankLoad.Enabled
     [HarmonyPatch(typeof(savedatascript), nameof(savedatascript.LoadStuff), new[] { typeof(savedata), typeof(uint), typeof(bool) })]
     public static class EmptyTankLoad
     {
-        public static bool Enabled = true;
         public static long Emptied;
 
         // the game removes the item's records from the far store at the end of LoadStuff (itemData.RemoveID): which
@@ -27,7 +25,7 @@ namespace TLDRevamp.Fixes
         private static void Prefix(savedatascript __instance, savedata _data, uint _key, bool _clientDontAskOnSpawn, out Pending __state)
         {
             __state = default;
-            if (!Enabled || _data == null || _data.itemData == null || !__instance.items.TryGetValue(_key, out var it) || it == null || it.loaded || it.tanks == null || it.tanks.Count == 0) return;
+            if (_data == null || _data.itemData == null || !__instance.items.TryGetValue(_key, out var it) || it == null || it.loaded || it.tanks == null || it.tanks.Count == 0) return;
             if (!syncScript.IsHostOrSingle() && !_clientDontAskOnSpawn) return;   // the game asks the host instead
             if (!savedatascript.IndexOfID(_data.itemData.items, _key, out _)) return;  // LoadStuff returns early
             var rec = new bool[it.tanks.Count];
@@ -46,7 +44,7 @@ namespace TLDRevamp.Fixes
         /// Tanks of `it` without a record in `recs` hold nothing (`recs` must still hold the item's entries).
         public static void EmptyUnrecorded(tosaveitemscript it, List<save_tankscript> recs)
         {
-            if (!Enabled || it == null || it.tanks == null) return;
+            if (it == null || it.tanks == null) return;
             for (int i = 0; i < it.tanks.Count; i++)
                 if (!savedatascript.IndexOfID(recs, it.idInSave, i, out _)) Empty(it.tanks[i]);
         }

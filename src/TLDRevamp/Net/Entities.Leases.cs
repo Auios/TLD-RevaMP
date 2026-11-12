@@ -465,20 +465,20 @@ namespace TLDRevamp.Net
                 if (hit == null)
                     foreach (var e in ByNet.Values)
                         if (e.Proxy && e.Root != null && e.Root.transform == __instance.transform.root) { hit = e; break; }
-                if (hit == null && DrawbarPickupClaim)
+                if (hit == null)
                     foreach (var e in ByNet.Values)
                         if (e.Proxy && HitchTrailer(e) && e.Root.attachable.gameObject == __instance.gameObject) { hit = e; break; }
                 if (hit == null) return;
                 // a whole car: lifted (a bike, a moped, a car flipped back) it's ours like any item, as in single player —
                 // unless someone rides it (CanPickup refuses that lift; the server refuses the claim of a driven car too).
-                // Without CarCopyLift cars changed hands by driving only (a passenger entering claimed the car)
-                if (hit.Root.car != null && (!CarCopyLift || Ridden(hit))) return;
+                // Previously cars changed hands by driving only (a passenger entering claimed the car)
+                if (hit.Root.car != null && Ridden(hit)) return;
                 if (HitchTrailer(hit) && hit.Root.attachable.attached) return;
                 // picked up out of its owner's physics lock: the game's Pick unlocks it right after this prefix, so the
                 // takeover doesn't put it back in the owner's mount spot first. Put back, an item already brought to the
                 // hand lay 1.9 m off it and the game dropped it at once (stress campaign 2026-10-25, heldincar C: the
                 // lamp let go in a friend's moving car, picked up again after getting out)
-                if (PickupSkipsLock && hit.PoseLocked) { hit.PoseLocked = false; PickupLocksSkipped++; }
+                if (hit.PoseLocked) { hit.PoseLocked = false; PickupLocksSkipped++; }
                 SetProxy(hit, false);
                 hit.OwnerId = MyId;
                 W.Reset(); WriteClaim(W, hit.NetId, ClaimReason.Pickup); ToServer(W, true);
@@ -521,26 +521,14 @@ namespace TLDRevamp.Net
             _handCopyNext = now + HandCopyRetryS;
             HandCopiesClaimed++;
             Anomaly($"copy in our hands: {e.Root.name} net {e.NetId} owner {e.OwnerId} — claimed now");
-            if (PickupSkipsLock && e.PoseLocked) e.PoseLocked = false;
+            if (e.PoseLocked) e.PoseLocked = false;
             SetProxy(e, false);
             e.OwnerId = MyId;
             W.Reset(); WriteClaim(W, e.NetId, ClaimReason.Pickup); ToServer(W, true);
             ClaimsSent++;
         }
 
-        /// A/B switch: true = picking up the drawbar of another player's trailer claims the trailer. The drawbar is its own
-        /// root object (attachgripscript instantiates it unparented), so neither match above found the trailer: the copy
-        /// stayed a proxy, HitchTick made the drawbar kinematic again every step, it never followed the hand and the game
-        /// dropped it at once, before the attach press (user, 2026-10-24: the IFA trailer "sometimes won't couple": it
-        /// coupled only when its owner pressed attach; hitchplayer.py J: the joiner's hands empty 1.5 s after picking it up).
-        public static bool DrawbarPickupClaim = true;
-        /// A/B switch: true = a pickup claim of a copy in its owner's physics lock skips the takeover's lock re-apply
-        /// (false: SetProxy put it back in the owner's spot in the mount before the game's Pick unlocked it).
-        public static bool PickupSkipsLock = true; public static long PickupLocksSkipped;
-
-        /// A/B switch: true = lifting another player's car copy claims it unless someone rides it, the ridden one can't be
-        /// lifted (CarCopyNoLift); false = the game's lift ran on the copy unclaimed (before v0.69.2).
-        public static bool CarCopyLift = true;
+        public static long PickupLocksSkipped;
         public static int CarLiftsRefused;   // refused CanPickup checks (the ray asks every frame it looks)
 
         /// Someone sits on car `e`: its owner at the wheel, or any other player in any of its seats.
@@ -561,7 +549,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(pickupable __instance, ref bool __result)
             {
-                if (!__result || !CarCopyLift || !InSession || !IsProxy(__instance)) return;
+                if (!__result || !InSession || !IsProxy(__instance)) return;
                 var e = ProxyOf(__instance.transform);
                 if (e == null || e.Root == null || e.Root.car == null || e.Root.gameObject != __instance.gameObject || !Ridden(e)) return;
                 __result = false;

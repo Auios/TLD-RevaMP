@@ -49,8 +49,8 @@ namespace TLDRevamp.Net
         {
             if (!Server.TryGetValue(net, out var se)) return;
             string why = idx < 0 || idx > 4096 ? "item index" : null;
-            if (why == null && EditValidation && from != 0 && !TakeToken(_editBuckets, from, EditRatePerS, EditBurst)) why = "edit rate";
-            if (why == null && EditRangeCheck && from != 0 && !AtObject(from, se) && !AtSplitPart(from, se)) why = "edit reach";
+            if (why == null && from != 0 && !TakeToken(_editBuckets, from, EditRatePerS, EditBurst)) why = "edit rate";
+            if (why == null && from != 0 && !AtObject(from, se) && !AtSplitPart(from, se)) why = "edit reach";
             if (why != null) { SessionLog.Event("detach-refused", net, item: idx, from: from, to: se.OwnerId, result: why); return; }
             // Ownership may have reached the server while this player's copy was still a proxy. Its local
             // UnCraft was suppressed, so even an already-owner request must run on the current owner.

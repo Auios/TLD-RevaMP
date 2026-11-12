@@ -20,17 +20,15 @@ namespace TLDRevamp.Fixes
     /// Here those two roots get the game's own visszarako. Any other root without one is only logged (it may be moved
     /// by something else — never moved twice).
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.FreeAttachPoints.Enabled
     [HarmonyPatch(typeof(attachablescript), nameof(attachablescript.NewPoint), new[] { typeof(Transform), typeof(Vector3), typeof(Quaternion) })]
     public static class FreeAttachPoints
     {
-        public static bool Enabled = true;
         public static long Given, OtherRoots;
 
         [HarmonyPostfix]
         private static void Postfix(Transform __result)
         {
-            if (!Enabled || __result == null) return;
+            if (__result == null) return;
             var root = __result.root;
             if (root.GetComponent<visszarako>() != null) return;
             if (root == __result || root.name.EndsWith("_AttachAtStartInPlace", System.StringComparison.Ordinal))

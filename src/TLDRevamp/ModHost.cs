@@ -30,9 +30,6 @@ namespace TLDRevamp
         private static object _worldObj;
         public static int WorldsReplaced;
         public static string Info = "not started";
-
-        /// A/B (bridge `set`): false = before 2026-11-10 (no DbLoad; no public-game singleton names for the mods).
-        public static bool DbLoadCalls = true, PublicAliases = true;
         public static int DbLoadRuns;
         private static itemdatabase _dbFor;
         private static object _aliasM, _aliasD, _aliasSd;
@@ -93,12 +90,12 @@ namespace TLDRevamp
                             var log = BepInEx.Logging.Logger.CreateLogSource(l.Id);
                             // UseLogger: the mod's own log file (TLDLoader.Logger, echoed to BepInEx's log); otherwise BepInEx's
                             object logger = null;
-                            if (LoaderFeatures && Flag(modBase, mod, "UseLogger"))
+                            if (Flag(modBase, mod, "UseLogger"))
                                 try { logger = Activator.CreateInstance(stub.GetType("TLDLoader.Logger"), mod); }
                                 catch (Exception e) { Plugin.Log.LogWarning("ModHost: " + l.Id + ": its log file: " + (e.InnerException ?? e).Message); }
                             modBase.GetProperty("Logger").SetValue(mod, logger ?? Activator.CreateInstance(hostLogger,
                                 (Action<string>)(m => log.LogInfo(m)), (Action<string>)(m => log.LogWarning(m)), (Action<string>)(m => log.LogError(m))));
-                            if (LoaderFeatures) Loader.GetMethod("HostAdd", BindingFlags.NonPublic | BindingFlags.Static)?.Invoke(null, new[] { mod });
+                            Loader.GetMethod("HostAdd", BindingFlags.NonPublic | BindingFlags.Static)?.Invoke(null, new[] { mod });
                             bool menu = (bool)modBase.GetProperty("LoadInMenu").GetValue(mod);
                             // Every lifecycle method is bound the same way: the mod's own
                             // override, or nothing.  (OnMenuLoad additionally needs the mod
@@ -119,7 +116,7 @@ namespace TLDRevamp
                             }
                             Mods.Add(l);
                             Plugin.Log.LogInfo($"ModHost: loaded {l.Name} {l.Version} ({l.Id}) from {l.File}");
-                            if (LoaderFeatures) StartLikeLoader(l, modBase);
+                            StartLikeLoader(l, modBase);
                         }
                         catch (Exception e) { Plugin.Log.LogError("ModHost: creating " + t.FullName + " failed: " + (e.InnerException ?? e)); }
                     }
@@ -144,10 +141,6 @@ namespace TLDRevamp
             if (string.IsNullOrEmpty(asm.Location)) Retargeted++;
             return asm;
         }
-
-        /// A/B (bridge `set` before the mods load, or the config): false = before 2026-11-11 — no LoadedMods, no UseLogger
-        /// log file, no settings read at load, no UseHarmony patching, no isOnMainMenu/scene, no TLD Loader events.
-        public static bool LoaderFeatures = true;
         private static Type Loader;
         private static MethodInfo _hostScene;
         public static int HarmonyPatched, ConfigsAtLoad, ConfigsAtLoadFailed;
@@ -196,7 +189,7 @@ namespace TLDRevamp
 
         private static void Scene(bool inWorld)
         {
-            if (!LoaderFeatures || Loader == null) return;
+            if (Loader == null) return;
             if (_hostScene == null) _hostScene = Loader.GetMethod("HostScene", BindingFlags.NonPublic | BindingFlags.Static);
             try { _hostScene?.Invoke(null, new object[] { inWorld }); } catch { }
         }
@@ -233,7 +226,7 @@ namespace TLDRevamp
             // DbLoad: once per item database (a new one comes with each scene load), before a world can place items —
             // the database is up in the menu already. Mods change the game's item prefabs or add their own there. The
             // order is the mods' IDs (ordinal), the same on every machine: what one mod does can depend on another's.
-            if (DbLoadCalls && itemdatabase.s != null && itemdatabase.s != _dbFor)
+            if (itemdatabase.s != null && itemdatabase.s != _dbFor)
             {
                 _dbFor = itemdatabase.s;
                 DbLoadRuns++;
@@ -252,7 +245,7 @@ namespace TLDRevamp
             // Load reloads the scene, and the new world's player exists before the next tick). The player check alone
             // saw no change: before 2026-11-11 the mods got no OnUnload for the old world and no OnLoad for the new one.
             object worldNow = worldUp ? (object)mainscript.s : null;
-            bool replaced = LoaderFeatures && worldUp && _worldUp && !ReferenceEquals(worldNow, _worldObj);
+            bool replaced = worldUp && _worldUp && !ReferenceEquals(worldNow, _worldObj);
             _worldObj = worldNow;
             if (replaced)
             {
@@ -293,7 +286,6 @@ namespace TLDRevamp
         /// beta's, whenever one of them is a new object. Without the preloader the fields don't exist: nothing to do.
         private static void PublicNames()
         {
-            if (!PublicAliases) return;
             Alias(typeof(mainscript), "M", mainscript.s, ref _aliasM);
             Alias(typeof(itemdatabase), "d", itemdatabase.s, ref _aliasD);
             Alias(typeof(savedatascript), "d", savedatascript.s, ref _aliasSd);

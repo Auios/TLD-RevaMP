@@ -16,11 +16,9 @@ namespace TLDRevamp.Fixes
     /// from the save). A spawned loser stays (counted: KeptSpawned); buildings near the player get their roads at once
     /// (PoiRoadsSettled), so both are decided before either is spawned. Buildings that came from the save, the start
     /// house and buildings placed by other code have no candidate here and are never replaced.
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.PoiSpotOrder.Enabled.
     [HarmonyPatch]
     public static class PoiSpotOrder
     {
-        public static bool Enabled = true;
         public static long Collisions, Replaced, KeptSpawned, KeptFirst;
 
         /// The candidate spot each building came from.
@@ -60,7 +58,6 @@ namespace TLDRevamp.Fixes
             if (!_haveCand && _alignedToRoad) return;
             __state = cand;
             _haveCand = false;
-            if (!Enabled) return;
             try
             {
                 var chunkPos = mainscript.GetChunkPos(_pos, __instance.chunkSize);
@@ -88,7 +85,7 @@ namespace TLDRevamp.Fixes
 
         private static bool First(Vector3d a, Vector3d b) => a.x < b.x || (a.x == b.x && a.z < b.z);
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"collisions\":" + Collisions + ",\"replaced\":" + Replaced +
+        public static string Stats => "{\"collisions\":" + Collisions + ",\"replaced\":" + Replaced +
             ",\"keptFirst\":" + KeptFirst + ",\"keptSpawned\":" + KeptSpawned + "}";
     }
 }

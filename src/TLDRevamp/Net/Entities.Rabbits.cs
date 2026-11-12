@@ -81,16 +81,9 @@ namespace TLDRevamp.Net
         // ================================================================ copies don't think
         [HarmonyPatch(typeof(aiscript), "Update")]
         private static class RabAiUpdate { [HarmonyPrefix] private static bool Prefix(aiscript __instance) => !RabCopy(__instance) && !RabBodyGone(__instance); }
-
-        /// A container holding a rabbit removed its body (mountStuff.Store). aiscript.Update on it: a dying one called Die every
-        /// frame, Die stopped at the missing body before it set alive=false - 40 exceptions a second and the game's rabbit count
-        /// going down each time, for as long as the corpse lay in the owner's trunk (itemchaos 2026-10-31, the playtest save).
-        /// It waits in the container; out of it, the new body is the one its scripts use.
-        public static bool RabStoredWaits = true;   // A/B: false = before
         public static long RabStoredSkips;
         private static bool RabBodyGone(aiscript a)
         {
-            if (!RabStoredWaits) return false;
             var rb = a.GetComponent<Rigidbody>();
             if (rb == null) { RabStoredSkips++; return true; }
             // a limb's body gone too: SetRagdol walks them all and threw just the same (itemchaos 2026-11-01, thousands a session)

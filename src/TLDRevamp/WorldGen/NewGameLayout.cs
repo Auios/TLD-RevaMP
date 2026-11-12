@@ -18,7 +18,6 @@ namespace TLDRevamp.WorldGen
     /// second while the menu is up). A layout it does not recognise (no biome or map row) is left as it is.
     public static class NewGameLayout
     {
-        public static bool Enabled = true;   // A/B (bridge `set`): false = each row where its own code put it (before)
         public const float RowStep = 85f, ToggleStep = 64f, Gap = 20f, MapSettingsGap = 60f;
         public static string Last = "not run";
 
@@ -34,7 +33,7 @@ namespace TLDRevamp.WorldGen
         /// mods' Update (LateUpdate, before the frame is drawn), so a row added then never shows in its old place.
         public static void Tick()
         {
-            if (!Enabled || Time.unscaledTime < _nextCheck) return;
+            if (Time.unscaledTime < _nextCheck) return;
             _nextCheck = Time.unscaledTime + 0.5f;
             if (mainscript.s != null && mainscript.s.player != null) return;
             try
@@ -65,7 +64,7 @@ namespace TLDRevamp.WorldGen
             private void OnEnable() => LateUpdate();
             private void LateUpdate()
             {
-                if (!Enabled || transform != _content) return;
+                if (transform != _content) return;
                 try { Relayout(); } catch (System.Exception e) { Last = "failed: " + e.Message; }
             }
         }

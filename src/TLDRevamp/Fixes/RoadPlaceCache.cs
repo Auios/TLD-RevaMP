@@ -26,18 +26,6 @@ namespace TLDRevamp.Fixes
 
         public static long Passes, Skipped, VerifyChecks, VerifyMismatches;
         public static long PassesWork, PassesAfterWork, PassesSafety, PassesMoved, PassesSig;
-
-        /// Incremental passes (v0.21.0). Driving bench: 509 of 657 full passes were caused by movement (the margin is
-        /// the distance to the nearest inner chunk's roadPlaceDist threshold, which is always small while driving),
-        /// each walking every road element within 3.5 km with a Unity null check (~2 ms). A full scan records each inner
-        /// chunk's in-range state; later passes recompute only that state (one distance per inner chunk) and walk the
-        /// elements of inner chunks whose state flipped or that are unfinished (an action stopped the pass there), in the
-        /// game's order. Others were fully satisfied at their last walk and nothing in the game changes their elements
-        /// except this pass (same assumption as the skip logic above). Full scan at least every SafetyIntervalFrames.
-        /// Verify: before each incremental pass, a dry game-equivalent pass finds the first action; it must be the same
-        /// road element ours acts on (or none for both).
-        /// On by default since v0.21.1: verified (569 incremental passes, 0 mismatches), driving A/B p99 −9% (16.75 → 15.25).
-        public static bool Incremental = true;
         public static long IncrPasses, FullScans, IncrWalked, IncrMismatches;
         public static string LastIncrMismatch = "";
 
@@ -83,16 +71,7 @@ namespace TLDRevamp.Fixes
             public roadGenScript.dotChunkClass Dcc;
             public Vector3d ChunkKey, Key;
         }
-        public static bool TravelBound = true;
         public static long EvalsSkipped, Evals;
-
-        /// Heap mode (v0.34.0): with TravelBound, an incremental pass still visited every inner chunk of every needed
-        /// chunk (three lookups each) just to find the few whose bound expired — tens of thousands per frame with 16
-        /// players. Inner chunks now sit in a min-heap by Expiry; a pass pops only the expired ones (same evaluation and
-        /// same condition as TravelBound, a hair earlier on floating-point ties), then walks the dirty inner chunks in the
-        /// game's order (chunk position in chunksNeeded, then the inner chunk's dictionary position — both recorded at the
-        /// last full scan; a changed chunk order changes the signature and forces a full scan). Verify covers it as before.
-        public static bool HeapMode = true;
         public static long HeapPasses, HeapPops;
 
         private static readonly ConditionalWeakTable<roadGenScript, State> States = new ConditionalWeakTable<roadGenScript, State>();
@@ -122,7 +101,7 @@ namespace TLDRevamp.Fixes
                 if (Verify)
                 {
                     VerifyChecks++;
-                    if (Pass(gen, _moreFrame, dryRun: true, out _, out _)) VerifyMismatches++;
+                    if (Pass(gen, out _)) VerifyMismatches++;
                 }
                 return false;
             }
@@ -134,37 +113,29 @@ namespace TLDRevamp.Fixes
             else PassesMoved++;
             bool didWork;
             double margin;
-            if (Incremental)
-            {
-                bool full = !(st.Tracked && sig == st.Signature && gen.roadPlaceDist == st.Dist && arounds.Count == st.GenPos.Count
-                              && st.SinceFull < SafetyIntervalFrames);
-                // Heap mode also survives new inner chunks / road pieces (logged by UpdInnerChunk): only a changed scope
-                // (needed chunks, their order or identity, a reset chunk) needs a full scan
-                bool heapOk = HeapMode && TravelBound && st.HeapReady && st.Tracked && arounds.Count > 0 && st.GenPos.Count == arounds.Count
-                              && gen.roadPlaceDist == st.Dist && st.SinceFull < SafetyIntervalFrames && ShapeSignature(gen) == st.ShapeSig;
-                if (heapOk) full = false;
-                roadGenScript.roadElementClass expected = null;
-                bool expectAction = false;
-                if (Verify && !full) expectAction = Pass(gen, _moreFrame, dryRun: true, out _, out expected);
-                roadGenScript.roadElementClass acted;
-                if (heapOk)
-                    didWork = HeapScan(gen, st, _moreFrame, out margin, out acted);
-                else
-                    didWork = Scan(gen, st, _moreFrame, full, out margin, out acted);
-                if (Verify && !full && (expectAction != (acted != null) || (expected != null && acted != null && expected != acted)))
-                {
-                    IncrMismatches++;
-                    LastIncrMismatch = "expected " + (expected != null ? "action" : "none") + ", ours " + (acted != null ? "action" : "none") +
-                                       (expected != null && acted != null ? " (different element)" : "");
-                }
-                if (full) { FullScans++; st.SinceFull = 0; } else { IncrPasses++; st.SinceFull++; }
-                st.Tracked = true;
-            }
+            bool full = !(st.Tracked && sig == st.Signature && gen.roadPlaceDist == st.Dist && arounds.Count == st.GenPos.Count
+                          && st.SinceFull < SafetyIntervalFrames);
+            // Heap mode also survives new inner chunks / road pieces (logged by UpdInnerChunk): only a changed scope
+            // (needed chunks, their order or identity, a reset chunk) needs a full scan
+            bool heapOk = st.HeapReady && st.Tracked && arounds.Count > 0 && st.GenPos.Count == arounds.Count
+                          && gen.roadPlaceDist == st.Dist && st.SinceFull < SafetyIntervalFrames && ShapeSignature(gen) == st.ShapeSig;
+            if (heapOk) full = false;
+            roadGenScript.roadElementClass expected = null;
+            bool expectAction = false;
+            if (Verify && !full) expectAction = Pass(gen, out expected);
+            roadGenScript.roadElementClass acted;
+            if (heapOk)
+                didWork = HeapScan(gen, st, _moreFrame, out margin, out acted);
             else
+                didWork = Scan(gen, st, _moreFrame, full, out margin, out acted);
+            if (Verify && !full && (expectAction != (acted != null) || (expected != null && acted != null && expected != acted)))
             {
-                st.Tracked = false;
-                didWork = Pass(gen, _moreFrame, dryRun: false, out margin, out _);
+                IncrMismatches++;
+                LastIncrMismatch = "expected " + (expected != null ? "action" : "none") + ", ours " + (acted != null ? "action" : "none") +
+                                   (expected != null && acted != null ? " (different element)" : "");
             }
+            if (full) { FullScans++; st.SinceFull = 0; } else { IncrPasses++; st.SinceFull++; }
+            st.Tracked = true;
             if (didWork) PassesWork++;
             st.Stable = !didWork;
             st.Margin = margin;
@@ -177,13 +148,10 @@ namespace TLDRevamp.Fixes
             return false;
         }
 
-        /// Same decisions and order as the original active branch. Returns true if it placed/destroyed anything
-        /// (dry run: would have). margin = min over inner chunks of |nearest genAround distance - roadPlaceDist|.
-        private static bool Pass(roadGenScript gen, bool moreFrame, bool dryRun, out double margin, out roadGenScript.roadElementClass first)
+        /// Same decisions and order as the original active branch. Returns true if it would place/destroy anything.
+        private static bool Pass(roadGenScript gen, out roadGenScript.roadElementClass first)
         {
             first = null;
-            margin = double.MaxValue;
-            bool did = false;
             double R = gen.roadPlaceDist;
             var arounds = gen.mapSetting.genArounds;
 
@@ -194,22 +162,13 @@ namespace TLDRevamp.Fixes
                 {
                     // flag2 in the original: any genAround within R (XZ)
                     bool inRange = false;
-                    double nearest = double.MaxValue;
                     for (int g = 0; g < arounds.Count; g++)
                     {
                         Vector3d d = inner.Key - mainscript.GlobalFromUnityPos(arounds[g].upos);
                         d.y = 0.0;
                         double mag = d.magnitude;
-                        if (mag < nearest) nearest = mag;
                         if (mag < R) { inRange = true; break; } // original breaks here too
                     }
-                    if (arounds.Count > 0)
-                    {
-                        double m = Math.Abs(nearest - R);
-                        if (m < margin) margin = m;
-                    }
-                    else margin = 0;
-
                     foreach (var road in inner.Value.roads)
                     {
                         foreach (int el in road.roadElements)
@@ -218,28 +177,18 @@ namespace TLDRevamp.Fixes
                             if (inRange)
                             {
                                 if (rec.obj != null) continue;
-                                if (dryRun) { margin = 0; first = rec; return true; }
-                                rec.obj = UnityEngine.Object.Instantiate(itemdatabase.s.Road(rec.roadID), gen.parent);
-                                var rs = rec.obj.GetComponent<roadscript>();
-                                rs.Init(gen, item, road.roadId, el, gen.mapSetting.seed);
-                                rs.Place(rec.bonePos);
-                                if (dcc.roads[road.roadId].roadType == roadGenScript.roadTypeEmu.mainRoad && el != 0)
-                                    rs.PowerPole(itemdatabase.s.rPowerPole);
+                                first = rec; return true;
                             }
                             else
                             {
                                 if (rec.obj == null) continue;
-                                if (dryRun) { margin = 0; first = rec; return true; }
-                                UnityEngine.Object.Destroy(rec.obj);
+                                first = rec; return true;
                             }
-                            did = true;
-                            if (moreFrame) { margin = 0; return true; } // original: one action per frame
                         }
                     }
                 }
             }
-            if (did) margin = 0;
-            return did;
+            return false;
         }
 
         /// Fingerprint of everything the pass depends on besides positions: which chunks are needed, and for each one
@@ -299,7 +248,7 @@ namespace TLDRevamp.Fixes
         {
             if (_chunk == null) return;
             Changes.GetValue(_chunk, _ => new Counter()).Value++;
-            if (!HeapMode || !States.TryGetValue(__instance, out var st) || !st.HeapReady) return;
+            if (!States.TryGetValue(__instance, out var st) || !st.HeapReady) return;
             var key = mainscript.GetChunkPos(_currentPos, __instance.innerChunkSize);
             if (!_chunk.innerChunks.TryGetValue(key, out var ic)) return;
             // Unknown to the last full scan and not logged yet → inserted by this very call: enumerated last
@@ -310,7 +259,7 @@ namespace TLDRevamp.Fixes
             st.Log.Add(new Change { Dcc = _chunk, Key = key, NewOrd = ord });
         }
 
-        /// Incremental version of Pass (see Incremental). full: walk everything and (re)record every inner chunk's state.
+        /// Incremental version of Pass. full: walk everything and (re)record every inner chunk's state.
         private static bool Scan(roadGenScript gen, State st, bool moreFrame, bool full, out double margin, out roadGenScript.roadElementClass acted)
         {
             acted = null;
@@ -320,7 +269,7 @@ namespace TLDRevamp.Fixes
             var arounds = gen.mapSetting.genArounds;
             if (full) { st.InRange.Clear(); st.Dirty.Clear(); st.Heap.Clear(); st.ChunkIdxOf.Clear(); st.ChunkKeyOf.Clear(); }
             st.Log.Clear(); st.LoggedNew.Clear(); // a full scan sees everything; an incremental Scan runs only when nothing changed
-            bool buildHeap = full && HeapMode && TravelBound;
+            bool buildHeap = full;
             if (!full) st.HeapReady = false; // this pass doesn't maintain the heap
             int chunkIdx = -1;
             // Each generation centre's global position once per pass (was converted per inner chunk × centre)
@@ -328,7 +277,7 @@ namespace TLDRevamp.Fixes
             for (int g = 0; g < arounds.Count; g++) _gpos[g] = mainscript.GlobalFromUnityPos(arounds[g].upos);
             _visited.Clear();
             // Largest centre displacement since the previous pass (horizontal, as the distances are)
-            bool bound = TravelBound && !full && st.GenPos.Count == arounds.Count;
+            bool bound = !full && st.GenPos.Count == arounds.Count;
             if (bound)
             {
                 double step = 0;
@@ -370,16 +319,13 @@ namespace TLDRevamp.Fixes
                         }
                         if (arounds.Count > 0) { if (gap < margin) margin = gap; }
                         else margin = 0;
-                        if (TravelBound)
+                        ir = st.Recs.GetValue(ic, _ => new Rec());
+                        ir.InRange = inRange; ir.Gap = gap; ir.MxAtEval = st.Mx;
+                        if (buildHeap)
                         {
-                            ir = st.Recs.GetValue(ic, _ => new Rec());
-                            ir.InRange = inRange; ir.Gap = gap; ir.MxAtEval = st.Mx;
-                            if (buildHeap)
-                            {
-                                ir.Expiry = st.Mx + gap; ir.ChunkIdx = chunkIdx; ir.Ord = ord;
-                                ir.Ic = ic; ir.Dcc = dcc; ir.ChunkKey = item; ir.Key = inner.Key;
-                                st.Heap.Add(ir);
-                            }
+                            ir.Expiry = st.Mx + gap; ir.ChunkIdx = chunkIdx; ir.Ord = ord;
+                            ir.Ic = ic; ir.Dcc = dcc; ir.ChunkKey = item; ir.Key = inner.Key;
+                            st.Heap.Add(ir);
                         }
                         Evals++;
                     }
@@ -435,7 +381,7 @@ namespace TLDRevamp.Fixes
         private static readonly List<Rec> _dirty = new List<Rec>();
         private static readonly Comparison<Rec> GameOrder = (a, b) => a.ChunkIdx != b.ChunkIdx ? a.ChunkIdx.CompareTo(b.ChunkIdx) : a.Ord.CompareTo(b.Ord);
 
-        /// Incremental pass in heap mode (see HeapMode): same decisions as Scan's incremental pass.
+        /// Incremental pass in heap mode: same decisions as Scan's incremental pass.
         private static bool HeapScan(roadGenScript gen, State st, bool moreFrame, out double margin, out roadGenScript.roadElementClass acted)
         {
             acted = null;

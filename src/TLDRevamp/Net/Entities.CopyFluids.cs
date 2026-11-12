@@ -15,10 +15,9 @@ namespace TLDRevamp.Net
     /// So on a copy (1) the game's fluid losses (fluidcontainer.ChangeWithoutMix with a negative amount) don't run, and
     /// (2) once a second every tank of a copy is checked against the owner's latest record and put back when it differs:
     /// the fill of a player (an edit, Entities.Edits) waits for its record; fluid poured from a copy into one's own can is
-    /// the owner's to count. A/B switch Entities.CopyFluidsFollowOwner (false = before this change).
+    /// the owner's to count.
     public static partial class Entities
     {
-        public static bool CopyFluidsFollowOwner = true;
         public static float CopyFluidCheckS = 1f, CopyFluidToleranceL = 0.01f;
         public static long CopyFluidLossSkipped, CopyFluidsRestored, CopyFluidChecks;
         private static readonly HashSet<mainscript.fluidcontainer> CopyFluidContainers = new HashSet<mainscript.fluidcontainer>();
@@ -87,7 +86,6 @@ namespace TLDRevamp.Net
             _copyFluidAt = Time.realtimeSinceStartup + CopyFluidCheckS;
             CopyFluidContainers.Clear();
             CopyTruthSweep();
-            if (!CopyFluidsFollowOwner) return;
             foreach (var e in ByNet.Values)
             {
                 if (!e.Proxy || e.Root == null || e.Items == null) continue;
@@ -161,7 +159,7 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static bool Prefix(mainscript.fluidcontainer __instance, float amount)
             {
-                if (amount >= 0f || !CopyFluidsFollowOwner || CopyFluidContainers.Count == 0 || !CopyFluidContainers.Contains(__instance)) return true;
+                if (amount >= 0f || CopyFluidContainers.Count == 0 || !CopyFluidContainers.Contains(__instance)) return true;
                 CopyFluidLossSkipped++;
                 return false;
             }

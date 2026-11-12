@@ -54,9 +54,9 @@ namespace TLDRevamp.Net
             if (r.Bad || idx < 0 || !Server.TryGetValue(net, out var se) || se.PartIndex >= 0) { MembersGoneRejected++; return; }
             if (se.OwnerId != from)
             {
-                // another player deleted it on their copy (Entities.Lifecycle, PlayerDeleteSync): its owner deletes it and
+                // another player deleted it on their copy (Entities.Lifecycle): its owner deletes it and
                 // tells everyone, as for a member destroyed on its own machine
-                if (!PlayerDeleteSync || (se.Gone != null && se.Gone.Contains(idx))) { MembersGoneRejected++; return; }
+                if (se.Gone != null && se.Gone.Contains(idx)) { MembersGoneRejected++; return; }
                 WriteMemberGone(WS, net, idx);
                 ServerSendTo(se.OwnerId, WS, true);
                 MemberDeletesForwarded++;
@@ -89,7 +89,7 @@ namespace TLDRevamp.Net
             {
                 // ours: another player deleted this member on their copy — deleted here the game's way; its OnDestroy (a
                 // real deletion, no far-store record) sends MemberGone to everyone
-                if (!PlayerDeleteSync || e.OwnerId != MyId || !Resolve(e) || idx >= e.Items.Count || (e.Split != null && e.Split.Contains(idx))) { MembersGoneRejected++; return; }
+                if (e.OwnerId != MyId || !Resolve(e) || idx >= e.Items.Count || (e.Split != null && e.Split.Contains(idx))) { MembersGoneRejected++; return; }
                 var mine = e.Items[idx];
                 if (mine == null || mine == e.Root) { MembersGoneRejected++; return; }
                 mine.JustDestroy();
@@ -112,10 +112,8 @@ namespace TLDRevamp.Net
             MembersGoneApplied++;
         }
 
-        public static string MemberGoneStats() => "{\"sent\":" + MembersGoneSent + ",\"applied\":" + MembersGoneApplied + ",\"rejected\":" + MembersGoneRejected +
-                                                  ",\"playerDeleteSync\":" + (PlayerDeleteSync ? "true" : "false") + ",\"playerDeletes\":" + PlayerDeletesSent + ",\"memberDeletesSent\":" + MemberDeletesSent +
-                                                  ",\"memberDeletesForwarded\":" + MemberDeletesForwarded + ",\"memberDeletesApplied\":" + MemberDeletesApplied +
-                                                  ",\"keepPartsOnRemove\":" + (KeepPartsOnRemove ? "true" : "false") + ",\"partsKept\":" + PartsKeptOnRemove +
+        public static string MemberGoneStats() => "{\"sent\":" + MembersGoneSent + ",\"applied\":" + MembersGoneApplied + ",\"rejected\":" + MembersGoneRejected + ",\"playerDeletes\":" + PlayerDeletesSent + ",\"memberDeletesSent\":" + MemberDeletesSent +
+                                                  ",\"memberDeletesForwarded\":" + MemberDeletesForwarded + ",\"memberDeletesApplied\":" + MemberDeletesApplied + ",\"partsKept\":" + PartsKeptOnRemove +
                                                   ",\"partsOrphaned\":" + PartsOrphaned + ",\"partsOrphanedNoRecord\":" + PartsOrphanedNoRecord + "}";
     }
 }

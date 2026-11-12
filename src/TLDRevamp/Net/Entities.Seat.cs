@@ -69,15 +69,6 @@ namespace TLDRevamp.Net
                 if (RemotePlayers.AnyRemoteInSeat(__instance)) __result = false;
             }
         }
-
-        /// One driver per car (playtest 2026-10-18, "managed to sit in the same driver seat"). FreeCanSit can only see a
-        /// seat as taken once the other player's seated state has come in; two players sitting down within a state of each
-        /// other both sat at the wheel (seatrace: 150 ms lag, both in seat 4, the host owning the car). The server now
-        /// refuses a car claim while another player's reported seat is its driver seat, or while another player's claim of
-        /// it is fresh (their seat report is still on its way: seated players send 2 states a second). The one whose claim
-        /// was refused sits in the driver seat of a car someone else drives: they are moved to a free seat of it (out of the
-        /// car if none is free), with a note why.
-        public static bool DriverSeatGuard = true;   // A/B: false = before v0.69.2 (two players at one wheel)
         public static float DriveClaimHoldS = 1.5f;
         public static long DriverSeatRefused, DriverSeatMoved, DriverSeatOut;
         private static readonly List<KeyValuePair<int, int>> _seatedIn = new List<KeyValuePair<int, int>>();
@@ -101,7 +92,7 @@ namespace TLDRevamp.Net
         /// Server, a claim of a car: null = may take it, else why not.
         private static string DriverSeatClaimRefusal(SEnt se, int from)
         {
-            if (!DriverSeatGuard || !se.Car || se.PartIndex >= 0) return null;
+            if (!se.Car || se.PartIndex >= 0) return null;
             int by = DriverSeatTakenBy(se, from);
             if (by >= 0) return "driven (player " + by + " sits at the wheel)";
             if (se.ClaimedBy >= 0 && se.ClaimedBy != from && se.OwnerId == se.ClaimedBy && Time.realtimeSinceStartup - se.ClaimedAt < DriveClaimHoldS)
@@ -113,7 +104,7 @@ namespace TLDRevamp.Net
         /// drives (its owner says so, or another player sits in this very seat), after our claim was answered.
         private static void DriverSeatConflictTick(fpscontroller pl, Ent e)
         {
-            if (!DriverSeatGuard || e == null || !e.Proxy || e.OwnerId == MyId || _claimedFor != e.NetId) return;
+            if (e == null || !e.Proxy || e.OwnerId == MyId || _claimedFor != e.NetId) return;
             var seats = VehicleSeats(e.Root);
             int mine = System.Array.IndexOf(seats, pl.seat);
             bool other = e.Driven;
@@ -140,7 +131,7 @@ namespace TLDRevamp.Net
         }
 
         public static string SeatGuardStats() =>
-            "{\"enabled\":" + (DriverSeatGuard ? "true" : "false") + ",\"refused\":" + DriverSeatRefused + ",\"moved\":" + DriverSeatMoved + ",\"out\":" + DriverSeatOut + "}";
+            "{\"refused\":" + DriverSeatRefused + ",\"moved\":" + DriverSeatMoved + ",\"out\":" + DriverSeatOut + "}";
 
         /// The game calls GetOut every frame a passenger sits with a place to get out to (fpscontroller.Update); it only
         /// gets out on the use key's press. The seat-leave event (and the repro recorder's seat leave, made from it) and the

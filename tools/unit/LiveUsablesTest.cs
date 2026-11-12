@@ -46,7 +46,7 @@ namespace TLDRevamp.Net
         static readonly Dictionary<tosaveitemscript, float> EditDirty = new Dictionary<tosaveitemscript, float>();
         static readonly Dictionary<tosaveitemscript, int> EditKinds = new Dictionary<tosaveitemscript, int>();
         static float _editFlushAt; static int _resyncFirst;
-        static bool InSession = true, _applyingState, EditValidation, EditRangeCheck = true;
+        static bool InSession = true, _applyingState;
         static int MyId = 1; const float EditHold = 1.5f, StateInterestM = 300;
         static long EditRefusedValues, EditsOutOfReach, DetachReqsSent;
         static readonly object _editBuckets = new object(); static float EditRatePerS, EditBurst;

@@ -899,7 +899,7 @@ rows come from each tick's top list (a method missing from a tick counts as 0 th
 complete rankings.
 
 Launch flag for A/B runs: `-tldset Path=Value[,Path=Value...]` sets runtime switches before the first frame, like
-bridge `set` (only where the bridge is on), e.g. `-tldbench fixoff -tldset TLDRevamp.Fixes.KeyNameCache.Enabled=False`.
+bridge `set` (only where the bridge is on).
 
 ## Game-side format and beta details (protocol 30)
 
@@ -934,14 +934,13 @@ is scratch storage that stays populated after placement and would falsely report
 `genDone` uses `terrain`, `roads`, `scenery`, `buildings`; roads counts completed roads, including each road of a
 parallel batch, rather than batches. Completion callbacks also cover the replacement generation paths in fixes.
 
-`Fixes.PoiBacklog.Enabled` (bridge `set TLDRevamp.Fixes.PoiBacklog.Enabled False`) restores the old raw POI count
-in `buildings` and the black-box total. Bridge `genbacklog` samples immediately and returns `candidates`, `ready`,
+Bridge `genbacklog` samples immediately and returns `candidates`, `ready`,
 `waitingForRoads`, `deferred`, and counters `samples` / `deferredObserved` (sum of deferred observations, not unique
 buildings). The first four are gauges, with `candidates = ready + waitingForRoads + deferred`. A candidate is deferred
 only if one of `RoadsDoneAtPlace`'s four dependencies is unfinished and outside `roadgen.chunksNeeded`. Candidates
 whose unfinished dependencies are all inside that set remain pending, including missing chunks. Completed
 dependencies outside it do not defer placement. The
-`buildingsDeferred` diagnostic remains available with the switch off. Neither mode changes generation or leases.
+`buildingsDeferred` diagnostic does not change generation or leases.
 This is a local telemetry change; Protocol.Version is unchanged.
 
 The October 18 internet test's 1,454 client ticks all had `roads = 0`; `buildings` stayed 24, 27 or 28. The host's
@@ -1001,8 +1000,7 @@ switches. Rebase/stream/completion events are attributed by Unity frame number t
 whatever script happens to update first.
 Rebase flags now require an actual change to `visszarakva`. Older captures (including the October 18 playtest and
 statecheck format-2 captures) flagged every periodic `VisszaRakas` call, even its no-shift branch; that flag alone
-cannot attribute a hitch to a floating-origin shift. `RebaseLab.ActualShiftFlags = false` restores the old diagnostic
-for comparison. `RebaseLab.Checks` and `.Shifts` distinguish the two; `rebaseprof stop` retains the last **actual**
+cannot attribute a hitch to a floating-origin shift. `RebaseLab.Checks` and `.Shifts` distinguish the two; `rebaseprof stop` retains the last **actual**
 shift's timing instead of overwriting it at the next no-op check. Use `PerObject = false` for performance runs
 (the per-object profiler allocates regex strings), and `TimeSync = false` to avoid adding a forced physics sync.
 Particle scan/pause maxima (`RebaseParticles.ScanMaxUs`, `.PauseMaxUs`) and client packet work maxima

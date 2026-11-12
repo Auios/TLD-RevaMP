@@ -26,13 +26,6 @@ namespace TLDRevamp.Fixes
         public static long Calls, VerifyChecks, VerifyMismatches;
         public static string LastMismatch = "";
         public static int Patched;
-
-        /// Game bug with several players (multiplayer host: one generation centre per player): the list gets the 5×5 chunks
-        /// around every centre appended without removing duplicates (10 players close together: 250 entries, 25 chunks).
-        /// Every consumer walks the list; for each of them a repeated chunk can't do anything its first visit didn't
-        /// (generation/connection flags, "one action then stop" loops, Contains checks), so dropping repeats is exact.
-        /// Dropping them before the stable sort gives the same order as sorting and then dropping later repeats.
-        public static bool Dedup = true;
         private static readonly HashSet<Vector3d> Seen = new HashSet<Vector3d>();
 
         private static readonly MethodInfo Original = AccessTools.Method(typeof(mapSettingScript), nameof(mapSettingScript.GetChunksNeeded));
@@ -79,9 +72,9 @@ namespace TLDRevamp.Fixes
                     for (int k = -_edge / 2; k <= _edge / 2; k++)
                     {
                         var c = mainscript.GetChunkPos(genArounds[i].upos, k, j, _chunkSize);
-                        if (!Dedup || Seen.Add(c)) list.Add(c);
+                        if (Seen.Add(c)) list.Add(c);
                     }
-            if (Dedup) Seen.Clear();
+            Seen.Clear();
             if (genArounds.Count > 0)
             {
                 Vector3d orderTo = mainscript.GlobalFromUnityPos(genArounds[0].upos);
@@ -109,7 +102,7 @@ namespace TLDRevamp.Fixes
             {
                 VerifyChecks++;
                 var reference = ms.GetChunksNeeded(_chunkSize, _edge);
-                if (Dedup) { var seen = new HashSet<Vector3d>(); reference = reference.FindAll(x => seen.Add(x)); }
+                var seen = new HashSet<Vector3d>(); reference = reference.FindAll(x => seen.Add(x));
                 string diff = reference.Count != list.Count ? "count " + list.Count + " vs " + reference.Count : null;
                 for (int i = 0; diff == null && i < list.Count; i++) if (!list[i].Equals(reference[i])) diff = "element " + i;
                 if (diff != null) { VerifyMismatches++; LastMismatch = diff; }
