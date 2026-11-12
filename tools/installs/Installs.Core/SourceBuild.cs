@@ -267,8 +267,9 @@ public sealed class SourceBuild
         }
         if (!plugin.Contains("public const string BaseVersion"))
             extra.Add("-p:CustomAfterMicrosoftCommonTargets=" + LegacyTargets(plugin, version, sha));
+        bool includeDev = !c.PlayerEdition && File.Exists(Path.Combine(Repo, "src", "TLDRevamp.Dev", "TLDRevamp.Dev.csproj"));
         bool disableServers = true;
-        foreach (var project in new[] { "TLDRevamp", "TLDRevamp.Multiplayer", "TLDLoaderShim" })
+        foreach (var project in new[] { "TLDRevamp", "TLDRevamp.Multiplayer", "TLDLoaderShim" }.Concat(includeDev ? new[] { "TLDRevamp.Dev" } : Array.Empty<string>()))
         {
             string[] args = ["build", Path.Combine("src", project, project + ".csproj"), "-c", "Release", "-nologo", "-t:Rebuild",
                 "-p:UseSharedCompilation=false", "-nodeReuse:false", .. extra];
@@ -284,7 +285,7 @@ public sealed class SourceBuild
             if (result.Code != 0) throw new UserError("dotnet build failed (exit " + result.Code + "; see the build log)");
         }
         var files = new[] {
-            ("TLDRevamp", "TLDRevamp.dll"), ("TLDRevamp.Multiplayer", "TLDRevamp.Multiplayer.dll"), ("TLDLoaderShim", "TLDLoader.dll") };
+            ("TLDRevamp", "TLDRevamp.dll"), ("TLDRevamp.Multiplayer", "TLDRevamp.Multiplayer.dll"), ("TLDLoaderShim", "TLDLoader.dll") }.Concat(includeDev ? new[] { ("TLDRevamp.Dev", "TLDRevamp.Dev.dll") } : Array.Empty<(string, string)>());
         var built = Path.Combine(Repo, "src", "TLDRevamp", "bin", "Release", "netstandard2.1", "TLDRevamp.dll");
         Verify(built, sha);
         var hash = Files.Sha256(built);
@@ -299,6 +300,7 @@ public sealed class SourceBuild
         }
         foreach (var (project, file) in files)
             Files.CopyFile(Path.Combine(Repo, "src", project, "bin", "Release", "netstandard2.1", file), Path.Combine(dst, file));
+        if (!includeDev) File.Delete(Path.Combine(dst, "TLDRevamp.Dev.dll"));
         Verify(installed, sha, hash);
         foreach (var file in new[] { "packaging/approved-mods.txt", "COPYING" })
             Files.CopyFile(Path.Combine(Repo, file), Path.Combine(dst, Path.GetFileName(file)));

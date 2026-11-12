@@ -140,10 +140,6 @@ namespace TLDRevamp
                 "Starts or stops recording a replay (everything near you, every player; saved to BepInEx/tldrevamp-replays).");
             KeyReplayPlay = Config.Bind("Keys", "ReplayPlay", new BepInEx.Configuration.KeyboardShortcut(KeyCode.F10, KeyCode.LeftControl),
                 "Plays the latest replay, or closes the one playing.");
-            ShowWipMark = Config.Bind("Branding", "ShowWipMark", true,
-                "Draw the TLD RevaMP <version> · WIP mark in the bottom-right corner. It is also configurable under Settings → Revamp → Branding.");
-            Overlay.ShowWip = ShowWipMark.Value;
-            ShowWipMark.SettingChanged += (_, __) => { if (Overlay != null) Overlay.ShowWip = ShowWipMark.Value; };
             Feedback = new FeedbackReporter(Telemetry);
             Net.ModCatalog.Url = Config.Bind("Mods", "CatalogUrl", Net.ModCatalog.DefaultUrl,
                 "Catalog URL (HTTPS, or file URI for local testing), fetched when opening Mods or pressing Refresh, and at start for the update check (Settings → Revamp → Mods section). Files still require local approved-mods.txt approval.");
@@ -177,37 +173,18 @@ namespace TLDRevamp
                 "Opens the multiplayer screen (also the game's own Multiplayer button).");
             KeyOverlay = Config.Bind("Keys", "PerformanceOverlay", new BepInEx.Configuration.KeyboardShortcut(KeyCode.PageUp),
                 "Shows or hides the performance overlay (also Settings → Revamp).");
-            KeyItemTraffic = Config.Bind("Keys", "ItemTraffic", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Insert),
-                "Shows or hides each object's network traffic (an arrow and a rate over it; also Settings → Revamp → Debugging).");
-            KeyDebugLayout = Config.Bind("Keys", "DebugLayout", new BepInEx.Configuration.KeyboardShortcut(KeyCode.RightShift),
-                "Debugging V2 (Settings → Revamp → Debugging: V2, Debug overlay on): edit the overlay's layout — switch parts off, drag the panels.");
-            KeyItemHealth = Config.Bind("Keys", "ItemHealth", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Home),
-                "Item health: aim at a shared object (or sit in a car, or hold an item) in a multiplayer game and press it — every check of it, what is wrong, why, and what happened. Again closes.");
-            KeyDebugView = Config.Bind("Keys", "DebugView", new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
-                "Cycles Off / Focus / Problems / Everything. Unbound by default; choose a free key, leaving F11, Page Up/Down, Scroll Lock, Insert and Ctrl+Insert available.");
-            KeyOwnership = Config.Bind("Keys", "OwnershipOverlay", new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
-                "Shows or hides ownership and sync error labels (also Settings > Revamp > Debugging). Unbound by default.");
-            KeyOwnerGhost = Config.Bind("Keys", "OwnerGhost", new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
-                "Shows or hides the crosshair object's last received owner pose. Unbound by default.");
-            KeyLinks = Config.Bind("Keys", "LinkView", new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
-                "Shows or hides attachment, lock and rider links. Unbound by default.");
             KeyReport = Config.Bind("Keys", "DebugReport", new BepInEx.Configuration.KeyboardShortcut(KeyCode.PageDown),
                 "Saves a debug report (BepInEx/tldrevamp-feedback); with Settings → Revamp → \"Send my reports to the host\" on, the host gets a copy.");
             KeyMark = Config.Bind("Keys", "Mark", new BepInEx.Configuration.KeyboardShortcut(KeyCode.ScrollLock),
                 "Opens session marks: Enter saves a note, Escape cancels. Notes can be renamed from the list.");
-            KeyCompare = Config.Bind("Keys", "ObjectComparison", new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
-                "Shows or hides live partner views of the focused shared object. Unbound by default; also Settings > Revamp > Debugging.");
-            KeyEvents = Config.Bind("Keys", "ObjectEvents", new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
-                "Shows or hides recent telemetry events for the focused object. Unbound by default; also Settings > Revamp > Debugging.");
             KeyRepro = Config.Bind("Keys", "ReproRecorder", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Insert, KeyCode.LeftControl),
                 "Takes a bug report: opens a note box, Enter saves the report zip, the recorded actions and the world save into one bundle in BepInEx/tldrevamp-feedback (or type /bug <note> in chat). Either Ctrl works.");
             KeyDevMenu = Config.Bind("Keys", "DevMenu", new BepInEx.Configuration.KeyboardShortcut(KeyCode.F1),
                 "The game's own developer menu (spawning, god mode, …), with Dev Mode on in the game's settings. F1 in the game; RevaMP lets it be changed.");
             // Settings → Revamp → Keys: each of these rebound in game (KeyBindings)
             KeyBindings.Register(("Multiplayer screen", KeyMpScreen), ("Performance overlay", KeyOverlay),
-                ("Debug report", KeyReport), ("Bug report", KeyRepro), ("Session marks", KeyMark), ("Item health", KeyItemHealth), ("Debug layout (V2)", KeyDebugLayout),
-                ("Item traffic", KeyItemTraffic), ("Debug view (Legacy)", KeyDebugView), ("Ownership labels (Legacy)", KeyOwnership), ("Owner ghost (Legacy)", KeyOwnerGhost),
-                ("Links (Legacy)", KeyLinks), ("Object comparison", KeyCompare), ("Object events", KeyEvents), ("Cinematic camera", KeyCinematic),
+                ("Debug report", KeyReport), ("Bug report", KeyRepro), ("Session marks", KeyMark),
+                ("Cinematic camera", KeyCinematic),
                 ("Record a replay", KeyReplayRecord), ("Watch the latest replay", KeyReplayPlay));
             // the game's Dev Mode keys on a page of their own: F1 (its developer menu) and the rest (DevModeKeys, unbound by default)
             var devRows = new System.Collections.Generic.List<(string, BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut>)> { ("Open the developer menu", KeyDevMenu) };
@@ -265,9 +242,6 @@ namespace TLDRevamp
             ModHost.MustMatch = Config.Bind("Mods", "LoaderModsMustMatch", true,
                 "When you host: refuse players whose TLD Loader mods (BepInEx/TLDLoaderMods) differ from yours (mod ID, version or DLL). Items those mods add reach other players as game items only when everyone has the same mods. Off: they join anyway, and what those mods add may be missing or wrong for them.").Value;
             ModHost.Start();   // TLDLoader mods from BepInEx/TLDLoaderMods (TLDLoader itself doesn't run on the beta)
-            if (Config.Bind("Mods", "ScanLoaderMods", false,
-                    "For mod authors: read every TLD Loader mod in BepInEx/TLDLoaderMods and write what it would need for multiplayer (a report and a code skeleton) to BepInEx/TLDRevampModScan.").Value)
-                try { LoaderScan.ScanAll(); } catch (Exception e) { Log.LogWarning("modscan: " + e.Message); }
             Net.Entities.CopyFarShadowsM = Mathf.Max(0f, Config.Bind("Multiplayer", "CopyShadowsOffBeyondM", 0f,
                     "Other players' cars farther than this (metres) cast no shadows here; 0 = always. A slower machine in a big session: try 30 (17 cars 20-45 m away, all without shadows: the slowest frames 2.6 ms quicker on the test desktop).").Value);
 
@@ -338,7 +312,6 @@ namespace TLDRevamp
     {
         internal static long Updates;
         private bool _loggedUpdate, _loggedGui;
-        private int _debugViewRevision = int.MinValue;   // taken on the first frame: settings loading is no change to announce
 
         private void Update()
         {
@@ -365,30 +338,17 @@ namespace TLDRevamp
             Cinematic.CinematicCamera.Tick();
             if (Plugin.KeyDown(Plugin.KeyCinematic) && Cinematic.CinematicCamera.KeyAllowed()) Cinematic.CinematicCamera.Toggle();
             } catch (Exception e) { Fault(1, "replay/camera", e); }
-            try { Fixes.TerrainHorizon.Tick(); Fixes.OpenXrBridge.Tick(); Fixes.VrContractBridge.Tick(); MpLab.Tick(); Net.NetLab.Tick(); } catch (Exception e) { Fault(2, "terrain/vr/labs", e); }
+            try { Fixes.TerrainHorizon.Tick(); Fixes.OpenXrBridge.Tick(); Fixes.VrContractBridge.Tick(); } catch (Exception e) { Fault(2, "terrain/vr/labs", e); }
             try { Net.Mp.Tick(); } catch (Exception e) { Fault(3, "multiplayer", e); }
             try { Net.PlayerSave.Tick(); Net.Tpa.Tick(); Net.CarTuneSave.Tick(); } catch (Exception e) { Fault(4, "player save/tpa", e); }
             try { Net.Voice.Tick(); Net.Chat.Tick(); } catch (Exception e) { Fault(5, "voice/chat", e); }
-            try { Net.VehicleLab.Tick(); Net.StreamLab.Tick(); Fixes.TinyRendererCull.Tick(); WorldGenLab.AllocTick(); RenderLab.Tick(); RebaseLab.Tick(); Fixes.RebaseParticles.Tick(); Net.DedicatedServer.Tick(); } catch (Exception e) { Fault(6, "labs/cull/server", e); }
+            try { Fixes.TinyRendererCull.Tick(); RebaseLab.Tick(); Fixes.RebaseParticles.Tick(); Net.DedicatedServer.Tick(); } catch (Exception e) { Fault(6, "labs/cull/server", e); }
             try { ModHost.Tick(); } catch (Exception e) { Fault(7, "mods", e); }
-            try { WorldGen.NewGameLayout.Tick(); KeyBindings.Tick(); DebugV2.Tick(); ItemHealth.Tick(); } catch (Exception e) { Fault(8, "menus/keys/debug", e); }
+            try { WorldGen.NewGameLayout.Tick(); KeyBindings.Tick(); } catch (Exception e) { Fault(8, "menus/keys/debug", e); }
             try {
             if (Plugin.KeyDown(Plugin.KeyOverlay)) { p.Overlay.Visible = !p.Overlay.Visible; RevampSettings.Save(); } // same setting as the Revamp tab
-            if (Plugin.KeyDown(Plugin.KeyItemTraffic)) { Net.ItemTraffic.SetVisible(!Net.ItemTraffic.Show); RevampSettings.Save(); p.Overlay.Toast(Net.ItemTraffic.Show ? "Item traffic on" : "Item traffic off", 2f); }
-            if (Plugin.KeyDown(Plugin.KeyOwnership)) { WorldOverlays.Ownership = !WorldOverlays.Ownership; RevampSettings.Save(); }
-            if (Plugin.KeyDown(Plugin.KeyOwnerGhost)) { WorldOverlays.Ghost = !WorldOverlays.Ghost; RevampSettings.Save(); }
-            if (Plugin.KeyDown(Plugin.KeyLinks)) { WorldOverlays.Links = !WorldOverlays.Links; RevampSettings.Save(); }
             if (Plugin.KeyDown(Plugin.KeyReport)) Net.Reports.LocalReport("hotkey");
             if (Plugin.KeyDown(Plugin.KeyMark)) MarkPanel.Open();
-            if (Plugin.KeyDown(Plugin.KeyCompare)) { ObjectPanels.Compare = !ObjectPanels.Compare; RevampSettings.Save(); }
-            if (Plugin.KeyDown(Plugin.KeyEvents)) { ObjectPanels.Events = !ObjectPanels.Events; RevampSettings.Save(); }
-            if (Plugin.KeyDown(Plugin.KeyDebugView)) { DebugView.Mode = DebugView.Next(DebugView.Mode); RevampSettings.Save(); }
-            if (_debugViewRevision == int.MinValue) _debugViewRevision = DebugView.Revision;
-            if (_debugViewRevision != DebugView.Revision)
-            {
-                _debugViewRevision = DebugView.Revision; p.Overlay.Toast("Debug view: " + DebugView.Mode, 2f);
-            }
-            ObjectPanels.Tick();
             if (Plugin.KeyDown(Plugin.KeyRepro)) MarkPanel.Open(true);
             ReproRecorder.Tick();
             MarkPanel.Tick();
@@ -423,15 +383,11 @@ namespace TLDRevamp
             // network tick among it).
             Cinematic.CinematicCamera.Draw();
             Replay.ReplayViewer.Draw(); Replay.ReplayRecorder.Draw();
-            NetworkConditions.Draw(); ReproRecorder.Draw();
+            ReproRecorder.Draw();
             MarkPanel.Draw();
-            ObjectPanels.Draw();
-            Net.Banner.Draw();
             ModHost.Gui();
             ModHost.RefreshConfigScreen();   // is a settings screen open right now?
             ModHost.DrawConfigs();   // the Loader mods' own settings windows (IMGUI)
-            ItemHealth.Draw();
-            DebugV2.DrawEditor();    // every event (its clicks and drags), drawn over the panels it frames
         }
 
         private void FixedUpdate()

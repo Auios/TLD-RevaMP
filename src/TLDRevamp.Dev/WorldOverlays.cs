@@ -185,9 +185,9 @@ namespace TLDRevamp
             for (int i = 0; i < _count; i++) { _rows[i].Entity = null; _rows[i].Frame = null; }
             for (int i = 0; i < _edgeCount; i++) { _edges[i].A = null; _edges[i].B = null; }
             _count = _edgeCount = _dropped = 0;
-            var focus = Entities.OverlayLook(); _focus = focus != null ? focus.NetId : 0;
+            var focus = EntityOverlays.OverlayLook(); _focus = focus != null ? focus.NetId : 0;
             if (DebugView.Mode == DebugViewMode.Problems || DebugView.Mode != DebugViewMode.Focus && (Ownership || Links || GhostAll))
-                Entities.OverlaySelect(_nearest, cam.transform.position, DebugView.Mode == DebugViewMode.Problems, now);
+                EntityOverlays.OverlaySelect(_nearest, cam.transform.position, DebugView.Mode == DebugViewMode.Problems, now);
             else _nearest.Clear();
             _scanned = _nearest.Count;
             bool found = false;
@@ -206,7 +206,7 @@ namespace TLDRevamp
                 _linkNearest.Clear();
                 for (int i = 0; i < _nearest.Count; i++) _linkNearest.Offer(_nearest.Items[i], _nearest.Items[i].NetId, 1);
                 if (focus != null && !found) _linkNearest.Offer(focus, focus.NetId, 0);
-                Entities.OverlayLinks(_linkNearest, DebugView.Mode == DebugViewMode.Problems);
+                EntityOverlays.OverlayLinks(_linkNearest, DebugView.Mode == DebugViewMode.Problems);
                 double ms = (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
                 _linkMs += ms; _linkMaxMs = Math.Max(_linkMaxMs, ms); _linkRefreshes++;
             }
@@ -216,7 +216,7 @@ namespace TLDRevamp
                 bool bad = false;
                 for (int j = 0; j < _edgeCount; j++) if (_edges[j].Bad && (_edges[j].NetA == r.Entity.NetId || _edges[j].NetB == r.Entity.NetId)) { bad = true; break; }
                 r.Problem = WorldOverlayLogic.Problem(r.Error, r.Age, Entities.OverlayMoving(r.Entity), bad,
-                    Entities.OverlayRecentProblem(r.Entity.NetId), Entities.OverlayRestSend(r.Entity, now));
+                    EntityOverlays.OverlayRecentProblem(r.Entity.NetId), EntityOverlays.OverlayRestSend(r.Entity, now));
                 r.Ghost &= r.Entity.NetId == _focus || r.Problem != null;
                 if (r.Problem != null)
                 {
@@ -245,7 +245,7 @@ namespace TLDRevamp
             {
                 string owner = WorldOverlayLogic.Owner(e.OwnerId, Entities.MyId);
                 string text = owner + (e.Proxy ? " / proxy" : " / simulated") + " / epoch " + e.Epoch.ToString(IC) + "\n" +
-                    (e.Proxy ? WorldOverlayLogic.Error(r.Error, r.Angle, r.Age, moving) + "\n" + Entities.OverlayMode(e) + " / " + Entities.OverlayAge(e, r.Age) : Entities.OverlaySendState(e));
+                    (e.Proxy ? WorldOverlayLogic.Error(r.Error, r.Angle, r.Age, moving) + "\n" + EntityOverlays.OverlayMode(e) + " / " + EntityOverlays.OverlayAge(e, r.Age) : EntityOverlays.OverlaySendState(e));
                 SetText(r.Text, r.Display, ref r.Size, text, e.Proxy ? text.Replace(WorldOverlayLogic.Error(r.Error, r.Angle, r.Age, moving), WorldOverlayLogic.Error(r.Error, r.Angle, r.Age, moving, true)) : null);
             }
             else if (DebugView.Mode == DebugViewMode.Focus) SetText(r.Text, r.Display, ref r.Size, "");
@@ -272,8 +272,8 @@ namespace TLDRevamp
             if (DebugV2.Line("tabs", "sync"))
             {
                 Next();
-                if (e.Proxy) sb.Append(WorldOverlayLogic.Error(r.Error, r.Angle, r.Age, moving)).Append(" · ").Append(Entities.OverlayMode(e));
-                else sb.Append(Entities.OverlaySendState(e));
+                if (e.Proxy) sb.Append(WorldOverlayLogic.Error(r.Error, r.Angle, r.Age, moving)).Append(" · ").Append(EntityOverlays.OverlayMode(e));
+                else sb.Append(EntityOverlays.OverlaySendState(e));
             }
             if (DebugV2.Line("tabs", "net"))
             {

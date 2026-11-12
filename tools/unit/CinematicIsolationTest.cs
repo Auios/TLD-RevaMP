@@ -772,7 +772,7 @@ static class CinematicIsolationTest
     static void BridgeClassificationMatchesThePolicy()
     {
         // The debug bridge's own classification must call the pure policy, so the two cannot drift apart.
-        var bridge = Read("src/TLDRevamp/DebugBridge.cs");
+        var bridge = Read("src/TLDRevamp/DebugBridge.cs") + Read("src/TLDRevamp.Dev/DevCommands.cs");
         Check(bridge.Contains("Cinematic.CinematicCommandPolicy.IsReadOnly(arg)"),
             "the bridge classifies the camera commands with the pure policy");
 
@@ -797,7 +797,7 @@ static class CinematicIsolationTest
     {
         // The camera's bridge surface has its own switch, and it only reaches the camera. It must not reach the
         // player's pickup, the entities, the session or anything else that changes the world or the network.
-        var bridgeSurface = Read("src/TLDRevamp/Cinematic/CinematicBridge.cs");
+        var bridgeSurface = Read("src/TLDRevamp.Dev/Cinematic/CinematicBridge.cs");
         // The strip is a per-line helper, so it is applied line by line and the lines are joined. Applied to the
         // whole file at once it stops at the first line comment and returns almost nothing, and the check below
         // could then never fail.
@@ -856,8 +856,8 @@ static class CinematicIsolationTest
         foreach (var type in named)
             Check(allowedTypes.Contains(type), "the camera's bridge surface may only use its own types and plain .NET types; found " + type);
 
-        // The bridge's own dispatch must route the camera command to the camera's surface and nowhere else.
-        var bridge = Read("src/TLDRevamp/DebugBridge.cs");
+        // The registered developer command must route to the camera's surface and nowhere else.
+        var bridge = Read("src/TLDRevamp/DebugBridge.cs") + Read("src/TLDRevamp.Dev/DevCommands.cs");
         var dispatch = Regex.Match(bridge, @"case ""cinema"":\s*return\s+([^;]+);");
         Check(dispatch.Success, "the bridge dispatches the cinema command");
         if (dispatch.Success)
@@ -1022,7 +1022,7 @@ static class CinematicIsolationTest
             "the camera's Fov property clamps what it is given");
 
         // And the bridge's own `cinema fov` clamps before it stores the value.
-        var bridge = Read("src/TLDRevamp/Cinematic/CinematicBridge.cs");
+        var bridge = Read("src/TLDRevamp.Dev/Cinematic/CinematicBridge.cs");
         var bridgeCode = CodeLinesOf(bridge).Select(l => l.code).ToArray();
         Check(bridgeCode.Any(code => Regex.IsMatch(code, @"State\.Fov\s*=\s*CinematicLimits\.ClampFov\s*\(")),
             "the bridge clamps the field of view it is given");

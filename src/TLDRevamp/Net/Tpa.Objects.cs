@@ -9,7 +9,7 @@ namespace TLDRevamp.Net
         internal static void ObjectApplied(uint net)
         {
             if ((_arrivalPending || _objectsAt > 0) && _arrivalObjects.Add(net))
-                ObjectPanelEvents.TpaObject(net, false, Entities.MyId, Time.realtimeSinceStartupAsDouble);
+                DevHooks.TpaObject?.Invoke(net, false, Entities.MyId, Time.realtimeSinceStartupAsDouble);
         }
     }
 }

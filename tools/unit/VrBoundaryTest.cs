@@ -32,7 +32,7 @@ static class VrBoundaryTest
             "src/TLDRevamp/VR/VrHandMachine.cs", "src/TLDRevamp/VR/VrRigPolicy.cs",
             "src/TLDRevamp/VR/VrLocomotion.cs", "src/TLDRevamp/VR/VrUiRay.cs",
             "src/TLDRevamp/VR/VrReconnectPolicy.cs", "src/TLDRevamp/VR/VrContracts.cs",
-            "src/TLDRevamp/VR/VrDiagnostics.cs",
+            "src/TLDRevamp.Dev/VR/VrDiagnostics.cs",
         };
         foreach (var f in contractFiles)
         {
@@ -82,7 +82,7 @@ static class VrBoundaryTest
               (bridge.Contains("HeadDecision") || bridge.Contains("PolicyReason") || bridge.Contains("HeadMayFollowCamera")));
         Check("the bridge applies the rig policy to the game", bridge.Contains("ApplyRigPolicy"));
         Check("the bridge does not move the gameplay root itself", !Regex.IsMatch(bridge, @"player\.Th\.(position|rotation)\s*="));
-        Check("the bridge reports the state without a pose", bridge.Contains("VrDiagnostics.Json"));
+        Check("the bridge reports the state without a pose", bridge.Contains("DevHooks.VrState") && Read("src/TLDRevamp.Dev/DevPlugin.cs").Contains("VR.VrDiagnostics.Json"));
 
         // ---- the OpenXR first-wave fixes are preserved
         var openxr = Read("src/TLDRevamp/Fixes/OpenXrBridge.cs");

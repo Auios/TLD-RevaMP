@@ -3,7 +3,7 @@
   <ItemGroup>
     <Compile Include="TerrainRibbonTest.cs" />
     <Compile Include="TerrainRibbonStubs.cs" />
-    <Compile Include="../../src/TLDRevamp/Fixes/TerrainRibbon.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Fixes/TerrainRibbon.cs" />
     <Compile Include="../../src/TLDRevamp/Fixes/TerrainHorizonGeometry.cs" />
   </ItemGroup>
 </Project>

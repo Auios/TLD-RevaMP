@@ -101,7 +101,7 @@ namespace TLDRevamp.Net
                 default: return "{\"error\":\"unsupported repro action\"}";
             }
         }
-        private static string ReproNotOwner() => ReproPlayback.Active ? "{\"ok\":true,\"skipped\":true}" : "{\"error\":\"requires local owner\"}";
+        private static string ReproNotOwner() => DevHooks.Playing ? "{\"ok\":true,\"skipped\":true}" : "{\"error\":\"requires local owner\"}";
         private static string ReproHitchAction(ReproRow r)
         {
             if (!ByNet.TryGetValue(r.Net, out var tr) || !ByNet.TryGetValue(r.Other, out var car) || !Resolve(tr) || !Resolve(car) ||

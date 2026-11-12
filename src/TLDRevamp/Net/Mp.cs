@@ -266,7 +266,7 @@ namespace TLDRevamp.Net
             JoinLoading.End(Session.EndReason ?? "stopped");
             bool wasHost = Server != null;
             foreach (var b in Bots) b.Dispose();
-            Bots.Clear(); PlayerBots.Reset();
+            Bots.Clear(); DevHooks.SessionStopped?.Invoke();
             if (Client != null) { TestSafety.InHostWorld = false; GameMode.RestoreOwn(); }   // leaving the host's world: the player's own saving rules and game mode again (a test's block stays)
             if (Client != null) { try { if (!fromSceneLoad) PlayerSave.ClientLeaving(); Client.Leave(); } catch (Exception e) { Plugin.Log.LogWarning("player save on leave: " + e.Message); } }
             if (Server != null) { try { var ps = new List<Session.Player>(); Server.Players(ps); PlayerSave.ServerStopping(ps); } catch (Exception e) { Plugin.Log.LogWarning("player save on stop: " + e.Message); } }
@@ -419,7 +419,7 @@ namespace TLDRevamp.Net
             Guard(0, "server", () => Server?.Tick());
             Guard(1, "client", () => Client?.Tick());
             Guard(2, "session", Session.Tick);
-            Guard(3, "bots", () => { for (int i = 0; i < Bots.Count; i++) Bots[i].Tick(); PlayerBots.Tick(); });
+            Guard(3, "bots", () => { for (int i = 0; i < Bots.Count; i++) Bots[i].Tick(); DevHooks.BotsTick?.Invoke(); });
             Guard(4, "players", RemotePlayers.Tick);
             Guard(5, "entities", Entities.Tick);
             Guard(7, "mods", () => { Server?.UploadTick(); ModObjects.Tick(); });
@@ -472,7 +472,7 @@ namespace TLDRevamp.Net
                     if (b.T.Connections.Count > 0) { int pg = b.T.Status(b.T.Connections[0]).Ping; if (pg >= 0) { pingSum += pg; pingN++; if (pg > pingMax) pingMax = pg; } }
                 }
                 parts.Add("\"bots\":{\"count\":" + Bots.Count + ",\"ready\":" + ready + ",\"bytesIn\":" + inB + ",\"bytesOut\":" + outB +
-                          ",\"pingAvg\":" + (pingN > 0 ? pingSum / pingN : -1) + ",\"pingMax\":" + pingMax + ",\"lag\":" + Json.Str(NetLab.LagInfo) + "}");
+                          ",\"pingAvg\":" + (pingN > 0 ? pingSum / pingN : -1) + ",\"pingMax\":" + pingMax + ",\"lag\":" + Json.Str(DevHooks.LagInfo?.Invoke() ?? "off") + "}");
             }
             parts.Add("\"remotePlayers\":" + RemotePlayers.Count);
             return "{" + string.Join(",", parts) + "}";
@@ -510,6 +510,9 @@ namespace TLDRevamp.Net
 
     public sealed partial class MpServer : IDisposable
     {
+        internal static Action<MpServer, int, byte, NetReader> DiagnosticMessage;
+        internal static Action<MpServer, int> DiagnosticPeerLeft;
+        internal IEnumerable<int> DiagnosticPlayers() { foreach (var p in _peers.Values) if (p.Ready) yield return p.Id; }
         private sealed class Peer
         {
             public HSteamNetConnection Conn;
@@ -791,8 +794,9 @@ namespace TLDRevamp.Net
                 case Reports.ReportChunk: if (p != null && p.Ready) Reports.ServerChunk(p.Id, p.ReportAccount, p.Name, r); break;
                 case TelemetryMarks.Message: if (p != null && p.Ready) MarkRequest(p.Id, p.SaveId, r); break;
                 case Reports.MarkRename: if (p != null && p.Ready) Reports.ServerRename(p.Id, r); break;
-                case ObjectPanelWire.Ask:
-                case ObjectPanelWire.Answer: if (p != null && p.Ready) PanelMessage(p.Id, type, r); break;
+                // Object comparison keeps its wire ids reserved when the optional handler is absent.
+                case 105:
+                case 107: if (p != null && p.Ready) DiagnosticMessage?.Invoke(this, p.Id, type, r); break;
                 case Protocol.Voice: if (p != null && p.Ready) VoiceFrom(p, r); break;
                 case Protocol.Outfit:
                 {
@@ -840,7 +844,7 @@ namespace TLDRevamp.Net
         {
             if (!_peers.TryGetValue(c.m_HSteamNetConnection, out var p)) return;
             _peers.Remove(c.m_HSteamNetConnection);
-            _panelRequests.Remove(p.Id);
+            DiagnosticPeerLeft?.Invoke(this, p.Id);
             RemotePlayers.Left(p.Id);
             HitCheck.Forget(p.Id);
             PlayerSave.ServerOnLeave(p.Id, p.SaveId);   // before the hand-over: their pocket leaves the world with them
@@ -1097,9 +1101,22 @@ namespace TLDRevamp.Net
 
     public sealed partial class MpClient : IDisposable
     {
+        internal static Action<byte, NetReader> DiagnosticMessage;
         public readonly SteamTransport T;
         public readonly BotMotion Bot;   // null = the local player
-        internal PlayerBot Player;       // a player bot (PlayerBotCore): its own moves, seat and claims instead of Bot's circle
+        internal interface IClientController
+        {
+            string Name { get; }
+            bool Silent { get; }
+            Vector3d Position { get; }
+            float Yaw { get; }
+            uint SeatNet { get; }
+            int SeatIndex { get; }
+            bool Wants(byte type);
+            void Receive(byte type, NetReader reader);
+            void Tick(int myId);
+        }
+        internal IClientController Player;       // a player bot (PlayerBotCore): its own moves, seat and claims instead of Bot's circle
         internal string JoinAddress;     // joined by IP: where (a player bot made in this game joins the same way)
         public int MyId = -1;
         public int ServerSeed;
@@ -1165,7 +1182,7 @@ namespace TLDRevamp.Net
             if (_helloSent) return;
             _helloSent = true;
             _w.Reset(); _w.U8(Protocol.Hello); _w.U16(Protocol.Version); _w.Str(Plugin.Version); _w.U64(TestClaimSteamId != 0 ? TestClaimSteamId : Mp.MySteamId());
-            _w.Str(Player != null ? Player.Core.Name : Bot != null ? "bot" : Session.MyName());
+            _w.Str(Player != null ? Player.Name : Bot != null ? "bot" : Session.MyName());
             // The password goes on the wire cleaned, whatever route it took to get here: the host's side is
             // cleaned when it is stored, so a raw value here would never match and the joiner would be told
             // the password is wrong for typing exactly what the host set.
@@ -1248,7 +1265,7 @@ namespace TLDRevamp.Net
             _heardAt = Time.realtimeSinceStartup;
             if (_silentShown) { _silentShown = false; Session.Show(1, "", "The host is back."); }
             byte type = r.U8();
-            if (Player != null && PlayerBotCore.Wants(type)) { Player.Core.Receive(type, r, Player.Send); return; }
+            if (Player != null && Player.Wants(type)) { Player.Receive(type, r); return; }
             if (type == Protocol.Batch)
             {
                 // the server's per-tick bundle: each message as if it came alone (a message's handler may read to its end)
@@ -1366,9 +1383,10 @@ namespace TLDRevamp.Net
                 case Reports.ReportAsk: if (Bot == null) Reports.ClientAsk(r); break;
                 case TelemetryMarks.Message: if (Bot == null) TelemetryMarks.Client(r); break;
                 case Reports.MarkRename: if (Bot == null) Reports.ClientRename(r); break;
-                case ObjectPanelWire.Query:
-                case ObjectPanelWire.Row:
-                case ObjectPanelWire.Roster: if (Bot == null) ObjectPanelWire.Client(type, r); break;
+                // The developer plugin supplies these diagnostic replies; normal clients need no handler.
+                case 106:
+                case 108:
+                case 109: if (Bot == null) DiagnosticMessage?.Invoke(type, r); break;
                 case Protocol.Roster: if (Bot == null) Session.RosterIn(r); break;
                 case Protocol.Voice: if (Bot == null) Voice.In(r); break;
                 case Protocol.PlayerJoined: { int id = (int)r.VarU32(); ulong sid = r.U64(); string name = Session.CleanName(r.Str()); if (id == 0) HostName = name; if (Bot == null) RemotePlayers.Joined(id, name, sid); break; }
@@ -1545,7 +1563,7 @@ namespace TLDRevamp.Net
 
         public void Tick()
         {
-            if (Player != null && Player.Core.Silent) return;   // a crashed player bot: nothing read, nothing sent
+            if (Player != null && Player.Silent) return;   // a crashed player bot: nothing read, nothing sent
             if (_stalled.Count > 0 && Time.realtimeSinceStartup >= StallUntil) ReplayStalled(_conn);
             if (_lagged.Count > 0) ReleaseLagged(_conn);
             T.MaxPollMs = Bot == null && Fixes.StreamReceiveBudget.Enabled ? Fixes.StreamReceiveBudget.BudgetMs : 0;
@@ -1588,7 +1606,7 @@ namespace TLDRevamp.Net
                 return;
             }
             _sendAcc += Time.unscaledDeltaTime;
-            if (Player != null) { Player.Tick(MyId); _botPos = Player.Core.Pos; _botYaw = Player.Core.Yaw; }
+            if (Player != null) { Player.Tick(MyId); _botPos = Player.Position; _botYaw = Player.Yaw; }
             else if (Bot != null) _botPos = Bot.Step(Time.unscaledDeltaTime, out _botYaw);
             if (_sendAcc < 1f / Protocol.StateHz) return;
             _sendAcc -= 1f / Protocol.StateHz;
@@ -1598,7 +1616,7 @@ namespace TLDRevamp.Net
             _w.Reset(); _w.U8(Protocol.State); _w.U16(++_seq); Protocol.WriteStamp(_w, Time.realtimeSinceStartupAsDouble); Protocol.WritePos(_w, g); Protocol.WriteYaw(_w, yaw);
             uint sNet = 0; int sIdx = 0; var foot = default(Protocol.Footing);
             if (Bot == null) { Entities.LocalSeat(out sNet, out sIdx); Entities.LocalFooting(out foot); }
-            else if (Player != null) { sNet = Player.Core.SeatNet; sIdx = Player.Core.SeatIdx; }
+            else if (Player != null) { sNet = Player.SeatNet; sIdx = Player.SeatIndex; }
             else if (_carNet != 0 && Mp.BotDriverSeat >= 0) { sNet = _carNet; sIdx = Mp.BotDriverSeat; }
             Protocol.WriteSeat(_w, sNet, sIdx, foot);
             T.Send(_conn, _w, SteamTransport.SendUnreliable);
@@ -1635,7 +1653,7 @@ namespace TLDRevamp.Net
         public string StatusJson() =>
             "{\"id\":" + MyId + ",\"name\":" + Json.Str(Session.MyName()) + ",\"ready\":" + (_readySent ? "true" : "false") + ",\"serverSeed\":" + ServerSeed + ",\"mySeed\":" + Mp.Seed() + ",\"reject\":" + Json.Str(RejectReason) +
             ",\"statesIn\":" + StatesIn + ",\"posesIn\":" + PosesIn + ",\"bytesIn\":" + T.BytesIn + ",\"bytesOut\":" + T.BytesOut + ",\"last\":" + Json.Str(T.LastEvent) +
-            ",\"ping\":" + (T.Connections.Count > 0 ? T.Status(T.Connections[0]).Ping : -1) + ",\"lag\":" + Json.Str(NetLab.LagInfo) + "}";
+            ",\"ping\":" + (T.Connections.Count > 0 ? T.Status(T.Connections[0]).Ping : -1) + ",\"lag\":" + Json.Str(DevHooks.LagInfo?.Invoke() ?? "off") + "}";
 
         public void Dispose() => T.Dispose();
     }
@@ -1679,6 +1697,12 @@ namespace TLDRevamp.Net
         private sealed class Look { public int Sel; public bool[] En; public Color[] Col; }
         private static readonly Dictionary<int, Look> Looks = new Dictionary<int, Look>();
         public static long OutfitsReapplied;
+        internal static void ObserveRiders(Action<Transform, int, uint, bool, Transform> observe)
+        {
+            foreach (var rp in All.Values)
+                if (rp.Go != null && rp.Go.activeInHierarchy)
+                    observe(rp.Go.transform, rp.Id, rp.SeatNet != 0 ? rp.SeatNet : rp.Foot.Net, rp.SeatNet != 0, rp.SeatedOn);
+        }
         private static readonly Dictionary<int, Rp> All = new Dictionary<int, Rp>();
         /// Test (mp relplayers): every remote body shown here.
         public static IEnumerable<KeyValuePair<int, Transform>> ShownBodies()

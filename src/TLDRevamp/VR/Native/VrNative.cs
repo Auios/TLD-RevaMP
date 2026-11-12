@@ -69,7 +69,7 @@ namespace TLDRevamp.VR.Native
             arg = (arg ?? "").Trim();
             if (arg.Length == 0 || arg == "state") return Json();
             if (arg.StartsWith("sim", StringComparison.Ordinal)) return VrSim.Command(arg.Substring(3).Trim());
-            if (arg == "body") return VrBody.Json();
+            if (arg == "body" && DevHooks.VrBody != null) return DevHooks.VrBody();
             if (arg.StartsWith("items", StringComparison.Ordinal)) return VrHands.ItemsJson(arg.Length > 5 ? float.Parse(arg.Substring(5).Trim(), CultureInfo.InvariantCulture) : 6f);
             if (arg == "comfort on" || arg == "comfort off") { Comfort = arg.EndsWith("on"); return Json(); }
             if (arg == "hands on" || arg == "hands off") { Hands = arg.EndsWith("on"); return Json(); }

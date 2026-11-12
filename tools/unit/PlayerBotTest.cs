@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using TLDRevamp.Net;
 using UnityEngine;
 
-/// Offline check of the player bot (src/TLDRevamp/Net/PlayerBotCore.cs) against a fake world: what it sends is what a
+/// Offline check of the player bot (src/TLDRevamp.Dev/Net/PlayerBotCore.cs) against a fake world: what it sends is what a
 /// real client sends for the same thing, byte for byte where the format is shared (claims, the state head), and in the
 /// order a real client sends it (seat, claim, then states only once the server made it the owner).
 static class PlayerBotTest

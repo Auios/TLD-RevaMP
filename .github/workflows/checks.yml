@@ -62,6 +62,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      - name: Build both plugins when game references are available
+        if: ${{ hashFiles('lib/Assembly-CSharp.dll') != '' }}
+        run: dotnet build src/TLDRevamp.Dev/TLDRevamp.Dev.csproj -c Release -p:UseSharedCompilation=false -nodeReuse:false
       - name: Every unit project
         shell: bash
         run: |

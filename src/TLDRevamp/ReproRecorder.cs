@@ -40,10 +40,11 @@ namespace TLDRevamp
             ",\"skipped\":" + (_data != null ? _data.Skipped : _skipped) + ",\"sampleHz\":10,\"capacity\":60000,\"selfMs\":" + Json.Num(_calls == 0 ? 0 : _ticks * 1000.0 / Stopwatch.Frequency / _calls, "F4") +
             ",\"maxMs\":" + Json.Num(_max * 1000.0 / Stopwatch.Frequency, "F4") + ",\"appendMs\":" +
             Json.Num(_appendCalls == 0 ? 0 : _appendTicks * 1000.0 / Stopwatch.Frequency / _appendCalls, "F4") + ",\"appendMaxMs\":" + Json.Num(_appendMax * 1000.0 / Stopwatch.Frequency, "F4") + "}";
+        internal static Func<ReproRow> SimulationSnapshot;
         internal static string Start() => StartCore(false);
         private static string StartCore(bool auto)
         {
-            if (ReproPlayback.Active) return "{\"error\":\"end playback before recording\"}";
+            if (DevHooks.Playing) return "{\"error\":\"end playback before recording\"}";
             if (Recording) { if (!auto) { _auto = false; _full = false; } return State(); }   // a hand start takes over the automatic one: it saves a file on stop
             if (_save != null && !_save.IsCompleted) return "{\"error\":\"previous repro is saving\"}";
             var p = mainscript.s != null ? mainscript.s.player : null;
@@ -53,7 +54,7 @@ namespace TLDRevamp
             _start = Time.realtimeSinceStartupAsDouble; _next = _start; _count = _dropped = _skipped = 0; _failed = false; _ticks = _calls = _max = 0;
             _appendTicks = _appendCalls = _appendMax = 0;
             Net.Entities.ReproReset();
-            Add(NetworkConditions.ReproRow(NetworkConditions.Current));
+            Add(SimulationSnapshot?.Invoke() ?? new ReproRow { Kind = ReproKind.Network });
             Net.Entities.LocalSeat(out uint seatNet, out int seat);
             if (seatNet != 0) Add(new ReproRow { Kind = ReproKind.SeatEnter, Net = seatNet, Slot = seat });
             CopyStartWorld();
@@ -112,7 +113,7 @@ namespace TLDRevamp
         }
         private static void AutoStart()
         {
-            if (!Auto || ReproPlayback.Active || SessionLog.Sid == null || SessionLog.Sid == _autoSid) return;
+            if (!Auto || DevHooks.Playing || SessionLog.Sid == null || SessionLog.Sid == _autoSid) return;
             if (mainscript.s == null || mainscript.s.player == null || !Net.Entities.InSession) return;
             if (_save != null && !_save.IsCompleted) return;
             StartCore(true);
@@ -127,7 +128,7 @@ namespace TLDRevamp
         private static void Cost(long begin) { long elapsed = Stopwatch.GetTimestamp() - begin; _ticks += elapsed; _calls++; _max = Math.Max(_max, elapsed); }
         internal static void Add(ReproRow row)
         {
-            if (!Recording || ReproPlayback.Active) return;
+            if (!Recording || DevHooks.Playing) return;
             long begin = Stopwatch.GetTimestamp();
             row.T = Math.Max(0, Time.realtimeSinceStartupAsDouble - _start); row.St = SessionLog.St;
             if (_full) { _tail?.Add(row); return; }
@@ -151,13 +152,13 @@ namespace TLDRevamp
         internal static void Skip() { if (Recording) _data.Skip(); }
         internal static void Command(string text)
         {
-            if (!Recording || ReproPlayback.Active) return;
+            if (!Recording || DevHooks.Playing) return;
             int code = ReproData.Command(text);
             if (code >= 0 && code != 4) Add(new ReproRow { Kind = ReproKind.Command, A = code });
         }
         internal static void Event(string kind, uint net, uint other, int item, int slot, int from, string result)
         {
-            if (!Recording || ReproPlayback.Active || from != Net.Entities.MyId) return;
+            if (!Recording || DevHooks.Playing || from != Net.Entities.MyId) return;
             ReproKind action;
             switch (kind)
             {

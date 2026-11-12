@@ -135,7 +135,7 @@ namespace TLDRevamp
             }
             if (_finishIdx < 0) _finishIdx = Array.IndexOf(_names, "PostLateUpdate.FinishFrameRendering");
             if (_finishIdx >= 0 && _stamps[_finishIdx] != 0 && _stamps[_finishIdx + 1] != 0)
-                RenderLab.FinishFrameBounds(_stamps[_finishIdx], _stamps[_finishIdx + 1]);
+                DevHooks.FinishFrame?.Invoke(_stamps[_finishIdx], _stamps[_finishIdx + 1]);
             double total = 0;
             // Interval i = stamps[i+1] - stamps[i]; skip intervals where a probe didn't fire this frame (stamp 0)
             for (int i = 0; i < n; i++)

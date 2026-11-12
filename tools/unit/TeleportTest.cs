@@ -10,6 +10,7 @@ static class TeleportTest
     static void Check(bool ok, string why) { checks++; if (!ok) throw new Exception(why); }
     static void Main()
     {
+        DevHooks.TpaObject += ObjectPanelEvents.TpaObject;
         Check(TpaArrival.Close(1, .2, 1), "one to two metre arrival accepted");
         Check(TpaArrival.Close(2, 0, 0) && !TpaArrival.Close(2.001, 0, 0), "two metre boundary");
         Check(!TpaArrival.Close(0, -6.56, 0), "reported wrong floor rejected");

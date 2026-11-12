@@ -49,13 +49,14 @@ def private_hits(data):
 def build(base, version, edition=None):
     """The version is metadata, so a dev release remains a clean build of its commit. edition "player": a release for
     players (TLDRevamp.PlayerEdition); a dev build has none."""
-    for proj in ("TLDRevamp/TLDRevamp.csproj", "TLDLoaderShim/TLDLoaderShim.csproj"):
+    main = "TLDRevamp/TLDRevamp.csproj" if edition == "player" else "TLDRevamp.Dev/TLDRevamp.Dev.csproj"
+    for proj in (main, "TLDLoaderShim/TLDLoaderShim.csproj"):
         subprocess.run(["dotnet", "build", str(ROOT / "src" / proj), "-c", "Release", "-nologo", "-v", "q",
                         "-p:RevampVersion=" + version] + (["-p:RevampEdition=" + edition] if edition else []), check=True)
 
 
 
-def package(version, commit):
+def package(version, commit, edition=None):
     game = tldenv.GAME_DIR
     plugin = {
         "TLDRevamp.dll": ROOT / "src/TLDRevamp" / OUT / "TLDRevamp.dll",
@@ -64,6 +65,8 @@ def package(version, commit):
         "approved-mods.txt": ROOT / "packaging/approved-mods.txt",
         "COPYING": ROOT / "COPYING",
     }
+    if edition != "player":
+        plugin["TLDRevamp.Dev.dll"] = ROOT / "src/TLDRevamp.Dev" / OUT / "TLDRevamp.Dev.dll"
     # RevaMP reads the dev version from metadata; BepInPlugin keeps the plain numeric version.
     dll = plugin["TLDRevamp.dll"].read_bytes()
     if version.encode() not in dll:

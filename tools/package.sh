@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Player release zip: BepInEx 5 (unmodified, from this machine's game install) + the mod + INSTALL.txt.
-# Never includes: configs, logs, caches, third-party TLDLoader mods (Killenger's autopilot is test tooling), saves.
+# Never includes: TLDRevamp.Dev.dll, configs, logs, caches, third-party TLDLoader mods (Killenger's autopilot is test tooling), saves.
 #   tools/package.sh  ->  dist/TLD-RevaMP-<version>.zip
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -28,7 +28,7 @@ cp "$DLL" "$ROOT/src/TLDLoaderShim/bin/Release/netstandard2.1/TLDLoader.dll" "$R
 sed "s/@VERSION@/$VER/g" "$ROOT/packaging/INSTALL.txt" > "$P/INSTALL.txt"
 mkdir -p "$P/BepInEx/licenses"; cp "$ROOT"/packaging/licenses/*.txt "$P/BepInEx/licenses/"   # bundled third-party licences
 # nothing personal or third-party slipped in
-if find "$P" -iname "*.cfg" -o -iname "*.log" -o -ipath "*TLDLoaderMods*" -o -iname "*autopilot*" | grep -q .; then echo "package contains configs/logs/third-party mods" >&2; exit 1; fi
+if find "$P" -iname "TLDRevamp.Dev.dll" -o -iname "*.cfg" -o -iname "*.log" -o -ipath "*TLDLoaderMods*" -o -iname "*autopilot*" | grep -q .; then echo "package contains configs/logs/third-party mods" >&2; exit 1; fi
 # and no build-machine paths, names or addresses inside our DLLs (string literals, PDB path)
 for f in "$P"/BepInEx/plugins/TLDRevamp/*.dll; do
   # (not grep -q: it quits at the first match, strings dies of SIGPIPE, and pipefail turned every match into "clean")

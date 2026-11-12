@@ -24,6 +24,8 @@ static class ReproActionsTest
     }
     private static void Main()
     {
+        DevHooks.Playback = () => ReproPlayback.Active;
+        ReproRecorder.SimulationSnapshot = () => NetworkConditions.ReproRow(NetworkConditions.Current);
         var p = mainscript.s.player;
         foreach (string guid in new[] { "tldrevamp.copyisolation", "someone.tld.copyisolation" })
         {

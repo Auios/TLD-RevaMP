@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Build the plugin and copy it into the game's BepInEx/plugins folder.
+# Build both plugins and copy them into the game's BepInEx/plugins folder.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GAME="${TLD_DIR:-$HOME/.local/share/Steam/steamapps/common/The Long Drive}"
-dotnet build "$ROOT/src/TLDRevamp/TLDRevamp.csproj" -c Release -nologo -v q
+dotnet build "$ROOT/src/TLDRevamp.Dev/TLDRevamp.Dev.csproj" -c Release -nologo -v q
 dotnet build "$ROOT/src/TLDLoaderShim/TLDLoaderShim.csproj" -c Release -nologo -v q
 mkdir -p "$GAME/BepInEx/plugins/TLDRevamp"
 mkdir -p "$GAME/BepInEx/patchers/TLDRevamp"
 cp "$ROOT/src/TLDRevamp.Preloader/bin/Release/netstandard2.1/TLDRevamp.Preloader.dll" "$GAME/BepInEx/patchers/TLDRevamp/"
 cp "$ROOT/src/TLDRevamp/bin/Release/netstandard2.1/TLDRevamp.dll" "$GAME/BepInEx/plugins/TLDRevamp/"
+cp "$ROOT/src/TLDRevamp.Dev/bin/Release/netstandard2.1/TLDRevamp.Dev.dll" "$GAME/BepInEx/plugins/TLDRevamp/"
 # the multiplayer API other mods reference (built with TLDRevamp, which depends on it)
 cp "$ROOT/src/TLDRevamp.Multiplayer/bin/Release/netstandard2.1/TLDRevamp.Multiplayer.dll" "$ROOT/packaging/approved-mods.txt" "$GAME/BepInEx/plugins/TLDRevamp/"
 # TLDLoader mods under BepInEx: the API stub next to our plugin, the mods (third-party, not in git) in BepInEx/TLDLoaderMods

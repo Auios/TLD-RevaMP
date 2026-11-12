@@ -56,7 +56,7 @@ namespace TLDRevamp
         internal static ObjectPanelState Capture(uint net, bool remote = false, bool eventsOnly = false)
         {
             long at = Stopwatch.GetTimestamp(), alloc = SessionLog.AllocCounter ? GC.GetAllocatedBytesForCurrentThread() : 0;
-            var s = eventsOnly ? new ObjectPanelState { Net = net } : Entities.PanelCapture(net);
+            var s = eventsOnly ? new ObjectPanelState { Net = net } : EntityPanels.PanelCapture(net);
             if (remote && !Reports.Share) s.Flags |= ObjectPanelState.Bits.EventsNotShared;
             else ObjectPanelEvents.Capture(SessionLog.PanelEventsRing, s, Time.realtimeSinceStartupAsDouble);
             long ticks = Stopwatch.GetTimestamp() - at;
@@ -76,7 +76,7 @@ namespace TLDRevamp
             double now = Time.realtimeSinceStartupAsDouble;
             if (now < _next) return;
             _next = now + .5;
-            uint target = _compare && _requested != 0 ? _requested : Entities.PanelFocus(true);
+            uint target = _compare && _requested != 0 ? _requested : EntityPanels.PanelFocus(true);
             if (target != _net)
             {
                 _token++; _round = 0; Partners.Clear(); Array.Clear(Locals, 0, Locals.Length); _compareScroll = Vector2.zero;
@@ -84,7 +84,7 @@ namespace TLDRevamp
                 _net = target;
             }
             ObjectPanelEvents.FocusTpa(_net);
-            Mine.text = Entities.PoiFocusDescription(now) ?? Entities.OverlayDescription(_net, now);
+            Mine.text = Entities.PoiFocusDescription(now) ?? EntityOverlays.OverlayDescription(_net, now);
             if (_compare)
             {
                 ObjectPanelEvents.FocusTpa(_net);

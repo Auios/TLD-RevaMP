@@ -121,6 +121,27 @@ public sealed class SourceTests : IDisposable
         Assert.Equal(c.Commit, CopyInfo.Load(c.Dir)!.Commit);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DeveloperPluginFollowsTheSourceCopyEdition(bool player)
+    {
+        var c = Copy(); var b = Builder(); b.Build(c, Managed, Core);
+        Write(Path.Combine(Repo, "src", "TLDRevamp.Dev", "TLDRevamp.Dev.csproj"));
+        string dev = Path.Combine(c.GameDir, "BepInEx", "plugins", "TLDRevamp", "TLDRevamp.Dev.dll");
+        Write(dev, "old developer plugin");
+        c.PlayerEdition = player; calls.Clear();
+        Assert.True(b.Build(c, Managed, Core, force: true));
+        Assert.Equal(!player, calls.Any(x => x.Args[0] == "build" && x.Args[1].Contains("TLDRevamp.Dev")));
+        Assert.Equal(!player, File.Exists(dev));
+        if (!player)
+        {
+            c.PlayerEdition = true;
+            Assert.True(b.Build(c, Managed, Core, force: true));
+            Assert.False(File.Exists(dev));
+        }
+    }
+
     [Fact]
     public void FetchCountsNewCommitsSkipsUnchangedBuildsAndSwitchesRefs()
     {

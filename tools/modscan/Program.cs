@@ -7,7 +7,7 @@ using System.Reflection;
 /// <mod>.md and <mod>.MpSkeleton.cs. The game's own DLLs resolve what the mod references:
 ///   TLD_DIR=<the game's folder> dotnet run --project tools/modscan -- <mod.dll> [--lib <more folders with DLLs it needs>]
 ///   [--out <folder for the report>]
-/// (build TLD Revamp first: tools/build.sh, or dotnet build src/TLDRevamp -c Release)
+/// (build TLD Revamp first: tools/build.sh, or dotnet build src/TLDRevamp.Dev -c Release)
 ///
 /// Where the report goes: by default next to the scanned DLL, which is where the in-game scanner writes it
 /// (BepInEx/TLDRevampModScan). --out sends it somewhere else. It never writes to the current working directory:

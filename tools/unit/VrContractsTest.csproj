@@ -10,6 +10,6 @@
     <Compile Include="../../src/TLDRevamp/VR/VrUiRay.cs" />
     <Compile Include="../../src/TLDRevamp/VR/VrReconnectPolicy.cs" />
     <Compile Include="../../src/TLDRevamp/VR/VrContracts.cs" />
-    <Compile Include="../../src/TLDRevamp/VR/VrDiagnostics.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/VR/VrDiagnostics.cs" />
   </ItemGroup>
 </Project>

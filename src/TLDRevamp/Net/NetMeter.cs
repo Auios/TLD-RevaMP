@@ -123,7 +123,7 @@ namespace TLDRevamp.Net
             if (len <= 0) return;
             long ticks = Now() - t0;
             byte type = buf[0];
-            if (type != Protocol.Batch) { OutMsgs[type]++; OutBytes[type] += len; OutTicks[type] += ticks; Traffic(true, type, len, 0, buf, 0, len, peer); Note(true, type, len, peer); ItemTraffic.Packet(buf, 0, len, len, true, server); return; }
+            if (type != Protocol.Batch) { OutMsgs[type]++; OutBytes[type] += len; OutTicks[type] += ticks; Traffic(true, type, len, 0, buf, 0, len, peer); Note(true, type, len, peer); DevHooks.Packet?.Invoke(buf, 0, len, len, true, server); return; }
             OutMsgs[type]++; OutBytes[type]++; OutTicks[type] += ticks;
             Traffic(true, type, 1, 0, null, 0, 0, peer);
             int pos = 1;
@@ -136,7 +136,7 @@ namespace TLDRevamp.Net
                 int bytes = (int)n + (pos - at);
                 OutMsgs[st]++; OutBytes[st] += bytes; Note(true, st, bytes, peer);
                 Traffic(true, st, bytes, 0, buf, pos, (int)n, peer);
-                ItemTraffic.Packet(buf, pos, (int)n, bytes, true, server);
+                DevHooks.Packet?.Invoke(buf, pos, (int)n, bytes, true, server);
                 pos += (int)n;
             }
         }
@@ -148,14 +148,14 @@ namespace TLDRevamp.Net
             long ticks = Now() - t0;
             InMsgs[type]++; InBytes[type] += bytes; InTicks[type] += ticks;
             Traffic(false, type, bytes, ticks, buf, offset, length, peer);
-            if (type != Protocol.Batch) { Note(false, type, bytes, peer); ItemTraffic.Packet(buf, offset, length, bytes, false, server); }
+            if (type != Protocol.Batch) { Note(false, type, bytes, peer); DevHooks.Packet?.Invoke(buf, offset, length, bytes, false, server); }
         }
 
         public static void Reset()
         {
             Array.Clear(OutMsgs, 0, 256); Array.Clear(OutBytes, 0, 256); Array.Clear(OutTicks, 0, 256);
             Array.Clear(InMsgs, 0, 256); Array.Clear(InBytes, 0, 256); Array.Clear(InTicks, 0, 256);
-            ItemTraffic.Reset();
+            DevHooks.TrafficReset?.Invoke();
             Peers.Clear(); _since = Time.realtimeSinceStartupAsDouble; _sinceFrame = Time.frameCount;
             _ringAt = 0; _ringN = 0; _rateAt = 0;
         }

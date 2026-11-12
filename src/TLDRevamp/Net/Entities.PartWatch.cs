@@ -37,7 +37,7 @@ namespace TLDRevamp.Net
             if (now - _pwLookAt >= PartWatchLookEveryS) { _pwLookAt = now; PartWatchLook(pl, now); ItemWatchLook(pl, now); }
         }
 
-        private struct PartReach { public bool Visible, Targetable, Expected; public int Cols, Live, UseLayer, Held; }
+        internal struct PartReach { public bool Visible, Targetable, Expected; public int Cols, Live, UseLayer, Held; }
 
         /// The game's own rule (partslotscript.Craft): crafted into a slot that switches colliders off, or onto an item that
         /// is (its holder's slot), the part's colliders are off on purpose — and so are those of what is fitted onto it.
@@ -54,7 +54,7 @@ namespace TLDRevamp.Net
         }
 
         /// The part as the game's use ray finds it: its own colliders on useLayer, or its slot's (the dismount hits either).
-        private static PartReach Reach(attachablescript part, fpscontroller pl)
+        internal static PartReach Reach(attachablescript part, fpscontroller pl)
         {
             var r = new PartReach();
             _pwCols.Clear(); part.GetComponentsInChildren(true, _pwCols);

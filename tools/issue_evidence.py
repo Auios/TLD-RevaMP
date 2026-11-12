@@ -110,7 +110,7 @@ GATES = {
     33: [
         {"id": "shim", "kind": "file", "path": "src/TLDLoaderShim/TLDLoader.cs", "state": "committed",
          "note": "the shim whose API the scanner and the ported mods target"},
-        {"id": "scanner", "kind": "file", "path": "src/TLDRevamp/LoaderScan.cs", "state": "either",
+        {"id": "scanner", "kind": "file", "path": "src/TLDRevamp.Dev/LoaderScan.cs", "state": "either",
          "note": "the scanner reports lifecycle, dependencies, type-load errors and member sites"},
         {"id": "scanner-cli", "kind": "file", "path": "tools/modscan/Program.cs", "state": "either",
          "note": "the scanner runs without starting the game"},

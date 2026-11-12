@@ -266,10 +266,10 @@ static class TerrainHorizonTest
         Check(horizon.Contains("NearCutRadius()"),
               "the near cut is derived from the game's own draw distance");
 
-        // D1: the Unity-shaped twin of the ribbon (src/TLDRevamp/Fixes/TerrainRibbon.cs) needs
+        // D1: the Unity-shaped twin of the ribbon (src/TLDRevamp.Dev/Fixes/TerrainRibbon.cs) needs
         // Unity types, so it cannot be linked here. It must still be guarded the same way: a
         // NaN half-width and an overflowing segment must be rejected before anything is written.
-        string ribbonTwin = File.ReadAllText(Path.Combine(root, "src/TLDRevamp/Fixes/TerrainRibbon.cs"));
+        string ribbonTwin = File.ReadAllText(Path.Combine(root, "src/TLDRevamp.Dev/Fixes/TerrainRibbon.cs"));
         Check(ribbonTwin.Contains("if (!Finite(halfWidth)"),
               "the ribbon twin rejects a non-finite half-width explicitly");
         Check(ribbonTwin.Contains("if (!Finite(forward))"),

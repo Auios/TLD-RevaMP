@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>TLDRevamp.Dev</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+      <!-- no build-machine paths in the DLL (the PDB path and source paths carry the user name) -->
+    <PathMap>$(MSBuildProjectDirectory)=/src/$(MSBuildProjectName)</PathMap>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(MSBuildThisFileDirectory)../../lib/*.dll" Private="false" />
+    <ProjectReference Include="../TLDRevamp.Multiplayer/TLDRevamp.Multiplayer.csproj" Private="false" />
+    <ProjectReference Include="../TLDRevamp/TLDRevamp.csproj" Private="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- the corner mark's font atlas (tools/wipfont.py) -->
+    <EmbeddedResource Include="../TLDRevamp/Assets/WipFont.png" LogicalName="TLDRevamp.WipFont.png" />
+    <EmbeddedResource Include="../TLDRevamp/Assets/WipFont.txt" LogicalName="TLDRevamp.WipFont.txt" />
+  </ItemGroup>
+</Project>

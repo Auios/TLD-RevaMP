@@ -6,7 +6,8 @@ source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.cs')
 
 
 def method(name, result='void'):
-    start = source.index('        private static ' + result + ' ' + name + '(')
+    signature = ' static ' + result + ' ' + name + '('
+    start = source.rfind('\n', 0, source.index(signature)) + 1
     brace = source.index('{', start)
     depth = 1
     end = brace + 1

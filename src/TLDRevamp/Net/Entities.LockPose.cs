@@ -47,7 +47,7 @@ namespace TLDRevamp.Net
 
         // Use the shared ancestor's frame, including a container mounted on a moving part. Unshared parents fall
         // back to world poses, so their motion remains visible to the send decision.
-        private static uint LockedFrame(Ent e, mountStuff mount, Transform t, out Vector3 lp, out Quaternion lq, out int item, out int index)
+        internal static uint LockedFrame(Ent e, mountStuff mount, Transform t, out Vector3 lp, out Quaternion lq, out int item, out int index)
         {
             lp = default; lq = Quaternion.identity; item = index = -1;
             if (mount == null) return 0;

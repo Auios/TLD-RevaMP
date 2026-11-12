@@ -710,7 +710,7 @@ namespace TLDRevamp.Replay
         {
             // the debug layout editor (DebugV2, Right Shift) too: the mouse moves its cursor, so it must not turn the
             // camera, and a click on the editor must not also grab or use something in the world
-            if (!ReplayViewer.Active && !DebugV2.Editing || __instance == null) return;
+            if (!ReplayViewer.Active && !DevHooks.CapturingInput || __instance == null) return;
             Find();
             if (ReplayViewer.Active)
             {

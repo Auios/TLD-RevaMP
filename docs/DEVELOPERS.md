@@ -333,6 +333,10 @@ A dev build is a **draft** release by default: only people with write access see
 build is installed from its zip. In game it shows as e.g. `0.69.1-dev.c8d9c55`, and multiplayer only lets that exact
 build join.
 
+### Developer plugin
+
+Source builds deploy two BepInEx plugins: `TLDRevamp.dll` runs the game features, and `TLDRevamp.Dev.dll` holds labs, probes, diagnostic loggers, test bots, network simulation, debug panels and overlays. Build `src/TLDRevamp.Dev/TLDRevamp.Dev.csproj` to build both; `tools/build.sh` deploys both. Player releases ship without Dev. To add a lab, register its bridge commands, settings, keys and optional observations through the core hooks, and tick or draw it from the Dev runner. Core must never reference Dev.
+
 ## Release model
 
 - **Releases** are published from `main` as a GitHub release with the version tag `v<version>`. The assets are the

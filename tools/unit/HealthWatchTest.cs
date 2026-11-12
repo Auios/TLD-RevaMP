@@ -70,7 +70,7 @@ static class HealthWatchTest
         else
         {
             string privacy = System.IO.File.ReadAllText(System.IO.Path.Combine(root, "src/TLDRevamp/TelemetryPrivacy.cs"));
-            string panel = System.IO.File.ReadAllText(System.IO.Path.Combine(root, "src/TLDRevamp/ObjectPanelEvents.cs"));
+            string panel = System.IO.File.ReadAllText(System.IO.Path.Combine(root, "src/TLDRevamp.Dev/ObjectPanelEvents.cs"));
             foreach (var w in new[] { HealthWatchRules.Body, HealthWatchRules.Position, HealthWatchRules.NonFinite, HealthWatchRules.Runaway, HealthWatchRules.UnderGround,
                                       HealthWatchRules.OwnerLeft, HealthWatchRules.SlotMismatch, HealthWatchRules.RepairLoop, HealthWatchRules.ItemOff, HealthWatchRules.ItemHeldLayer, HealthWatchRules.ItemNotPickup })
             {

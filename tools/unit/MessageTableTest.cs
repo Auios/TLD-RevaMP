@@ -53,7 +53,10 @@ static class MessageTableTest
     {
         string root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
         string sourceRoot = Path.Combine(root, "src", "TLDRevamp");
-        var src = Directory.GetFiles(sourceRoot, "*.cs", SearchOption.AllDirectories).ToDictionary(p => p, File.ReadAllText);
+        var src = Directory.GetFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+            .Concat(Directory.GetFiles(Path.Combine(root, "src", "TLDRevamp.Dev"), "*.cs", SearchOption.AllDirectories))
+            .Where(p => !p.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar) && !p.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
+            .ToDictionary(p => p, p => File.ReadAllText(p).Replace("\r\n", "\n"));
         string allSource = string.Join("\n", src.Values);
         var consts = ReadConsts(src);
         var rows = ReadTable(File.ReadAllText(Path.Combine(root, "docs", "MESSAGES.md")));
@@ -62,7 +65,7 @@ static class MessageTableTest
         Check("sorted by id", rows.Select(r => r.Id).SequenceEqual(rows.Select(r => r.Id).OrderBy(i => i)));
 
         // what the dispatchers route: Mp.cs's two switches, then Entities' own
-        string mp = File.ReadAllText(Path.Combine(sourceRoot, "Net", "Mp.cs"));
+        string mp = File.ReadAllText(Path.Combine(sourceRoot, "Net", "Mp.cs")).Replace("\r\n", "\n");
         int serverAt = mp.IndexOf("switch (type)"), serverEnd = mp.IndexOf("void OnTransport", serverAt), clientAt = mp.IndexOf("switch (type)", serverEnd);
         Check("Mp.cs has its two dispatchers", serverAt > 0 && serverEnd > serverAt && clientAt > serverEnd);
         string entities = string.Join("\n", src.Where(p => Path.GetFileName(p.Key).StartsWith("Entities")).Select(p => p.Value));
@@ -121,6 +124,7 @@ static class MessageTableTest
         var ids = new HashSet<int>();
         foreach (Match m in Regex.Matches(code, @"case (?:(\w+)\.)?(\w+):"))
         {
+            if (int.TryParse(m.Groups[2].Value, out int reserved)) { ids.Add(reserved); continue; }
             string owner = m.Groups[1].Success ? m.Groups[1].Value : "Entities";
             if (consts.TryGetValue(owner, out var names) && names.TryGetValue(m.Groups[2].Value, out int id)) { ids.Add(id); continue; }
             // a file's nested class can stand in front of a const of the outer one: a name only one class declares is that one

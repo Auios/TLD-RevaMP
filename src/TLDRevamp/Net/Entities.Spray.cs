@@ -16,7 +16,7 @@ namespace TLDRevamp.Net
         private static readonly HashSet<Ent> _spraying = new HashSet<Ent>();
 
         /// Owner: the can in this player's hands is spraying (its valve open past the first frames).
-        private static bool IsSpraying(tosaveitemscript it)
+        internal static bool IsSpraying(tosaveitemscript it)
         {
             if (it == null || !IsHeld(it)) return false;
             var sp = it.GetComponent<sprayscript>();

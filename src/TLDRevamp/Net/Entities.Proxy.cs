@@ -161,7 +161,7 @@ namespace TLDRevamp.Net
         // display copy no wheel physics runs, so the owner sends what the pose is made of — suspension travel along the
         // collider's up axis, steer angle, rpm — and the copy rebuilds the same pose (spin integrated from rpm: a wheel
         // turns ~180° between two 20 Hz states at speed, sampling its angle would look wrong).
-        private static wheelgraphicsscript[] WheelsOf(Ent e)
+        internal static wheelgraphicsscript[] WheelsOf(Ent e)
         {
             if (e.Wheels == null || e.Wheels.Length == 0) e.Wheels = e.Root.GetComponentsInChildren<wheelgraphicsscript>(true);
             return e.Wheels;

@@ -122,7 +122,7 @@ namespace TLDRevamp
                     }
                 }
                 Info = Mods.Count + " mod(s)";
-                AutopilotBridge.Install();   // test tooling: the autopilot port made aware of other players
+                DevHooks.ModsLoaded?.Invoke();   // test tooling: the autopilot port made aware of other players
             }
             catch (Exception e) { Info = "failed: " + e.Message; Plugin.Log.LogError("ModHost: " + e); }
         }
@@ -279,7 +279,7 @@ namespace TLDRevamp
                 foreach (var l in Mods) Call(l, l.OnLoad, "OnLoad");
             }
             foreach (var l in Mods) Call(l, l.Update, "Update");
-            AutopilotBridge.Tick();
+            DevHooks.ModsTick?.Invoke();
         }
 
         /// The public game's names for the singletons (TLDRevamp.Preloader.LoaderAliases adds the fields) pointed at the

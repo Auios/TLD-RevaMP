@@ -23,7 +23,7 @@ namespace TLDRevamp.Net
         {
             private static void Postfix(carscript __instance)
             {
-                if (ReproPlayback.Active)
+                if (DevHooks.Playing)
                 {
                     if (__instance != _reproDrive || !__instance.isPlayerDriving || Time.realtimeSinceStartup > _reproDriveUntil) return;
                     var c = __instance; var r = _reproDriveInput; int bits = (int)r.C;

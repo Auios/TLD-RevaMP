@@ -507,6 +507,14 @@ namespace TLDRevamp
             return p.EndsWith("password") || p.Contains("hostpassword") || p.EndsWith(".password");
         }
 
+        private static readonly System.Collections.Generic.Dictionary<string, Func<string, string>> Commands = new System.Collections.Generic.Dictionary<string, Func<string, string>>(StringComparer.Ordinal);
+        internal static void Register(string name, Func<string, string> command) => Commands[name] = command;
+        internal static bool TryRegistered(string name, string arg, out string reply)
+        {
+            if (Commands.TryGetValue(name, out var command)) { reply = command(arg); return true; }
+            reply = null; return false;
+        }
+
         internal static string Execute(string line)
         {
             var parts = line.Split(new[] { ' ' }, 2);
@@ -533,12 +541,11 @@ namespace TLDRevamp
             }
             var p = Plugin.Instance;
 
+            if (TryRegistered(cmd, arg, out var contributedCommand)) return contributedCommand;
             switch (cmd)
             {
                 case "vr": return Fixes.VrContractBridge.Json();
                 case "vrnative": return VR.Native.VrNative.Command(arg);
-                case "cinema": return Cinematic.CinematicBridge.Command(arg);
-                case "replay": return Replay.ReplayBridge.Command(arg);
                 // The XR session (issue #41). The tool tools/quest3vr.py sends exactly this command, so without
                 // the case the tool could never start a session, sample it or recenter: the bridge answered
                 // "unknown command" and the tool stopped at its first call. "openxr" on its own is a pure read
@@ -548,12 +555,6 @@ namespace TLDRevamp
                 // acts on it. The start is explicit (nothing starts a session behind the player's back) and a
                 // failed start is retried only when it is asked for.
                 case "openxr": return Fixes.OpenXrBridge.Command(arg);
-                // The horizon diagnostics (issue #37). The tool tools/terrainhorizon.py sends exactly this command,
-                // so without the case the tool could never produce any evidence: the bridge answered "unknown
-                // command" and the tool stopped. It is a pure read, so it needs no developer access.
-                case "terrainhorizon": return Fixes.TerrainHorizonLab.Snapshot(arg);
-                // This fix's own counters: what it drew, what it cost and how often it ran.
-                case "terrainhorizonstats": return Fixes.TerrainHorizonLab.Stats();
                 // The detailed terrain ring (issue #37): how far it reaches, its tiles, what it raised.
                 case "detailedterrain": return Fixes.DetailedTerrain.Stats();
                 case "ping": return "{\"ok\":true,\"version\":\"" + Plugin.Version + "\",\"build\":\"" + Plugin.BuildHash + "\",\"commit\":\"" + Plugin.BuildCommit + "\",\"dirty\":" + (Plugin.BuildDirty ? "true" : "false") + ",\"game\":\"" + Plugin.GameBuild + "\",\"port\":" + _boundPort + ",\"dataPath\":" + Json.Str(Application.dataPath) + ",\"patchFailures\":" + Plugin.PatchFailures + ",\"failedPatches\":" + Json.Str(string.Join(",", Plugin.FailedPatches)) + "}";
@@ -561,7 +562,6 @@ namespace TLDRevamp
                 case "scene": return p.Telemetry.SceneStatsJson();
                 case "breakdown": return p.Telemetry.Breakdown.Json();
                 case "telemetry": return SessionLog.Stats();
-                case "counters": return CounterProbe.Run(arg);
                 case "timers": return ScriptProfiler.Bridge(arg);
                 case "il": return ScriptProfiler.Il(arg.Trim());
                 case "telemetrytest": return SessionLog.SelfTest(arg.Length > 0 ? int.Parse(arg) : 20000);
@@ -569,55 +569,15 @@ namespace TLDRevamp
                 case "mark": return Net.TelemetryMarks.Local(arg);
                 case "markpanel": return MarkPanel.Bridge(arg);
                 case "markrename": return MarkPanel.Bridge(arg, true);
-                case "repro": return ReproPlayback.Command(arg);
                 case "bug": return BugReport.Bridge(arg);
                 case "blackbox": return SessionLog.Blackbox();
                 case "trace": return Net.Entities.TelemetryTrace();
                 case "netcat": return Net.NetMeter.CategoryJson();
-                case "items": return PhysicsLab.Items(arg);
-                case "physics": return PhysicsLab.Stats();
-                case "followdump": return PhysicsLab.FollowDump(arg.Length > 0 ? int.Parse(arg) : 6);
-                case "render": return PhysicsLab.RenderStats();
-                case "cameras": return PhysicsLab.Cameras();
-                case "renderinv": return RenderLab.Inventory();
-                case "skinned": return RenderLab.Skinned();
-                case "rtoggle": { var tv = arg.Split(' '); return RenderLab.Toggle(tv[0], tv.Length > 1 ? tv[1] : ""); }
-                case "mirrors": return RenderLab.Mirrors();
-                case "particles": return RenderLab.Particles();
                 case "rebaseprof": return arg == "stop" ? RebaseLab.Stop() : RebaseLab.Start();
                 case "pourtest": return RebaseLab.PourTest(arg);
-                case "uievents": return UiLab.Events(arg);
-                case "uiclick": return UiLab.Click(arg);
-                case "uihover": return UiLab.Hover(arg);
-                case "uiscroll": return UiLab.Scroll(arg);
-                case "revampscroll":
-                {
-                    // test: scroll the open Revamp tab (1 top, 0 bottom) — screenshots of its lower sections; "info V" scrolls
-                    // the explanation panel instead
-                    bool infoPanel = arg.StartsWith("info ", StringComparison.Ordinal);
-                    if (infoPanel) arg = arg.Substring(5);
-                    foreach (var sr in UnityEngine.Object.FindObjectsOfType<UnityEngine.UI.ScrollRect>())
-                    {
-                        var srPath = UiLab.PathOf(sr.transform);
-                        if (srPath.Contains("TabRevamp") && srPath.Contains("RevampInfo") == infoPanel)
-                        { sr.verticalNormalizedPosition = float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture); return "{\"ok\":true}"; }
-                    }
-                    return "{\"error\":\"Revamp tab not open\"}";
-                }
-                case "settingsinst": return UiLab.SettingsInstances();
                 case "loadsave": return TestSafety.LoadSave(arg);
-                case "worldhash":
-                {
-                    var wa = arg.Split(' ');
-                    var ic = System.Globalization.CultureInfo.InvariantCulture;
-                    return WorldHash.Hash(double.Parse(wa[0], ic), double.Parse(wa[1], ic), double.Parse(wa[2], ic), wa.Length > 3 && wa[3] == "detail");
-                }
-                case "gensettings": return WorldHash.GenSettings();
                 case "worldcheck": return Net.WorldCheck.Status();
-                case "heightdbg": { var ha = arg.Split(' '); var hic = System.Globalization.CultureInfo.InvariantCulture; return WorldHash.HeightDbg(double.Parse(ha[0], hic), double.Parse(ha[1], hic)); }
-                case "stale": return WorldHash.Stale(arg == "detail");
                 case "mods": return string.IsNullOrWhiteSpace(arg) ? ModHost.Status() : arg.Trim() == "aliases" ? ModHost.AliasStatus() : Net.ModBrowser.Bridge(arg);
-                case "traffic": return AutopilotBridge.Status();
                 case "seatraw": return Net.Entities.SeatRaw();
                 case "poisaved":
                 {
@@ -643,11 +603,6 @@ namespace TLDRevamp
                         rows.Add("[" + k + "," + Json.Str(pf.name) + "," + all + "," + saved + ",[" + string.Join(",", big) + "]]");
                     }
                     return "{\"pois\":[" + string.Join(",", rows) + "]}";
-                }
-                case "aimlab":
-                {
-                    var al = arg.Trim().Split(' ');
-                    return al[0] == "start" ? Diagnostics.AimLab.Start(uint.Parse(al[1])) : al[0] == "stop" ? Diagnostics.AimLab.Stop() : Diagnostics.AimLab.Status();
                 }
                 case "guardlab":
                     // test: Fixes.WornDestroyed / FluidTypeGuard (tools/guards.py)
@@ -691,23 +646,6 @@ namespace TLDRevamp
                     // sitseat <idx> [redirect] [net=<id>]: a seat of the nearest car, or of shared vehicle <id>
                     uint sn = 0; foreach (var w in sp) if (w.StartsWith("net=")) sn = uint.Parse(w.Substring(4));
                     return Net.Entities.SitSeat(int.Parse(sp[0]), System.Array.IndexOf(sp, "redirect") > 0, sn);
-                }
-                case "streamlab":
-                {
-                    var sa = arg.Split(' ');
-                    if (sa[0] == "start") return Net.StreamLab.Start(sa.Length > 1 ? float.Parse(sa[1], System.Globalization.CultureInfo.InvariantCulture) : 0.5f);
-                    return Net.StreamLab.Status();
-                }
-                case "vehlab":
-                {
-                    var va = arg.Split(' ');
-                    switch (va[0])
-                    {
-                        case "start": return Net.VehicleLab.Start(va.Length > 1 ? float.Parse(va[1], System.Globalization.CultureInfo.InvariantCulture) : 6f);
-                        case "status": return Net.VehicleLab.Status();
-                        case "stop": return Net.VehicleLab.Stop();
-                        default: return "{\"error\":\"vehlab start [offset] | status | stop\"}";
-                    }
                 }
                 case "itemsnap":
                 {
@@ -759,7 +697,6 @@ namespace TLDRevamp
                         case "bots": return Net.Mp.AddBots(int.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], mic) : 30f, ma.Length > 3 ? float.Parse(ma[3], mic) : 5f);
                         case "remotebots": return Net.Mp.AddRemoteBots(int.Parse(ma[1]), ulong.Parse(ma[2]), ma.Length > 3 ? float.Parse(ma[3], mic) : 30f, ma.Length > 4 ? float.Parse(ma[4], mic) : 5f, ma.Length > 5 ? float.Parse(ma[5], mic) : 0f);
                         case "dropbots": return Net.Mp.DropBots(int.Parse(ma[1]));
-                        case "pbot": return Net.PlayerBots.Command(ma.Skip(1).ToArray());   // player bots: a third player for ownership tests (Net/PlayerBot.cs)
                         case "status": return Net.Mp.Status();
                         case "save": return Net.Mp.SaveTail();
                         case "players": return Net.RemotePlayers.List();
@@ -828,9 +765,6 @@ namespace TLDRevamp
                         }
                         case "fluids": return Net.Entities.Fluids(uint.Parse(ma[1]));
                         case "tankexplode": return Net.Entities.TankExplode(uint.Parse(ma[1]), int.Parse(ma[2]), ma.Length > 3 ? float.Parse(ma[3], System.Globalization.CultureInfo.InvariantCulture) : 1000f);
-                        case "holdnet": return Net.FillLab.HoldNet(uint.Parse(ma[1]));
-                        case "walkat": return Net.FillLab.WalkAt(uint.Parse(ma[1]), float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture));
-                        case "holdfill": return ma[1] == "stop" ? Net.FillLab.Stop() : ma[1] == "status" ? Net.FillLab.Status() : Net.FillLab.Start(uint.Parse(ma[1]), uint.Parse(ma[2]), int.Parse(ma[3]), ma.Length > 4 ? float.Parse(ma[4], System.Globalization.CultureInfo.InvariantCulture) : 0f, ma.Length > 5 ? float.Parse(ma[5], System.Globalization.CultureInfo.InvariantCulture) : 0.7f);
                         case "fill": return Net.Entities.Fill(uint.Parse(ma[1]), int.Parse(ma[2]), ma[3], float.Parse(ma[4], System.Globalization.CultureInfo.InvariantCulture));
                         case "pour": return ma[1] == "stop" ? Net.Entities.Pour(0, 0, 0, false) : ma[1] == "status" ? Net.Entities.PourStatus() : Net.Entities.Pour(uint.Parse(ma[1]), uint.Parse(ma[2]), int.Parse(ma[3]), true);
                         case "sitdriver": return Net.Entities.SitDriver(uint.Parse(ma[1]));
@@ -929,8 +863,6 @@ namespace TLDRevamp
                         case "lookmount": return Net.Entities.LookMount(uint.Parse(ma[1]), int.Parse(ma[2]));
                         case "partwatch": return Net.Entities.PartWatchCommand(ma);
                         case "healthwatch": return Net.Entities.HealthWatchCommand(ma);
-                        case "debugv2": return DebugV2.Command(ma);
-                        case "health": return ItemHealth.Command(ma);
                         case "keys": return KeyBindings.Command(ma);
                         case "attachedparts": return Net.Entities.AttachedParts(uint.Parse(ma[1]));
                         case "carslots": return Net.Entities.CarSlots(uint.Parse(ma[1]));
@@ -972,11 +904,6 @@ namespace TLDRevamp
                         case "sharing":
                         case "reports": return Net.Reports.Stats();
                         case "report": { string rn = arg.Length > 6 ? arg.Substring(7) : ""; Net.Reports.LocalReport(rn.Length == 0 ? "bridge" : rn); return Net.Reports.Stats(); }
-                        case "ai": return Net.AiProbe.List();
-                        case "aiids": return Net.AiProbe.Ids();
-                        case "aihead": return Net.AiProbe.Heads();
-                        case "aicols": return Net.AiProbe.Cols(ma.Length > 1 ? ma[1] : "");
-                        case "aivision": return Net.AiProbe.Vision();
                         case "aistats": return Net.Entities.AiStats();
                         case "aisee": return Net.Entities.AiSee();
                         case "ownerlog": return Net.Entities.OwnerLogJson(ma.Length > 1 ? uint.Parse(ma[1]) : 0u);
@@ -1031,7 +958,7 @@ namespace TLDRevamp
                         case "entitems": return Net.Entities.EntItems(uint.Parse(ma[1]));
                         case "entpoke": return Net.Entities.EntPoke(uint.Parse(ma[1]), ma[2], ma.Length > 4 ? int.Parse(ma[3]) : 0, float.Parse(ma[ma.Length - 1], System.Globalization.CultureInfo.InvariantCulture));
                         case "stop": return Net.Mp.Stop();
-                        default: return "{\"error\":\"mp host [port] | join <ip:port> | bots <n> [radius] [speed] | status | stop\"}";
+                        default: if (TryRegistered("mp " + ma[0], arg, out var contributed)) return contributed; return "{\"error\":\"mp host [port] | join <ip:port> | bots <n> [radius] [speed] | status | stop\"}";
                     }
                 }
                 case "net":
@@ -1039,9 +966,6 @@ namespace TLDRevamp
                     var na = arg.Split(' ');
                     switch (na[0])
                     {
-                        case "pair": return Net.NetLab.Pair(na.Length > 1 ? int.Parse(na[1]) : 1000, na.Length > 2 ? int.Parse(na[2]) : 64, na.Length > 3 && na[3] == "loopback");
-                        case "status": return Net.NetLab.Status();
-                        case "relay": return Net.NetLab.Relay(na.Length > 1 ? na[1] : "off");
                         case "pops": return Net.SteamCompat.Pops();
                         case "route": return Net.Mp.Route();
                         case "stats": return Net.Mp.NetStats();
@@ -1050,56 +974,12 @@ namespace TLDRevamp
                             if (na.Length > 1 && (na[1] == "show" || na[1] == "hide")) { Net.NetMeter.Show = na[1] == "show"; return "{\"show\":" + (Net.NetMeter.Show ? "true" : "false") + "}"; }
                             if (na.Length > 1 && na[1] == "panel") return "{\"text\":" + Json.Str(Net.NetMeter.PanelText(12)) + "}";
                             return Net.NetMeter.Json();
-                        case "items":
-                            if (na.Length > 1 && (na[1] == "show" || na[1] == "hide")) { Net.ItemTraffic.SetVisible(na[1] == "show"); return "{\"show\":" + (Net.ItemTraffic.Show ? "true" : "false") + "}"; }
-                            if (na.Length > 1 && na[1] == "labels") return ItemTrafficLabels.Json();
-                            return Net.ItemTraffic.ListJson(20);
                         case "debugview": return DebugView.Command(na.Length > 1 ? na[1] : "state");
-                        case "ownership": case "ghost": case "ghostall": case "links":
-                            return WorldOverlays.Command(na[0], na.Length > 1 ? na[1] : "state");
-                        case "compare": return ObjectPanels.Command(true, na);
-                        case "events": return ObjectPanels.Command(false, na);
                         case "log": return Net.NetMeter.Log(na.Length > 1 ? int.Parse(na[1]) : 50);
                         case "me": return "{\"steamId\":" + Json.Str(Steamworks.SteamUser.GetSteamID().m_SteamID.ToString()) + ",\"online\":" + (Steamworks.SteamUser.BLoggedOn() ? "true" : "false") + "}";
-                        case "stop": return Net.NetLab.Stop();
-                        case "probe": return Net.NetLab.Probe(int.Parse(na[1]));
-                        case "lag":
-                        {
-                            var lic = System.Globalization.CultureInfo.InvariantCulture;
-                            return Net.NetLab.Lag(int.Parse(na[1]), na.Length > 2 ? float.Parse(na[2], lic) : 0f, na.Length > 3 ? float.Parse(na[3], lic) : 0f, na.Length > 4 ? int.Parse(na[4]) : 0);
-                        }
-                        case "conditions": return NetworkConditions.Command(string.Join(" ", na.Skip(1)));
-                        default: return "{\"error\":\"net pair <count> <size> [loopback] | status | stats | meter [reset|show|hide|panel] | items [show|hide|labels] | log [n] | stop\"}";
+                        default: if (TryRegistered("net " + na[0], arg, out var contributed)) return contributed; return "{\"error\":\"net pair <count> <size> [loopback] | status | stats | meter [reset|show|hide|panel] | items [show|hide|labels] | log [n] | stop\"}";
                     }
                 }
-                case "fakeplayers":
-                {
-                    var fa = arg.Split(' ');
-                    var ic = System.Globalization.CultureInfo.InvariantCulture;
-                    return MpLab.Set(int.Parse(fa[0]), fa.Length > 1 ? float.Parse(fa[1], ic) : 25f, fa.Length > 2 ? float.Parse(fa[2], ic) : 5000f);
-                }
-                case "uidump": { var ua = arg.Split(' '); return UiLab.Dump(ua[0], ua.Length > 1 ? int.Parse(ua[1]) : 3, ua.Length > 2 && ua[2] == "full"); }
-                case "matshare": return RenderLab.MaterialSharing(arg);
-                case "instinfo": return RenderLab.InstancingInfo();
-                case "instancing": return RenderLab.InstancingOn();
-                case "visroots": return RenderLab.VisibleByRoot(arg.Length > 0 ? int.Parse(arg) : 25);
-                case "rendertime": return arg == "stop" ? RenderLab.TimingStop() : RenderLab.TimingStart();
-                case "camera":
-                {
-                    var camArgs = arg.Split(' ');
-                    return PhysicsLab.SetCamera(camArgs[0], camArgs[1] == "on");
-                }
-                case "drivein":
-                {
-                    if (arg.Length == 0) return DriveLab.GetIn();
-                    var dv = arg.Split(' ');
-                    var ic = System.Globalization.CultureInfo.InvariantCulture;
-                    return DriveLab.GetIn(new Vector3(float.Parse(dv[0], ic), float.Parse(dv[1], ic), float.Parse(dv[2], ic)));
-                }
-                case "driveout": return DriveLab.GetOut();
-                case "carsnear": return DriveLab.CarsNear(arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 300f);
-                case "roadpoint": return DriveLab.RoadPoint();
-                case "brakecar": return DriveLab.Brake();
                 case "handbrake": {
                     var pl = mainscript.s != null ? mainscript.s.player : null;
                     var car = pl != null ? pl.Car : null;
@@ -1109,14 +989,7 @@ namespace TLDRevamp
                     return "{\"handbrake\":" + (on ? "true" : "false") + "}";
                 }
                 case "shot": return CaptureLocalShot(arg);
-                case "nudge": return DriveLab.Nudge(arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 12f);
-                case "fuelup": return DriveLab.FuelUp();
                 case "handlayers": return Fixes.HandLayersAfterVr.Json();
-                case "poiretype": { var pr = arg.Split(' '); return PoiRetype(pr[0], int.Parse(pr[1])); }
-                case "poihide": return PoiHide(arg.Trim());
-                case "poialign": return Diagnostics.PoiAlignLog.Query(arg);
-                case "poiwait": { var pw = arg.Split(' '); var ciw = System.Globalization.CultureInfo.InvariantCulture; return PoiWait(double.Parse(pw[0], ciw), double.Parse(pw[1], ciw), double.Parse(pw[2], ciw)); }
-                case "pois": { var pp = arg.Split(' '); var cip = System.Globalization.CultureInfo.InvariantCulture; return Pois(double.Parse(pp[0], cip), double.Parse(pp[1], cip), double.Parse(pp[2], cip)); }
                 case "seatwhy": { var sw2 = arg.Split(' '); return Net.Entities.SeatWhy(uint.Parse(sw2[0]), int.Parse(sw2[1])); }
                 case "leasetable": return Net.Entities.LeaseTable();
                 case "wheelinfo": return Net.Entities.WheelInfo(parts.Length > 1 ? float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture) : 30f);
@@ -1144,7 +1017,6 @@ namespace TLDRevamp
                     }
                     return "{\"cars\":[" + string.Join(",", rows) + "]}";
                 }
-                case "slotdestroys": return "{\"count\":" + Diagnostics.SlotPartDestroyLog.Count + ",\"log\":" + Json.Str(Diagnostics.SlotPartDestroyLog.Log) + "}";
                 case "slotmiss": return "{\"misses\":" + Net.ItemSnapshot.SlotMisses + ",\"log\":" + Json.Str(Net.ItemSnapshot.SlotMissLog) + "}";
                 case "gpos":
                 {
@@ -1178,15 +1050,6 @@ namespace TLDRevamp
                     uc.RB.velocity = Vector3.zero; uc.RB.angularVelocity = Vector3.zero;
                     return "{\"upright\":true}";
                 }
-                case "spawncarg":
-                {
-                    // a test car ON the ground at a GLOBAL position (each machine converts with its own floating origin)
-                    var sg = arg.Split(' ');
-                    var uvc = mainscript.UnityPosFromGlobal(new Vector3d(double.Parse(sg[2], System.Globalization.CultureInfo.InvariantCulture), 0, double.Parse(sg[3], System.Globalization.CultureInfo.InvariantCulture)));
-                    var ghc = StandHit(uvc.x, uvc.z, null);   // the road or ground, not a roof
-                    if (ghc == null) return "{\"error\":\"no ground generated there\"}";
-                    return PhysicsLab.SpawnCar(int.Parse(sg[0]), int.Parse(sg[1]), new Vector3(uvc.x, ghc.Value.point.y + 0.6f, uvc.z), sg.Length > 4 ? float.Parse(sg[4], System.Globalization.CultureInfo.InvariantCulture) : 0f);
-                }
                 case "tpg":
                 {
                     // teleport to a GLOBAL position (floating-origin safe between machines): convert, hop high, ground
@@ -1204,7 +1067,6 @@ namespace TLDRevamp
                     if (gp.Length > 2 && gp[2] == "hold") { _tpHeld = true; TpSettle(pl); }
                     return "{\"tpg\":true,\"ux\":" + uv.x.ToString("F1", ci) + ",\"uz\":" + uv.z.ToString("F1", ci) + "}";
                 }
-                case "worldgen": return arg == "reset" ? WorldGenLab.Reset() : WorldGenLab.Snapshot();
                 // the terrain mode (issue #32): what is selected, what the running world uses, where it came from
                 // `terrain`                   - the mode, its source and the road generator's own flags
                 // `terrain select <Crossroads|MainRoadOnly>` - pick the mode for the next new game
@@ -1255,64 +1117,18 @@ namespace TLDRevamp
                     if (menuhandler.s == null || menuhandler.s.currentMainMap == null || menuhandler.s.currentMainMap.poiGens == null)
                         return "{\"error\":\"no POI generators\"}";
                     SessionLog.SampleGen(); return Fixes.PoiBacklog.Stats;
-                case "alignstats": return WorldGenLab.AlignStats();
-                case "randbench": return WorldGenLab.RandBench(arg.Length > 0 ? int.Parse(arg) : 20000);
-                case "allocprobe": return WorldGenLab.AllocProbe();
-                case "alloc": return WorldGenLab.AllocStats(arg == "reset");
                 case "noisecheck": return Fixes.FastNoise.Check(arg.Length > 0 ? int.Parse(arg) : 1000000);
                 case "randcheck": return Fixes.FastRandom.Check(arg.Length > 0 ? int.Parse(arg) : 1000000);
-                case "carface":
-                {
-                    var fv = arg.Split(' ');
-                    var ic = System.Globalization.CultureInfo.InvariantCulture;
-                    return DriveLab.FaceCar(new Vector3(float.Parse(fv[0], ic), float.Parse(fv[1], ic), float.Parse(fv[2], ic)), float.Parse(fv[3], ic));
-                }
-                case "near": return DriveLab.Near(arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 15f);
-                case "autodrive":
-                    if (arg.StartsWith("on")) return DriveLab.Start(arg.Length > 3 ? float.Parse(arg.Substring(3), System.Globalization.CultureInfo.InvariantCulture) : 20f);
-                    if (arg == "off") return DriveLab.Stop();
-                    return DriveLab.Stats();
-                case "sleepcars": return PhysicsLab.SleepCars();
-                case "carsleep": return PhysicsLab.CarSleepState();
-                case "wheelbench": return PhysicsLab.WheelBench(arg.Length > 0 ? int.Parse(arg) : 100);
-                case "awake": return PhysicsLab.Awake(arg.Length > 0 ? int.Parse(arg) : 25);
-                case "clearpile": return PhysicsLab.ClearPile();
-                case "crash":
-                {
-                    // collision tests: `crash rec start [radius]`, `crash rec stop`, `crash launch <m/s> [gx gz]`
-                    var cra = arg.Split(' '); var cic = System.Globalization.CultureInfo.InvariantCulture;
-                    if (cra[0] == "rec") return cra.Length > 1 && cra[1] == "stop" ? CrashLab.Stop(cra.Length > 2 ? float.Parse(cra[2], cic) : -1f) : CrashLab.Start(cra.Length > 2 ? float.Parse(cra[2], cic) : 80f);
-                    if (cra[0] == "cars") return CrashLab.CarsNear(cra.Length > 1 ? float.Parse(cra[1], cic) : 40f);
-                    if (cra[0] == "launch")
-                    {
-                        bool hold = cra[cra.Length - 1] == "hold"; int nargs = hold ? cra.Length - 1 : cra.Length;
-                        return CrashLab.Launch(float.Parse(cra[1], cic), nargs > 3 ? new Vector3d(double.Parse(cra[2], cic), 0, double.Parse(cra[3], cic)) : (Vector3d?)null, hold);
-                    }
-                    return "{\"error\":\"crash rec start|stop, crash launch <m/s> [gx gz]\"}";
-                }
-                case "spawncar": { var sa = arg.Split(' '); return PhysicsLab.SpawnCar(int.Parse(sa[0]), int.Parse(sa[1]), new Vector3(float.Parse(sa[2], System.Globalization.CultureInfo.InvariantCulture), float.Parse(sa[3], System.Globalization.CultureInfo.InvariantCulture), float.Parse(sa[4], System.Globalization.CultureInfo.InvariantCulture)), sa.Length > 5 ? float.Parse(sa[5], System.Globalization.CultureInfo.InvariantCulture) : 0f); }
-                case "spawnpile":
-                {
-                    // spawnpile <ids,comma> <count> <x> <y> <z> <cols> <spacing> <height> <seed>
-                    var a = arg.Split(' ');
-                    var ci = System.Globalization.CultureInfo.InvariantCulture;
-                    return PhysicsLab.SpawnPile(a[0], int.Parse(a[1]),
-                        new Vector3(float.Parse(a[2], ci), float.Parse(a[3], ci), float.Parse(a[4], ci)),
-                        int.Parse(a[5]), float.Parse(a[6], ci), float.Parse(a[7], ci), int.Parse(a[8]));
-                }
                 case "reset": p.Telemetry.Reset(); return "{\"ok\":true}";
                 case "report": return "{\"dir\":" + Json.Str(p.Feedback.Capture(arg)) + "}";
                 case "screenshot": return CaptureLocalShot("");
                 case "poigens": return Fixes.PoiItemsStore.Gens();
                 case "poistore": return Fixes.PoiItemsStore.Stats;
                 case "unfreezeground": return Fixes.UnfreezeOnGround.Stats;
-                case "loadwatch": return Fixes.LoadWatch.Stats();
                 case "loadfreeze": return Fixes.LoadFreeze.Stats;
                 case "fallrescue": return arg == "test" ? Fixes.FallRescue.Test() : Fixes.FallRescue.Stats;
                 case "stillfrozen": return Fixes.LoadFreeze.StillFrozen(string.IsNullOrEmpty(arg) ? 150f : float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture));
-                case "loadtrace": return "{\"trace\":" + Json.Str(Fixes.LoadWatch.TraceText) + "}";
                 case "terrainkeep": return Fixes.TerrainRestartKeep.Stats();
-                case "attachlog": return Diagnostics.AttachLog.Stats;
                 case "streamrace": return Fixes.StreamRace.Probe(arg);
                 case "mount": return Net.Entities.MountLab(arg);
                 case "attachpoints":
@@ -1492,9 +1308,6 @@ namespace TLDRevamp
                 case "admin":
                     // the server's admin commands (Net/Admin.cs), as its console file or an admin's chat runs them
                     return Net.Mp.Server == null ? "{\"error\":\"not hosting\"}" : "{\"out\":" + Json.Str(Net.Mp.Server.Run(arg)) + "}";
-                case "modscan":
-                    // the TLD Loader mod scanner (LoaderScan): one DLL, or every mod in BepInEx/TLDLoaderMods
-                    return string.IsNullOrWhiteSpace(arg) ? LoaderScan.ScanAll() : LoaderScan.ScanAndWrite(arg.Trim());
                 case "groundg":
                 {
                     // ground height at a GLOBAL point, in global y — plus this machine's floating origin (machines must agree)
@@ -1529,12 +1342,6 @@ namespace TLDRevamp
                     return "{\"runInBackground\":" + (Application.runInBackground ? "true" : "false") + ",\"focused\":" + (Application.isFocused ? "true" : "false") + "}";
                 case "overlay": p.Overlay.Visible = arg != "off"; return "{\"ok\":true}";
                 case "timescale": Time.timeScale = float.Parse(arg); return "{\"ok\":true}";
-                case "banner":
-                {
-                    if (arg == "off") return Net.Banner.Show(0f, "");
-                    int sp = arg.IndexOf(' ');
-                    return Net.Banner.Show(float.Parse(arg.Substring(0, sp), System.Globalization.CultureInfo.InvariantCulture), arg.Substring(sp + 1));
-                }
                 case "carmove":
                 {
                     // nearest car to the player (or the car of network id cm[6]): put it at x y z facing yaw, at rest (scenario staging)
@@ -1570,7 +1377,7 @@ namespace TLDRevamp
                     if (arg.Length > 0) QualitySettings.SetQualityLevel(int.Parse(arg), true);
                     return "{\"level\":" + QualitySettings.GetQualityLevel() + ",\"shadowDistance\":" + QualitySettings.shadowDistance + ",\"vSync\":" + QualitySettings.vSyncCount + ",\"targetFps\":" + Application.targetFrameRate + "}";
                 case "help":
-                    return "{\"commands\":\"alive ping stats scene breakdown net items [show|hide|labels] items [filter] physics spawnpile clearpile loopprof start|stop [n] reset report <note> screenshot overlay on|off bg on|off ground x z profile start [Type.Method ...]|stop [n] " + VR.VrBridgeCommandPolicy.Syntax + " terrainhorizon [x z] terrainhorizonstats vr devaccess switches [text] get <Type.member.path> set <path> <value> call <path.Method> [args] timescale <f> teleport x y z quality [n]\"}";
+                    return "{\"commands\":\"alive ping stats scene breakdown net loopprof start|stop [n] reset report <note> screenshot overlay on|off bg on|off ground x z profile start [Type.Method ...]|stop [n] " + VR.VrBridgeCommandPolicy.Syntax + " vr devaccess switches [text] get <Type.member.path> set <path> <value> call <path.Method> [args] timescale <f> teleport x y z quality [n] " + string.Join(" ", Commands.Keys) + "\"}";
                 default: return "{\"error\":\"unknown command, try help\"}";
             }
         }

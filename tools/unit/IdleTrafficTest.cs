@@ -221,9 +221,9 @@ namespace TLDRevamp.Net
         static bool CargoClaims;
         static float CargoClaimCooldownS = 2;
         static long CargoClaimed;
-        static void LocalSeat(out uint car, out int seat) { car = TestMain.s?.player?.SeatNet ?? 0; seat = 0; }
+        internal static void LocalSeat(out uint car, out int seat) { car = TestMain.s?.player?.SeatNet ?? 0; seat = 0; }
         static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
-        static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
+        internal static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
         static readonly Dictionary<int, HashSet<uint>> Known = new Dictionary<int, HashSet<uint>>();
         static readonly HashSet<GameObject> ProxyItems = new HashSet<GameObject>();
         static readonly NetWriter WS = new NetWriter();

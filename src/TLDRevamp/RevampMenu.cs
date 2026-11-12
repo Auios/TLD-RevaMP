@@ -15,6 +15,12 @@ namespace TLDRevamp
     [HarmonyPatch]
     public static class RevampMenu
     {
+        private static string MenuPath(Transform t)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            for (; t != null; t = t.parent) parts.Insert(0, t.name);
+            return string.Join("/", parts);
+        }
         public const int TabIndex = 90;
         // Per settings menu instance (the game can have more than one: main menu scene, game scene)
         private sealed class Ui { public GameObject Tab, LedOn; public TextMeshProUGUI Info; public ScrollRect InfoScroll; public readonly List<System.Action> Refreshers = new List<System.Action>();
@@ -266,7 +272,7 @@ namespace TLDRevamp
             Object.Destroy(toggleTpl);
             Object.Destroy(choiceTpl);
             Refresh(ui);
-            Plugin.Log.LogInfo("RevampMenu: Revamp tab added to " + UiLab.PathOf(s.transform) + " in scene " + s.gameObject.scene.name + " — to the settings menu (" + RevampSettings.Entries.Count + " rows)");
+            Plugin.Log.LogInfo("RevampMenu: Revamp tab added to " + MenuPath(s.transform) + " in scene " + s.gameObject.scene.name + " — to the settings menu (" + RevampSettings.Entries.Count + " rows)");
         }
 
         /// Show an explanation from its top (a new text never opens scrolled halfway down the previous one).

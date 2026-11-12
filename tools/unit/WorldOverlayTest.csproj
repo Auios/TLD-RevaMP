@@ -3,7 +3,7 @@
   <ItemGroup>
     <Compile Include="../../src/TLDRevamp/DebugView.cs" />
     <Compile Include="WorldOverlayTest.cs" />
-    <Compile Include="../../src/TLDRevamp/WorldOverlayLogic.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/WorldOverlayLogic.cs" />
     <Compile Include="../../src/TLDRevamp/Net/BandwidthRules.cs" />
   </ItemGroup>
 </Project>

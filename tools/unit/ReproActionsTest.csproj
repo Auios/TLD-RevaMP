@@ -11,10 +11,11 @@
     <Compile Include="../../src/TLDRevamp/BugReportLogic.cs" />
     <Compile Include="../../src/TLDRevamp/ReproCarState.cs" />
     <Compile Include="../../src/TLDRevamp/ReproRecorder.cs" />
-    <Compile Include="../../src/TLDRevamp/ReproPlayback.cs" />
-    <Compile Include="../../src/TLDRevamp/NetworkSimulation.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/ReproPlayback.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/NetworkSimulation.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Repro.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.ReproPlayback.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.ReproDrive.cs" />
+    <Compile Include="../../src/TLDRevamp/DevHooks.cs" />
   </ItemGroup>
 </Project>

@@ -133,7 +133,7 @@ static class LoaderLifecycleDocTest
         else Check("the README does not claim loader features it does not deliver", true);
 
         // ---- 9. the scanner's report must name the same lifecycle set as the shim ----
-        string scan = Read("src/TLDRevamp/LoaderScan.cs");
+        string scan = Read("src/TLDRevamp.Dev/LoaderScan.cs");
         foreach (string m in ShimLifecycle)
             Check("the scanner reports " + m, scan.Contains("\"" + m + "\""));
 

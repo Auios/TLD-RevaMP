@@ -17,6 +17,15 @@ static class NetworkConditionsTest
         try
         {
             string file = System.IO.Path.Combine(folder, "tldrevamp-settings.txt");
+            Check(!RevampSettings.Entries.Exists(e => e.Key == "ownershipOverlay" || e.Key == "simPreset"), "core has no developer rows before registration");
+            System.IO.File.WriteAllText(file, "ownershipOverlay=1\nhostPassword=old-secret\n");
+            RevampSettings.Load(); RevampSettings.Save();
+            Check(System.IO.File.ReadAllText(file).Contains("ownershipOverlay=1"), "core preserves settings for an absent developer plugin");
+            Check(!System.IO.File.ReadAllText(file).Contains("hostPassword"), "unknown settings never resurrect the retired password");
+            DevSettings.Install();
+            Check(RevampSettings.Entries.Find(e => e.Key == "ownershipOverlay").Get() == 1, "late developer registration applies the saved value");
+            RevampSettings.Entries.Find(e => e.Key == "ownershipOverlay").Set(0);
+            System.IO.File.Delete(file);
             // The terrain for a new game (issue #32) is picked on the new-game screen only, never in Settings. The
             // last pick is still remembered in the settings file, and the key the old Settings row wrote is read too.
             Check(!RevampSettings.Entries.Exists(e => e.Key == "terrainMode" || e.Key == RevampSettings.NewGameTerrainKey),

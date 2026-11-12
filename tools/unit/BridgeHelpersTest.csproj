@@ -3,6 +3,6 @@
   <ItemGroup>
     <Compile Include="BridgeHelpersTest.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.ItemCheck.cs" />
-    <Compile Include="../../src/TLDRevamp/DriveLab.Brake.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/DriveLab.Brake.cs" />
   </ItemGroup>
 </Project>

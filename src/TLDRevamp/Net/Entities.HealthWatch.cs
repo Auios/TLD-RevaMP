@@ -167,7 +167,7 @@ namespace TLDRevamp.Net
         }
 
         /// What can never be right, whatever the mod does with the object.
-        private static void CheckSanity(Ent e, CheckAdd Add, bool slots = true)
+        internal static void CheckSanity(Ent e, CheckAdd Add, bool slots = true)
         {
             var p = e.Root.transform.position;
             if (!HealthWatchRules.Finite(p.x, p.y, p.z))

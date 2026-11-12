@@ -47,6 +47,19 @@ namespace TLDRevamp
             AddSection("Keys", HowTo, binds);
         }
 
+        internal static void Contribute(params (string Name, ConfigEntry<KeyboardShortcut> Entry)[] binds)
+        {
+            int first = RevampSettings.Entries.Count;
+            AddSection("Keys", HowTo, binds);
+            var rows = RevampSettings.Entries.GetRange(first + 1, RevampSettings.Entries.Count - first - 1);
+            RevampSettings.Entries.RemoveRange(first, RevampSettings.Entries.Count - first);
+            foreach (var row in rows)
+            {
+                int at = RevampSettings.Entries.FindIndex(e => e.Kind == RevampSettings.Kind.Button && e.Label == "Cinematic camera");
+                RevampSettings.Entries.Insert(at < 0 ? RevampSettings.Entries.Count : at, row);
+            }
+        }
+
         /// One more section of keys after Register's (Dev Mode keys: the game's own, on a page of their own).
         internal static void AddSection(string header, string help, params (string Name, ConfigEntry<KeyboardShortcut> Entry)[] binds)
         {

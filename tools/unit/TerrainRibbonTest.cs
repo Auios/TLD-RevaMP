@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using TLDRevamp.Fixes;
 using UnityEngine;
 
-/// The Unity-shaped twin of the pure ribbon geometry (src/TLDRevamp/Fixes/TerrainRibbon.cs).
+/// The Unity-shaped twin of the pure ribbon geometry (src/TLDRevamp.Dev/Fixes/TerrainRibbon.cs).
 ///
 /// The renderer draws its ribbons through TerrainHorizonGeometry, which has no Unity types, so
 /// the headless test can run it. This file is the Unity twin of the same geometry; it needs Unity's

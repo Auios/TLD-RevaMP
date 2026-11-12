@@ -35,7 +35,7 @@ def main():
                               check=True, capture_output=True, text=True).stdout.split()
         if tag in tags: dr.fail(f"{tag} is already released (or a draft) on {repo}")
     dr.build(base, a.version, edition="player")   # for players: TLDRevamp.PlayerEdition (no developer settings, keys, overlays, bridge)
-    out = dr.package(a.version, commit)
+    out = dr.package(a.version, commit, edition="player")
     # the dev-build note at the top of INSTALL.txt, replaced by the preview's
     with zipfile.ZipFile(out) as z: entries = {n: z.read(n) for n in z.namelist()}
     install = entries["INSTALL.txt"].decode("utf-8").split("\n\n", 1)[1]

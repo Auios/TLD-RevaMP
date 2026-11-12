@@ -1,21 +1,22 @@
 using System.Collections.Generic;
 using UnityEngine;
+using static TLDRevamp.Net.Entities;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static class EntityPanels
     {
         internal static uint PanelFocus(bool held)
         {
             if (!InSession) return 0;
             if (PoiFocusUsable() != null) return 0;
             // Telemetry already maintains these addresses at 10 Hz; opening a panel adds no focus scan.
-            return ObjectPanelState.Select(TelemetryFocus[2], TelemetryFocus[0], held ? TelemetryFocus[3] != 0 ? TelemetryFocus[3] : TelemetryFocus[4] : 0);
+            return ObjectPanelState.Select(ObservedFocus(2), ObservedFocus(0), held ? ObservedFocus(3) != 0 ? ObservedFocus(3) : ObservedFocus(4) : 0);
         }
         internal static ObjectPanelState PanelCapture(uint net)
         {
             var s = new ObjectPanelState { Net = net };
-            if (!ByNet.TryGetValue(net, out var e)) return s;
+            if (!ObservedEntities.TryGetValue(net, out var e)) return s;
             s.Flags = ObjectPanelState.Bits.Found;
             s.Epoch = e.Epoch; s.Owner = e.OwnerId; s.Part = e.PartIndex; s.Parent = e.ParentNet;
             var root = e.Root;
@@ -116,8 +117,8 @@ namespace TLDRevamp.Net
         private static Dictionary<tosaveitemscript, (Ent Entity, int Member)> PanelContents()
         {
             var contents = new Dictionary<tosaveitemscript, (Ent, int)>();
-            foreach (var e in ByNet.Values) if (e.Root != null) contents[e.Root] = (e, e.Items.IndexOf(e.Root));
-            foreach (var e in ByNet.Values) for (int i = 0; i < e.Items.Count; i++)
+            foreach (var e in ObservedEntities.Values) if (e.Root != null) contents[e.Root] = (e, e.Items.IndexOf(e.Root));
+            foreach (var e in ObservedEntities.Values) for (int i = 0; i < e.Items.Count; i++)
             {
                 var it = e.Items[i];
                 if (it != null && (e.Split == null || !e.Split.Contains(i)) && !contents.ContainsKey(it)) contents.Add(it, (e, i));

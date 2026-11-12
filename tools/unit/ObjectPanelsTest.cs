@@ -76,16 +76,16 @@ static class ObjectPanelsTest
         Check("no target is one compact hint", GUI.Labels.Count == 2 && GUI.Labels[0].Text == "RevaMP · Debug view: Focus" && !GUI.Labels[1].Text.Contains('\n') && DebugLayout.Card.H == 58 && DebugLayout.Card.W <= 500);
         Check("empty events have no feed box or heading", !GUI.Labels[1].Text.Contains("events") && JsonDocument.Parse(ObjectPanels.Json()).RootElement.GetProperty("feed").ValueKind == JsonValueKind.Null);
         Entities.TelemetryFocus[0] = 8; Entities.TelemetryFocus[3] = 9;
-        Check("actual focus falls back to car before held item", Entities.PanelFocus(true) == 8);
-        Entities.TelemetryFocus[0] = 0; Check("actual focus falls back to held item", Entities.PanelFocus(true) == 9);
-        Entities.TelemetryFocus[2] = 7; Check("actual focus prefers crosshair", Entities.PanelFocus(true) == 7);
+        Check("actual focus falls back to car before held item", EntityPanels.PanelFocus(true) == 8);
+        Entities.TelemetryFocus[0] = 0; Check("actual focus falls back to held item", EntityPanels.PanelFocus(true) == 9);
+        Entities.TelemetryFocus[2] = 7; Check("actual focus prefers crosshair", EntityPanels.PanelFocus(true) == 7);
         Entities.BuildingFocus = "HouseDoor / building part\nPoiKey: generator 2 / position 1, 2, 3 / usable 4\nxRot 45 / yRot 0 / slide 0 / turn 0\nlast change 0.1 s ago\nlive send 0 Hz / receive 60 Hz / interpolating yes";
-        Check("building crosshair suppresses nearby entity and held fallbacks", Entities.PanelFocus(true) == 0);
+        Check("building crosshair suppresses nearby entity and held fallbacks", EntityPanels.PanelFocus(true) == 0);
         Time.realtimeSinceStartupAsDouble += .5; ObjectPanels.Tick();
         GUI.Labels.Clear(); Event.current.type = EventType.Repaint; DrawPanels();
         Check("Focus presents building address, values, rates and interpolation", GUI.Labels.Any(l => l.Text.Contains("building part") && l.Text.Contains("PoiKey") && l.Text.Contains("receive 60 Hz")));
         Entities.BuildingFocus = null; Time.realtimeSinceStartupAsDouble += .5; ObjectPanels.Tick();
-        Check("entity focus resumes unchanged after leaving the building", Entities.PanelFocus(true) == 7);
+        Check("entity focus resumes unchanged after leaving the building", EntityPanels.PanelFocus(true) == 7);
         ObjectPanels.Command(true, new[] { "compare", "on" });
         var request = Reader(Mp.Client.Sent.Last()); request.U8(); uint token = request.U32(), round = request.U32();
         Entities.TelemetryFocus[2] = 10; Time.realtimeSinceStartupAsDouble += .5; ObjectPanels.Tick();
@@ -141,14 +141,14 @@ static class ObjectPanelsTest
         route.Set(3, 1, 7, 1); Check("round wrap is handled", route.Accept(3, uint.MaxValue, 7, 1));
         var server = new MpServer(); server.Add(1); server.Add(2); server.Add(3, false);
         Time.realtimeSinceStartupAsDouble = 1;
-        server.PanelAsk(1, 9, 10, 7);
+        ServerPanels.For(server).PanelAsk(1, 9, 10, 7);
         Check("host queries every other ready player", server.T.Sent.Count(p => p.bytes[0] == ObjectPanelWire.Query) == 1 && server.T.Sent.Single(p => p.bytes[0] == ObjectPanelWire.Query).target == 2);
         var hostRow = server.T.Sent.Single(p => p.bytes[0] == ObjectPanelWire.Row);
         var r = Reader(hostRow.bytes); r.U8(); r.U32(); r.U32(); r.U32(); Check("requester also receives host view as player zero", r.I32() == 0 && ObjectPanelState.Read(r)?.Net == 7);
         var w = new NetWriter(); ObjectPanelWire.Header(w, ObjectPanelWire.Answer, 9, 10, 7); w.I32(1); Full().Write(w); r = Reader(w); r.U8();
-        server.T.Sent.Clear(); server.PanelMessage(2, ObjectPanelWire.Answer, r);
+        server.T.Sent.Clear(); ServerPanels.For(server).PanelMessage(2, ObjectPanelWire.Answer, r);
         r = Reader(server.T.Sent.Single().bytes); r.U8(); r.U32(); r.U32(); r.U32(); Check("relay authenticates source from connection player number", r.I32() == 2 && server.T.Sent[0].target == 1 && ObjectPanelState.Read(r)?.Net == 7);
-        server.PanelAsk(1, 9, 11, 0); server.T.Sent.Clear(); r = Reader(w); r.U8(); server.PanelMessage(2, ObjectPanelWire.Answer, r);
+        ServerPanels.For(server).PanelAsk(1, 9, 11, 0); server.T.Sent.Clear(); r = Reader(w); r.U8(); ServerPanels.For(server).PanelMessage(2, ObjectPanelWire.Answer, r);
         Check("cancelled request cannot relay delayed replies", server.T.Sent.Count == 0);
         Mp.Server = null; Mp.Client = new MpClient(); Entities.MyId = 1; Time.realtimeSinceStartupAsDouble = 2;
         ObjectPanels.Compare = false; ObjectPanels.Events = false;
@@ -217,13 +217,13 @@ static class ObjectPanelsTest
             root.partslotscripts.Add(new partslotscript { Part = new attachablescript { tosave = it, attached = true }, tipus = new[] { "wheel" } });
         }
         Entities.ByNet.Walks = 0;
-        var s = Entities.PanelCapture(7);
+        var s = EntityPanels.PanelCapture(7);
         Check("real capture resolves 64 local slot members without global scans", s.SlotCount == 64 && s.Slots.Select((slot, i) => slot.Content == 7 && slot.Member == i + 1 && slot.Wheel).All(b => b) && Entities.ByNet.Walks == 0 && Entities.GroupScans == 0);
         group.Split = new System.Collections.Generic.HashSet<int> { 1 };
         var loose = new Entities.Ent { NetId = 8, Root = group.Items[1] }; loose.Items.Add(loose.Root); Entities.ByNet[8] = loose;
         var external = Entities.ByNet[100];
         for (int i = 1; i < 64; i++) root.partslotscripts[i].Part.tosave = external.Root;
-        s = Entities.PanelCapture(7);
+        s = EntityPanels.PanelCapture(7);
         Check("external slots share one index and split members use their own group", s.Slots[0].Content == 8 && s.Slots[0].Member == 0 && s.Slots.Skip(1).All(slot => slot.Content == 100 && slot.Member == 0) && Entities.ByNet.Walks == 2 && Entities.GroupScans == 0);
         Mp.Server = null; Mp.Client = new MpClient(); ObjectPanels.Compare = false;
         Time.realtimeSinceStartupAsDouble = 100;
@@ -242,7 +242,7 @@ static class ObjectPanelsTest
         ObjectPanels.Compare = false; Time.realtimeSinceStartupAsDouble = 200;
         ObjectPanels.Command(true, new[] { "compare", "on", "23" });
         var request = Reader(Mp.Client.Sent.Last()); request.U8(); uint token = request.U32(), round = request.U32();
-        var reply = Entities.PanelCapture(23);
+        var reply = EntityPanels.PanelCapture(23);
         root.transform.position = new Vector3 { x = 12.5f }; root.transform.rotation = new Quaternion { y = .7071068f, w = .7071068f };
         Time.realtimeSinceStartupAsDouble += .5; ObjectPanels.Tick();
         ObjectPanels.Receive(token, round, 2, reply);
@@ -263,7 +263,7 @@ static class ObjectPanelsTest
         ObjectPanels.Receive(token, round, 3, reply);
         Check("expired rounds cannot bind to overwritten local history", JsonDocument.Parse(ObjectPanels.Json()).RootElement.GetProperty("partners").GetArrayLength() == 1);
         request = Reader(Mp.Client.Sent.Last()); request.U8(); request.U32(); uint latest = request.U32();
-        reply = Entities.PanelCapture(23); ObjectPanels.Receive(token, latest, 2, reply);
+        reply = EntityPanels.PanelCapture(23); ObjectPanels.Receive(token, latest, 2, reply);
         root.transform.position = new Vector3 { x = 25 }; Time.realtimeSinceStartupAsDouble += .5; ObjectPanels.Tick();
         SameRound("refresh while awaiting the next reply keeps matched deltas");
         ObjectPanels.Compare = false; Entities.ByNet.Clear();
@@ -284,7 +284,7 @@ static class ObjectPanelsTest
         var server = new MpServer(); server.Add(1);
         foreach (bool share in new[] { false, true })
         {
-            Reports.Share = share; server.T.Sent.Clear(); server.PanelAsk(1, 1, 1, 7);
+            Reports.Share = share; server.T.Sent.Clear(); ServerPanels.For(server).PanelAsk(1, 1, 1, 7);
             var r = Reader(server.T.Sent.Single(p => p.bytes[0] == ObjectPanelWire.Row).bytes); r.U8(); r.U32(); r.U32(); r.U32(); r.I32(); s = ObjectPanelState.Read(r);
             Check("host answer follows sharing consent: " + share, s.EventCount == (share ? 1 : 0) && s.Has(ObjectPanelState.Bits.EventsNotShared) != share);
         }

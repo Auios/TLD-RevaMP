@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using TLDRevamp.Multiplayer;
+using static TLDRevamp.Net.Entities;
 using UnityEngine;
 
 namespace TLDRevamp
@@ -59,7 +60,7 @@ namespace TLDRevamp
                 if (cam == null || !cam.isActiveAndEnabled) return;
                 Net.ItemTraffic.Current(Rows);
                 Vector3 eye = cam.transform.position;
-                uint focus = DebugView.Mode == DebugViewMode.Everything ? 0 : DebugView.PinnedNet != 0 ? DebugView.PinnedNet : Net.Entities.PanelFocus(true);
+                uint focus = DebugView.Mode == DebugViewMode.Everything ? 0 : DebugView.PinnedNet != 0 ? DebugView.PinnedNet : Net.EntityPanels.PanelFocus(true);
                 for (int i = 0; i < Rows.Count; i++)
                 {
                     var row = Rows[i];
@@ -146,7 +147,7 @@ namespace TLDRevamp
                 return so != null && !so.Stored ? so.GameObject : null;
             }
             // Root is the live save script, for an owner and a proxy alike; a detached part has its own Root.
-            var e = Net.Entities.TrafficEntity(row.Net);
+            var e = Net.EntityTraffic.TrafficEntity(row.Net);
             return e != null && e.Root != null ? e.Root.gameObject : null;
         }
         private static Label Get(Net.ItemTraffic.Row row, GameObject go)
@@ -161,7 +162,7 @@ namespace TLDRevamp
             oldest.Net = row.Net; oldest.Mod = row.Mod; oldest.Object = go; oldest.Transform = go.transform;
             // A root component's bounds are cheap. Hierarchies without one use a fixed offset, without walking a car's parts.
             oldest.Renderer = go.GetComponent<Renderer>(); oldest.Collider = go.GetComponent<Collider>();
-            var e = row.Mod ? null : Net.Entities.TrafficEntity(row.Net);
+            var e = row.Mod ? null : Net.EntityTraffic.TrafficEntity(row.Net);
             oldest.Offset = e != null && e.PartIndex < 0 && e.Root != null && e.Root.car != null ? 2f : 0.75f;
             oldest.ObjectName = Net.ItemTraffic.ObjectName(go.name);
             if (oldest.ObjectName.Length > 42) oldest.ObjectName = oldest.ObjectName.Substring(0, 39) + "...";
@@ -233,9 +234,9 @@ namespace TLDRevamp
 }
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static class EntityTraffic
     {
         /// Live entities only: a far-store record has no world object to label.
-        internal static Ent TrafficEntity(uint net) => ByNet.TryGetValue(net, out var e) ? e : null;
+        internal static Ent TrafficEntity(uint net) => ObservedEntities.TryGetValue(net, out var e) ? e : null;
     }
 }

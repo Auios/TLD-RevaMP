@@ -11,7 +11,7 @@ static class P {
     var paths = Regex.Matches(list, "\\(\"(TLDRevamp\\.[A-Za-z0-9_.]+)\", Kind\\.(Test|OptIn|Config|Other)").Cast<Match>().Select(m => m.Groups[1].Value).ToList();
     Check("the list has switches", paths.Count > 100);
     Check("each switch once", paths.Distinct().Count() == paths.Count);
-    var files = Directory.GetFiles(src, "*.cs", SearchOption.AllDirectories)
+    var files = Directory.GetFiles(src, "*.cs", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(root, "src/TLDRevamp.Dev"), "*.cs", SearchOption.AllDirectories))
       .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar) && !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
       .Select(File.ReadAllText).ToList();
     var missing = new List<string>();

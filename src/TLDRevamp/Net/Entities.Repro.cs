@@ -34,7 +34,7 @@ namespace TLDRevamp.Net
                 X = rec.gpos.x, Y = rec.gpos.y, Z = rec.gpos.z, A = rec.indexType, B = rec.attachType,
                 C = rec.lpos.x, D = rec.lpos.y, E = rec.lpos.z, F = rec.poigenid, G = rec.poiid.x, H = rec.poiid.z });
         }
-        private static bool ReproLocal(fpscontroller p) => ReproRecorder.Recording && !ReproPlayback.Active && mainscript.s != null && mainscript.s.player == p;
+        private static bool ReproLocal(fpscontroller p) => ReproRecorder.Recording && !DevHooks.Playing && mainscript.s != null && mainscript.s.player == p;
         [HarmonyPatch(typeof(fpscontroller), nameof(fpscontroller.Pickup), new[] { typeof(pickupable) })]
         private static class ReproPickup
         {
@@ -46,7 +46,7 @@ namespace TLDRevamp.Net
         {
             private static bool Prefix(fpscontroller __instance, bool isDestroyed)
             {
-                if (ReproPlayback.Active && !isDestroyed && __instance.pickedUp != null && ForceHeld == __instance.pickedUp.tosave) return false;
+                if (DevHooks.Playing && !isDestroyed && __instance.pickedUp != null && ForceHeld == __instance.pickedUp.tosave) return false;
                 if (!ReproLocal(__instance) || isDestroyed || __instance.pickedUp == null || _reproInventoryDepth > 0) return true;
                 var r = ReproItem(__instance.throwForce > __instance.minThrowForce ? ReproKind.Throw : ReproKind.Drop, __instance.pickedUp.tosave);
                 r.A = Mathf.Clamp01(__instance.throwForce); var dir = __instance.Th.forward; r.X = dir.x; r.Y = dir.y; r.Z = dir.z; ReproRecorder.Add(r); return true;
@@ -91,7 +91,7 @@ namespace TLDRevamp.Net
         {
             private static void Postfix(usablescript __instance, bool syncinmulti)
             {
-                if (!ReproRecorder.Recording || ReproPlayback.Active || !syncinmulti || !PlayerActing || _applyingLive || _applyingState || _applyingPoi) return;
+                if (!ReproRecorder.Recording || DevHooks.Playing || !syncinmulti || !PlayerActing || _applyingLive || _applyingState || _applyingPoi) return;
                 var u = __instance;
                 var it = ItemOf(u, u.tosaveid, u.setid); var r = ReproItem(ReproKind.Usable, it);
                 if (u.setidPoi)
@@ -156,7 +156,7 @@ namespace TLDRevamp.Net
         private static uint _reproDetachNet;
         private static ReproRow? ReproDetaching(attachablescript at)
         {
-            if (!ReproRecorder.Recording || ReproPlayback.Active || !PlayerActing || _applyingDetach || _applyingState || _hitchApplying || at == null || at.utanfuto != null) return null;
+            if (!ReproRecorder.Recording || DevHooks.Playing || !PlayerActing || _applyingDetach || _applyingState || _hitchApplying || at == null || at.utanfuto != null) return null;
             return ReproItem(ReproKind.Detach, at.tosave);
         }
         private static void ReproDetached(ReproRow? row)
@@ -180,7 +180,7 @@ namespace TLDRevamp.Net
         {
             [HarmonyPriority(Priority.First)]
             private static void Prefix(partslotscript __instance, out ReproRow? __state)
-            { __state = ReproRecorder.Recording && !ReproPlayback.Active ? ReproDetaching(__instance.part()) : null; }
+            { __state = ReproRecorder.Recording && !DevHooks.Playing ? ReproDetaching(__instance.part()) : null; }
             private static void Postfix(ReproRow? __state, bool __result)
             { if (__result) ReproDetached(__state); }
         }
@@ -195,7 +195,7 @@ namespace TLDRevamp.Net
             { __state = ReproRecorder.Recording && _p != null && _p.physlock == __instance; }
             private static void Postfix(mountStuff __instance, pickupable _p, bool __state, bool __runOriginal)
             {
-                if (!__runOriginal || __state || !ReproRecorder.Recording || ReproPlayback.Active || _p == null || _p.physlock != __instance) return;
+                if (!__runOriginal || __state || !ReproRecorder.Recording || DevHooks.Playing || _p == null || _p.physlock != __instance) return;
                 try
                 {
                     var e = EditEntityOf(_p.tosave); if (e == null || e.Proxy || e.OwnerId != MyId) return;
@@ -212,7 +212,7 @@ namespace TLDRevamp.Net
         {
             private static void Prefix(pickupable __instance)
             {
-                if (!ReproRecorder.Recording || ReproPlayback.Active || __instance.physlock == null) return;
+                if (!ReproRecorder.Recording || DevHooks.Playing || __instance.physlock == null) return;
                 var e = EditEntityOf(__instance.tosave); if (e != null && !e.Proxy && e.OwnerId == MyId) ReproRecorder.Add(ReproItem(ReproKind.PhysUnlock, __instance.tosave));
             }
         }

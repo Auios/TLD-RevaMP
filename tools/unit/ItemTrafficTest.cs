@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json;
+using TLDRevamp;
 using TLDRevamp.Net;
 using UnityEngine;
 
@@ -64,6 +65,7 @@ static class ItemTrafficTest
     }
     static void Main()
     {
+        DevHooks.Packet += ItemTraffic.Packet; DevHooks.TrafficReset += ItemTraffic.Reset;
         Fresh(); var state = State(300); var live = Live(12); var edit = Edit(300); var pose = ModPose(300);
         Send(state); Receive(live); Receive(edit); Send(pose); ItemTraffic.Current(Rows);
         Check("wait for a full second", Rows.Count == 0);

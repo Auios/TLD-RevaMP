@@ -20,7 +20,7 @@ namespace TLDRevamp.Net
         private static bool LetGoInCar(bool stored, bool locked, uint carriedBy, bool inBox, bool touching) =>
             !stored && !locked && carriedBy == 0 && (inBox || touching);
 
-        private static bool CargoBody(Ent e) => e.Root.P != null || Limbs(e) != null && Limp(e);
+        internal static bool CargoBody(Ent e) => e.Root.P != null || Limbs(e) != null && Limp(e);
 
         private static bool StateMoving(Ent e, bool pose, bool limbs, bool awake, ref bool velocityMoving, bool ground = false)
         {
@@ -82,19 +82,19 @@ namespace TLDRevamp.Net
                 ? (Vector3)(at - previous) / (float)(stamp - previousStamp) : Vector3.zero;
 
         // Slot parts may use a joint instead of transform parenting; trailers and articulated vehicles keep their pose stream.
-        private static bool AttachedCarPart(Ent e)
+        internal static bool AttachedCarPart(Ent e)
         {
             var at = e.Root != null && e.Root.car == null ? e.Root.attachable : null;
             return at != null && BandwidthRules.AttachedPart(false, at.attached, at.isPart, at.slot != null,
                    at.point != null && at.point.GetComponentInParent<carscript>() != null);
         }
 
-        private static bool CompactFlyer(Ent e) => e.Root.car == null && e.Root.P == null && e.Root.nyul == null &&
+        internal static bool CompactFlyer(Ent e) => e.Root.car == null && e.Root.P == null && e.Root.nyul == null &&
             e.Root.npc == null && e.Root.ragdollPos == null && e.Root.GetComponent<randomFlyer>() != null &&
             !(TLDRevamp.Multiplayer.MpApi.TryGetRagdoll(e.Root.gameObject, out _, out _) && Limp(e));   // a mod's limp body sends its limbs
 
         // nyulscript animals share the upright ground path. Locked, dead or ragdolled rabbits keep full poses.
-        private static bool CompactGround(Ent e) => e.PartIndex < 0 && e.Root.car == null && e.Root.npc == null &&
+        internal static bool CompactGround(Ent e) => e.PartIndex < 0 && e.Root.car == null && e.Root.npc == null &&
             (e.Root.P == null || e.Root.P.physlock == null) &&
             e.Root.nyul != null && e.Root.nyul.AI != null && e.Root.nyul.AI.alive && (Limbs(e) == null || !Limp(e));
     }

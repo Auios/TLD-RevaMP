@@ -43,15 +43,15 @@ namespace TLDRevamp.Net
                 {
                     double gx = double.Parse(a[2], ic), gz = double.Parse(a[3], ic);
                     if (c.SeatNet != 0) { err = "seated"; break; }
-                    c.Pos = new Vector3d(gx, Entities.BotWorld.Ground(gx, gz, out double gy) ? gy : c.Pos.y, gz);
+                    c.Pos = new Vector3d(gx, EntityBots.BotWorld.Ground(gx, gz, out double gy) ? gy : c.Pos.y, gz);
                     break;
                 }
-                case "enter": err = c.Enter(uint.Parse(a[2], ic), Entities.BotWorld); break;
+                case "enter": err = c.Enter(uint.Parse(a[2], ic), EntityBots.BotWorld); break;
                 case "drive": err = c.Drive(float.Parse(a[2], ic) / 3.6f, a.Length > 3 ? float.Parse(a[3], ic) : 0f, now); break;
-                case "exit": err = c.Exit(Entities.BotWorld, b.Send); break;
-                case "take": err = c.Take(uint.Parse(a[2], ic), Entities.BotWorld); break;
-                case "drop": err = c.Release(0, null, Entities.BotWorld, b.Send); break;
-                case "put": err = c.Release(uint.Parse(a[2], ic), new Vector3(float.Parse(a[3], ic), float.Parse(a[4], ic), float.Parse(a[5], ic)), Entities.BotWorld, b.Send); break;
+                case "exit": err = c.Exit(EntityBots.BotWorld, b.Send); break;
+                case "take": err = c.Take(uint.Parse(a[2], ic), EntityBots.BotWorld); break;
+                case "drop": err = c.Release(0, null, EntityBots.BotWorld, b.Send); break;
+                case "put": err = c.Release(uint.Parse(a[2], ic), new Vector3(float.Parse(a[3], ic), float.Parse(a[4], ic), float.Parse(a[5], ic)), EntityBots.BotWorld, b.Send); break;
                 case "leave": err = b.Leave(); break;
                 case "crash": err = b.Crash(a.Length > 2 ? float.Parse(a[2], ic) : PlayerBotCore.CrashSilentS); break;
                 case "rejoin": err = b.Join(); break;
@@ -88,8 +88,17 @@ namespace TLDRevamp.Net
         }
     }
 
-    public sealed class PlayerBot
+    public sealed class PlayerBot : MpClient.IClientController
     {
+        string MpClient.IClientController.Name => Core.Name;
+        bool MpClient.IClientController.Silent => Core.Silent;
+        Vector3d MpClient.IClientController.Position => Core.Pos;
+        float MpClient.IClientController.Yaw => Core.Yaw;
+        uint MpClient.IClientController.SeatNet => Core.SeatNet;
+        int MpClient.IClientController.SeatIndex => Core.SeatIdx;
+        bool MpClient.IClientController.Wants(byte type) => PlayerBotCore.Wants(type);
+        void MpClient.IClientController.Receive(byte type, NetReader reader) => Core.Receive(type, reader, Send);
+        void MpClient.IClientController.Tick(int myId) => Tick(myId);
         internal readonly PlayerBotCore Core;
         internal MpClient Client;
         private float _crashFor;
@@ -153,7 +162,7 @@ namespace TLDRevamp.Net
         internal void Tick(int myId)
         {
             Core.MyId = myId; Core.Clock = Time.unscaledTimeAsDouble;
-            Core.Tick(Core.Clock, Time.unscaledDeltaTime, Entities.BotWorld, Send);
+            Core.Tick(Core.Clock, Time.unscaledDeltaTime, EntityBots.BotWorld, Send);
         }
 
         internal string ToJson()

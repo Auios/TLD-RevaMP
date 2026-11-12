@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace TLDRevamp
@@ -19,8 +20,14 @@ namespace TLDRevamp
         private Texture2D _graph;
         private string _toast, _text = "";
         private float _toastUntil, _nextGraph, _nextText;
-        private readonly CompactOverlay _toastBar = new CompactOverlay(), _noticeBar = new CompactOverlay();
-        private readonly PacketTable _packetTable = new PacketTable();
+        private readonly CompactOverlay _toastBar = new CompactOverlay();
+        internal static Func<string, string, bool> LineFilter;
+        internal static Func<bool> Hidden;
+        internal delegate void LayoutContributor(float width, ref DebugLayout.Request request);
+        internal static LayoutContributor Measure;
+        internal static System.Action AfterArrange, DrawExtras, DrawCustom;
+        private static bool Line(string panel, string line) => LineFilter?.Invoke(panel, line) ?? true;
+        private static bool IsHidden => Hidden?.Invoke() ?? false;
         private int _styleRevision = -1;
         private float _textHeight;
         private float _panelWidth; private int _screenWidth;
@@ -44,7 +51,7 @@ namespace TLDRevamp
             float width = DebugLayout.LeftWidth(Screen.width, Screen.height, MarkPanel.Opened);
             if (_styleRevision != OverlayStyle.Revision || _panelWidth != width || _screenWidth != Screen.width)
             {
-                _styleRevision = OverlayStyle.Revision; _panelWidth = width; _screenWidth = Screen.width; _nextText = _nextPackets = _nextToast = 0;
+                _styleRevision = OverlayStyle.Revision; _panelWidth = width; _screenWidth = Screen.width; _nextText = _nextToast = 0;
             }
             float now = Time.realtimeSinceStartup, scale = OverlayStyle.Scale;
             if (Visible && now >= _nextText)
@@ -54,63 +61,49 @@ namespace TLDRevamp
                 _t.Lows(out float low1, out float low01);
                 // each line can be switched off in Debugging V2 (DebugV2.Line: always on in Legacy)
                 var lines = new System.Collections.Generic.List<string>(6);
-                if (DebugV2.Line("perf", "fps")) lines.Add($"{Plugin.Version} ({Plugin.CommitLabel})  {_t.Fps:F0} fps - {_t.AvgFps:F0} avg - {low1:F0} 1% low - {low01:F0} 0.1% low");
-                if (DebugV2.Line("perf", "times")) lines.Add($"p50  {p50:F1} ms     p99  {_t.Percentile(.99f):F1} ms");
-                if (DebugV2.Line("perf", "stats")) lines.Add($"Hitches  {_t.Hitches}     GC  {_t.GcCollections}     Heap  {_t.ManagedMB} MB");
-                if (DebugV2.Line("perf", "keys")) lines.Add($"{Plugin.KeyName(Plugin.KeyOverlay)} hide · {Plugin.KeyName(Plugin.KeyReport)} report");
+                if (Line("perf", "fps")) lines.Add($"{Plugin.Version} ({Plugin.CommitLabel})  {_t.Fps:F0} fps - {_t.AvgFps:F0} avg - {low1:F0} 1% low - {low01:F0} 0.1% low");
+                if (Line("perf", "times")) lines.Add($"p50  {p50:F1} ms     p99  {_t.Percentile(.99f):F1} ms");
+                if (Line("perf", "stats")) lines.Add($"Hitches  {_t.Hitches}     GC  {_t.GcCollections}     Heap  {_t.ManagedMB} MB");
+                if (Line("perf", "keys")) lines.Add($"{Plugin.KeyName(Plugin.KeyOverlay)} hide · {Plugin.KeyName(Plugin.KeyReport)} report");
                 string net = null; try { net = Net.Mp.NetStatsLine(); } catch { }
                 if (net != null)
                 {
                     var parts = net.Replace("<b>", "").Replace("</b>", "").Replace("  down", "\nDown").Split('\n');
-                    if (DebugV2.Line("perf", "mp")) lines.Add(parts[0]);
-                    if (parts.Length > 1 && DebugV2.Line("perf", "net")) lines.Add(parts[1]);
+                    if (Line("perf", "mp")) lines.Add(parts[0]);
+                    if (parts.Length > 1 && Line("perf", "net")) lines.Add(parts[1]);
                 }
                 _text = string.Join("\n", lines);
                 _content.text = OverlayStyle.Truncate(_text, Mathf.Max(0, width - 2 * OverlayStyle.Padding));
                 _textHeight = OverlayStyle.Height(_content, width - 2 * OverlayStyle.Padding);
-            }
-            if (Net.NetMeter.Show && now >= _nextPackets)
-            {
-                _nextPackets = now + .5f;
-                _packetTable.Rebuild(width, Net.Mp.Client != null || Net.Mp.Server != null);
             }
             bool toast = _toast != null && now < _toastUntil;
             if (toast && now >= _nextToast)
             {
                 _toastBar.Measure("RevaMP · Notice", _toast.Replace("\n", " · ")); _nextToast = now + .25f;
             }
-            _noticeBar.Measure(Net.ItemTraffic.Show ? "RevaMP · Item traffic" : "RevaMP · Debug view: Everything", "Not in a multiplayer game");
-            NetworkConditions.Measure(); ReproRecorder.Measure(); WorldOverlays.MeasureMore();
-            ObjectPanels.ReserveLayout(width);
-            bool notice = DebugView.Active && !Net.Entities.InSession && (WorldOverlays.Ownership || WorldOverlays.Ghost || WorldOverlays.Links || Net.ItemTraffic.Show);
-            DebugLayout.Arrange(Screen.width, Screen.height, new DebugLayout.Request {
-                Performance = Visible && !DebugV2.Hidden ? OverlayStyle.PanelHeight((DebugV2.Line("perf", "graph") ? 36 * scale : 0) + (_text.Length > 0 ? _textHeight : 0), OverlayTool.Performance) : 0,
-                Packets = Net.NetMeter.Show && !DebugV2.Hidden ? _packetTable.Height : 0,
-                Card = ObjectPanels.CardHeight, Compare = ObjectPanels.CompareHeight,
+            ReproRecorder.Measure();
+            var request = new DebugLayout.Request {
+                Performance = Visible && !IsHidden ? OverlayStyle.PanelHeight((Line("perf", "graph") ? 36 * scale : 0) + (_text.Length > 0 ? _textHeight : 0), OverlayTool.Performance) : 0,
                 Toast = toast ? _toastBar.Height : 0, ToastWidth = _toastBar.Width,
-                Network = NetworkConditions.BarHeight, NetworkWidth = NetworkConditions.BarWidth,
                 Recording = ReproRecorder.BarHeight, RecordingWidth = ReproRecorder.BarWidth,
-                More = WorldOverlays.MoreHeight, MoreWidth = WorldOverlays.MoreWidth,
-                Notice = notice ? _noticeBar.Height : 0, NoticeWidth = _noticeBar.Width,
-                Mark = MarkPanel.Measure(), Banner = Net.Banner.Measure() });
-            DebugV2.AfterArrange();
-            if (ItemHealth.Open && ItemHealth.Box.width > 0) DebugLayout.Labels.Reserve(new DebugBox(ItemHealth.Box.x, ItemHealth.Box.y, ItemHealth.Box.width, ItemHealth.Box.height));
-            _toastBar.Draw(DebugLayout.Toast); _noticeBar.Draw(DebugLayout.Notice, OverlayKind.Muted);
-            WorldOverlays.Draw(); ItemTrafficLabels.Draw(); AttachBoxes.Draw();
-            _packetTable.Draw(DebugLayout.Packets);
-            if (ShowWip) WipMark.Draw();
+                Mark = MarkPanel.Measure() };
+            Measure?.Invoke(width, ref request);
+            DebugLayout.Arrange(Screen.width, Screen.height, request);
+            AfterArrange?.Invoke();
+            _toastBar.Draw(DebugLayout.Toast);
+            DrawExtras?.Invoke();
             if (DebugLayout.Performance.H > 0)
             {
                 if (now >= _nextGraph) { _nextGraph = now + .1f; RedrawGraph(); }
                 var content = OverlayStyle.Panel(DebugLayout.Performance, OverlayTool.Performance);
-                float graph = DebugV2.Line("perf", "graph") ? 36 * scale : 0;
+                float graph = Line("perf", "graph") ? 36 * scale : 0;
                 if (graph > 0) { var old = GUI.color; GUI.color = Color.white; GUI.DrawTexture(new Rect(content.x, content.y, content.width, Mathf.Min(32 * scale, content.height)), _graph); GUI.color = old; }
                 OverlayStyle.Label(new Rect(content.x, content.y + graph, content.width, Mathf.Max(0, content.height - graph)), _content);
             }
-            DebugV2.DrawCustom();
+            DrawCustom?.Invoke();
         }
 
-        private float _nextPackets, _nextToast;
+        private float _nextToast;
         /// Frametime graph, adaptive range up to 50 ms, line at 16.7 ms; texture row 0 is the bottom.
         private void RedrawGraph()
         {

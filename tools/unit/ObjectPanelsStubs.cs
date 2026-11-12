@@ -44,6 +44,7 @@ namespace TLDRevamp
 namespace TLDRevamp.Net
 {
     internal static class Reports { internal static bool Share; }
+    internal static class EntityOverlays { internal static string OverlayDescription(uint net, double now) => Entities.OverlayDescription(net, now); }
     internal static class Mp { internal static MpServer Server; internal static MpClient Client; }
     public static partial class Entities
     {
@@ -52,13 +53,15 @@ namespace TLDRevamp.Net
         internal static string OverlayDescription(uint net, double now) => net == 0 ? "Aim at a shared object, sit in a car or hold an item" : "net " + net;
         internal static string BuildingFocus;
         internal static string PoiFocusDescription(double now) => BuildingFocus;
-        private static object PoiFocusUsable() => BuildingFocus;
+        internal static object PoiFocusUsable() => BuildingFocus;
         internal static readonly uint[] TelemetryFocus = { 0, 0, 7, 0, 0 };
         internal sealed class PanelEntities : Dictionary<uint, Ent>
         {
             internal int Walks;
             internal new ValueCollection Values { get { Walks++; return base.Values; } }
         }
+        internal static uint ObservedFocus(int index) => TelemetryFocus[index];
+        internal static PanelEntities ObservedEntities => ByNet;
         internal static readonly PanelEntities ByNet = new PanelEntities();
         internal sealed class Ent
         {
@@ -72,15 +75,16 @@ namespace TLDRevamp.Net
             internal UnityEngine.Vector3 FarPos, LastVel;
             internal UnityEngine.Quaternion FarRot = new UnityEngine.Quaternion { w = 1 };
         }
-        private static bool IsHeld(tosaveitemscript it) => false;
-        private static bool IsStored(tosaveitemscript it) => false;
-        private static Ent SharedGroupOf(tosaveitemscript it) { GroupScans++; throw new Exception("unexpected group scan"); }
+        internal static bool IsHeld(tosaveitemscript it) => false;
+        internal static bool IsStored(tosaveitemscript it) => false;
+        internal static Ent SharedGroupOf(tosaveitemscript it) { GroupScans++; throw new Exception("unexpected group scan"); }
     }
     public sealed partial class MpServer
     {
         private sealed class Peer { internal int Id, Conn; internal bool Ready; }
         private readonly Dictionary<uint, Peer> _peers = new Dictionary<uint, Peer>();
         internal readonly SteamTransport T = new SteamTransport();
+        internal IEnumerable<int> DiagnosticPlayers() { foreach (var p in _peers.Values) if (p.Ready) yield return p.Id; }
         internal void Add(int id, bool ready = true) => _peers[(uint)id] = new Peer { Id = id, Conn = id, Ready = ready };
         internal bool SendToPlayer(int id, NetWriter w, bool reliable) => _peers.TryGetValue((uint)id, out var p) && p.Ready && T.Send(id, w, 1);
     }

@@ -146,7 +146,7 @@ namespace TLDRevamp.Fixes
         }
 
         /// The state, for the diagnostics bridge. No pose, ever.
-        internal static string Json() { return VrDiagnostics.Json(Contracts); }
+        internal static string Json() { return DevHooks.VrState?.Invoke() ?? "{}"; }
 
         /// The session decision the hands and the canvas follow. The game's own SetVR calls the hands and the canvas
         /// after the XR manager; the seam gives them the state the contract holds.

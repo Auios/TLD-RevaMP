@@ -6,10 +6,10 @@
     <Compile Include="../../src/TLDRevamp/DebugView.cs" />
     <Compile Include="../../src/TLDRevamp/OverlayStyle.cs" />
     <Compile Include="../../src/TLDRevamp/CompactOverlay.cs" />
-    <Compile Include="../../src/TLDRevamp/PacketTable.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/PacketTable.cs" />
     <Compile Include="../../src/TLDRevamp/OverlayTableLogic.cs" />
-    <Compile Include="../../src/TLDRevamp/OverlayDialogLogic.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/OverlayDialogLogic.cs" />
     <Compile Include="../../src/TLDRevamp/MarkPanel.cs" />
-    <Compile Include="../../src/TLDRevamp/Net/Banner.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Net/Banner.cs" />
   </ItemGroup>
 </Project>

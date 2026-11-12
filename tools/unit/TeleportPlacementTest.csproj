@@ -9,5 +9,6 @@
     <Compile Include="../../src/TLDRevamp/Net/SessionSettingsData.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
     <Compile Include="../../src/TLDRevamp/Fixes/UnfreezeOnGround.cs" />
+    <Compile Include="../../src/TLDRevamp/DevHooks.cs" />
   </ItemGroup>
 </Project>

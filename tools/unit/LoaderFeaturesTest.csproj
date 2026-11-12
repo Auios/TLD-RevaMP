@@ -10,6 +10,7 @@
     <!-- the shim and the fixture mod as files next to the test (the fixture's MissingDep stays out on purpose) -->
     <ProjectReference Include="../../src/TLDLoaderShim/TLDLoaderShim.csproj" ReferenceOutputAssembly="false" OutputItemType="LoaderFixture" AdditionalProperties="ImportDirectoryBuildTargets=false" />
     <ProjectReference Include="fixtures/loader/FeaturesMod.csproj" ReferenceOutputAssembly="false" OutputItemType="LoaderFixture" AdditionalProperties="ImportDirectoryBuildTargets=false" />
+    <Compile Include="../../src/TLDRevamp/DevHooks.cs" />
   </ItemGroup>
   <Target Name="CopyLoaderFixtures" AfterTargets="Build">
     <Copy SourceFiles="@(LoaderFixture)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />

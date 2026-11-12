@@ -14,7 +14,7 @@ static class DocsAccuracyTest
         Check("current protocol is " + protocol, protocol.Length > 0);
         // The number and its history live in one file, so a raised number that misses it fails here; other docs link there.
         Check("the top of the protocol's history is the code's number", Regex.Match(Read("docs/PROTOCOL.md"), @"^## (\d+)$", RegexOptions.Multiline).Groups[1].Value == protocol);
-        string wire = Read("src/TLDRevamp/Net/ObjectPanelWire.cs");
+        string wire = Read("src/TLDRevamp.Dev/Net/ObjectPanelWire.cs");
         Check("comparison retains message ids 105-109", wire.Contains("Ask = 105, Query = 106, Answer = 107, Row = 108, Roster = 109"));
         Check("join manifest and end marker avoid comparison ids", Read("src/TLDRevamp/Net/Protocol.cs").Contains("JoinLoading = 110;") &&
             Read("docs/MULTIPLAYER-ARCHITECTURE.md").Contains("Reliable message 110 sends phase 0"));

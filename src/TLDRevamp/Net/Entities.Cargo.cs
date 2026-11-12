@@ -30,7 +30,7 @@ namespace TLDRevamp.Net
         /// such claim skipped parts, so only picking it up could take it.
         public static bool LoosePartClaims = true;
         /// Not a car's part, or one that came off and is bolted to nothing now.
-        private static bool LooseItem(Ent e) => e.PartIndex < 0 ||
+        internal static bool LooseItem(Ent e) => e.PartIndex < 0 ||
             LoosePartClaims && e.Root != null && (e.Root.attachable == null || !e.Root.attachable.attached) && !RidesParent(e);
         public static float CargoClaimCooldownS = 2f;   // per item: no claim tug-of-war between two cars touching it
         /// A/B: an item its owner just let go of is ours at once when it is in or coming at our car — no cooldown. Marks
@@ -47,7 +47,7 @@ namespace TLDRevamp.Net
         /// Test only (bridge `mp forceheld <net>`): this item counts as in the local player's hands — a player carrying
         /// a part holds the mouse button down, which a test can't (the bridge's pickup is dropped the next frame).
         public static tosaveitemscript ForceHeld;
-        private static bool IsHeld(tosaveitemscript it)
+        internal static bool IsHeld(tosaveitemscript it)
         {
             if (ForceHeld != null && it == ForceHeld) return true;
             var p = it != null ? it.P : null;
@@ -391,7 +391,7 @@ namespace TLDRevamp.Net
             e.Proxy && e.Root != null && e.Root.car == null && LooseItem(e) && CargoBody(e) && !e.Held && !e.Stored && e.WornBy < 0 && !e.CrashTaking;   // (worn: a passenger's hat)
 
         /// Stored in one of the car's containers, or lying inside the car's box and in no other container.
-        private static bool InCar(carscript car, Ent e, out bool stored)
+        internal static bool InCar(carscript car, Ent e, out bool stored)
         {
             var pl = e.Root.P != null ? e.Root.P.physlock : null;
             stored = pl != null && pl.transform.root == car.transform.root;

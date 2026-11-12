@@ -3,12 +3,12 @@ using UnityEngine;
 
 namespace TLDRevamp
 {
-    public partial class DebugBridge
+    internal static class PoisProbe
     {
         /// `mp pois x z r`: pois near a spot — key, name, distance, spawned flags, whether its building object is
         /// loaded. x,z are UNITY coordinates (what callers have); they're converted to global here, because the
         /// floating origin shifts on every far hop and poi.pos is global — comparing them raw finds nothing.
-        private static string Pois(double x, double z, double r)
+        internal static string Pois(double x, double z, double r)
         {
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
             if (map == null || map.poiGens == null) return "{\"error\":\"no map\"}";
@@ -45,7 +45,7 @@ namespace TLDRevamp
         /// `poiwait gx gz r`: test (poicheck.py) — around a GLOBAL spot: the buildings still waiting to be placed (each
         /// generator's poiToPlace: candidate, type, road rule, whether RoadsDoneAtPlace lets it go now) and the road chunks
         /// there (exists, needed, roads, generated, Done). Two machines that disagree about a building show here why.
-        private static string PoiWait(double gx, double gz, double r)
+        internal static string PoiWait(double gx, double gz, double r)
         {
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
             if (map == null || map.poiGens == null) return "{\"error\":\"no map\"}";
@@ -94,7 +94,7 @@ namespace TLDRevamp
         /// before it is spawned here: what a different game build would generate there (the missing diner).
         /// Test (`poihide <key>`): this machine has no building at that spot — what a player who "doesn't see the
         /// building" has (Entities.PoiCensus, buildingdiff.py).
-        private static string PoiHide(string key)
+        internal static string PoiHide(string key)
         {
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
             if (map == null || map.poiGens == null) return "{\"error\":\"no map\"}";
@@ -115,7 +115,7 @@ namespace TLDRevamp
             return "{\"error\":\"no building at " + key + "\"}";
         }
 
-        private static string PoiRetype(string key, int id)
+        internal static string PoiRetype(string key, int id)
         {
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
             if (map == null || map.poiGens == null) return "{\"error\":\"no map\"}";

@@ -71,7 +71,7 @@ static class ReadmeCommandsTest
             Read("packaging/INSTALL.txt").Contains("No other mod loader"));
 
         // ---- 4. the keys the README names must be the code's defaults ----
-        string plugin = Read("src/TLDRevamp/Plugin.cs");
+        string plugin = Read("src/TLDRevamp/Plugin.cs") + Read("src/TLDRevamp.Dev/DevPlugin.cs");
         foreach (var pair in new[] { ("F11", "MultiplayerScreen"), ("PageUp", "PerformanceOverlay"),
                                      ("PageDown", "DebugReport"), ("Insert", "ItemTraffic"),
                                      ("ScrollLock", "Mark"), ("LeftControl", "ReproRecorder") })

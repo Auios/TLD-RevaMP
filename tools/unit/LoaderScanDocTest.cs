@@ -17,7 +17,7 @@ static class LoaderScanDocTest
     {
         string root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
         string Read(string rel) => File.ReadAllText(Path.Combine(root, rel));
-        string scan = Read("src/TLDRevamp/LoaderScan.cs");
+        string scan = Read("src/TLDRevamp.Dev/LoaderScan.cs");
         string docs = Read("docs/MODDING-MULTIPLAYER.md");
 
         // ---- 1. the scanner's section kinds ----
@@ -93,7 +93,7 @@ static class LoaderScanDocTest
         Check("the modscan tool exists", File.Exists(Path.Combine(root, "tools/modscan/Program.cs")));
 
         // ---- 5. the startup switch ----
-        string plugin = Read("src/TLDRevamp/Plugin.cs");
+        string plugin = Read("src/TLDRevamp/Plugin.cs") + Read("src/TLDRevamp.Dev/DevPlugin.cs");
         Check("the scanner runs at startup when the setting is on",
             plugin.Contains("ScanLoaderMods") && plugin.Contains("LoaderScan.ScanAll()"));
         Check("the documentation names the setting", docs.Contains("[Mods] ScanLoaderMods = true"));

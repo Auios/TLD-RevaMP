@@ -130,7 +130,7 @@ namespace TLDRevamp.Net
             a.Length > 7 ? float.Parse(a[7], System.Globalization.CultureInfo.InvariantCulture) : 60f);
         public static string PoiProbe(string[] a) => a.Length > 1 ? StartUsableProbe(PoiArg(a, 1), float.Parse(a[6], System.Globalization.CultureInfo.InvariantCulture)) : UsableProbeJson();
 
-        private static usablescript PoiFocusUsable()
+        internal static usablescript PoiFocusUsable()
         {
             if (!InSession || _telemetryLook == null) return null;
             var u = _telemetryLook.GetComponentInParent<usablescript>();

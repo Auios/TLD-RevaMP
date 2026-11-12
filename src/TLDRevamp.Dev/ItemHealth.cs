@@ -5,7 +5,7 @@ using UnityEngine;
 namespace TLDRevamp
 {
     /// Item health (Keys → ItemHealth, Home): aim at a shared object (or sit in a car, or hold an item) and press it. A panel
-    /// lists every check of that object (Entities.HealthChecks): loaded here, owner, position, held/stored/attached/locked
+    /// lists every check of that object (EntityHealth.HealthChecks): loaded here, owner, position, held/stored/attached/locked
     /// and its slots, its body and colliders, its fitted parts the crosshair can't reach, refusals and corrections — each
     /// with ✓, ! or ✗, why it is wrong, and the recent events that led there. While it is open the object's live comparison
     /// (ObjectPanels) asks every other player, through the host, for their view of it, so "attached here, loose for the
@@ -41,7 +41,7 @@ namespace TLDRevamp
 
         internal static string OpenFor(uint net)
         {
-            if (net == 0 && Net.Entities.InSession) net = Net.Entities.PanelFocus(true);
+            if (net == 0 && Net.Entities.InSession) net = Net.EntityPanels.PanelFocus(true);
             if (net == 0)
             {
                 if (!ReferenceEquals(Plugin.Instance, null)) Plugin.Instance.Overlay.Toast("Item health: aim at a shared object (or sit in a car, or hold an item) in a multiplayer game, then press " + Plugin.KeyName(Plugin.KeyItemHealth));
@@ -69,7 +69,7 @@ namespace TLDRevamp
             _local = ObjectPanels.Capture(_net);
             ObjectPanels.PartnerViews(_net, _partners);
             bool session = Net.Mp.Server != null || Net.Mp.Client != null;
-            Net.Entities.HealthChecks(_net, _local, _partners, session && ObjectPanels.Comparing(_net), _checks);
+            Net.EntityHealth.HealthChecks(_net, _local, _partners, session && ObjectPanels.Comparing(_net), _checks);
             var e = Net.Entities.EntityOf(_net);
             _title = "Item health · " + (e != null && e.Root != null ? Net.ItemTraffic.ObjectName(e.Root.name) : "object") + " · net " + _net;
             int problems = 0, warnings = 0; _worst = 0;
@@ -89,14 +89,14 @@ namespace TLDRevamp
                 if (!string.IsNullOrEmpty(c.How)) Put("    how it happened:\n    " + c.How.Replace("\n", "\n    "), OverlayStyle.Muted);
             }
             var timeline = new StringBuilder();
-            for (int i = 0; i < _local.EventCount; i++) timeline.Append(i == 0 ? "" : "\n").Append("    ").Append(Net.Entities.EventText(_local.Events[i], 0));
+            for (int i = 0; i < _local.EventCount; i++) timeline.Append(i == 0 ? "" : "\n").Append("    ").Append(Net.EntityHealth.EventText(_local.Events[i], 0));
             Put("Timeline here (last 35 s)" + (timeline.Length > 0 ? ":\n" + timeline : ": no events"), OverlayStyle.Text);
             foreach (var p in _partners)
             {
                 if (p.State.Has(ObjectPanelState.Bits.EventsNotShared)) { Put("Player " + p.Player + ": events not shared (they have report sharing off)", OverlayStyle.Muted); continue; }
                 if (p.State.EventCount == 0) continue;
                 var t = new StringBuilder("Timeline for player " + p.Player + ":");
-                for (int i = 0; i < p.State.EventCount && i < 8; i++) t.Append("\n    ").Append(Net.Entities.EventText(p.State.Events[i], p.Age));
+                for (int i = 0; i < p.State.EventCount && i < 8; i++) t.Append("\n    ").Append(Net.EntityHealth.EventText(p.State.Events[i], p.Age));
                 Put(t.ToString(), OverlayStyle.Text);
             }
             _rows.RemoveRange(n, _rows.Count - n);

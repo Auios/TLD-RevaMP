@@ -238,7 +238,7 @@ namespace TLDRevamp.Net
             DeathReset();
             Tpa.ResetTelemetry();
             ResetTpaSync();
-            ItemTraffic.Reset();   // session ids start at 1 again; no old object's traffic belongs to the next one
+            DevHooks.TrafficReset?.Invoke();   // session ids start at 1 again; no old object's traffic belongs to the next one
             if (_standInterp) StandInterpOff(mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.RB : null);
             foreach (var e in ByNet.Values)
             {
@@ -379,7 +379,7 @@ namespace TLDRevamp.Net
         /// In the local player's inventory with its model hidden (fpscontroller.InvStore: parented to the inventory point,
         /// disableThisWhenStored off). The copies elsewhere showed it floating in the middle of that player (v0.64.4,
         /// first play session with a friend).
-        private static bool IsStored(tosaveitemscript it)
+        internal static bool IsStored(tosaveitemscript it)
         {
             var p = it != null ? it.P : null;
             return p != null && p.disableThisWhenStored != null && !p.disableThisWhenStored.gameObject.activeSelf && p.inInventory() > 0;
@@ -1652,7 +1652,7 @@ namespace TLDRevamp.Net
         public static long FarAttachedMoved;
 
         /// A state for a shared object that is in this machine's far store: move its record.
-        private static bool IsStored(uint id)
+        internal static bool IsStored(uint id)
         {
             var data = savedatascript.s != null ? savedatascript.s.data : null;
             return data != null && data.itemData != null && savedatascript.IndexOfID(data.itemData.items, id, out _);

@@ -29,7 +29,7 @@ static class BridgeCommandTest
     static int Main(string[] args)
     {
         string root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
-        string bridge = File.ReadAllText(Path.Combine(root, "src", "TLDRevamp", "DebugBridge.cs"));
+        string bridge = File.ReadAllText(Path.Combine(root, "src", "TLDRevamp", "DebugBridge.cs")) + File.ReadAllText(Path.Combine(root, "src", "TLDRevamp.Dev", "DevCommands.cs"));
 
         // the case labels of the bridge's command switch
         var cases = new HashSet<string>(
@@ -85,7 +85,7 @@ static class BridgeCommandTest
             "terrainhorizon dispatches to the Lab's Snapshot");
         Check(bridge.Contains("case \"terrainhorizonstats\": return Fixes.TerrainHorizonLab.Stats();"),
             "terrainhorizonstats dispatches to the Lab's Stats");
-        string lab = File.ReadAllText(Path.Combine(root, "src", "TLDRevamp", "Fixes", "TerrainHorizonLab.cs"));
+        string lab = File.ReadAllText(Path.Combine(root, "src", "TLDRevamp.Dev", "Fixes", "TerrainHorizonLab.cs"));
         Check(lab.Contains("internal static string Stats()"), "the Lab has the Stats the command calls");
         Check(lab.Contains("internal static string Snapshot(string arg)"), "the Lab has the Snapshot the command calls");
         // the counters the command reports come from the renderer itself

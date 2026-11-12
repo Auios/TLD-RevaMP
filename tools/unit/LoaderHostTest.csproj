@@ -12,6 +12,7 @@
          for this fixture build; use the actual project outputs, not fixed paths. -->
     <ProjectReference Include="../../src/TLDLoaderShim/TLDLoaderShim.csproj" ReferenceOutputAssembly="false" OutputItemType="LoaderFixture" AdditionalProperties="ImportDirectoryBuildTargets=false" />
     <ProjectReference Include="fixtures/loader/RecorderMod.csproj" ReferenceOutputAssembly="false" OutputItemType="LoaderFixture" AdditionalProperties="ImportDirectoryBuildTargets=false" />
+    <Compile Include="../../src/TLDRevamp/DevHooks.cs" />
   </ItemGroup>
   <Target Name="CopyLoaderFixtures" AfterTargets="Build">
     <Copy SourceFiles="@(LoaderFixture)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />

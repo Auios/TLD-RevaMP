@@ -49,8 +49,10 @@ echo "scratch copy: $WORK"
 
 # the files the doc test reads
 copy_tree() {
+    mkdir -p "$WORK/src/TLDRevamp.Dev"
+    cp "$ROOT/src/TLDRevamp.Dev/LoaderScan.cs" "$ROOT/src/TLDRevamp.Dev/DevPlugin.cs" "$WORK/src/TLDRevamp.Dev/"
     mkdir -p "$WORK/src/TLDRevamp" "$WORK/src/TLDRevamp/Net" "$WORK/src/TLDLoaderShim" "$WORK/docs"
-    cp "$ROOT/src/TLDRevamp/ModHost.cs" "$ROOT/src/TLDRevamp/Plugin.cs" "$ROOT/src/TLDRevamp/LoaderScan.cs" \
+    cp "$ROOT/src/TLDRevamp/ModHost.cs" "$ROOT/src/TLDRevamp/Plugin.cs" \
        "$ROOT/src/TLDRevamp/Overlay.cs" "$ROOT/src/TLDRevamp/FeedbackReporter.cs" "$WORK/src/TLDRevamp/"
     cp "$ROOT/src/TLDRevamp/Net/Voice.cs" "$ROOT/src/TLDRevamp/Net/ModCatalog.cs" "$ROOT/src/TLDRevamp/Net/ModActivation.cs" \
        "$ROOT/src/TLDRevamp/Net/JoinLoading.cs" "$ROOT/src/TLDRevamp/Net/JoinLoadingView.cs" "$ROOT/src/TLDRevamp/Net/JoinLoadingState.cs" "$ROOT/src/TLDRevamp/Net/JoinChecks.cs" "$ROOT/src/TLDRevamp/Net/MpScreen.cs" \
@@ -83,7 +85,7 @@ copy_tree() {
 # CRASH, and a crash is not a catch. This check turns that into a clear harness error.
 require_scratch_files() {
     for f in README.md packaging/INSTALL.txt packaging/mods.json packaging/approved-mods.txt \
-             src/TLDRevamp/Overlay.cs src/TLDRevamp/LoaderScan.cs src/TLDRevamp/FeedbackReporter.cs \
+             src/TLDRevamp/Overlay.cs src/TLDRevamp.Dev/LoaderScan.cs src/TLDRevamp/FeedbackReporter.cs \
              src/TLDRevamp/Plugin.cs src/TLDRevamp/ModHost.cs \
              src/TLDRevamp/Net/Voice.cs src/TLDRevamp/Net/ModCatalog.cs src/TLDRevamp/Net/ModActivation.cs \
              src/TLDRevamp/Net/JoinLoading.cs src/TLDRevamp/Net/JoinLoadingView.cs src/TLDRevamp/Net/JoinLoadingState.cs src/TLDRevamp/Net/JoinChecks.cs src/TLDRevamp/Net/MpScreen.cs \
@@ -371,7 +373,7 @@ cat > "$WORK/m14.py" <<'PY'
 import sys
 work = sys.argv[1]
 # the scanner stops reporting a section the documentation still promises
-p = work + "/src/TLDRevamp/LoaderScan.cs"
+p = work + "/src/TLDRevamp.Dev/LoaderScan.cs"
 s = open(p).read()
 old = '[Kind.DrawOnly] = ("Draws on screen", "Works as is: each player sees their own."),'
 assert old in s, "anchor missing"
@@ -415,7 +417,7 @@ cat > "$WORK/m18.py" <<'PY'
 import sys
 work = sys.argv[1]
 # the scanner stops counting the member sites it cannot resolve
-p = work + "/src/TLDRevamp/LoaderScan.cs"
+p = work + "/src/TLDRevamp.Dev/LoaderScan.cs"
 s = open(p).read()
 old = "catch { rep.UnresolvedMembers++; }"
 assert old in s, "anchor missing"
@@ -426,7 +428,7 @@ cat > "$WORK/m19.py" <<'PY'
 import sys
 work = sys.argv[1]
 # the report stops saying which dependencies could not be loaded
-p = work + "/src/TLDRevamp/LoaderScan.cs"
+p = work + "/src/TLDRevamp.Dev/LoaderScan.cs"
 s = open(p).read()
 old = "UNRESOLVED"
 assert old in s, "anchor missing"
@@ -508,7 +510,7 @@ mutate_noop() {
     copy_tree
     cp "$ROOT/README.md" "$WORK/"
     cp "$ROOT/docs/NEXUS.md" "$WORK/docs/"
-    cp "$ROOT/src/TLDRevamp/Overlay.cs" "$ROOT/src/TLDRevamp/LoaderScan.cs" "$ROOT/src/TLDRevamp/FeedbackReporter.cs" \
+    cp "$ROOT/src/TLDRevamp/Overlay.cs" "$ROOT/src/TLDRevamp/FeedbackReporter.cs" \
        "$ROOT/src/TLDRevamp/Plugin.cs" "$WORK/src/TLDRevamp/"
     mkdir -p "$WORK/src/TLDRevamp/Net"
     cp "$ROOT/src/TLDRevamp/Net/Voice.cs" "$ROOT/src/TLDRevamp/Net/ModCatalog.cs" "$ROOT/src/TLDRevamp/Net/ModActivation.cs" \
@@ -543,7 +545,7 @@ mutate_other() {
     cp "$ROOT/docs/NEXUS.md" "$WORK/docs/"
     # EVERY file the doc tests read, at the path they read it from. A test that starts reading a new
     # file must fail loudly here (a missing file), never "pass" on a crash.
-    cp "$ROOT/src/TLDRevamp/Overlay.cs" "$ROOT/src/TLDRevamp/LoaderScan.cs" "$ROOT/src/TLDRevamp/FeedbackReporter.cs" \
+    cp "$ROOT/src/TLDRevamp/Overlay.cs" "$ROOT/src/TLDRevamp/FeedbackReporter.cs" \
        "$ROOT/src/TLDRevamp/Plugin.cs" "$WORK/src/TLDRevamp/"
     mkdir -p "$WORK/src/TLDRevamp/Net"
     cp "$ROOT/src/TLDRevamp/Net/Voice.cs" "$ROOT/src/TLDRevamp/Net/ModCatalog.cs" "$ROOT/src/TLDRevamp/Net/ModActivation.cs" \

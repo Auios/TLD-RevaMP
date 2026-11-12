@@ -6,7 +6,7 @@
     <Compile Include="JoinLoadingAssetStubs.cs" />
     <Compile Include="../../src/TLDRevamp/DebugView.cs" />
     <Compile Include="../../src/TLDRevamp/OverlayStyle.cs" />
-    <Compile Include="../../src/TLDRevamp/OverlayDialogLogic.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/OverlayDialogLogic.cs" />
     <Compile Include="../../src/TLDRevamp/Net/JoinLoading.cs" />
     <Compile Include="../../src/TLDRevamp/Net/JoinLoadingView.cs" />
     <Compile Include="../../src/TLDRevamp/Net/JoinLoadingPreview.cs" />

@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using TLDRevamp;
+using static TLDRevamp.Net.EntityOverlays;
 using UnityEngine;
 
 namespace TLDRevamp.Net
@@ -27,12 +28,13 @@ namespace TLDRevamp.Net
         static float RestSpeed = .05f;
         static readonly Dictionary<uint, int> _hitchTransfers = new Dictionary<uint, int>(), _hitchCommands = new Dictionary<uint, int>();
         static uint TelemetryNet(uint net) => net;
+        internal static uint[] TelemetryFocus = new uint[5];
         internal static uint PanelFocus(bool held) => _telemetryLook;
-        static bool RidesParent(Ent e) => e.Root?.attachable != null && e.Root.attachable.attached && e.Root.attachable.parentAtAttach && e.Root.transform.parent != null;
-        static bool RidesOwnersContainer(Ent e) => !e.PoseLocked && !e.Held && e.Root?.P?.physlock?.parentTosave != null &&
+        internal static bool RidesParent(Ent e) => e.Root?.attachable != null && e.Root.attachable.attached && e.Root.attachable.parentAtAttach && e.Root.transform.parent != null;
+        internal static bool RidesOwnersContainer(Ent e) => !e.PoseLocked && !e.Held && e.Root?.P?.physlock?.parentTosave != null &&
             ByNet.Values.Any(c => c.Root == e.Root.P.physlock.parentTosave && c.OwnerId == e.OwnerId);
-        static bool IsStored(TestItem it) => it.P != null && it.P.inInventory;
-        static bool IsSpraying(TestItem it) => IsHeld(it) && it.GetComponent<TestSpray>()?.valve > .1f;
+        internal static bool IsStored(TestItem it) => it.P != null && it.P.inInventory;
+        internal static bool IsSpraying(TestItem it) => IsHeld(it) && it.GetComponent<TestSpray>()?.valve > .1f;
 
         static void OverlayCheck(bool ok, string why) => IdleTrafficTest.Check(ok, "overlay: " + why);
         static bool OverlayNear(Vector3d a, Vector3d b) => (a - b).magnitude < .001;
@@ -282,6 +284,11 @@ namespace TLDRevamp.Net
     }
     public static partial class RemotePlayers
     {
+        internal static void ObserveRiders(Action<Transform, int, uint, bool, Transform> observe)
+        {
+            foreach (var rp in All.Values) if (rp.Go != null && rp.Go.activeInHierarchy)
+                observe(rp.Go.transform, rp.Id, rp.SeatNet != 0 ? rp.SeatNet : rp.Foot.Net, rp.SeatNet != 0, rp.SeatedOn);
+        }
         internal class Remote { public GameObject Go; public int Id; public uint SeatNet; public Footing Foot; public Transform SeatedOn; }
         internal struct Footing { public uint Net; }
         internal static readonly Dictionary<int, Remote> All = new Dictionary<int, Remote>();
@@ -388,4 +395,9 @@ namespace UnityEngine.Rendering
     public enum BlendMode { SrcAlpha, OneMinusSrcAlpha }
     public enum CullMode { Off }
     public enum CompareFunction { Always }
+}
+
+namespace TLDRevamp.Net
+{
+    internal static class EntityPanels { internal static uint PanelFocus(bool held) => Entities.PanelFocus(held); }
 }

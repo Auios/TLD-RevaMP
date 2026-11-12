@@ -220,7 +220,7 @@ namespace TLDRevamp
         }
         private static string Aimed(bool cols)
         {
-            var e = Net.Entities.InSession ? Net.Entities.OverlayLook() : null;
+            var e = Net.Entities.InSession ? Net.EntityOverlays.OverlayLook() : null;
             if (e == null || e.Root == null) return cols ? "" : "aimed  nothing shared";
             if (cols) return Net.Entities.OverlayColliders(e, true);
             return "aimed  " + Net.ItemTraffic.ObjectName(e.Root.name) + " · " + WorldOverlayLogic.Owner(e.OwnerId, Net.Entities.MyId) + (e.Proxy ? " · copy" : " · simulated here");
