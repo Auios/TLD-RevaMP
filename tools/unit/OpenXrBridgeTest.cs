@@ -318,7 +318,7 @@ static class OpenXrBridgeTest
         if (!string.IsNullOrEmpty(repoRoot) && File.Exists(Path.Combine(repoRoot, "src/TLDRevamp/Fixes/OpenXrBridge.cs")))
         {
             string candidate = Path.Combine(repoRoot, relative);
-            if (File.Exists(candidate)) return File.ReadAllText(candidate);
+            if (File.Exists(candidate)) return File.ReadAllText(candidate).Replace("\r\n", "\n");
         }
         else
         {
@@ -326,7 +326,7 @@ static class OpenXrBridgeTest
             if (File.Exists(Path.Combine(currentDirectory, "src/TLDRevamp/Fixes/OpenXrBridge.cs")))
             {
                 string candidate = Path.Combine(currentDirectory, relative);
-                if (File.Exists(candidate)) return File.ReadAllText(candidate);
+                if (File.Exists(candidate)) return File.ReadAllText(candidate).Replace("\r\n", "\n");
             }
         }
 
@@ -334,7 +334,7 @@ static class OpenXrBridgeTest
         for (int i = 0; i < 8; i++)
         {
             string candidate = Path.Combine(dir, relative);
-            if (File.Exists(candidate)) return File.ReadAllText(candidate);
+            if (File.Exists(candidate)) return File.ReadAllText(candidate).Replace("\r\n", "\n");
             string parent = Path.GetDirectoryName(dir.TrimEnd(Path.DirectorySeparatorChar));
             if (parent == null) break;
             dir = parent;

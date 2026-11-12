@@ -32,7 +32,7 @@ static class SettingsFeatureSourceTest
 
     private static string Read(string rel)
     {
-        try { return File.ReadAllText(Path.Combine(root, rel)); }
+        try { return File.ReadAllText(Path.Combine(root, rel)).Replace("\r\n", "\n"); }   // any checkout's line endings
         catch { return ""; }
     }
 

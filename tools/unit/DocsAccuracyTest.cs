@@ -9,7 +9,7 @@ static class DocsAccuracyTest
     static int Main(string[] args)
     {
         string root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
-        string Read(string path) => File.ReadAllText(Path.Combine(root, path));
+        string Read(string path) => File.ReadAllText(Path.Combine(root, path)).Replace("\r\n", "\n");   // any checkout's line endings
         string protocol = Regex.Match(Read("src/TLDRevamp/Net/Protocol.cs"), @"const ushort Version = (\d+);").Groups[1].Value;
         Check("current protocol is " + protocol, protocol.Length > 0);
         // The number and its history live in one file, so a raised number that misses it fails here; other docs link there.

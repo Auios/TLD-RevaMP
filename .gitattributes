@@ -1,0 +1,2 @@
+# Shell scripts keep LF on every checkout: with CRLF (Windows checkouts, core.autocrlf) bash outside Git Bash fails on them.
+*.sh text eol=lf
