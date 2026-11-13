@@ -65,7 +65,7 @@ namespace TLDRevamp.Net
             return g.Hash;
         }
 
-        private static Transform[] Limbs(Ent e)
+        internal static Transform[] Limbs(Ent e)
         {
             // a mod's own ragdoll (MpApi.RegisterRagdoll) first, then the game's limb list
             if (e.Root != null && e.PartIndex < 0 && TLDRevamp.Multiplayer.MpApi.TryGetRagdoll(e.Root.gameObject, out var modLimbs, out _)) return modLimbs;
@@ -74,7 +74,7 @@ namespace TLDRevamp.Net
         }
 
         /// Limp: a body with no creature (dead player, skeleton), or a creature in its ragdoll.
-        private static bool Limp(Ent e)
+        internal static bool Limp(Ent e)
         {
             if (e.Rag == null) e.Rag = new Rag();
             if (e.Root != null && TLDRevamp.Multiplayer.MpApi.TryGetRagdoll(e.Root.gameObject, out _, out var isLimp))

@@ -1,3 +1,4 @@
+using static TLDRevamp.Net.Entities;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ namespace TLDRevamp.Net
     /// the host logged ~68,000 "ran out of virtual channels" for collision sounds, then FMOD "not enough resources" for
     /// every new AudioSource, and hung. Counts OnCollisionEnter of carscript / pickupable per (this root, other root),
     /// each tagged copy/owned and kinematic/physical. Bridge: `mp contacts [on|off|reset]`.
-    public static partial class Entities
+    internal static class EntityContactCensus
     {
         public static bool ContactCensus;
         private static readonly Dictionary<string, long> _census = new Dictionary<string, long>();

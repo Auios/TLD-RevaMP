@@ -430,7 +430,7 @@ namespace TLDRevamp.Net
         {
             CopyLodTick();
             if (!InSession) return;
-            WatchTick();
+            DevHooks.EntityWatch?.Invoke();
             AnomalyTick();
             PartWatchTick();
             HealthWatchTick();
@@ -1392,7 +1392,7 @@ namespace TLDRevamp.Net
             if (e.Ip == null) return;
             e.Ip.MaxCoast = CarCoastS > 0f && e.Root != null && e.Root.car != null && e.PartIndex < 0 ? CarCoastS : e.Ip.MaxExtrapolate;
         }
-        private static void SetProxy(Ent e, bool proxy, bool keepMotion = false)
+        internal static void SetProxy(Ent e, bool proxy, bool keepMotion = false)
         {
             if (e.Proxy == proxy) return;
             // becoming a copy around a player sitting in it (another took the wheel, a crash lease): the kinematic copy
@@ -1599,7 +1599,7 @@ namespace TLDRevamp.Net
             return any;
         }
 
-        private static bool Resolve(Ent e)
+        internal static bool Resolve(Ent e)
         {
             if (e.Root != null)
             {
@@ -1764,7 +1764,7 @@ namespace TLDRevamp.Net
             return true;
         }
 
-        private static void MoveRecord(List<save_item> list, int k, Vector3d pos, Vector3 euler)
+        internal static void MoveRecord(List<save_item> list, int k, Vector3d pos, Vector3 euler)
         {
             var rec = list[k];
             var from = savedatascript.SnapChunkPos(rec.transform.pos);

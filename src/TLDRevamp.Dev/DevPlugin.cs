@@ -21,7 +21,7 @@ namespace TLDRevamp
             {
                 int eq = pair.IndexOf('=');
                 if (eq <= 0) continue;
-                string member = pair.Substring(0, eq), owner = member;
+                string member = Reflect.MemberPath(pair.Substring(0, eq)), owner = member;
                 Type type = null;
                 while (type == null && owner.LastIndexOf('.') > 0)
                 { owner = owner.Substring(0, owner.LastIndexOf('.')); type = Reflect.FindType(owner); }
@@ -58,7 +58,22 @@ namespace TLDRevamp
                 "Shows or hides recent telemetry events for the focused object. Unbound by default; also Settings > Revamp > Debugging.");
 
             KeyBindings.Contribute(("Item health", KeyItemHealth), ("Debug layout (V2)", KeyDebugLayout), ("Item traffic", KeyItemTraffic), ("Debug view (Legacy)", KeyDebugView), ("Ownership labels (Legacy)", KeyOwnership), ("Owner ghost (Legacy)", KeyOwnerGhost), ("Links (Legacy)", KeyLinks), ("Object comparison", KeyCompare), ("Object events", KeyEvents));
-            Net.Entities.HoldForTest = Net.FillLab.HoldNet;
+            Net.EntityDebug.HoldForTest = Net.FillLab.HoldNet;
+            Reflect.RegisterMovedMembers(typeof(Net.Entities), typeof(Net.EntityDebug), typeof(Net.EntityMountLab), typeof(Net.EntityReproPlayback), typeof(Net.EntityItemCheck), typeof(Net.EntityItemWatch), typeof(Net.EntityContactCensus), typeof(Net.EntityFakeInput), typeof(Net.EntityTrack));
+            Reflect.RegisterMovedMembers(typeof(Net.RemotePlayers), typeof(Net.RemoteReproPlayback));
+            Reflect.RegisterMovedMembers(typeof(Replay.ReplayRecorder), typeof(Replay.ReplayTruthCapture));
+            Reflect.RegisterMovedMembers(typeof(Replay.ReplayViewer), typeof(Replay.ReplayTruthVerify));
+            DevHooks.OwnerDecision += Net.EntityDebug.OwnerLog;
+            DevHooks.ReproDriving += Net.EntityReproPlayback.ApplyDriveInput;
+            DevHooks.CopyJump += Net.EntityDebug.LogJump;
+            DevHooks.EntityWatch += Net.EntityMountLab.WatchTick;
+            DevHooks.EntityTrace += Net.EntityMountLab.TraceTick;
+            DevHooks.ItemScan += Net.EntityItemWatch.ItemWatchScan;
+            DevHooks.ItemLook += Net.EntityItemWatch.ItemWatchLook;
+            DevHooks.ItemFlags = () => Net.EntityItemWatch.ItemWatchFlags;
+            DevHooks.ItemLast = () => Net.EntityItemWatch.ItemWatchLast;
+            DevHooks.SlotRef = Net.EntityMountLab.SlotRef;
+            Replay.ReplayTruthCapture.Install();
             DevCommands.Install(); DevOverlay.Install();
             DevHooks.InputCapture = () => DebugV2.Editing;
             DevHooks.Playback = () => ReproPlayback.Active;
@@ -71,7 +86,7 @@ namespace TLDRevamp
             DevHooks.SessionStopped += Net.PlayerBots.Reset; DevHooks.BotsTick += Net.PlayerBots.Tick;
             DevHooks.Packet += Net.ItemTraffic.Packet; DevHooks.TrafficReset += Net.ItemTraffic.Reset;
             DevHooks.TpaObject += ObjectPanelEvents.TpaObject;
-            DevHooks.PlayerEditionApplied += () => Fixes.LoadWatch.Enabled = false;
+            DevHooks.PlayerEditionApplied += () => { Fixes.LoadWatch.Enabled = false; Net.EntityItemWatch.ItemWatch = false; };
             ReproRecorder.SimulationSnapshot = () => NetworkConditions.ReproRow(NetworkConditions.Current);
             Net.MpServer.DiagnosticMessage += (server, from, type, reader) => Net.ServerPanels.For(server).PanelMessage(from, type, reader);
             Net.MpServer.DiagnosticPeerLeft += (server, player) => Net.ServerPanels.For(server).PeerLeft(player);

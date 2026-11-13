@@ -299,7 +299,7 @@ namespace TLDRevamp.Net
         }
 
         /// The car's own box: every solid collider under it (body, parts), in its local space; cached for 10 s.
-        private static Bounds CarLocalBounds(carscript car)
+        internal static Bounds CarLocalBounds(carscript car)
         {
             if (_carBounds.TryGetValue(car, out var b)) return b;
             var t = car.transform; bool any = false;
@@ -651,7 +651,7 @@ namespace TLDRevamp.Net
         }
 
         /// The display copy whose root is `root` (per-frame map, shared with ProxyVelocity).
-        private static Ent ProxyOf(Transform root)
+        internal static Ent ProxyOf(Transform root)
         {
             if (root == null) return null;
             ProxyVelocity(root);   // refreshes the map once per frame

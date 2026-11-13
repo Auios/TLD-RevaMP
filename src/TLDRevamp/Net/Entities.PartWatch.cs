@@ -33,8 +33,8 @@ namespace TLDRevamp.Net
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || pl.Cam == null) return;
             float now = Time.realtimeSinceStartup;
-            if (now - _pwScanAt >= PartWatchNearbyEveryS) { _pwScanAt = now; PartWatchScan(pl, now); ItemWatchScan(pl, now); }
-            if (now - _pwLookAt >= PartWatchLookEveryS) { _pwLookAt = now; PartWatchLook(pl, now); ItemWatchLook(pl, now); }
+            if (now - _pwScanAt >= PartWatchNearbyEveryS) { _pwScanAt = now; PartWatchScan(pl, now); DevHooks.ItemScan?.Invoke(pl, now); }
+            if (now - _pwLookAt >= PartWatchLookEveryS) { _pwLookAt = now; PartWatchLook(pl, now); DevHooks.ItemLook?.Invoke(pl, now); }
         }
 
         internal struct PartReach { public bool Visible, Targetable, Expected; public int Cols, Live, UseLayer, Held; }
@@ -148,7 +148,7 @@ namespace TLDRevamp.Net
         private static bool OfPart(Collider c, attachablescript part) =>
             c.transform.IsChildOf(part.transform) || (part.slot != null && c.transform == part.slot.transform);
 
-        private static bool Shows(Transform root)
+        internal static bool Shows(Transform root)
         {
             foreach (var rd in root.GetComponentsInChildren<Renderer>()) if (rd.enabled && rd.gameObject.activeInHierarchy) return true;
             return false;

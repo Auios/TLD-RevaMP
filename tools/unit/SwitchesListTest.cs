@@ -18,7 +18,10 @@ static class P {
     foreach (var p in paths) {
       int dot = p.LastIndexOf('.');
       string type = p.Substring(0, dot), field = p.Substring(dot + 1), cls = type.Substring(type.LastIndexOf('.') + 1);
-      var classRe = new Regex(@"\b(class|struct)\s+" + Regex.Escape(cls) + @"\b");
+      // Dev registers the original member paths through Reflect.RegisterMovedMembers.
+      string owners = cls == "Entities" ? "Entities|EntityDebug|EntityMountLab|EntityReproPlayback|EntityItemCheck|EntityItemWatch|EntityContactCensus|EntityFakeInput|EntityTrack"
+        : cls == "ReplayRecorder" ? "ReplayRecorder|ReplayTruthCapture" : Regex.Escape(cls);
+      var classRe = new Regex(@"\b(class|struct)\s+(?:" + owners + @")\b");
       var fieldRe = new Regex(@"\bstatic\b[^;{(]*\b" + Regex.Escape(field) + @"\b\s*(=|;|,|\{)");
       if (!files.Any(t => classRe.IsMatch(t) && fieldRe.IsMatch(t))) missing.Add(p);
     }

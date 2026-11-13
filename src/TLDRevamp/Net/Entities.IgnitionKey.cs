@@ -128,6 +128,11 @@ namespace TLDRevamp.Net
                    ",\"key\":" + (c.ignitionUsable != null ? "true" : "false") + ",\"sent\":" + KeyHoldsSent + ",\"applied\":" + KeyHoldsApplied + ",\"refused\":" + KeyHoldsRefused + "}";
         }
 
+        internal static void EndKeyTest(bool expire = false)
+        {
+            if (expire) _keyTestUntil = Time.time - 1;
+            _keyTestCar = null;
+        }
         private static void KeyTestTick()
         {
             if (_keyTestCar == null) return;

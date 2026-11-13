@@ -14,8 +14,9 @@
     <Compile Include="../../src/TLDRevamp.Dev/ReproPlayback.cs" />
     <Compile Include="../../src/TLDRevamp.Dev/NetworkSimulation.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Repro.cs" />
-    <Compile Include="../../src/TLDRevamp/Net/Entities.ReproPlayback.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Net/Entities.ReproPlayback.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.ReproDrive.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Net/Entities.ReproDrive.cs" />
     <Compile Include="../../src/TLDRevamp/DevHooks.cs" />
   </ItemGroup>
 </Project>

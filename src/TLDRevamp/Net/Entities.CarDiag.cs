@@ -7,6 +7,9 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        /// Colliders currently enabled on an active object.
+        internal static int CountActive(List<BoxCollider> l) { int n = 0; if (l != null) foreach (var c in l) if (c != null && c.gameObject.activeInHierarchy && c.enabled) n++; return n; }
+
         /// One car as the physics engine has it right now, for a bug report: what holds a car that "does not move although the
         /// engine runs" shows here (a frozen or jointed body, a wheel lock, a wheel that cannot turn, a collider overlapping the
         /// body). The car the reporter sits in, else the nearest one within 15 m; null when there is none. Main thread.

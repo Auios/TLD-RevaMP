@@ -168,7 +168,8 @@ namespace TLDRevamp.Net
         internal static Ent Make(uint net) { var e = new Ent { NetId = net, OwnerId = MyId, Root = new tosaveitemscript() }; e.Items.Add(e.Root); ByNet[net] = e; return e; }
         internal static bool InSession = true, TestAsPlayer, PlayerActing = true, _hitchApplying, _applyingLive, _applyingState, _applyingPoi, _applyingDetach;
         internal static int MyId = 1, DetachRequests; internal static tosaveitemscript ForceHeld; private static float _keyTestUntil; private static carscript _keyTestCar;
-        private static bool Resolve(Ent e) => e.Root != null;
+        internal static IReadOnlyDictionary<uint, Ent> ObservedEntities => ByNet;
+        internal static bool Resolve(Ent e) => e.Root != null;
         private static Ent EditEntityOf(tosaveitemscript it)
         {
             foreach (var e in ByNet.Values) if (e.Root == it) return e;
@@ -178,24 +179,26 @@ namespace TLDRevamp.Net
         private static uint TelemetryNet(tosaveitemscript it) => EditEntityOf(it)?.NetId ?? 0;
         private static uint TelemetryNet(carscript car) { foreach (var e in ByNet.Values) if (e.Root.car == car) return e.NetId; return 0; }
         internal static void LocalSeat(out uint net, out int seat) { net = 0; seat = -1; }
-        private static string SitSeat(int seat, bool b, uint net) => "{\"ok\":true}";
+        internal static void EndKeyTest(bool expire = false) { if (expire) _keyTestUntil = Time.time - 1; _keyTestCar = null; }
         private static tosaveitemscript ItemOf(usablescript u, int a, int b) => null;
-        private static usablescript[] ItemUsables(tosaveitemscript it) => Array.Empty<usablescript>();
-        private static mountStuff[] LockMounts(tosaveitemscript it) { if (it.ThrowMounts) throw new Exception(); return it.Mounts; }
-        private static bool PartIsProxy(attachablescript at) => EditEntityOf(at.tosave)?.Proxy == true;
-        private static bool RequestDetach(attachablescript at) { DetachRequests++; return true; }
-        private static bool Unmount(attachablescript at, bool b) { at.attached = false; return true; }
-        private static bool IsStored(tosaveitemscript it) => false;
-        private static bool IsHeld(tosaveitemscript it) => false;
-        private static string KeyTest(uint net, int seconds) => "{\"refused\":9}";
-        private static bool HitchTrailer(Ent e) => true;
-        private static void RequestHitch(Ent tr, Ent car, partslotscript slot, bool on) { }
-        private struct PoiKey { internal int Gen, U; internal double X, Y, Z; }
-        private static usablescript PoiUsableOf(PoiKey k) => null;
+        internal static usablescript[] ItemUsables(tosaveitemscript it) => Array.Empty<usablescript>();
+        internal static mountStuff[] LockMounts(tosaveitemscript it) { if (it.ThrowMounts) throw new Exception(); return it.Mounts; }
+        internal static bool PartIsProxy(attachablescript at) => EditEntityOf(at.tosave)?.Proxy == true;
+        internal static bool RequestDetach(attachablescript at) { DetachRequests++; return true; }
+        internal static bool Unmount(attachablescript at, bool b) { at.attached = false; return true; }
+        internal static bool IsStored(tosaveitemscript it) => false;
+        internal static bool IsHeld(tosaveitemscript it) => false;
+        internal static string KeyTest(uint net, int seconds) => "{\"refused\":9}";
+        internal static bool HitchTrailer(Ent e) => true;
+        internal static void RequestHitch(Ent tr, Ent car, partslotscript slot, bool on) { }
+        internal struct PoiKey { internal int Gen, U; internal double X, Y, Z; }
+        internal static usablescript PoiUsableOf(PoiKey k) => null;
     }
+    internal static class EntityDebug { internal static string SitSeat(int seat, bool b, uint net) => "{\"ok\":true}"; }
     public static partial class RemotePlayers
     {
-        private class Remote { internal bool Has; internal Vector3d Target; internal uint SeatNet; internal int SeatIdx; }
+        internal class Remote { internal bool Has; internal Vector3d Target; internal uint SeatNet; internal int SeatIdx; }
+        internal static IReadOnlyList<Remote> ObservedReproPlayers => new List<Remote>(All.Values);
         private static Dictionary<int, Remote> All = new Dictionary<int, Remote>();
     }
 }

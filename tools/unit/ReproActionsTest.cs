@@ -39,6 +39,7 @@ static class ReproActionsTest
         mainscript.s.player = null; Check(ReproPlayback.Command("arm").Contains("error"), "local player required"); mainscript.s.player = p;
         BepInEx.Bootstrap.Chainloader.PluginInfos.Clear(); Check(ReproPlayback.Command("arm").Contains("error"), "isolation required");
         BepInEx.Bootstrap.Chainloader.PluginInfos.Add("someone.tld.copyisolation", null);
+        DevHooks.ReproDriving = EntityReproPlayback.ApplyDriveInput;
         ReproPlayback.Command("arm"); ReproRecorder.Toggle(); Check(Plugin.Instance.Overlay.Last.Contains("end playback"), "hotkey refusal toast");
         string limited = ReproPlayback.Command("act 22 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
         Check(limited.Contains("skipped") && !limited.Contains("error"), "rate-limited replay mark counted as skip");
@@ -130,9 +131,9 @@ static class ReproActionsTest
         foreach (var kind in new[] { ReproKind.Drive, ReproKind.PhysLock, ReproKind.PhysUnlock, ReproKind.EntityPose })
         {
             var r = new ReproRow { Kind = kind, Net = 7, Other = 8, X = .7, Y = .1, Z = -.2 };
-            Check(Entities.ReproAct(r).Contains("skipped"), "ownership latency skipped for " + kind);
+            Check(EntityReproPlayback.ReproAct(r).Contains("skipped"), "ownership latency skipped for " + kind);
             part.Proxy = false; part.OwnerId = Entities.MyId;
-            Check(Entities.ReproAct(r).Contains("ok"), "ownership arrival applies " + kind);
+            Check(EntityReproPlayback.ReproAct(r).Contains("ok"), "ownership arrival applies " + kind);
             if (kind == ReproKind.Drive)
             {
                 Hook("ReproDriveInput", "Postfix", part.Root.car);
@@ -142,12 +143,12 @@ static class ReproActionsTest
             if (kind == ReproKind.PhysUnlock) Check(part.Root.P.physlock == null, "owned unlock releases mount");
             if (kind == ReproKind.EntityPose) Check(part.Root.transform.position.x == .7f, "owned entity pose applied");
             part.Proxy = true; part.OwnerId = 2;
-            r.Net = 999; Check(Entities.ReproAct(r).Contains("error"), "missing target still fatal for " + kind);
+            r.Net = 999; Check(EntityReproPlayback.ReproAct(r).Contains("error"), "missing target still fatal for " + kind);
         }
-        Check(Entities.ReproAct(new ReproRow { Kind = ReproKind.Attach, Net = 7, Other = 8 }).Contains("ok") && part.Root.attachable.attached, "proxy attach action replays without owner pose");
-        Check(Entities.ReproAct(new ReproRow { Kind = ReproKind.Detach, Net = 7 }).Contains("requested") && Entities.DetachRequests == 1, "proxy detach routes request");
+        Check(EntityReproPlayback.ReproAct(new ReproRow { Kind = ReproKind.Attach, Net = 7, Other = 8 }).Contains("ok") && part.Root.attachable.attached, "proxy attach action replays without owner pose");
+        Check(EntityReproPlayback.ReproAct(new ReproRow { Kind = ReproKind.Detach, Net = 7 }).Contains("requested") && Entities.DetachRequests == 1, "proxy detach routes request");
         p.pickedUp = part.Root.P;
-        Check(!Entities.ReproAct(new ReproRow { Kind = ReproKind.Throw, Net = 7, A = 1, Z = 1 }).Contains("error"), "recorded full throw replays");
+        Check(!EntityReproPlayback.ReproAct(new ReproRow { Kind = ReproKind.Throw, Net = 7, A = 1, Z = 1 }).Contains("error"), "recorded full throw replays");
         ReproPlayback.Command("end");
         Console.WriteLine("ALL PASS (" + _checks + " real recorder/playback/hook checks)");
     }

@@ -176,7 +176,7 @@ namespace TLDRevamp.Net
         /// Test: every item bot bolts its item onto `slot` of `carNet` (the AttachSync a remote player's attach key sends).
         public static string BotAttach(uint carNet, string slot)
         {
-            if (!Entities.SlotRef(carNet, slot, out int parentIdx, out int index, out var lpos, out var gpos)) return "{\"error\":\"no such slot\"}";
+            if (DevHooks.SlotRef == null || !DevHooks.SlotRef(carNet, slot, out int parentIdx, out int index, out var lpos, out var gpos)) return "{\"error\":\"no such slot\"}";
             int n = 0;
             foreach (var b in Bots) if (b.SendItemAttach(carNet, parentIdx, index, lpos, gpos)) n++;
             return "{\"sent\":" + n + ",\"parentIdx\":" + parentIdx + ",\"index\":" + index + "}";
@@ -1664,6 +1664,23 @@ namespace TLDRevamp.Net
     /// floating origin; limbs from PlayerLook poses, clothes from outfits. Capsule only if the prefab is missing.
     public static partial class RemotePlayers
     {
+        internal readonly struct ReproObservation
+        {
+            internal readonly bool Has;
+            internal readonly Vector3d Target;
+            internal readonly uint SeatNet;
+            internal readonly int SeatIdx;
+            internal ReproObservation(bool has, Vector3d target, uint net, int seat) { Has = has; Target = target; SeatNet = net; SeatIdx = seat; }
+        }
+        internal static IReadOnlyList<ReproObservation> ObservedReproPlayers
+        {
+            get
+            {
+                var rows = new List<ReproObservation>();
+                foreach (var p in All.Values) rows.Add(new ReproObservation(p.Has, p.Target, p.SeatNet, p.SeatIdx));
+                return rows;
+            }
+        }
         private sealed class Rp
         {
             public int Id; public GameObject Go; public mpplayerscript Mp; public playermodeloutfitscript Look;

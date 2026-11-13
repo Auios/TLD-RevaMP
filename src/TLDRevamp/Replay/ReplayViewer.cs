@@ -19,7 +19,7 @@ namespace TLDRevamp.Replay
     /// character never moves.
     internal static partial class ReplayViewer
     {
-        private sealed class Body
+        internal sealed class Body
         {
             public GameObject Go;
             public mpplayerscript Mp;
@@ -623,7 +623,7 @@ namespace TLDRevamp.Replay
             return sb.ToString();
         }
 
-        private static string Error(string why) { Plugin.Instance?.Overlay?.Toast("Replay: " + why, 3f); return "{\"error\":" + Json.Str(why) + "}"; }
+        internal static string Error(string why) { Plugin.Instance?.Overlay?.Toast("Replay: " + why, 3f); return "{\"error\":" + Json.Str(why) + "}"; }
 
         // ------------------------------------------------------------------ helpers
 

@@ -46,7 +46,7 @@ namespace TLDRevamp
         {
             if (!On) return;
             Net.Entities.HealthWatch = false; Net.Entities.AutoMarks = false; DevHooks.PlayerEditionApplied?.Invoke();
-            Net.Entities.ItemWatch = false; Net.Entities.PartWatch = false; Net.Entities.PartWatchMarks = false;
+            Net.Entities.PartWatch = false; Net.Entities.PartWatchMarks = false;
             Plugin.SetWipMark(false);
             var entries = RevampSettings.Entries;
             foreach (var e in entries)

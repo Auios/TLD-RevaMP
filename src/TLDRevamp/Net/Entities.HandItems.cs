@@ -29,12 +29,12 @@ namespace TLDRevamp.Net
         public static float HeldStateHz = 50f, FastAfterReleaseS = 1.5f;   // 50 = once per physics step (fixedDeltaTime 0.02): 40 Hz gave uneven 20-60 ms gaps
         public static bool HandItemDraw = true;
         public static float HandItemPullM = .08f, HandItemPullDeg = 10f;   // A/B: HandItemPullM < 0 = shown at the hand alone (before 0.69.2)   // A/B: false = a held copy is shown by its world interpolation only
-        private static Transform ItemHand(Ent e) => HandItemDraw && e.Proxy && e.HandPose && e.HandEpoch == e.Epoch && e.HandOwner == e.OwnerId &&
+        internal static Transform ItemHand(Ent e) => HandItemDraw && e.Proxy && e.HandPose && e.HandEpoch == e.Epoch && e.HandOwner == e.OwnerId &&
             e.Held && !e.Stored && !e.PoseLocked && e.WornBy < 0 ? RemotePlayers.ItemHand(e.OwnerId) : null;
 
         // The ordinary transform/body movers yield until the release glide ends. Never put a hand pose into Ip:
         // its world/car samples keep running for drops, server records and machines without the holder model.
-        private static bool HandManaged(Ent e) => e.Proxy && (ItemHand(e) != null || e.HandDraw.Source != null || e.HandDraw.Blending(Time.timeAsDouble));
+        internal static bool HandManaged(Ent e) => e.Proxy && (ItemHand(e) != null || e.HandDraw.Source != null || e.HandDraw.Blending(Time.timeAsDouble));
 
         private static void TakeHandPose(Ent e, Vector3d global, Quaternion globalRot)
         {

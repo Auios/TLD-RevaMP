@@ -1,3 +1,4 @@
+using static TLDRevamp.Net.Entities;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,10 +8,10 @@ namespace TLDRevamp.Net
     // stamped with the wall clock, so two copies on one PC can be compared at the same moment (held-item lag tests).
     internal sealed class TrackRender : MonoBehaviour
     {
-        private void LateUpdate() => Entities.TrackLate();
+        private void LateUpdate() => EntityTrack.TrackLate();
     }
 
-    public static partial class Entities
+    internal static class EntityTrack
     {
         private static uint _trackNet; private static float _trackUntil; private static TrackRender _trackGo;
         private static readonly List<string> _trackRows = new List<string>();
@@ -27,7 +28,7 @@ namespace TLDRevamp.Net
 
         internal static void TrackLate()
         {
-            if (_trackNet == 0 || Time.unscaledTime > _trackUntil || !ByNet.TryGetValue(_trackNet, out var e) || e.Root == null) return;
+            if (_trackNet == 0 || Time.unscaledTime > _trackUntil || !ObservedEntities.TryGetValue(_trackNet, out var e) || e.Root == null) return;
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var g = mainscript.GlobalFromUnityPos(e.Root.transform.position);
             var pl = mainscript.s != null ? mainscript.s.player : null;

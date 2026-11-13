@@ -1,4 +1,7 @@
+using static TLDRevamp.Replay.ReplayRecorder;
+using static TLDRevamp.Replay.ReplayViewer;
 using System;
+using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -72,12 +75,24 @@ namespace TLDRevamp.Replay
         }
     }
 
-    internal static partial class ReplayRecorder
+    internal static class ReplayTruthCapture
     {
         /// Seconds between two truth frames while recording; 0: none (the default; only the 1:1 check sets it).
         internal static float TruthEvery;
         private static readonly List<ReplayTruth> _truth = new List<ReplayTruth>();
         private static double _nextTruth;
+        private static readonly ConditionalWeakTable<Take, List<ReplayTruth>> Frames = new ConditionalWeakTable<Take, List<ReplayTruth>>();
+        internal static List<ReplayTruth> Of(Take take) => take != null && Frames.TryGetValue(take, out var frames) ? frames : null;
+        internal static void Install()
+        {
+            DevHooks.ReplayCaptureStarted += ResetTruth;
+            DevHooks.ReplaySample += Truth;
+            DevHooks.ReplayCaptureStopped += take =>
+            {
+                if (_truth.Count > 0) Frames.Add(take, new List<ReplayTruth>(_truth));
+                _truth.Clear();
+            };
+        }
 
         private static void ResetTruth() { _truth.Clear(); _nextTruth = 0; }
 
@@ -86,9 +101,9 @@ namespace TLDRevamp.Replay
             if (TruthEvery <= 0 || _truth.Count >= ReplayTruth.MaxFrames || now < _nextTruth) return;
             _nextTruth = now + TruthEvery;
             var f = new ReplayTruth { T = t };
-            for (int i = 0; i < _objects.Count; i++)
+            for (int i = 0; i < ObservedObjects.Count; i++)
             {
-                var tr = _objects[i];
+                var tr = ObservedObjects[i];
                 if (!tr.Active || tr.It == null) continue;
                 var o = new ReplayTruth.Obj
                 {
@@ -121,11 +136,11 @@ namespace TLDRevamp.Replay
                 f.Objects.Add(o);
             }
             // the players as the recorder sampled them this moment: the local player first, then the remote bodies
-            var me = _player;
+            var me = ObservedPlayer;
             if (me != null) f.Players.Add(TruthPlayer(0, me.anim, !me.died, me.transform));
             foreach (var kv in Net.RemotePlayers.ShownBodies())
             {
-                if (kv.Value == null || !_remoteIndex.TryGetValue(kv.Key, out int index)) continue;
+                if (kv.Value == null || !ObservedRemoteIndex.TryGetValue(kv.Key, out int index)) continue;
                 var mp = kv.Value.GetComponent<mpplayerscript>();
                 f.Players.Add(TruthPlayer(index, mp != null ? mp.anim : null, kv.Value.gameObject.activeInHierarchy, kv.Value));
             }
@@ -145,7 +160,7 @@ namespace TLDRevamp.Replay
         }
     }
 
-    internal static partial class ReplayViewer
+    internal static class ReplayTruthVerify
     {
         private sealed class Worst
         {
@@ -198,26 +213,26 @@ namespace TLDRevamp.Replay
         internal static string Verify()
         {
             var take = ReplayRecorder.Last;
-            if (take == null || take.Truth == null || take.Truth.Count == 0) return Error("no recording with truth frames (replay truth <s>, then record)");
-            if (!Active || _take != take)
+            var frames = ReplayTruthCapture.Of(take);
+            if (frames == null || frames.Count == 0) return Error("no recording with truth frames (replay truth <s>, then record)");
+            if (!Active || ObservedTake != take)
             {
-                string started = Play(take.Recording, take, take.File ?? "last");
+                string started = PlayLatest();
                 if (!Active) return started;
             }
-            _clock.Playing = false;
+            PauseForObservation();
             var pose = new Worst(0.05); var turn = new Worst(2.0); var shown = new Worst(0.5); var lights = new Worst(0.5);
             var pieces = new Worst(0.05); var bones = new Worst(0.05); var drawn = new Worst(0.5); var mats = new Worst(0.5); var unlooked = new Worst(0.5);
             var bodies = new Worst(0.05); var limbs = new Worst(0.05);
-            foreach (var f in take.Truth)
+            foreach (var f in frames)
             {
-                _clock.Seek(f.T);
-                Apply();
+                SeekForObservation(f.T);
                 float t = f.T;
                 foreach (var o in f.Objects)
                 {
-                    if (o.Index >= _proxies.Count) continue;
-                    var proxy = _proxies[o.Index];
-                    var ro = _rec.Objects[o.Index];
+                    if (o.Index >= ObservedProxies.Count) continue;
+                    var proxy = ObservedProxies[o.Index];
+                    var ro = ObservedRecording.Objects[o.Index];
                     string Row(string what) => "{\"t\":" + Json.Num(t, "F2") + ",\"object\":" + o.Index + ",\"item\":" + ro.Prefab + ",\"what\":" + Json.Str(what) + "}";
                     bool copyShown = proxy.Root != null && proxy.Root.activeInHierarchy;
                     shown.Add(copyShown == o.Visible ? 0 : 1, () => Row("shown: real " + o.Visible + ", copy " + copyShown));
@@ -227,14 +242,14 @@ namespace TLDRevamp.Replay
                     pose.Add(d, () => Row("root off by " + d.ToString("F3") + " m"));
                     float a = Quaternion.Angle(proxy.Root.transform.rotation, o.Rot);
                     turn.Add(a, () => Row("root turned " + a.ToString("F1") + "°"));
-                    var look0 = o.Index < _looks.Count ? _looks[o.Index] : null;
+                    var look0 = o.Index < ObservedLooks.Count ? ObservedLooks[o.Index] : null;
                     uint copyLights = 0;
                     for (int i = 0; i < proxy.Lights.Length; i++) if (proxy.Lights[i] != null && proxy.Lights[i].enabled) copyLights |= 1u << i;
                     lights.Add(copyLights == o.Lights ? 0 : 1, () => Row("lights: real " + Convert.ToString(o.Lights, 2) + ", copy " + Convert.ToString(copyLights, 2) +
                         " (" + proxy.Lights.Length + " copied of " + ro.LightCount + "; " + LightsWhy(proxy, ro, look0, t) + ")"));
                     if (o.PiecePos == null) continue;
                     unlooked.Add(o.Unlooked, () => Row(o.Unlooked + " renderer(s) drawn live that the copy does not have"));
-                    var look = o.Index < _looks.Count ? _looks[o.Index] : null;
+                    var look = o.Index < ObservedLooks.Count ? ObservedLooks[o.Index] : null;
                     for (int p = 0; p < o.PiecePos.Length && p < proxy.Pieces.Length; p++)
                     {
                         var r = proxy.Renderers[p];
@@ -260,8 +275,8 @@ namespace TLDRevamp.Replay
                 }
                 foreach (var pl in f.Players)
                 {
-                    if (pl.Index >= _bodies.Count) continue;
-                    var b = _bodies[pl.Index];
+                    if (pl.Index >= ObservedBodies.Count) continue;
+                    var b = ObservedBodies[pl.Index];
                     bool on = b.Go != null && b.Go.activeInHierarchy;
                     string Row(string what) => "{\"t\":" + Json.Num(t, "F2") + ",\"player\":" + pl.Index + ",\"what\":" + Json.Str(what) + "}";
                     if (on != pl.Visible) { shown.Add(1, () => Row("player shown: real " + pl.Visible + ", copy " + on)); continue; }
@@ -281,7 +296,7 @@ namespace TLDRevamp.Replay
                     }
                 }
             }
-            return "{\"frames\":" + take.Truth.Count + ",\"shown\":" + shown.Json("mismatch") + ",\"pose\":" + pose.Json("m") + ",\"turn\":" + turn.Json("deg") +
+            return "{\"frames\":" + frames.Count + ",\"shown\":" + shown.Json("mismatch") + ",\"pose\":" + pose.Json("m") + ",\"turn\":" + turn.Json("deg") +
                    ",\"lights\":" + lights.Json("mismatch") + ",\"pieces\":" + pieces.Json("m") + ",\"bones\":" + bones.Json("m") + ",\"drawn\":" + drawn.Json("mismatch") +
                    ",\"materials\":" + mats.Json("mismatch") + ",\"unlooked\":" + unlooked.Json("renderers") +
                    ",\"bodies\":" + bodies.Json("m") + ",\"limbs\":" + limbs.Json("m") + "}";

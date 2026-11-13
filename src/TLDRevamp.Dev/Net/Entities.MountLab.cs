@@ -1,3 +1,5 @@
+using static TLDRevamp.Net.Entities;
+using static TLDRevamp.Net.EntityDebug;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
@@ -6,14 +8,13 @@ namespace TLDRevamp.Net
 {
     /// Test hooks for bug 3 (2026-10-03, "wheel attachment is buggy on cars if you are not the owner"): the game's own
     /// mount and dismount on a named slot, and where a part sits against its slot afterwards.
-    public static partial class Entities
+    internal static class EntityMountLab
     {
-        internal static tosaveitemscript RootOfNet(uint net) => MountRootOf(net);
-        private static tosaveitemscript MountRootOf(uint net) => ByNet.TryGetValue(net, out var e) && Resolve(e) ? e.Root : null;
+        private static tosaveitemscript MountRootOf(uint net) => ObservedEntities.TryGetValue(net, out var e) && Resolve(e) ? e.Root : null;
 
         private static string HitchHealth(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no car\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no car\"}";
             var rows = new List<string>(); int attached = 0;
             for (int i = 0; i < e.Items.Count; i++)
             {
@@ -90,7 +91,7 @@ namespace TLDRevamp.Net
             if (_watch == null) return;
             var p = _watch.transform.parent;
             if (p == _watchParent) return;
-            ByNet.TryGetValue(_watchNet, out var e);
+            ObservedEntities.TryGetValue(_watchNet, out var e);
             WatchNote("parent " + (_watchParent != null ? _watchParent.name : "null") + " -> " + (p != null ? p.name : "null") +
                       " attached " + (_watch.attachable != null && _watch.attachable.attached) + " proxy " + (e != null && e.Proxy) + " owner " + (e != null ? e.OwnerId : -1) +
                       " picked " + (mainscript.s != null && mainscript.s.player != null && mainscript.s.player.pickedUp == _watch.P));
@@ -114,7 +115,7 @@ namespace TLDRevamp.Net
             {
                 if (__instance.RB == null || __instance != (mainscript.s != null ? mainscript.s.player : null)) return;
                 if (DeathWatchOn)
-                    foreach (var e in ByNet.Values)
+                    foreach (var e in ObservedEntities.Values)
                     {
                         if (!e.Proxy || e.Root == null || e.Root.car != null) continue;
                         float d = (e.Root.transform.position - (__instance.transform.position + Vector3.up)).magnitude;
@@ -126,7 +127,7 @@ namespace TLDRevamp.Net
                 if (DeathWatchOn)   // the nearest car copy's own motion while near the player: steps vs the speed in its states
                 {
                     var pp0 = __instance.transform.position;
-                    foreach (var e in ByNet.Values)
+                    foreach (var e in ObservedEntities.Values)
                     {
                         if (!e.Proxy || e.Root == null || e.Root.car == null || (e.Root.transform.position - pp0).sqrMagnitude > 64f) continue;
                         DeathStepMax = Mathf.Max(DeathStepMax, e.StepSpeed); DeathTurnMax = Mathf.Max(DeathTurnMax, e.StepTurn);
@@ -138,7 +139,7 @@ namespace TLDRevamp.Net
                 if (DeathWatchOn && !__instance.Bsitting && __instance.RB.velocity.magnitude > 6f && DeathPush.Length < 1500)
                 {
                     var pp = __instance.transform.position; Ent nc = null; float nd = 8f;
-                    foreach (var e in ByNet.Values)
+                    foreach (var e in ObservedEntities.Values)
                     {
                         if (!e.Proxy || e.Root == null || e.Root.car == null) continue;
                         float d0 = (e.Root.transform.position - pp).magnitude;
@@ -151,7 +152,7 @@ namespace TLDRevamp.Net
                 if (dv <= __instance.deathVelocityChange) return;
                 DeathFrames++;
                 var p = __instance.transform.position; string best = "nothing within 6 m"; float bd = 36f;
-                foreach (var e in ByNet.Values)
+                foreach (var e in ObservedEntities.Values)
                 {
                     if (e.Root == null) continue;
                     float d = (e.Root.transform.position - p).sqrMagnitude;
@@ -191,7 +192,7 @@ namespace TLDRevamp.Net
             if (pl == null || crb == null) return;
             var cp = crb.position; var cv = (cp - _ridePrev) / Time.fixedDeltaTime; _ridePrev = cp;
             if (_rideN++ % 5 != 0 || _rideLog.Length > 20000) return;
-            ByNet.TryGetValue(_rideNet, out var e);
+            ObservedEntities.TryGetValue(_rideNet, out var e);
             var lp = _rideCar.transform.InverseTransformPoint(pl.transform.position);
             _rideLog.Append("t").Append(Time.time.ToString("F2")).Append(" lp ").Append(lp.ToString("F2"))
                     .Append(" plv ").Append(pl.RB != null ? pl.RB.velocity.ToString("F1") : "-")
@@ -205,7 +206,7 @@ namespace TLDRevamp.Net
         private static void GripTick()
         {
             if (_gtNet == 0 || Time.realtimeSinceStartup > _gtUntil || _gtLog.Length > 60000) return;
-            if (!ByNet.TryGetValue(_gtNet, out var e) || !Resolve(e) || e.Root == null || e.Root.attachable == null) return;
+            if (!ObservedEntities.TryGetValue(_gtNet, out var e) || !Resolve(e) || e.Root == null || e.Root.attachable == null) return;
             var rrb = e.Root.GetComponent<Rigidbody>(); var at = e.Root.attachable; var grb = at.GetComponent<Rigidbody>();
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var ic = CultureInfo.InvariantCulture;
@@ -216,7 +217,7 @@ namespace TLDRevamp.Net
                 .Append(" held ").Append(pl != null && pl.pickedUp == e.Root.P ? 1 : 0)
                 .Append(e.Proxy ? " proxy" : " own").Append(" o").Append(e.OwnerId).Append(e.HitchWaiting ? " wait" : "").Append("\n");
         }
-        private static void TraceTick()
+        internal static void TraceTick()
         {
             RideTick();
             GripTick();
@@ -229,7 +230,7 @@ namespace TLDRevamp.Net
             if (_trItem != null)
             {
                 var irb = _trItem.GetComponent<Rigidbody>();
-                ByNet.TryGetValue(_trItemNet, out var ie);
+                ObservedEntities.TryGetValue(_trItemNet, out var ie);
                 var lp = _trCar.transform.InverseTransformPoint(_trItem.transform.position);
                 mode = (irb == null ? "norb" : (irb.isKinematic ? "kin" : "dyn") + (irb.detectCollisions ? "" : " nocol") + " m" + irb.mass.ToString("F1")) +
                        (ie != null ? (ie.Proxy ? " proxy" : " own") + " o" + ie.OwnerId + (ie.Physical ? " phys" : "") : " noent") +
@@ -276,15 +277,15 @@ namespace TLDRevamp.Net
         {
             if (_watchHarmony != null) return;
             _watchHarmony = new HarmonyLib.Harmony("tldrevamp.mountwatch");
-            var pre = new HarmonyLib.HarmonyMethod(typeof(Entities).GetMethod(nameof(WatchSetParent), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static));
+            var pre = new HarmonyLib.HarmonyMethod(typeof(EntityMountLab).GetMethod(nameof(WatchSetParent), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static));
             _watchHarmony.Patch(HarmonyLib.AccessTools.Method(typeof(Transform), nameof(Transform.SetParent), new[] { typeof(Transform), typeof(bool) }), pre);
             var bf = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
             _watchHarmony.Patch(HarmonyLib.AccessTools.Method(typeof(save_attachable), nameof(save_attachable.Load), new[] { typeof(attachablescript), typeof(int), typeof(int), typeof(uint), typeof(int), typeof(Vector3d), typeof(int), typeof(Vector3d), typeof(Vector3d) }),
-                new HarmonyLib.HarmonyMethod(typeof(Entities).GetMethod(nameof(WatchLoad), bf)));
+                new HarmonyLib.HarmonyMethod(typeof(EntityMountLab).GetMethod(nameof(WatchLoad), bf)));
             _watchHarmony.Patch(HarmonyLib.AccessTools.Method(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(Transform) }),
-                finalizer: new HarmonyLib.HarmonyMethod(typeof(Entities).GetMethod(nameof(WatchAttachEx), bf)));
+                finalizer: new HarmonyLib.HarmonyMethod(typeof(EntityMountLab).GetMethod(nameof(WatchAttachEx), bf)));
             _watchHarmony.Patch(HarmonyLib.AccessTools.PropertySetter(typeof(Transform), nameof(Transform.parent)),
-                new HarmonyLib.HarmonyMethod(typeof(Entities).GetMethod(nameof(WatchSetParentProp), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)));
+                new HarmonyLib.HarmonyMethod(typeof(EntityMountLab).GetMethod(nameof(WatchSetParentProp), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)));
         }
         [HarmonyLib.HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Detach))]
         private static class WatchDetach { [HarmonyLib.HarmonyPrefix] private static void Pre(attachablescript __instance) { if (_watch != null && __instance.tosave == _watch) WatchNote("Detach called (applying " + _applyingDetach + ")\n" + StackTraceUtility.ExtractStackTrace().Replace("\n", " < ").Substring(0, 400)); } }
@@ -297,7 +298,7 @@ namespace TLDRevamp.Net
         internal static bool SlotRef(uint carNet, string slot, out int parentIdx, out int index, out Vector3d lpos, out Vector3d gpos)
         {
             parentIdx = 0; index = -1; lpos = gpos = new Vector3d(0, 0, 0);
-            if (!ByNet.TryGetValue(carNet, out var e) || !Resolve(e) || e.Root == null) return false;
+            if (!ObservedEntities.TryGetValue(carNet, out var e) || !Resolve(e) || e.Root == null) return false;
             var s = SlotNamed(e.Root, slot);
             if (s == null) return false;
             var pt = s.GetComponentInParent<tosaveitemscript>();
@@ -310,12 +311,6 @@ namespace TLDRevamp.Net
             gpos = mainscript.GlobalFromUnityPos(s.T.position);
             return index >= 0;
         }
-
-        /// `mount off <carNet> <slot>`: the slot's part comes off as a dismount does (partslotscript.UnCraft).
-        /// `mount on <partNet> <carNet> <slot>`: the loose part goes onto the slot as the attach key does (Craft).
-        /// `mount slots <carNet>`: the car's slots, with what is in them.
-        /// `mount pose <partNet> <carNet> <slot>`: the part against the slot (distance, attached, parent, bodies).
-        private static int CountActive(List<BoxCollider> l) { int n = 0; if (l != null) foreach (var c in l) if (c != null && c.gameObject.activeInHierarchy && c.enabled) n++; return n; }
 
         public static string MountLab(string arg)
         {
@@ -596,7 +591,7 @@ namespace TLDRevamp.Net
                 var rb = part.GetComponent<Rigidbody>();
                 int cols = 0, colsOn = 0;
                 foreach (var c in part.GetComponentsInChildren<Collider>(true)) { cols++; if (c.enabled && c.gameObject.activeInHierarchy) colsOn++; }
-                ByNet.TryGetValue(uint.Parse(a[1], ic), out var pe);
+                ObservedEntities.TryGetValue(uint.Parse(a[1], ic), out var pe);
                 return "{\"dist\":" + (part.transform.position - s.T.position).magnitude.ToString("F3", ic) +
                        ",\"attached\":" + (at != null && at.attached ? "true" : "false") + ",\"inSlot\":" + (s.hasPart() && s.part() == at ? "true" : "false") +
                        ",\"crafted\":" + (part.P != null && part.P.crafted ? "true" : "false") +
@@ -617,7 +612,7 @@ namespace TLDRevamp.Net
             if (a[0] == "items" && a.Length > 1)
             {
                 // the group's members by index (state records address them by it): name, and what each is attached to
-                if (!ByNet.TryGetValue(uint.Parse(a[1], ic), out var ge)) return "{\"error\":\"no entity\"}";
+                if (!ObservedEntities.TryGetValue(uint.Parse(a[1], ic), out var ge)) return "{\"error\":\"no entity\"}";
                 var rows = new List<string>();
                 for (int i = 0; i < ge.Items.Count; i++)
                 {
@@ -650,7 +645,7 @@ namespace TLDRevamp.Net
                     under = hh.collider.name + " of " + hh.collider.transform.root.name + " at " + hh.distance.ToString("F2", ic) + " m";
                     break;
                 }
-                ByNet.TryGetValue(uint.Parse(a[1], ic), out var ie);
+                ObservedEntities.TryGetValue(uint.Parse(a[1], ic), out var ie);
                 // where it is in the nearest car's frame, and whether that's inside the car's body (renderer bounds, local)
                 tosaveitemscript nc = null; float nd = float.MaxValue;
                 foreach (var ci in savedatascript.s.items.Values)
@@ -867,7 +862,7 @@ namespace TLDRevamp.Net
             {
                 // test: the car (ours) stands at a global (gx, gz) facing yaw, on the ground there, every body still — the
                 // site's own car was parked by a ramp (the user saw it climb it in step 7)
-                if (!ByNet.TryGetValue(uint.Parse(a[1], ic), out var ce) || !Resolve(ce) || ce.Root == null || ce.Root.car == null) return "{\"error\":\"no car\"}";
+                if (!ObservedEntities.TryGetValue(uint.Parse(a[1], ic), out var ce) || !Resolve(ce) || ce.Root == null || ce.Root.car == null) return "{\"error\":\"no car\"}";
                 if (ce.Proxy) return "{\"error\":\"that car is another machine's copy\"}";
                 var to = mainscript.UnityPosFromGlobal(new Vector3d(double.Parse(a[2], ic), 0, double.Parse(a[3], ic)));
                 var gh = DebugBridge.GroundHit(to.x, to.z);

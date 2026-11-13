@@ -286,7 +286,7 @@ namespace TLDRevamp.Net
             var rows = new List<string>();
             foreach (var kv in _hwActive) rows.Add("{\"net\":" + kv.Key + ",\"line\":" + Json.Str(kv.Value) + "}");
             return "{\"enabled\":" + (HealthWatch ? "true" : "false") + ",\"near\":" + _hwCycle.Count + ",\"far\":" + _hwFar.Count + ",\"flags\":" + HealthWatchFlags + ",\"marks\":" + AutoMarksSaved
-                   + ",\"items\":" + ItemWatchFlags + ",\"last\":" + Json.Str(HealthWatchLast) + ",\"itemLast\":" + Json.Str(ItemWatchLast) + ",\"active\":[" + string.Join(",", rows) + "]}";
+                   + ",\"items\":" + (DevHooks.ItemFlags?.Invoke() ?? 0) + ",\"last\":" + Json.Str(HealthWatchLast) + ",\"itemLast\":" + Json.Str(DevHooks.ItemLast?.Invoke() ?? "") + ",\"active\":[" + string.Join(",", rows) + "]}";
         }
     }
 }

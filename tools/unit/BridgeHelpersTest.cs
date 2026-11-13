@@ -3,6 +3,7 @@ global using fpscontroller = BridgeFakes.Player;
 global using inputscript = BridgeFakes.Input;
 global using mainscript = BridgeFakes.Main;
 global using carscript = BridgeFakes.Car;
+using static TLDRevamp.Net.Entities;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -16,30 +17,37 @@ static class BridgeHelpersTest
     internal static void Check(bool ok, string why) { checks++; if (!ok) throw new Exception(why); }
     static int Main()
     {
-        Entities.Tests(); DriveLab.Tests();
+        EntityItemCheck.Tests(); DriveLab.Tests();
         Console.WriteLine("ALL PASS (" + checks + " bridge helper checks)"); return 0;
     }
 }
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static class Entities
     {
-        static bool InSession = true;
-        static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
-        sealed class Ent
+        internal static bool InSession = true;
+        internal static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
+        internal sealed class Ent
         {
             internal BridgeFakes.Item Root = new BridgeFakes.Item();
             internal bool Proxy, Held, Stored;
         }
-        static bool Resolve(Ent e) => true;
-        static void TelemetryTouch(uint net) { }
-        static Transform[] Limbs(Ent e) => e.Root.ragdollPos?.childs;
-        static bool Limp(Ent e) => true;
-        static bool GrabPoint(Ent e, out Vector3 at) { at = e.Root.transform.position; return true; }   // Entities.FakeInput.cs (game colliders)
-        static bool IsHeld(BridgeFakes.Item it) => it.P == mainscript.s.player.pickedUp ||
+        internal static bool Resolve(Ent e) => true;
+        internal static void TelemetryTouch(uint net) { }
+        internal static Transform[] Limbs(Ent e) => e.Root.ragdollPos?.childs;
+        internal static bool Limp(Ent e) => true;
+        internal static bool IsHeld(BridgeFakes.Item it) => it.P == mainscript.s.player.pickedUp ||
             it.ragdollPos != null && Array.IndexOf(it.ragdollPos.ps, mainscript.s.player.pickedUp) >= 0;
-        static bool IsStored(BridgeFakes.Item it) => false;
+        internal static bool IsStored(BridgeFakes.Item it) => false;
+        internal static IReadOnlyDictionary<uint, Ent> ObservedEntities => ByNet;
+    }
+    internal static class EntityFakeInput
+    {
+        internal static bool GrabPoint(Entities.Ent e, out Vector3 at) { at = e.Root.transform.position; return true; }
+    }
+    internal static partial class EntityItemCheck
+    {
         public static void Tests()
         {
             var player = new fpscontroller(); mainscript.s = new mainscript { player = player };

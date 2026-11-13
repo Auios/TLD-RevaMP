@@ -18,6 +18,15 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        internal static bool Loose(Ent e, fpscontroller pl) =>
+            e.Root != null && e.Root.gameObject.activeInHierarchy && e.Root.P != null && e.Root.car == null
+            && (e.Root.attachable == null || !e.Root.attachable.attached) && !e.Held && !e.Stored && !e.ReleaseGhost && !e.CargoGhost
+            && !InLocalHands(pl, e);
+
+        /// In the local player's hands: picked up, or held in hand (a lamp while seated: inHandP).
+        internal static bool InLocalHands(fpscontroller pl, Ent e) =>
+            pl != null && e.Root != null && e.Root.P != null && (pl.pickedUp == e.Root.P || pl.inHandP == e.Root.P);
+
         internal static Ent EntityOf(uint net) => ByNet.TryGetValue(net, out var e) ? e : null;
 
         internal delegate void CheckAdd(int level, string title, string why, string how = null, string key = null);

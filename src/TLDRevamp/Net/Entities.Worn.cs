@@ -270,7 +270,7 @@ namespace TLDRevamp.Net
         private static Transform WornAnchor(Ent e) => e.WornBy >= 0 && e.Proxy ? RemotePlayers.WearAnchor(e.WornBy) : null;
 
         /// On a body here: placed by WornLate, not by its states (Tick).
-        private static bool WornRides(Ent e) => e.WornBy >= 0 && e.Proxy && e.Root != null && WornAnchor(e) != null;
+        internal static bool WornRides(Ent e) => e.WornBy >= 0 && e.Proxy && e.Root != null && WornAnchor(e) != null;
 
         /// Every frame after animation (the runner's LateUpdate): worn copies onto their wearers' heads.
         public static void WornLate()

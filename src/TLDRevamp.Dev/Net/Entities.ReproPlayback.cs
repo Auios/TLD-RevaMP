@@ -1,15 +1,19 @@
+using static TLDRevamp.Net.EntityDebug;
+using static TLDRevamp.Net.Entities;
 using System;
 using System.Text;
 using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityReproPlayback
     {
+        private static tosaveitemscript ReproTarget(uint net, int item = 0) => ObservedEntities.TryGetValue(net, out var e) && Resolve(e) &&
+            item >= 0 && item < e.Items.Count ? e.Items[item] : null;
         internal static string ReproResolve(int prefab, double x, double y, double z)
         {
             uint net = 0; int count = 0;
-            foreach (var e in ByNet.Values)
+            foreach (var e in ObservedEntities.Values)
             {
                 if (e.Root == null || e.Root.id != prefab || !e.Root.gameObject.activeInHierarchy) continue;
                 var g = mainscript.GlobalFromUnityPos(e.Root.transform.position);
@@ -18,9 +22,7 @@ namespace TLDRevamp.Net
             }
             return count == 1 ? "{\"net\":" + net + "}" : "{\"error\":\"repro target missing or ambiguous; supply an explicit net map\",\"matches\":" + count + "}";
         }
-        private static tosaveitemscript ReproTarget(uint net, int item = 0) => ByNet.TryGetValue(net, out var e) && Resolve(e) &&
-            item >= 0 && item < e.Items.Count ? e.Items[item] : null;
-        internal static void ReproReleaseHeld() { ForceHeld = null; _keyTestCar = null; ReproDriveEnd(); }
+        internal static void ReproReleaseHeld() { ForceHeld = null; EndKeyTest(); ReproDriveEnd(); }
         internal static string ReproAct(ReproRow r)
         {
             var p = mainscript.s != null ? mainscript.s.player : null;
@@ -73,10 +75,10 @@ namespace TLDRevamp.Net
                     if (u == null) return "{\"error\":\"usable absent\"}";
                     u.Refresh((float)r.X, (float)r.Y, (float)r.Z, (int)r.A); u.tunedFloat = (float)r.B; u.SyncMulti(true); return "{\"ok\":true}";
                 case ReproKind.Ignition:
-                    if (r.A == 0) { _keyTestUntil = Time.time - 1; _keyTestCar = null; return "{\"ok\":true}"; }
+                    if (r.A == 0) { EndKeyTest(true); return "{\"ok\":true}"; }
                     return KeyTest(r.Net, 3600);
                 case ReproKind.EntityPose:
-                    if (!ByNet.TryGetValue(r.Net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"entity pose target absent\"}";
+                    if (!ObservedEntities.TryGetValue(r.Net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"entity pose target absent\"}";
                     if (e.Proxy || e.OwnerId != MyId) return ReproNotOwner();
                     e.Root.transform.SetPositionAndRotation(mainscript.UnityPosFromGlobal(new Vector3d(r.X, r.Y, r.Z)), Quaternion.Euler((float)r.A, (float)r.B, (float)r.C));
                     return "{\"ok\":true}";
@@ -87,13 +89,13 @@ namespace TLDRevamp.Net
                     return Unmount(it.attachable, false) ? "{\"ok\":true}" : "{\"error\":\"unmount refused\"}";
                 case ReproKind.PhysLock:
                     var parent = ReproTarget(r.Other, (int)r.A);
-                    if (it == null || it.P == null || parent == null || !ByNet.TryGetValue(r.Net, out var own)) return "{\"error\":\"physlock target or mount absent\"}";
+                    if (it == null || it.P == null || parent == null || !ObservedEntities.TryGetValue(r.Net, out var own)) return "{\"error\":\"physlock target or mount absent\"}";
                     var mounts = LockMounts(parent);
                     if (r.Slot < 0 || r.Slot >= mounts.Length) return "{\"error\":\"mount absent\"}";
                     if (own.Proxy || own.OwnerId != MyId) return ReproNotOwner();
                     mounts[r.Slot].Store(it.P, false); return "{\"ok\":true}";
                 case ReproKind.PhysUnlock:
-                    if (it == null || it.P == null || !ByNet.TryGetValue(r.Net, out var unlocked)) return "{\"error\":\"unlock target absent\"}";
+                    if (it == null || it.P == null || !ObservedEntities.TryGetValue(r.Net, out var unlocked)) return "{\"error\":\"unlock target absent\"}";
                     if (unlocked.Proxy || unlocked.OwnerId != MyId) return ReproNotOwner();
                     it.P.UnPhysicsLock(); return "{\"ok\":true}";
                 case ReproKind.Hitch: case ReproKind.Unhitch: return ReproHitchAction(r);
@@ -101,10 +103,9 @@ namespace TLDRevamp.Net
                 default: return "{\"error\":\"unsupported repro action\"}";
             }
         }
-        private static string ReproNotOwner() => DevHooks.Playing ? "{\"ok\":true,\"skipped\":true}" : "{\"error\":\"requires local owner\"}";
         private static string ReproHitchAction(ReproRow r)
         {
-            if (!ByNet.TryGetValue(r.Net, out var tr) || !ByNet.TryGetValue(r.Other, out var car) || !Resolve(tr) || !Resolve(car) ||
+            if (!ObservedEntities.TryGetValue(r.Net, out var tr) || !ObservedEntities.TryGetValue(r.Other, out var car) || !Resolve(tr) || !Resolve(car) ||
                 !HitchTrailer(tr) || car.Root == null || r.Slot < 0 || r.Slot >= car.Root.partslotscripts.Count)
                 return "{\"error\":\"recorded hitch target or slot absent\"}";
             RequestHitch(tr, car, car.Root.partslotscripts[r.Slot], r.Kind == ReproKind.Hitch);
@@ -135,7 +136,7 @@ namespace TLDRevamp.Net
         }
         internal static string ReproCheck(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"repro check target absent\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"repro check target absent\"}";
             var g = mainscript.GlobalFromUnityPos(e.Root.transform.position);
             var sb = new StringBuilder("{\"pos\":[" + Json.Num(g.x) + "," + Json.Num(g.y) + "," + Json.Num(g.z) + "],\"stored\":" + ((e.Proxy ? e.Stored : IsStored(e.Root)) ? "true" : "false") +
                 ",\"held\":" + ((e.Proxy ? e.Held : IsHeld(e.Root)) ? "true" : "false") +
@@ -166,16 +167,17 @@ namespace TLDRevamp.Net
             return u == null ? "{\"error\":\"repro POI usable absent\"}" : "{\"state\":[" + Json.Num(u.slideValue) + "," + Json.Num(u.xRot) + "," + Json.Num(u.yRot) + "," + u.currentTurnState + "," + Json.Num(u.tunedFloat) + "]}";
         }
     }
-    public static partial class RemotePlayers
+    internal static class RemoteReproPlayback
     {
         internal static string ReproState()
         {
             var p = mainscript.s != null ? mainscript.s.player : null;
-            if (p == null || All.Count != 1) return "{\"error\":\"repro needs one local player and one peer\"}";
+            var peers = RemotePlayers.ObservedReproPlayers;
+            if (p == null || peers.Count != 1) return "{\"error\":\"repro needs one local player and one peer\"}";
             Entities.LocalSeat(out uint net, out int seat);
             var g = mainscript.GlobalFromUnityPos(p.transform.position);
             string local = ReproPlayer(g, net, seat), remote = "null";
-            foreach (var rp in All.Values) if (rp.Has) remote = ReproPlayer(rp.Target, rp.SeatNet, rp.SeatIdx);
+            foreach (var rp in peers) if (rp.Has) remote = ReproPlayer(rp.Target, rp.SeatNet, rp.SeatIdx);
             return "{\"local\":" + local + ",\"remote\":" + remote + "}";
         }
         private static string ReproPlayer(Vector3d g, uint net, int seat) => "{\"pos\":[" + Json.Num(g.x) + "," + Json.Num(g.y) + "," + Json.Num(g.z) + "],\"net\":" + net + ",\"seat\":" + seat + "}";

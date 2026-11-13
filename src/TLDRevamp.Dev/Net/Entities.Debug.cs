@@ -1,3 +1,4 @@
+using static TLDRevamp.Net.Entities;
 using System.Linq;
 using System;
 using System.Collections.Generic;
@@ -5,21 +6,16 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    /// Status and test helpers (bridge `mp entities|entdebug|detachpart|worldcar|carsnear`).
-    public static partial class Entities
+    internal static class EntityDebug
     {
-        /// The shared object whose group holds this item (diagnostics).
-        internal static Ent SharedGroupOf(tosaveitemscript it)
-        {
-            return EditEntityOf(it);
-        }
         /// Every owner change the server makes, with why (bridge `mp ownerlog [net]`): the last 200.
         private static readonly System.Collections.Generic.List<string> _ownerLog = new System.Collections.Generic.List<string>();
-        private static void OwnerLog(SEnt se, int to, string why)
+        internal static System.Func<uint, string> HoldForTest;
+        internal static void OwnerLog(uint net, int owner, uint epoch, int to, string why)
         {
-            SessionLog.Event(se.OwnerId == to ? "owner-decision" : "owner-change", se.NetId, from: se.OwnerId, to: to, result: why, epoch: se.Epoch + (se.OwnerId == to ? 0u : 1u));
+            SessionLog.Event(owner == to ? "owner-decision" : "owner-change", net, from: owner, to: to, result: why, epoch: epoch + (owner == to ? 0u : 1u));
             if (_ownerLog.Count >= 200) _ownerLog.RemoveAt(0);
-            _ownerLog.Add("t" + Time.realtimeSinceStartup.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + " net " + se.NetId + " " + se.OwnerId + " -> " + to + ": " + why);
+            _ownerLog.Add("t" + Time.realtimeSinceStartup.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + " net " + net + " " + owner + " -> " + to + ": " + why);
         }
         public static string OwnerLogJson(uint net)
         {
@@ -32,7 +28,7 @@ namespace TLDRevamp.Net
 
         public static string ResetStats()
         {
-            foreach (var e in ByNet.Values) { e.Frames = 0; e.Jumps = 0; e.ExtrapFrames = 0; e.MaxDevCm = 0; }
+            foreach (var e in ObservedEntities.Values) { e.Frames = 0; e.Jumps = 0; e.ExtrapFrames = 0; e.MaxDevCm = 0; }
             _jumpN = 0;
             return "{\"ok\":true}";
         }
@@ -43,7 +39,7 @@ namespace TLDRevamp.Net
         private static readonly float[] _jDev = new float[JumpCap], _jDevY = new float[JumpCap], _jDt = new float[JumpCap], _jAhead = new float[JumpCap], _jCorr = new float[JumpCap], _jT = new float[JumpCap];
         private static readonly bool[] _jBody = new bool[JumpCap];
         private static int _jumpN;
-        private static void LogJump(Ent e, float dev, float devY, float dt)
+        internal static void LogJump(Ent e, float dev, float devY, float dt)
         {
             int i = _jumpN++ % JumpCap;
             _jNet[i] = e.NetId; _jDev[i] = dev; _jDevY[i] = devY; _jDt[i] = dt * 1000f; _jT[i] = Time.realtimeSinceStartup;
@@ -68,85 +64,12 @@ namespace TLDRevamp.Net
             return sb.Append("]}").ToString();
         }
 
-        private static Vector3d StoredPos(uint id)
-        {
-            var data = savedatascript.s != null ? savedatascript.s.data : null;
-            return data != null && data.itemData != null && id != 0 && savedatascript.IndexOfID(data.itemData.items, id, out int k) ? data.itemData.items[k].transform.pos : new Vector3d(0, 0, 0);
-        }
-
-        /// What this machine thinks the entity's velocity is: its own body (simulated here), the owner's last (a copy).
-        private static string Vel(Ent e)
-        {
-            var ic = System.Globalization.CultureInfo.InvariantCulture;
-            var rb = e.Root.GetComponent<Rigidbody>();
-            var v = e.Proxy ? e.LastVel : rb != null ? rb.velocity : Vector3.zero;
-            return "[" + v.x.ToString("F2", ic) + "," + v.y.ToString("F2", ic) + "," + v.z.ToString("F2", ic) + "]";
-        }
-
-        private static string V3(Vector3d v)
-        {
-            var ic = System.Globalization.CultureInfo.InvariantCulture;
-            return "[" + v.x.ToString("F2", ic) + "," + v.y.ToString("F2", ic) + "," + v.z.ToString("F2", ic) + "]";
-        }
-
-        private static float Dist2(Ent e, Vector3 from) => e.Root != null ? (e.Root.transform.position - from).sqrMagnitude : float.MaxValue;
-
-        /// limit: only that many entities in the list, the nearest to the player first (the counters are always complete).
-        /// A report in a big world listed 4,330 of them, 2.3 MB built on the main thread: a 1.3 s freeze when the report was taken.
-        public static string Status(int limit = int.MaxValue)
-        {
-            var rows = new List<string>();
-            IEnumerable<Ent> listed = ByNet.Values;
-            if (ByNet.Count > limit)
-            {
-                var from = mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.transform.position : Vector3.zero;
-                var nearest = new List<Ent>(ByNet.Values);
-                nearest.Sort((a, b) => Dist2(a, from).CompareTo(Dist2(b, from)));
-                nearest.RemoveRange(limit, nearest.Count - limit);
-                listed = nearest;
-            }
-            foreach (var e in listed)
-            {
-                var g = e.Root != null ? mainscript.GlobalFromUnityPos(e.Root.transform.position) : StoredPos(e.RootId);
-                var q = e.Root != null ? e.Root.transform.rotation : Quaternion.identity;
-                var ic = System.Globalization.CultureInfo.InvariantCulture;
-                int attached = 0;
-                foreach (var it in e.Items) if (it != null && it.attachable != null && it.attachable.attached) attached++;
-                rows.Add("{\"net\":" + e.NetId + ",\"saveId\":" + e.RootId + ",\"car\":" + (e.Root != null && e.Root.car != null ? "true" : "false") + ",\"owner\":" + e.OwnerId + ",\"name\":" + Json.Str(e.Root != null ? e.Root.name : "") + ",\"parent\":" + e.ParentNet + ",\"part\":" + e.PartIndex + ",\"attached\":" + attached + ",\"owner\":" + e.OwnerId + ",\"epoch\":" + e.Epoch + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"upy\":" + (e.Root != null ? e.Root.transform.up.y.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) : "1") +
-                         ",\"items\":" + e.Items.Count + ",\"driven\":" + (e.Driven ? "true" : "false") + ",\"held\":" + (e.Proxy ? (e.Held ? "true" : "false") : (e.Root != null && IsHeld(e.Root) ? "true" : "false")) +
-                         ",\"dormant\":" + (e.Root == null ? "true" : "false") + ",\"stored\":" + (e.Proxy ? (e.Stored ? "true" : "false") : (IsStored(e.Root) ? "true" : "false")) +
-                         ",\"shown\":" + (e.Root != null && e.Root.P != null && e.Root.P.disableThisWhenStored != null ? (e.Root.P.disableThisWhenStored.gameObject.activeSelf ? "true" : "false") : "null") + ",\"pos\":[" + g.x.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + g.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + g.z.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "]" +
-                         ",\"ghost\":" + (e.CargoGhost ? "true" : "false") +
-                         ",\"rot\":[" + q.x.ToString("F6", ic) + "," + q.y.ToString("F6", ic) + "," + q.z.ToString("F6", ic) + "," + q.w.ToString("F6", ic) + "]" +
-                         (e.Ip != null ? ",\"delayMs\":" + e.Ip.DelayMs.ToString("F0") + ",\"jitterMs\":" + e.Ip.JitterMs.ToString("F0") + ",\"extrapolating\":" + (e.Ip.Extrapolating ? "true" : "false") : "") +
-                         // desync in the owner's clock (twocars): an owner's row says when (its state stamps' clock), a copy's row
-                         // which moment of the owner's clock it shows — the bridge call's own timing drops out
-                         (!e.Proxy ? ",\"clk\":" + (Time.unscaledTimeAsDouble - (Time.timeAsDouble - Time.fixedTimeAsDouble)).ToString("F4", System.Globalization.CultureInfo.InvariantCulture)
-                                   : e.Ip != null && e.Ip.Ready ? ",\"rt\":" + e.Ip.RenderTime.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) : "") +
-                         (e.Root != null ? ",\"yaw\":" + e.Root.transform.eulerAngles.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + ",\"vel\":" + Vel(e) : "") +
-                         (e.Root != null && e.Root.car != null && e.Root.car.Engine != null
-                             ? ",\"engRunning\":" + (e.Root.car.Engine.running ? "true" : "false") + ",\"engStart\":" + (e.Root.car.Engine.start ? "true" : "false") + ",\"starterSounds\":" + ProxyStarterSounds + ",\"stopSounds\":" + ProxyStopSounds + ",\"engRpm\":" + e.Root.car.Engine.rpm.ToString("F0") +
-                               ",\"engTemp\":" + e.Root.car.Engine.temp.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
-                               ",\"boil\":" + (e.Root.car.CoolantBoil != null && e.Root.car.CoolantBoil.isPlaying ? "true" : "false") +
-                               ",\"steam\":" + (e.Root.car.CoolantSteam != null && e.Root.car.CoolantSteamEmission.enabled ? e.Root.car.CoolantSteamEmission.rateOverTime.constant : 0f).ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
-                               ",\"coolant\":" + (e.Root.car.coolant != null && e.Root.car.coolant.coolant != null && e.Root.car.coolant.coolant.F != null ? e.Root.car.coolant.coolant.F.GetAmount() : -1f).ToString("F3", System.Globalization.CultureInfo.InvariantCulture) +
-                               ",\"fuel\":" + (e.Root.car.Tank != null && e.Root.car.Tank.F != null ? e.Root.car.Tank.F.GetAmount().ToString("F4", System.Globalization.CultureInfo.InvariantCulture) : "-1")
-                             : "") +
-                         ",\"frames\":" + e.Frames + ",\"extrapFrames\":" + e.ExtrapFrames + ",\"jumps\":" + e.Jumps + ",\"maxDevCm\":" + e.MaxDevCm.ToString("F1") +
-                         ",\"physical\":" + (e.Physical ? "true" : "false") + ",\"partsColOff\":" + (e.PartsColOff ? "true" : "false") + ",\"byBody\":" + (e.MovedByBody ? "true" : "false") +
-                         ",\"seqOut\":" + e.SeqOut + ",\"recv\":" + e.Recv + ",\"why\":[" + e.WhyAwake + "," + e.WhyPos + "," + e.WhyRot + "," + e.WhyStored + "]" + ",\"sentRest\":" + (e.SentAtRest ? "true" : "false") +
-                         ",\"lastSent\":" + V3(e.LastSentPos) + ",\"lastIn\":" + (e.Ip != null && e.Ip.Ready ? V3(e.Ip.LastPos) : "null") + "}");
-            }
-            return "{\"me\":" + MyId + ",\"resync\":{\"sent\":" + ResyncsSent + ",\"applied\":" + ResyncsApplied + ",\"itemsLoaded\":" + ResyncItemsLoaded + ",\"unchanged\":" + ResyncSkipped + ",\"partStates\":" + PartStatesChanged + ",\"bytes\":" + ResyncBytes + ",\"itemsSent\":" + ResyncItemsSent + ",\"captureMsMax\":" + ResyncCaptureMsMax.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + ",\"captureMsTotal\":" + ResyncCaptureMsTotal.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ",\"held\":" + ResyncHeld + ",\"budgetFrames\":" + ResyncBudgetFrames + ",\"listsApplied\":" + StateListsApplied + ",\"listsSame\":" + StateListsSame + ",\"attachReapplied\":" + AttachReapplied + ",\"splitSkipped\":" + ResyncSplitSkipped + ",\"foreignAttachDropped\":" + ResyncForeignAttachDropped + ",\"handoversSent\":" + HandoversSent + ",\"handoversApplied\":" + HandoversApplied + ",\"handoversLate\":" + HandoversLate + ",\"handoversCrashSkipped\":" + HandoversCrashSkipped + ",\"attachesKept\":" + AttachesKept + ",\"ragdollLimbsRestored\":" + RagdollLimbsRestored + ",\"attachesReplayed\":" + AttachesReplayed + ",\"handoverLateWhy\":" + Json.Str(HandoverLateWhy) + ",\"handoverDamageSuppressed\":" + HandoverDamageSuppressed + "},\"edits\":{\"marked\":" + EditsMarked + ",\"sent\":" + EditsSent + ",\"applied\":" + EditsApplied + ",\"rejected\":" + EditsRejected + ",\"marks\":" + Json.Str(EditMarks) + "},\"rebound\":" + Rebound + ",\"membersRebound\":" + MembersRebound + ",\"farRecordUpdates\":" + FarRecordUpdates + ",\"farAdds\":" + FarAdds + ",\"farResyncs\":" + FarResyncs + ",\"farResyncItems\":" + FarResyncItems + ",\"farRechunked\":" + FarRechunked + ",\"farAttachedMoved\":" + FarAttachedMoved + ",\"reshared\":" + Reshared + ",\"orphansCleared\":" + OrphansCleared + ",\"leaseKeys\":" + Json.Str(string.Join(" | ", LeaseAsked)) + ",\"leasesDone\":" + LeasesDone + ",\"leasesFreed\":" + LeasesFreed + ",\"leaseRefusedWhy\":" + LeaseRefusalsJson() + ",\"builtInReEnabled\":" + BuiltInReEnabled + ",\"spawnShared\":" + SpawnShared + ",\"contactSent\":" + ContactSent + ",\"contactRelayed\":" + ContactRelayed + ",\"contactApplied\":" + ContactApplied + ",\"count\":" + ByNet.Count + ",\"pendingShare\":" + PendingShare.Count + ",\"serverEnts\":" + Server.Count + ",\"claimsSent\":" + ClaimsSent + ",\"claimsRefused\":" + ClaimsRefused + ",\"refusedWhy\":{\"crash\":" + RefusedCrash + ",\"held\":" + RefusedHeld + ",\"stored\":" + RefusedStored + ",\"driven\":" + RefusedDriven + "}" + ",\"partsReported\":" + PartsReported + ",\"partsApplied\":" + PartsApplied + ",\"partsAppliedStored\":" + PartsAppliedStored + ",\"partRejects\":" + Json.Str(PartRejects) + ",\"suppressedDamage\":" + SuppressedDamage + ",\"suppressedFallOff\":" + SuppressedFallOff + ",\"attach\":{\"sent\":" + AttachesSent + ",\"applied\":" + AttachesApplied + ",\"same\":" + AttachesSame + ",\"failed\":" + AttachesFailed + ",\"fails\":" + Json.Str(AttachFails.Length > 300 ? AttachFails.Substring(AttachFails.Length - 300) : AttachFails) + ",\"detachSyncsSent\":" + DetachSyncsSent + ",\"detachSyncsApplied\":" + DetachSyncsApplied + ",\"detachReqsSent\":" + DetachReqsSent + ",\"detachReqsApplied\":" + DetachReqsApplied + ",\"autoDetachesIgnored\":" + AutoDetachesIgnored + ",\"cargoClaimed\":" + CargoClaimed + ",\"cargoNear\":" + CargoClaimedNear + ",\"cargoGhostsMade\":" + CargoGhostsMade + ",\"ghostNets\":[" + string.Join(",", CargoGhostNets) + "]" + ",\"itemNear\":" + ItemClaimedNear + ",\"itemOnContact\":" + ItemClaimedOnContact + ",\"gameFrozenReleased\":" + GameFrozenReleased + ",\"cargoOnContact\":" + CargoClaimedOnContact + ",\"heldShown\":" + HeldShown + ",\"contents\":{\"claimed\":" + ContentsClaimed + ",\"onOwner\":" + ContentsOnOwner + ",\"onPlace\":" + ContentsOnPlace + ",\"stored\":" + ContentsStored + "}}" + ",\"statesSent\":" + StatesSent + ",\"statesIn\":" + StatesIn + ",\"stale\":" + StatesStale + ",\"spawned\":" + Spawned +
-                   ",\"addRejects\":" + AddRejects + ",\"addRejectLast\":" + Json.Str(AddRejectLast) + ",\"ownerChanges\":" + OwnerChanges + ",\"silentTakeovers\":" + SilentTakeovers + ",\"pushes\":[" + PushesSent + "," + PushesApplied + "," + PushFrames + "]" + ",\"entities\":[" + string.Join(",", rows) + "]}";
-        }
-
         /// Load test (bridge `mp copies render|colliders|scripts on|off`): switch one kind of work off on every car copy here,
         /// to split what 16 players' cars cost each machine — drawing, physics colliders, the game's own scripts.
         public static string CopiesToggle(string what, bool on)
         {
             int n = 0, cars = 0;
-            foreach (var e in ByNet.Values)
+            foreach (var e in ObservedEntities.Values)
             {
                 if (!e.Proxy || e.Root == null || e.PartIndex >= 0 || e.Root.car == null) continue;
                 cars++;
@@ -187,7 +110,7 @@ namespace TLDRevamp.Net
                 else return "{\"error\":\"render|colliders|wheelcols|jointcols|restcols|scripts\"}";
             }
             int cols = 0, rends = 0, scripts = 0;
-            foreach (var e in ByNet.Values)
+            foreach (var e in ObservedEntities.Values)
                 if (e.Proxy && e.Root != null && e.PartIndex < 0 && e.Root.car != null)
                 {
                     var root = e.Root.transform.root;
@@ -203,7 +126,7 @@ namespace TLDRevamp.Net
         {
             var rows = new List<string>();
             var cam = mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.transform.position : Vector3.zero; // the local player (Camera.main isn't the player's camera)
-            foreach (var e in ByNet.Values)
+            foreach (var e in ObservedEntities.Values)
             {
                 if (e.Root == null) { rows.Add("{\"net\":" + e.NetId + ",\"root\":null}"); continue; }
                 var go = e.Root.gameObject;
@@ -223,7 +146,7 @@ namespace TLDRevamp.Net
         /// Test (bridge `mp members <net>`): a shared object's members - index, name, attached - to pick a part by name.
         public static string Members(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var rows = new List<string>();
             for (int i = 0; i < e.Items.Count; i++)
             {
@@ -244,11 +167,11 @@ namespace TLDRevamp.Net
         public static string DetachPart(int index, uint net = 0)
         {
             Ent car = null;
-            if (net != 0) { if (!ByNet.TryGetValue(net, out car) || car.Proxy || car.PartIndex >= 0) return "{\"error\":\"no owned car " + net + "\"}"; }
+            if (net != 0) { if (!ObservedEntities.TryGetValue(net, out car) || car.Proxy || car.PartIndex >= 0) return "{\"error\":\"no owned car " + net + "\"}"; }
             else if (mainscript.s != null && mainscript.s.player != null)
             {
                 var at = mainscript.s.player.transform.position; float best = float.MaxValue;
-                foreach (var e in ByNet.Values)
+                foreach (var e in ObservedEntities.Values)
                 {
                     if (e.Proxy || e.PartIndex >= 0 || e.Root == null || !HasAttached(e)) continue;
                     float d = (e.Root.transform.position - at).sqrMagnitude;
@@ -271,14 +194,14 @@ namespace TLDRevamp.Net
         /// Disposable test world only: unbolt locally while suppressing sync, so a mark has a known missing part.
         public static string TelemetryDesync(uint net, int index)
         {
-            if (!InSession || !ByNet.TryGetValue(net, out var e) || !e.Proxy || e.Root == null || index < 0 || index >= e.Items.Count)
+            if (!InSession || !ObservedEntities.TryGetValue(net, out var e) || !e.Proxy || e.Root == null || index < 0 || index >= e.Items.Count)
                 return "{\"error\":\"no loaded proxy group/item\"}";
             var at = e.Items[index] != null ? e.Items[index].attachable : null;
             if (at == null || !at.attached) return "{\"error\":\"item is not attached\"}";
-            bool applying = _applyingState, detaching = _applyingDetach;
-            _applyingState = _applyingDetach = true;
+            bool applying = ApplyingState, detaching = _applyingDetach;
+            ApplyingState = _applyingDetach = true;
             try { Unmount(at, true); }
-            finally { _applyingState = applying; _applyingDetach = detaching; }
+            finally { ApplyingState = applying; _applyingDetach = detaching; }
             if (e.EditHoldUntil == null) e.EditHoldUntil = new Dictionary<int, float>();
             e.EditHoldUntil[index] = Time.realtimeSinceStartup + 10f;
             SessionLog.Event("test-desync", net, item: index, from: MyId, result: "local unbolt; sync suppressed");
@@ -289,7 +212,7 @@ namespace TLDRevamp.Net
         /// cheatedStuff.Delete of the nearest one up its hierarchy, as fpscontroller finds it from what the player looks at.
         public static string XDelete(uint net, int idx)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             var it = idx < 0 ? e.Root : idx < e.Items.Count ? e.Items[idx] : null;
             if (it == null) return "{\"error\":\"no member " + idx + " here\"}";
             var ch = it.GetComponentInParent<cheatedStuff>();
@@ -303,7 +226,7 @@ namespace TLDRevamp.Net
         /// car that's the non-owner path (the DetachHook forwards it to the owner).
         public static string Wrench(uint net, int idx, bool force = false)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
             if (idx < 0 || idx >= e.Items.Count || e.Items[idx] == null || e.Items[idx].attachable == null || !e.Items[idx].attachable.attached)
                 return "{\"error\":\"part " + idx + " not attached\"}";
             // the player's dismount: slot.UnCraft() for a bolted part (fpscontroller's E-press), else Detach
@@ -317,8 +240,8 @@ namespace TLDRevamp.Net
         public static string AttachTo(uint partNet, uint carNet, int slot)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !ByNet.TryGetValue(partNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null) return "{\"error\":\"no such part here\"}";
-            if (!ByNet.TryGetValue(carNet, out var car) || !Resolve(car) || car.Root == null) return "{\"error\":\"no such car here\"}";
+            if (pl == null || !ObservedEntities.TryGetValue(partNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null) return "{\"error\":\"no such part here\"}";
+            if (!ObservedEntities.TryGetValue(carNet, out var car) || !Resolve(car) || car.Root == null) return "{\"error\":\"no such car here\"}";
             var at = pe.Root.attachable;
             partslotscript target = null; string where = "";
             if (slot >= 0 && slot < car.Root.partslotscripts.Count) { target = car.Root.partslotscripts[slot]; where = car.Root.name + "#" + slot; }
@@ -351,7 +274,7 @@ namespace TLDRevamp.Net
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null) return "{\"error\":\"not in game\"}";
             var rows = new List<string>();
-            foreach (var e in ByNet.Values)
+            foreach (var e in ObservedEntities.Values)
             {
                 if (!Resolve(e) || e.Root == null || e.Proxy || e.Root.car != null) continue;
                 var at = e.Root.attachable;
@@ -365,8 +288,8 @@ namespace TLDRevamp.Net
         public static string GlueTo(uint itemNet, uint carNet, float dx, bool keep = false)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !ByNet.TryGetValue(itemNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null) return "{\"error\":\"no such glueable item here\"}";
-            if (!ByNet.TryGetValue(carNet, out var car) || !Resolve(car) || car.Root == null) return "{\"error\":\"no such car here\"}";
+            if (pl == null || !ObservedEntities.TryGetValue(itemNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null) return "{\"error\":\"no such glueable item here\"}";
+            if (!ObservedEntities.TryGetValue(carNet, out var car) || !Resolve(car) || car.Root == null) return "{\"error\":\"no such car here\"}";
             var at = pe.Root.attachable;
             if (at.attached) return "{\"error\":\"already attached\"}";
             var ct = car.Root.transform;
@@ -389,7 +312,7 @@ namespace TLDRevamp.Net
         /// for comparing machines.
         public static string AttachPoseOf(uint itemNet)
         {
-            if (!ByNet.TryGetValue(itemNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null) return "{\"error\":\"no such item here\"}";
+            if (!ObservedEntities.TryGetValue(itemNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null) return "{\"error\":\"no such item here\"}";
             var at = pe.Root.attachable;
             if (!at.attached || at.point == null) return "{\"attached\":false}";
             var rt = at.point.root; var t = pe.Root.transform;
@@ -403,8 +326,8 @@ namespace TLDRevamp.Net
         /// Is part `partNet` bolted into car `carNet`'s group on this copy (and which slot)?
         public static string PartIn(uint partNet, uint carNet)
         {
-            if (!ByNet.TryGetValue(partNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null) return "{\"error\":\"no such part here\"}";
-            if (!ByNet.TryGetValue(carNet, out var car) || !Resolve(car)) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(partNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null) return "{\"error\":\"no such part here\"}";
+            if (!ObservedEntities.TryGetValue(carNet, out var car) || !Resolve(car)) return "{\"error\":\"no such car here\"}";
             var at = pe.Root.attachable; var to = at.AttachedToTosave();
             bool inCar = to != null && (to == car.Root || car.Items.Contains(to));
             return "{\"attached\":" + (at.attached ? "true" : "false") + ",\"inSlot\":" + (at.slot != null ? "true" : "false") + ",\"crafted\":" + (pe.Root.P != null && pe.Root.P.crafted ? "true" : "false")
@@ -416,7 +339,7 @@ namespace TLDRevamp.Net
         /// game's own crash check (carscript: DamageStuff(|speed − lspeed|)) sees the full impact on its next step.
         public static string CrashStop(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null || e.Root.car == null) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null || e.Root.car == null) return "{\"error\":\"no such car here\"}";
             if (e.Proxy) return "{\"error\":\"not simulated here\"}";
             float kmh = e.Root.car.speed; int n = 0;
             foreach (var rb in e.Root.transform.root.GetComponentsInChildren<Rigidbody>())
@@ -433,7 +356,7 @@ namespace TLDRevamp.Net
         /// Owner side: part `idx` of car `net` falls off as in a crash (the game's attachablescript.FallOFf).
         public static string FallOff(uint net, int idx)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
             if (idx < 0 || idx >= e.Items.Count || e.Items[idx] == null || e.Items[idx].attachable == null || e.Items[idx].attachable.slot == null)
                 return "{\"error\":\"part " + idx + " not in a slot\"}";
             e.Items[idx].attachable.FallOFf();
@@ -447,7 +370,7 @@ namespace TLDRevamp.Net
         public static string LookPick(uint net, bool pick)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null || e.Root.P == null) return "{\"error\":\"no such item here\"}";
+            if (pl == null || !ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null || e.Root.P == null) return "{\"error\":\"no such item here\"}";
             var p = e.Root.P; var at = e.Root.attachable;
             int cols = 0, on = 0; Collider target = null;
             foreach (var c in e.Root.GetComponentsInChildren<Collider>(true)) { cols++; if (c.enabled && c.gameObject.activeInHierarchy && !c.isTrigger) { on++; if (target == null) target = c; } }
@@ -486,7 +409,7 @@ namespace TLDRevamp.Net
         public static string LookMount(uint carNet, int slot)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !ByNet.TryGetValue(carNet, out var car) || !Resolve(car) || car.Root == null) return "{\"error\":\"no such car here\"}";
+            if (pl == null || !ObservedEntities.TryGetValue(carNet, out var car) || !Resolve(car) || car.Root == null) return "{\"error\":\"no such car here\"}";
             if (slot < 0 || slot >= car.Root.partslotscripts.Count || car.Root.partslotscripts[slot] == null) return "{\"error\":\"no slot " + slot + "\"}";
             var ps = car.Root.partslotscripts[slot];
             var part = ps.hasPart() ? ps.part() : null;
@@ -499,47 +422,11 @@ namespace TLDRevamp.Net
             return b.Append("}").ToString();
         }
 
-        /// A fitted part as the player's dismount sees it (fpscontroller.cs dismount branch): the game's conditions, its use
-        /// ray cast at the part from five sides (the first hit and whether it counts) and its colliders with their layers.
-        /// For `mp lookmount` and the bug report's parts.json (Entities.PartWatch).
-        internal static void MountFacts(partslotscript ps, attachablescript part, pickupable P, fpscontroller pl, System.Text.StringBuilder b, int index)
-        {
-            bool sit = pl.CanPickupSit(P), canPick = P.CanPickup(), covered = part.cover_CantCraftIfCovered != null && part.cover_CantCraftIfCovered.hasPart();
-            bool gameAllows = !ps.cantCraft && !ps.cantUnCraft && !ps.attachTarget && sit && canPick && !P.cantPickupWhileMount && !covered;
-            uint partNet = 0; foreach (var x in ByNet.Values) if (x.Root != null && x.Root.transform == part.transform) { partNet = x.NetId; break; }
-            b.Append(",\"part\":").Append(Json.Str(part.name)).Append(",\"net\":").Append(partNet).Append(",\"index\":").Append(index).Append(",\"canPickupSit\":").Append(sit ? "true" : "false")
-             .Append(",\"canPickup\":").Append(canPick ? "true" : "false").Append(",\"cantPickup\":").Append(P.cantPickup ? "true" : "false")
-             .Append(",\"cantPickupWhileMount\":").Append(P.cantPickupWhileMount ? "true" : "false").Append(",\"covered\":").Append(covered ? "true" : "false")
-             .Append(",\"crafted\":").Append(P.crafted ? "true" : "false").Append(",\"attached\":").Append(part.attached ? "true" : "false")
-             .Append(",\"gameAllows\":").Append(gameAllows ? "true" : "false");
-            // the ray: from 1.3 m off the part's first live collider on five sides, the first hit and whether it counts
-            Collider target = null; var cols = new List<string>();
-            foreach (var c in part.GetComponentsInChildren<Collider>(true))
-            {
-                cols.Add(Json.Str(c.name + ":" + LayerMask.LayerToName(c.gameObject.layer) + (c.enabled && c.gameObject.activeInHierarchy ? "" : ":off") + (c.isTrigger ? ":trigger" : "")
-                                  + ((pl.useLayer.value & (1 << c.gameObject.layer)) != 0 ? "" : ":notInUseLayer")));
-                if (target == null && c.enabled && c.gameObject.activeInHierarchy && !c.isTrigger) target = c;
-            }
-            string hitFrom = "", firstHit = "";
-            if (target != null)
-                foreach (var d in new[] { Vector3.up, Vector3.right, Vector3.left, Vector3.forward, Vector3.back })
-                {
-                    var ctr = target.bounds.center; var from = ctr + d * 1.3f;
-                    if (!Physics.Raycast(from, (ctr - from).normalized, out var hit, pl.FrayRange, pl.useLayer)) continue;
-                    var ls = hit.collider.GetComponent<layerScript>();
-                    bool counts = hit.collider.GetComponent<partslotscript>() == ps || (ls != null && ls.p == P);
-                    if (firstHit.Length == 0) firstHit = hit.collider.name + ":" + LayerMask.LayerToName(hit.collider.gameObject.layer) + (counts ? "" : " of " + hit.collider.transform.root.name);
-                    if (counts) { hitFrom = d.ToString(); break; }
-                }
-            b.Append(",\"rayCounts\":").Append(Json.Str(hitFrom)).Append(",\"firstHit\":").Append(Json.Str(firstHit))
-             .Append(",\"colliders\":[").Append(string.Join(",", cols)).Append("]");
-        }
-
         /// The local player picks up shared object `net` (fpscontroller.Pickup, as a player's grab — the claim hook sees it).
         public static string PickupNet(uint net, bool here = false)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null || e.Root.P == null) return "{\"error\":\"no such item here\"}";
+            if (pl == null || !ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null || e.Root.P == null) return "{\"error\":\"no such item here\"}";
             if (!e.Root.P.CanPickup()) return "{\"error\":\"can't be picked up\"}";   // the game's pickup ray asks this first
             if (here)
             {
@@ -581,16 +468,9 @@ namespace TLDRevamp.Net
                    ",\"agl\":" + agl.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
         }
 
-        /// Test labs outside Net (Diagnostics.AimLab): an entity's root object here.
-        internal static bool TryRoot(uint net, out GameObject root)
-        {
-            root = ByNet.TryGetValue(net, out var e) && Resolve(e) && e.Root != null ? e.Root.gameObject : null;
-            return root != null;
-        }
-
         public static string CarParts(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e)) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e)) return "{\"error\":\"no such car here\"}";
             if (!Resolve(e) || e.Root == null) return "{\"dormant\":true,\"parts\":[]}";
             var rows = CensusRows(e).ConvertAll(Json.Str);
             // wheels where they are shown: each item in a wheel slot, in the car body's frame (cm)
@@ -612,7 +492,7 @@ namespace TLDRevamp.Net
         /// a player's ray needs (enabled, layer), and whether the item is a copy here.
         public static string Caps(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such car here\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>();
             foreach (var tc in e.Root.transform.root.GetComponentsInChildren<tankcapscript>(true))
@@ -637,22 +517,22 @@ namespace TLDRevamp.Net
         /// `mp breakstate <net>`: this machine's breakables of one object: how many, how many broken. Not placed here: an error.
         public static string BreakState(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"not placed here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"not placed here\"}";
             int n = 0, broken = 0;
             foreach (var br in e.Root.transform.GetComponentsInChildren<breakablescript>(true)) { n++; if (br.destroyed) broken++; }
             var rag = e.Root.GetComponentInChildren<ragdollactivatescript>(true);
             int limbs = 0, loose = 0;
             if (rag != null && rag.RBs != null) foreach (var b in rag.RBs) if (b != null) { limbs++; if (!b.isKinematic) loose++; }
-            _breaksHere.TryGetValue(net, out var kept);
-            return "{\"breakables\":" + n + ",\"broken\":" + broken + ",\"kept\":" + (kept != null ? kept.Breaks.Count : 0) +
+            ObserveBreaks(net, out int keptCount, out var keptDone);
+            return "{\"breakables\":" + n + ",\"broken\":" + broken + ",\"kept\":" + keptCount +
                    ",\"ragdoll\":" + (rag != null && rag.ragdoll ? "true" : "false") + ",\"limbs\":" + limbs + ",\"limbsLoose\":" + loose +
-                   ",\"doneOnThis\":" + (kept != null && kept.Done == e.Root.transform ? "true" : "false") + ",\"id\":" + e.Root.GetInstanceID() + ",\"idInSave\":" + e.Root.idInSave + ",\"rootId\":" + e.RootId + "}";
+                   ",\"doneOnThis\":" + (keptDone == e.Root.transform ? "true" : "false") + ",\"id\":" + e.Root.GetInstanceID() + ",\"idInSave\":" + e.Root.idInSave + ",\"rootId\":" + e.RootId + "}";
         }
 
         /// `mp ragdollcycle <net>`: what a lock in a car does to a creature's limbs and what the unlock does: the game's own pair.
         public static string RagdollCycle(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             var it = e.Root.GetComponentInChildren<tosaveitemscript>(true);
             if (it == null || it.ragdollPos == null) return "{\"error\":\"no ragdoll on " + e.Root.name + "\"}";
             it.ragdollPos.Freeze(); it.ragdollPos.UnFreeze();
@@ -661,7 +541,7 @@ namespace TLDRevamp.Net
 
         public static string BreakEnt(uint net, float force)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             var br = e.Root.GetComponentInChildren<breakablescript>(true);
             if (br == null) return "{\"error\":\"nothing breakable on " + e.Root.name + "\"}";
             var names = new List<string>();
@@ -675,7 +555,7 @@ namespace TLDRevamp.Net
         public static string ServerEntity(uint net)
         {
             if (!IsHost) return "{\"error\":\"not the host\"}";
-            if (!Server.TryGetValue(net, out var se)) return "{\"error\":\"no such object on the server\"}";
+            if (!ObserveServer(net, out var se)) return "{\"error\":\"no such object on the server\"}";
             return "{\"net\":" + net + ",\"owner\":" + se.OwnerId + ",\"epoch\":" + se.Epoch + ",\"held\":" + (se.Held ? "true" : "false") + ",\"stored\":" + (se.Stored ? "true" : "false") +
                    ",\"driven\":" + (se.Driven ? "true" : "false") + ",\"crashReturnTo\":" + se.CrashReturnTo + ",\"parentNet\":" + se.ParentNet + ",\"attachParent\":" + se.AttachParent +
                    ",\"where\":" + V3(se.Where) + ",\"atRest\":" + (se.AtRest ? "true" : "false") + ",\"locked\":" + (se.Locked ? "true" : "false") + ",\"lockFrame\":" + se.LockFrame + "}";
@@ -686,7 +566,7 @@ namespace TLDRevamp.Net
         /// syncs (SyncMulti) as a player's does.
         public static string UseCap(uint net, int i)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such car here\"}";
             var caps = e.Root.transform.root.GetComponentsInChildren<tankcapscript>(true);
             if (i < 0 || i >= caps.Length) return "{\"error\":\"no cap " + i + " of " + caps.Length + "\"}";
             var u = caps[i].usable;
@@ -708,7 +588,7 @@ namespace TLDRevamp.Net
         /// slectedRandomTipus, the material type it shows: tipus), state, colour.
         public static string PartConds(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             var rows = new List<string>();
             for (int i = 0; i < e.Items.Count; i++)
             {
@@ -729,7 +609,7 @@ namespace TLDRevamp.Net
         /// 2026-10-09: "tires desynced when both drive").
         public static string WheelPose(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var ct = e.Root.transform;
             var rows = new List<string>();
@@ -753,7 +633,7 @@ namespace TLDRevamp.Net
         /// non-map item holds — it would never be placed), the nearest player to it (place range itemSpawnDist).
         public static string FarRec(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e)) return "{\"error\":\"no such entity\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e)) return "{\"error\":\"no such entity\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var data = savedatascript.s != null ? savedatascript.s.data : null;
             var sb = new System.Text.StringBuilder("{\"rootId\":" + e.RootId + ",\"dormant\":" + (e.Root == null ? "true" : "false"));
@@ -784,20 +664,20 @@ namespace TLDRevamp.Net
         /// `mp claim <net>`: take over a copy the way a push grip or a car's cargo claim does (provisional, the server decides)
         public static string ClaimTest(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e)) return "{\"error\":\"no such entity\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e)) return "{\"error\":\"no such entity\"}";
             if (!e.Proxy) return "{\"claimed\":false,\"why\":\"ours already\"}";
             SetProxy(e, false);
             e.OwnerId = MyId;
-            W.Reset(); WriteClaim(W, e.NetId, ClaimReason.Debug); ToServer(W, true);
+            var writer = new NetWriter(); WriteClaim(writer, e.NetId, ClaimReason.Debug); SendToServer(writer, true);
             ClaimsSent++;
             return "{\"claimed\":true}";
         }
 
-        internal static System.Func<uint, string> HoldForTest;
+        
         /// Test (bridge `mp handcopy <net>`): this copy picked up with no claim sent (not known as a copy for that moment): HandCopyTick's state.
         public static string TestHandCopy(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null || !e.Proxy) return "{\"error\":\"no such copy here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null || !e.Proxy) return "{\"error\":\"no such copy here\"}";
             foreach (var it in e.Items) if (it != null) ProxyItems.Remove(it.gameObject);
             ProxyItems.Remove(e.Root.gameObject);
             string held = HoldForTest?.Invoke(net) ?? "{\"error\":\"developer tools not installed\"}";
@@ -832,14 +712,14 @@ namespace TLDRevamp.Net
         public static string SetForceHeld(uint net)
         {
             if (net == 0) { ForceHeld = null; return "{\"forceHeld\":null}"; }
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such item here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such item here\"}";
             ForceHeld = e.Root;
             return "{\"forceHeld\":" + Json.Str(e.Root.name) + ",\"proxy\":" + (e.Proxy ? "true" : "false") + "}";
         }
 
         public static string AttachedParts(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
             var rows = new List<string>();
             for (int i = 0; i < e.Items.Count; i++)
                 if (e.Items[i] != null && e.Items[i].attachable != null && e.Items[i].attachable.attached)
@@ -892,7 +772,7 @@ namespace TLDRevamp.Net
         /// Test tooling: a member's state changed on this machine only, no message: a part's condition, a knob, a tank's level.
         public static string LocalState(uint net, int idx)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var it = idx >= 0 && idx < e.Items.Count ? e.Items[idx] : null;
             if (it == null) return "{\"error\":\"no item " + idx + "\"}";
             string what = "";
@@ -904,7 +784,7 @@ namespace TLDRevamp.Net
 
         public static string LocalOff(uint net, int idx)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
             var it = idx >= 0 && idx < e.Items.Count ? e.Items[idx] : null;
             if (it == null || it.attachable == null || !it.attachable.attached) return "{\"error\":\"part " + idx + " not on\"}";
             _applyingDetach = true;
@@ -915,7 +795,7 @@ namespace TLDRevamp.Net
         /// Every slot of a group and what the game has in it: a door on one machine only, two doors in one slot.
         public static string CarSlots(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such car here\"}";
             var rows = new List<string>();
             for (int i = 0; i < e.Items.Count; i++)
             {
@@ -942,7 +822,7 @@ namespace TLDRevamp.Net
             foreach (var it in savedatascript.s.items.Values)
             {
                 if (it == null || it.car == null || it.transform.parent != null || !it.gameObject.activeInHierarchy) continue;
-                bool shared = false; foreach (var e in ByNet.Values) if (e.Root == it) shared = true;
+                bool shared = false; foreach (var e in ObservedEntities.Values) if (e.Root == it) shared = true;
                 if (shared || it.name.StartsWith("Car01Full")) continue;   // Car01Full = the tests' spawned car
                 float d = (it.transform.position - p).sqrMagnitude;
                 if (d < bd) { bd = d; best = it; }
@@ -963,7 +843,7 @@ namespace TLDRevamp.Net
             var rows = new List<string>();
             int shared = 0;
             var sharedSet = new HashSet<tosaveitemscript>();
-            foreach (var e in ByNet.Values) foreach (var it in e.Items) if (it != null) sharedSet.Add(it);
+            foreach (var e in ObservedEntities.Values) foreach (var it in e.Items) if (it != null) sharedSet.Add(it);
             foreach (var it in savedatascript.s.items.Values)
             {
                 if (it == null || !it.gameObject.activeInHierarchy) continue;
@@ -985,33 +865,11 @@ namespace TLDRevamp.Net
         /// The shared objects here, with the ids a test needs to say exactly which object it means: the network id,
         /// the game's own save id (the id every machine agrees on), the owner's player id and the global position.
         /// `filter` narrows it to a name (a "PlayerRagdol" corpse, an item's name); "" is everything.
-        /// `mp relays`: which loaded objects carry a collision relay (what this machine simulates relays its contacts to the
-        /// other machine, Entities.Contact), and the server's list of locked objects whose pose follows their container,
-        /// with how many of those are no longer server objects.
-        public static string RelayList()
-        {
-            var rows = new List<string>();
-            int ownedLoaded = 0, ownedWithout = 0;
-            foreach (var e in ByNet.Values)
-            {
-                if (e.Root == null) continue;
-                var relay = e.Root.gameObject.GetComponent<ContactRelay>();
-                if (!e.Proxy) { ownedLoaded++; if (relay == null) ownedWithout++; }
-                rows.Add("{\"net\":" + e.NetId + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"relay\":" + (relay != null ? "true" : "false") +
-                         ",\"relayNet\":" + (relay != null ? relay.NetId : 0) + "}");
-            }
-            rows.Sort(StringComparer.Ordinal);
-            int gone = 0;
-            foreach (var se in _serverLocked) if (!Server.TryGetValue(se.NetId, out var now) || now != se) gone++;
-            return "{\"ownedLoaded\":" + ownedLoaded + ",\"ownedWithoutRelay\":" + ownedWithout + ",\"serverLocked\":" + _serverLocked.Count +
-                   ",\"serverLockedGone\":" + gone + ",\"rows\":[" + string.Join(",", rows) + "]}";
-        }
-
         public static string SharedList(string filter)
         {
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>();
-            foreach (var e in ByNet.Values)
+            foreach (var e in ObservedEntities.Values)
             {
                 string name = e.Root != null ? e.Root.name : "";
                 if (filter != null && filter.Length > 0 && name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0) continue;
@@ -1038,70 +896,11 @@ namespace TLDRevamp.Net
             return "{\"items\":[" + string.Join(",", rows) + "]}";
         }
 
-        /// A vehicle's seats: its own hierarchy's (indices as before), then those of every body outside it that carries its
-        /// part slots — Bus01's rear section (BusBack: its own body on a joint, 33 of the bus's 81 seats). Before, a player
-        /// in the back of a bus counted as not seated: the other machines showed them standing, trailing the bus.
-        public static bool RearSeats = true;   // off: the old behaviour (A/B in tools/busrear.py)
-        /// An object's seats are those in its own hierarchy, not its root's, and not those of an object locked into it. A
-        /// bar stool locked into a bus is parented to the bus's mount (mountStuff.Store): its seat is in the bus's
-        /// hierarchy, the bus's seat list (cached before the stool came) didn't have it and the stool's own list was the
-        /// bus's. Its sitter was sent as standing and drawn from late world positions on the other machines: sliding back
-        /// through the bus while it drove, snapping onto the stool when it stopped (playtest 2026-10-24, tools/busstool.py).
-        public static bool ItemSeats = true;   // A/B: false = before v0.69.2
-        public static long ItemSeatsSent;
-        private static readonly Dictionary<Transform, seatscript[]> _seats = new Dictionary<Transform, seatscript[]>();
-        private static readonly Dictionary<Transform, seatscript[]> _seatsOwn = new Dictionary<Transform, seatscript[]>();
-        internal static seatscript[] VehicleSeats(tosaveitemscript vehicle, bool always = false)
-        {
-            bool all = RearSeats || always;
-            var cache = all ? _seats : _seatsOwn;
-            var root = ItemSeats ? vehicle.transform : vehicle.transform.root;
-            if (cache.TryGetValue(root, out var have) && have.Length > 0 && have[0] != null) return have;
-            if (cache.Count > 256) cache.Clear();   // destroyed vehicles' entries
-            var list = new List<seatscript>(root.GetComponentsInChildren<seatscript>(true));
-            if (ItemSeats) list.RemoveAll(st => st == null || InLockedItem(st.transform, root));
-            if (all && vehicle.partslotscripts != null)
-            {
-                var extra = new List<Transform>();
-                foreach (var sl in vehicle.partslotscripts)
-                    if (sl != null && (ItemSeats ? !sl.transform.IsChildOf(root) : sl.transform.root != root) && !extra.Contains(sl.transform.root)) extra.Add(sl.transform.root);
-                extra.Sort((x, y) => string.CompareOrdinal(x.name, y.name));
-                foreach (var t in extra) list.AddRange(t.GetComponentsInChildren<seatscript>(true));
-            }
-            var arr = list.ToArray();
-            cache[root] = arr;
-            return arr;
-        }
-
-        /// Below `top`, is `t` in an item the game has locked into a mount of it (the item parented to the mountStuff)?
-        private static bool InLockedItem(Transform t, Transform top)
-        {
-            for (var p = t; p != null && p != top; p = p.parent)
-                if (p.parent != null && p.parent.GetComponent<mountStuff>() != null && p.GetComponent<tosaveitemscript>() != null) return true;
-            return false;
-        }
-
-        /// The shared object a seat belongs to: the nearest one above it that isn't a part (the car for its own seats, the
-        /// stool for a stool's, wherever the stool is).
-        private static Ent SeatObject(seatscript seat)
-        {
-            Ent best = null; int bestDepth = int.MaxValue;
-            var st = seat.transform;
-            foreach (var e in ByNet.Values)
-            {
-                if (e.Root == null || e.PartIndex >= 0 || !st.IsChildOf(e.Root.transform)) continue;
-                int d = 0;
-                for (var p = st; p != null && p != e.Root.transform; p = p.parent) d++;
-                if (d < bestDepth) { bestDepth = d; best = e; }
-            }
-            return best;
-        }
-
         /// `seats <net>`: the vehicle's seat list as the seat sync numbers it — index, seat, the body it sits on, driver
         /// flags, whether it redirects (mainseat) and whether someone can sit there now.
         public static string SeatList(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no entity " + net + "\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no entity " + net + "\"}";
             var seats = VehicleSeats(e.Root, true);
             var rows = new List<string>();
             for (int i = 0; i < seats.Length; i++)
@@ -1116,82 +915,6 @@ namespace TLDRevamp.Net
                         .ConvertAll(x => Json.Str(x.name + " root " + x.transform.root.name + " (" + x.transform.root.GetComponentsInChildren<seatscript>(true).Length + " seats) parent " +
                                                   (x.transform.parent != null ? x.transform.parent.name : "-") + " rb " + (x.GetComponentInParent<Rigidbody>() != null ? x.GetComponentInParent<Rigidbody>().name : "-"))).ToArray()) + "]" +
                    ",\"seats(i,name,body,driver,redirect,free,active)\":[" + string.Join(",", rows) + "]}";
-        }
-
-        /// The local player's seat, if it belongs to a shared object: (network id, seat index), else net 0.
-        public static void LocalSeat(out uint net, out int idx)
-        {
-            net = 0; idx = 0;
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !pl.Bsitting || pl.seat == null) return;
-            if (ItemSeats && SeatObject(pl.seat) is Ent so)
-            {
-                int k = Array.IndexOf(VehicleSeats(so.Root), pl.seat);
-                if (k >= 0)
-                {
-                    net = so.NetId; idx = k;
-                    if (so.Root.car == null) ItemSeatsSent++;
-                    return;
-                }
-            }
-            var root = pl.seat.transform.root;
-            foreach (var e in Placed())
-            {
-                if (e.Root == null || e.PartIndex >= 0) continue;
-                // only the vehicle itself: an item in the seated player's hand is in the car's hierarchy too (hand →
-                // player → seat → car), and VehicleSeats of it is the car's seats — a lamp held in the right hand was
-                // sent as the seat, the others found no seat 1 on a lamp and drew the passenger trailing the car on the
-                // road (heldincar.py, 2026-10-08)
-                if (e.Root.car == null && e.Root.transform != root) continue;
-                var seats = e.Root.transform.root == root ? VehicleSeats(e.Root) : null;
-                if (seats == null)
-                {
-                    // a seat on a body outside the vehicle's hierarchy (the back of a bus): one of its slot bodies
-                    if (e.Root.partslotscripts == null || e.Root.car == null) continue;
-                    bool mine = false;
-                    foreach (var sl in e.Root.partslotscripts) if (sl != null && sl.transform.root == root) { mine = true; break; }
-                    if (!mine) continue;
-                    if (!RearSeats) continue;
-                    seats = VehicleSeats(e.Root);
-                }
-                int i = Array.IndexOf(seats, pl.seat);
-                if (i < 0) return;
-                net = e.NetId; idx = i;
-                return;
-            }
-        }
-
-        /// Where a player seated in shared object `net`, seat `idx`, sits on this machine (null if not here).
-        /// Per frame for every seated remote player: the seat found once per (car copy, seat) and kept. Searching the
-        /// car's hierarchy every frame cost the laptop 223 ms/s at 16 seated players (~5 ms a frame; spread load test,
-        /// v0.57.89) — before the bots sat in their cars no test had seated players in numbers.
-        public static Transform SeatTransformCached(uint net, int idx, ref Transform carRoot, ref Transform seat)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || (e.Root == null && !Resolve(e))) return null;
-            var root = e.Root.transform.root;
-            if (seat != null && carRoot == root) return seat;
-            carRoot = root;
-            seat = SeatTransform(net, idx);
-            return seat;
-        }
-
-        /// The seat itself (SeatTransform gives its sit point, a separate object without the seatscript).
-        public static seatscript SeatScript(uint net, int idx, out carscript car)
-        {
-            car = null;
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return null;
-            var seats = VehicleSeats(e.Root);
-            if (idx < 0 || idx >= seats.Length || seats[idx] == null) return null;
-            car = seats[idx].Car != null ? seats[idx].Car : e.Root.car;
-            return seats[idx];
-        }
-
-        public static Transform SeatTransform(uint net, int idx)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return null;
-            var seats = VehicleSeats(e.Root);
-            if (idx < 0 || idx >= seats.Length) return null;
-            return seats[idx].sitPos != null ? seats[idx].sitPos : seats[idx].transform;
         }
 
         /// Raw seat data of the car nearest to the player (no session needed): what each seatscript redirects to
@@ -1227,7 +950,7 @@ namespace TLDRevamp.Net
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null) return "{\"error\":\"not in game\"}";
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no entity " + net + "\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no entity " + net + "\"}";
             foreach (var st in e.Root.GetComponentsInChildren<seatscript>(true))
             {
                 var s = st.mainseat != null ? st.mainseat : st;
@@ -1245,7 +968,7 @@ namespace TLDRevamp.Net
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null) return "{\"error\":\"not in game\"}";
             tosaveitemscript car = null; float best = float.MaxValue;
-            if (net != 0) { if (!ByNet.TryGetValue(net, out var se) || !Resolve(se)) return "{\"error\":\"no entity " + net + "\"}"; car = se.Root; best = 0f; }
+            if (net != 0) { if (!ObservedEntities.TryGetValue(net, out var se) || !Resolve(se)) return "{\"error\":\"no entity " + net + "\"}"; car = se.Root; best = 0f; }
             else foreach (var it in savedatascript.s.items.Values)
                 if (it != null && it.car != null && it.transform.parent == null) { float d = (it.transform.position - pl.transform.position).sqrMagnitude; if (d < best) { best = d; car = it; } }
             if (car == null) return "{\"error\":\"no car\"}";
@@ -1278,7 +1001,7 @@ namespace TLDRevamp.Net
         /// Per-seat diagnostics for shared object `net`: why can't the driver seat be taken?
         public static string SeatDump(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var seats = e.Root.transform.root.GetComponentsInChildren<seatscript>(true);
             var rows = new List<string>();
             for (int i = 0; i < seats.Length; i++)
@@ -1303,7 +1026,7 @@ namespace TLDRevamp.Net
         public static string SitDriver(uint net)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (pl == null || !ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var seats = e.Root.transform.root.GetComponentsInChildren<seatscript>(true);
             // already sitting in this vehicle (a test's second call after the first one sat the player): done
             if (pl.Bsitting && pl.seat != null)
@@ -1343,7 +1066,7 @@ namespace TLDRevamp.Net
         /// paintable part's colour, in a stable order (path in the object), to compare machines.
         public static string PaintLab(uint net, Color? c)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no entity " + net + "\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no entity " + net + "\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var parts = new List<partconditionscript>(e.Root.GetComponentsInChildren<partconditionscript>(true));
             parts.RemoveAll(x => x == null || !x.gameObject.activeInHierarchy);
@@ -1376,7 +1099,7 @@ namespace TLDRevamp.Net
 
         public static string InterpDump(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e)) return "{\"error\":\"no entity\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e)) return "{\"error\":\"no entity\"}";
             return e.Ip != null ? e.Ip.Dump() : "{\"error\":\"not a copy here\"}";
         }
 
@@ -1384,7 +1107,7 @@ namespace TLDRevamp.Net
         /// state, the owner and the newest state against the shown time (carstop: the copy 35-44 m off after a stop).
         public static string CopyState(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e)) return "{\"error\":\"no entity\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e)) return "{\"error\":\"no entity\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             string V(Vector3d v) => "[" + v.x.ToString("F2", ic) + "," + v.y.ToString("F2", ic) + "," + v.z.ToString("F2", ic) + "]";
             string B(bool b) => b ? "true" : "false";
@@ -1406,7 +1129,7 @@ namespace TLDRevamp.Net
 
         public static string CarBreak(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var root = e.Root.transform.root;
             var parts = new List<string>();
@@ -1443,7 +1166,7 @@ namespace TLDRevamp.Net
         public static string SitPassenger(uint net)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (pl == null || !ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var seats = e.Root.transform.root.GetComponentsInChildren<seatscript>(true);
             // already sitting in this vehicle (a test's second call after the first one sat the player): done
             if (pl.Bsitting && pl.seat != null)
@@ -1483,7 +1206,7 @@ namespace TLDRevamp.Net
         /// only: a hinged part turned the wrong way passes it.
         public static string PartPoses(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var rt = e.Root.transform;
             var rows = new List<string>();
@@ -1509,7 +1232,7 @@ namespace TLDRevamp.Net
         {
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var ent = new Dictionary<tosaveitemscript, Ent>();
-            foreach (var e in ByNet.Values) foreach (var it in e.Items) if (it != null && !ent.ContainsKey(it)) ent[it] = e;
+            foreach (var e in ObservedEntities.Values) foreach (var it in e.Items) if (it != null && !ent.ContainsKey(it)) ent[it] = e;
             var rows = new List<string>();
             foreach (var it in savedatascript.s.items.Values)
             {
@@ -1552,7 +1275,7 @@ namespace TLDRevamp.Net
         {
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var entOf = new Dictionary<Transform, Ent>();
-            foreach (var e in ByNet.Values) if (e.Root != null) entOf[e.Root.transform.root] = e;
+            foreach (var e in ObservedEntities.Values) if (e.Root != null) entOf[e.Root.transform.root] = e;
             string Tag(Collider c)
             {
                 var root = c.transform.root; var rb = c.attachedRigidbody;
@@ -1599,7 +1322,7 @@ namespace TLDRevamp.Net
             }
             if (best == null) return "{\"error\":\"none\"}";
             Ent owner = null; int idx = -1;
-            foreach (var e in ByNet.Values) { int k = e.Items.IndexOf(best); if (k >= 0) { owner = e; idx = k; break; } }
+            foreach (var e in ObservedEntities.Values) { int k = e.Items.IndexOf(best); if (k >= 0) { owner = e; idx = k; break; } }
             var rb = best.GetComponent<Rigidbody>();
             var p = best.transform.parent;
             return "{\"name\":" + Json.Str(best.name) + ",\"dist\":" + System.Math.Sqrt(bd).ToString("F2", ic) +
@@ -1640,7 +1363,7 @@ namespace TLDRevamp.Net
         public static string FarStray(uint net, double m)
         {
             var data = savedatascript.s != null ? savedatascript.s.data : null;
-            if (!ByNet.TryGetValue(net, out var e) || e.Root != null || data == null || data.itemData == null) return "{\"error\":\"not stored here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || e.Root != null || data == null || data.itemData == null) return "{\"error\":\"not stored here\"}";
             foreach (var a in data.itemData.attachable)
             {
                 if (a == null || a.attachType != 1 || a.parentid != e.RootId || !savedatascript.IndexOfID(data.itemData.items, a.id, out int k)) continue;
@@ -1715,38 +1438,9 @@ namespace TLDRevamp.Net
                    ",\"fuel\":" + fuel.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + ",\"yAvg\":" + (ids.Count > 0 ? ySum / ids.Count : 0).ToString("F3", System.Globalization.CultureInfo.InvariantCulture) + ",\"models\":" + Json.Str(string.Join(" ", ms)) + "}";
         }
 
-        /// Non-pose state of shared object `net`, flattened over its group in order (tests compare it between machines).
-        // ---------------------------------------------------------------- fluids (tools/fluids.py)
-        /// The entity's tanks in EntState order (its items in order, each item's tanks): amount per fluid, caps open.
-        private static List<tankscript> TanksOf(Ent e)
-        {
-            var l = new List<tankscript>();
-            foreach (var it in e.Items) if (it != null && it.tanks != null) foreach (var t in it.tanks) l.Add(t);
-            return l;
-        }
-
-        /// For logs: which shared object a root is — net, owner, copy or own — or "local" if it isn't shared.
-        internal static string DescribeRoot(Transform root)
-        {
-            foreach (var e in ByNet.Values)
-                if (e.Root != null && e.Root.transform.root == root) return "net " + e.NetId + " owner " + e.OwnerId + (e.Proxy ? " copy" : " own");
-            return "local";
-        }
-
-        public static Transform RootOf(uint net) => ByNet.TryGetValue(net, out var e) && Resolve(e) && e.Root != null ? e.Root.transform.root : null;
-
-        public static pickupable PickupableOf(uint net) => ByNet.TryGetValue(net, out var e) && Resolve(e) && e.Root != null ? e.Root.P : null;
-
-        public static tankscript TankOf(uint net, int ti)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return null;
-            var l = TanksOf(e);
-            return ti >= 0 && ti < l.Count ? l[ti] : null;
-        }
-
         public static string Fluids(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>(); int ti = 0;
             foreach (var t in TanksOf(e))
@@ -1768,7 +1462,7 @@ namespace TLDRevamp.Net
         /// (tankscript.TryExplode) — as a crash or a shot would; it goes off only if it holds something explosive.
         public static string TankExplode(uint net, int ti, float force)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             if (e.Proxy) return "{\"error\":\"not mine\"}";
             var tanks = TanksOf(e);
             if (ti < 0 || ti >= tanks.Count || tanks[ti] == null) return "{\"error\":\"no tank " + ti + "\"}";
@@ -1780,7 +1474,7 @@ namespace TLDRevamp.Net
         /// Test setup on one's OWN container: tank ti holds `amount` of one fluid (like having filled it at a pump).
         public static string Fill(uint net, int ti, string fluid, float amount)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             if (e.Proxy) return "{\"error\":\"not mine\"}";
             var tanks = TanksOf(e);
             if (ti < 0 || ti >= tanks.Count || tanks[ti] == null) return "{\"error\":\"no tank " + ti + "\"}";
@@ -1828,8 +1522,8 @@ namespace TLDRevamp.Net
                 _pourFrom = _pourInto = null; _pourBody = null;
                 return "{\"stopped\":" + st + "}";
             }
-            if (!ByNet.TryGetValue(can, out var ec) || !Resolve(ec)) return "{\"error\":\"no container here\"}";
-            if (!ByNet.TryGetValue(car, out var et) || !Resolve(et)) return "{\"error\":\"no target here\"}";
+            if (!ObservedEntities.TryGetValue(can, out var ec) || !Resolve(ec)) return "{\"error\":\"no container here\"}";
+            if (!ObservedEntities.TryGetValue(car, out var et) || !Resolve(et)) return "{\"error\":\"no target here\"}";
             var tanks = TanksOf(et);
             if (ti < 0 || ti >= tanks.Count || tanks[ti] == null || tanks[ti].TC == null) return "{\"error\":\"no tank " + ti + "\"}";
             _pourInto = null;
@@ -1851,7 +1545,7 @@ namespace TLDRevamp.Net
 
         public static string EntState(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var tanks = new List<string>(); var parts = new List<string>(); var us = new List<string>(); var doors = new List<string>();
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             foreach (var it in e.Items)
@@ -1870,7 +1564,7 @@ namespace TLDRevamp.Net
         /// Which parts of the items' records change between two calls (as the resync sees them: canonical ids, no transform).
         public static string ResyncDiff(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var map = new Dictionary<uint, uint>();
             for (int i = 0; i < e.Items.Count; i++) if (e.Items[i] != null) map[e.Items[i].idInSave] = CanonBase + (uint)i;
             var outs = new List<string>(); int changed = 0;
@@ -1890,20 +1584,9 @@ namespace TLDRevamp.Net
             return "{\"changed\":" + changed + ",\"diffs\":[" + string.Join(",", outs) + "]}";
         }
 
-        /// Items of shared object `net` here: loaded or stored, how attached, how far from the root.
-        /// Why would SeatTransform(net, idx) fail right now (the seat-flicker probe).
-        public static string SeatWhy(uint net, int idx)
-        {
-            if (!ByNet.TryGetValue(net, out var e)) return "{\"why\":\"net absent from ByNet\"}";
-            if (!Resolve(e)) return "{\"why\":\"Resolve failed (dormant)\"}";
-            if (e.Root == null) return "{\"why\":\"root null\"}";
-            var seats = e.Root.transform.root.GetComponentsInChildren<seatscript>(true);
-            return "{\"why\":\"idx " + idx + "/" + seats.Length + "\"}";
-        }
-
         public static string EntItems(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e)) return "{\"error\":\"no such object\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e)) return "{\"error\":\"no such object\"}";
             Resolve(e);
             var rows = new List<string>();
             var ci = System.Globalization.CultureInfo.InvariantCulture;
@@ -1929,7 +1612,7 @@ namespace TLDRevamp.Net
         /// (i-th part condition over the group), `usable <i> <slide>`.
         public static string EntPoke(uint net, string what, int i, float v)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             bool asPlayer = what.StartsWith("p:");   // end the change the way a player's interaction does (the game's sync points)
             if (asPlayer) what = what.Substring(2);
             int k = 0;
@@ -1964,7 +1647,7 @@ namespace TLDRevamp.Net
             }
             if (best == null) return "{\"error\":\"nothing within " + r + " m\"}";
             uint net = 0;
-            foreach (var e in ByNet.Values) if (e.Root != null && e.Root.gameObject == best.gameObject) net = e.NetId;
+            foreach (var e in ObservedEntities.Values) if (e.Root != null && e.Root.gameObject == best.gameObject) net = e.NetId;
             pl.Pickup(best, best.transform.position);
             return "{\"picked\":" + Json.Str(best.name) + ",\"net\":" + net + "}";
         }
@@ -1974,7 +1657,7 @@ namespace TLDRevamp.Net
         /// its switches (usable turn states).
         public static string Lights(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             int on = 0, all = 0;
             foreach (var l in e.Root.GetComponentsInChildren<Light>(true)) { all++; if (l.enabled && l.gameObject.activeInHierarchy && l.intensity > 0f) on++; }
             var us = new List<string>();
@@ -1985,7 +1668,7 @@ namespace TLDRevamp.Net
         /// Test (bridge `mp turn <net>`): the object's first switch turned as a player's use key does (usablescript.Turn).
         public static string TurnSwitch(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             var u = e.Root.GetComponentInChildren<usablescript>(true);
             if (u == null) return "{\"error\":\"no switch\"}";
             u.Turn();
@@ -1996,7 +1679,7 @@ namespace TLDRevamp.Net
         /// UnPhysicsLock, as picking it up does), set down dx/dz from where it is, on the ground.
         public static string TakeOut(uint net, float dx, float dz)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             if (e.Proxy) return "{\"error\":\"not the owner\"}";
             var p = e.Root.P;
             string from = p != null && p.physlock != null ? p.physlock.transform.root.name : "";
@@ -2009,7 +1692,7 @@ namespace TLDRevamp.Net
         /// game's picked-up layer.
         public static string WheelsInfo(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var sb = new System.Text.StringBuilder("{\"pickedUpLayer\":" + mainscript.pickedUpLayer + ",\"wheels\":[");
             int i = 0;
@@ -2018,7 +1701,7 @@ namespace TLDRevamp.Net
                 var g = mainscript.GlobalFromUnityPos(w.transform.position);
                 bool grounded = w.GetGroundHit(out var hit);
                 uint hitNet = 0;
-                if (grounded && hit.collider != null) foreach (var o in ByNet.Values) if (o.Root != null && hit.collider.transform.root == o.Root.transform.root) { hitNet = o.NetId; break; }
+                if (grounded && hit.collider != null) foreach (var o in ObservedEntities.Values) if (o.Root != null && hit.collider.transform.root == o.Root.transform.root) { hitNet = o.NetId; break; }
                 if (i++ > 0) sb.Append(',');
                 sb.Append("{\"pos\":[" + g.x.ToString("F2", ic) + "," + g.y.ToString("F2", ic) + "," + g.z.ToString("F2", ic) + "],\"layer\":" + w.gameObject.layer +
                           ",\"ignoresPickedUp\":" + (Physics.GetIgnoreLayerCollision(w.gameObject.layer, mainscript.pickedUpLayer) ? "true" : "false") +
@@ -2032,7 +1715,7 @@ namespace TLDRevamp.Net
         /// the item.
         public static string WheelOver(uint carNet, uint itemNet)
         {
-            if (!ByNet.TryGetValue(carNet, out var c) || c.Root == null || !ByNet.TryGetValue(itemNet, out var it) || it.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(carNet, out var c) || c.Root == null || !ObservedEntities.TryGetValue(itemNet, out var it) || it.Root == null) return "{\"error\":\"no such object here\"}";
             if (c.Proxy) return "{\"error\":\"not the owner\"}";
             var w = c.Root.transform.root.GetComponentInChildren<WheelCollider>();
             if (w == null) return "{\"error\":\"no wheel\"}";
@@ -2049,7 +1732,7 @@ namespace TLDRevamp.Net
         /// Test: this machine's game destroys a copy on its own, as streaming races do.
         public static string TestLoseCopy(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             if (!e.Proxy) return "{\"error\":\"not a copy\"}";
             UnityEngine.Object.Destroy(e.Root.gameObject);
             return "{\"lost\":" + net + "}";
@@ -2057,7 +1740,7 @@ namespace TLDRevamp.Net
 
         public static string MoveItem(uint net, float dx, float dz, bool onGround = false)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such object here\"}";
             if (e.Proxy) return "{\"error\":\"not the owner\"}";
             var t = e.Root.transform;
             t.position += new Vector3(dx, 1f, dz);
@@ -2082,7 +1765,7 @@ namespace TLDRevamp.Net
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || pl.pickedUp == null) return "{\"error\":\"holding nothing\"}";
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
+            if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no such object here\"}";
             Transform target = e.Root.transform;
             foreach (var st in e.Root.transform.root.GetComponentsInChildren<seatscript>(true)) if (!st.driverSeat0 && st.mainseat == null) { target = st.transform; break; }
             var from = pl.Th.position;
@@ -2166,21 +1849,6 @@ namespace TLDRevamp.Net
             return (int)ms.Length;
         }
 
-        /// Nearest car to the local player (for scenarios).
-        public static tosaveitemscript NearestCar()
-        {
-            if (savedatascript.s == null || mainscript.s == null || mainscript.s.player == null) return null;
-            var p = mainscript.s.player.transform.position;
-            tosaveitemscript best = null; float bd = float.MaxValue;
-            foreach (var it in savedatascript.s.items.Values)
-                if (it != null && it.car != null && it.transform.parent == null)
-                {
-                    float d = (it.transform.position - p).sqrMagnitude;
-                    if (d < bd) { bd = d; best = it; }
-                }
-            return best;
-        }
-
         /// `wheelinfo [r]`: every car within r m — per wheel the suspension as the network sends it: travel (collider origin
         /// → wheel pose along its up; the state packs it into ±25 cm), the collider's center offset and suspension distance.
         public static string WheelInfo(float r)
@@ -2193,7 +1861,7 @@ namespace TLDRevamp.Net
             {
                 if ((car.transform.position - p).magnitude > r) continue;
                 if (!first) sb.Append(','); first = false;
-                Ent ce = null; foreach (var x in ByNet.Values) if (x.Root != null && x.Root.car == car && x.PartIndex < 0) { ce = x; break; }
+                Ent ce = null; foreach (var x in ObservedEntities.Values) if (x.Root != null && x.Root.car == car && x.PartIndex < 0) { ce = x; break; }
                 var gp = mainscript.GlobalFromUnityPos(car.transform.position);
                 sb.Append("{\"name\":").Append(Json.Str(car.name)).Append(",\"net\":").Append(ce != null ? ce.NetId : 0)
                   .Append(",\"proxy\":").Append(ce != null && ce.Proxy ? "true" : "false")

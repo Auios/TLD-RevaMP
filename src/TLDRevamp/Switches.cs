@@ -726,9 +726,10 @@ namespace TLDRevamp
                 string value;
                 try
                 {
-                    int dot = s.Path.LastIndexOf('.');
-                    var t = Reflect.FindType(s.Path.Substring(0, dot));
-                    var f = t?.GetField(s.Path.Substring(dot + 1), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                    string path = Reflect.MemberPath(s.Path);
+                    int dot = path.LastIndexOf('.');
+                    var t = Reflect.FindType(path.Substring(0, dot));
+                    var f = t?.GetField(path.Substring(dot + 1), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
                     value = f == null ? "(missing)" : Convert.ToString(f.GetValue(null), System.Globalization.CultureInfo.InvariantCulture);
                 }
                 catch (Exception e) { value = "(" + e.GetType().Name + ")"; }

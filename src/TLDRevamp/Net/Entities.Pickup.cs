@@ -11,7 +11,7 @@ namespace TLDRevamp.Net
         }
 
         private static string ClaimName(ClaimReason reason) => "claim: " + reason.ToString();
-        private static void WriteClaim(NetWriter w, uint net, ClaimReason reason)
+        internal static void WriteClaim(NetWriter w, uint net, ClaimReason reason)
         {
             w.U8(Claim); w.U32(net); w.U8((byte)reason);
         }

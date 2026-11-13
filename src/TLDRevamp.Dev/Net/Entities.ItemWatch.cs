@@ -1,3 +1,4 @@
+using static TLDRevamp.Net.Entities;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,8 +11,14 @@ namespace TLDRevamp.Net
     /// within reach that has no collider the pickup ray hits, or a hidden object in front of it that takes the ray. Not checked: an item
     /// in a hand (anyone's), stored, fitted, a car, or a ghost the mod made on purpose (taken out of a container, a car's
     /// cargo). Each item is reported once: an event (item-untargetable) and an automatic mark (Entities.AutoMark).
-    public static partial class Entities
+    internal static class EntityItemWatch
     {
+        private sealed class WatchedPart
+        {
+            internal bool Done;
+            internal float LookAt = -1f;
+            internal readonly List<Renderer> Renderers = new List<Renderer>();
+        }
         public static bool ItemWatch = true;   // A/B: false = no checks of loose items
         public static long ItemWatchFlags;
         public static string ItemWatchLast = "";
@@ -21,15 +28,6 @@ namespace TLDRevamp.Net
         private static readonly List<Collider> _iwCols = new List<Collider>();
 
         private struct ItemReachInfo { public bool Visible, Targetable; public int Cols, Live, Pickup, Held; }
-
-        private static bool Loose(Ent e, fpscontroller pl) =>
-            e.Root != null && e.Root.gameObject.activeInHierarchy && e.Root.P != null && e.Root.car == null
-            && (e.Root.attachable == null || !e.Root.attachable.attached) && !e.Held && !e.Stored && !e.ReleaseGhost && !e.CargoGhost
-            && !InLocalHands(pl, e);
-
-        /// In the local player's hands: picked up, or held in hand (a lamp while seated: inHandP).
-        private static bool InLocalHands(fpscontroller pl, Ent e) =>
-            pl != null && e.Root != null && e.Root.P != null && (pl.pickedUp == e.Root.P || pl.inHandP == e.Root.P);
 
         private static ItemReachInfo ItemReach(Ent e, fpscontroller pl, WatchedPart w)
         {
@@ -51,15 +49,15 @@ namespace TLDRevamp.Net
         }
 
         /// From PartWatchScan: the loose items near the player.
-        private static void ItemWatchScan(fpscontroller pl, float now)
+        internal static void ItemWatchScan(fpscontroller pl, float now)
         {
             _nearItems.Clear();
             if (!ItemWatch) return;
             var at = pl.transform.position; float r2 = PartWatchNearbyM * PartWatchNearbyM;
-            foreach (var e in ByNet.Values)
+            foreach (var e in ObservedEntities.Values)
                 if (e.Root != null && (e.Root.transform.position - at).sqrMagnitude <= r2 && Loose(e, pl)) _nearItems.Add(e);
             List<uint> dead = null;
-            foreach (var k in _itemWatched.Keys) if (!ByNet.ContainsKey(k)) (dead ?? (dead = new List<uint>())).Add(k);
+            foreach (var k in _itemWatched.Keys) if (!ObservedEntities.ContainsKey(k)) (dead ?? (dead = new List<uint>())).Add(k);
             if (dead != null) foreach (var k in dead) _itemWatched.Remove(k);
             // their meshes, for the crosshair check (an item that can't be picked up at all is item health's: CheckPickup)
             foreach (var e in _nearItems)
@@ -70,7 +68,7 @@ namespace TLDRevamp.Net
         }
 
         /// From PartWatchLook: the loose item under the crosshair.
-        private static void ItemWatchLook(fpscontroller pl, float now)
+        internal static void ItemWatchLook(fpscontroller pl, float now)
         {
             if (_nearItems.Count == 0) return;
             var cam = pl.Cam.transform; var ray = new Ray(cam.position, cam.forward);

@@ -6,7 +6,7 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
-        private struct PoiKey : IEquatable<PoiKey>
+        internal struct PoiKey : IEquatable<PoiKey>
         {
             public int Gen, U; public double X, Y, Z;
             public bool Equals(PoiKey o) => Gen == o.Gen && U == o.U && X == o.X && Y == o.Y && Z == o.Z;

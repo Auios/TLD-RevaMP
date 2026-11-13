@@ -30,8 +30,6 @@ namespace TLDRevamp.Replay
             public List<Tracked> Objects;
             public int Scene;
             public string File;
-            /// What the world really showed at some samples (the 1:1 check, `replay truth`); null when not asked for.
-            public List<ReplayTruth> Truth;
         }
 
         private static ReplayRecording _rec;
@@ -70,7 +68,7 @@ namespace TLDRevamp.Replay
             _player = p; _scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
             _start = Time.realtimeSinceStartupAsDouble; _next = _start; _nextScan = _start; _scans = 0;
             _ticks = _calls = _max = _gcTicks = _maxGc = 0; _maxAt = 0; Array.Clear(_maxPhase, 0, 4); _failed = false; _stopReason = "";
-            ResetTruth();
+            DevHooks.ReplayCaptureStarted?.Invoke();
             var me = new ReplayPlayer { Local = true };
             if (Net.PlayerLook.LocalOutfit(out int sel, out bool[] en, out Color[] col)) Outfit(me, sel, en, col);
             _rec.Players.Add(me);
@@ -90,8 +88,8 @@ namespace TLDRevamp.Replay
             foreach (var p in rec.Players) foreach (var s in p.Samples) if (s.T > rec.Duration) rec.Duration = s.T;
             foreach (var o in rec.Objects) if (o.Track.Keys.Count > 0) rec.Duration = Math.Max(rec.Duration, o.Track.Keys[o.Track.Keys.Count - 1].T);
             if (Last != null && Last.Objects != null && !ReplayViewer.Uses(Last)) foreach (var o in Last.Objects) o.Look?.Dispose();
-            Last = new Take { Recording = rec, Objects = new List<Tracked>(_objects), Scene = _scene, Truth = _truth.Count > 0 ? new List<ReplayTruth>(_truth) : null };
-            _truth.Clear();
+            Last = new Take { Recording = rec, Objects = new List<Tracked>(_objects), Scene = _scene };
+            DevHooks.ReplayCaptureStopped?.Invoke(Last);
             _objects.Clear(); _byInstance.Clear(); _byRoot.Clear(); _remoteIndex.Clear();
             _stopReason = reason;
             string folder = Folder, name = ReplayFiles.Name(DateTime.Now), path = Path.Combine(folder, name);
@@ -131,7 +129,7 @@ namespace TLDRevamp.Replay
                 long d = Stopwatch.GetTimestamp();
                 Pieces(t);
                 long e = Stopwatch.GetTimestamp();
-                Truth(t, now);
+                DevHooks.ReplaySample?.Invoke(t, now);
                 _phase[0] = b - a; _phase[1] = c - b; _phase[2] = d - c; _phase[3] = e - d;
                 _rec.Duration = t;
                 if (_rec.Full) Stop("the recording is full");
@@ -256,7 +254,7 @@ namespace TLDRevamp.Replay
 
         private static readonly long CaptureBudget = Stopwatch.Frequency * 3 / 1000;   // 3 ms
 
-        private static float Nearest(Vector3 p)
+        internal static float Nearest(Vector3 p)
         {
             float best = float.MaxValue;
             foreach (var q in _playerPositions) { float d = (p - q).sqrMagnitude; if (d < best) best = d; }

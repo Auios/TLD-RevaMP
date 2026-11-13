@@ -1,10 +1,12 @@
+using static TLDRevamp.Net.EntityFakeInput;
+using static TLDRevamp.Net.Entities;
 using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityItemCheck
     {
         private static pickupable _itemCheckHold;
         private static uint _itemCheckNet;
@@ -52,7 +54,7 @@ namespace TLDRevamp.Net
         /// Bridge `mp itemcheck net [hold|release|launch]`: a sustained real pickup, its release, and body diagnostics.
         public static string ItemCheck(uint net, string action)
         {
-            if (!InSession || !ByNet.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no loaded entity\"}";
+            if (!InSession || !ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no loaded entity\"}";
             TelemetryTouch(net);
             var pl = mainscript.s.player;
             var limbs = Limbs(e);

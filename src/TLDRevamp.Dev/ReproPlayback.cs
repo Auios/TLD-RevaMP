@@ -26,15 +26,15 @@ namespace TLDRevamp
             }
             if (a[0] == "end")
             {
-                if (Active) { TestSafety.BlockAutoSave = _oldSave; Application.runInBackground = _oldBackground; Net.Entities.ReproReleaseHeld(); }
+                if (Active) { TestSafety.BlockAutoSave = _oldSave; Application.runInBackground = _oldBackground; Net.EntityReproPlayback.ReproReleaseHeld(); }
                 Active = false; return Command("status");
             }
             if (!Active) return "{\"error\":\"repro arm first\"}";
-            if (a[0] == "resolve" && a.Length == 5) return Net.Entities.ReproResolve(int.Parse(a[1], CultureInfo.InvariantCulture), N(a[2]), N(a[3]), N(a[4]));
-            if (a[0] == "check" && a.Length == 2) return Net.Entities.ReproCheck(uint.Parse(a[1], CultureInfo.InvariantCulture));
+            if (a[0] == "resolve" && a.Length == 5) return Net.EntityReproPlayback.ReproResolve(int.Parse(a[1], CultureInfo.InvariantCulture), N(a[2]), N(a[3]), N(a[4]));
+            if (a[0] == "check" && a.Length == 2) return Net.EntityReproPlayback.ReproCheck(uint.Parse(a[1], CultureInfo.InvariantCulture));
             if (a[0] == "peer" && a.Length == 1) return Peer();
-            if (a[0] == "players" && a.Length == 1) return Net.RemotePlayers.ReproState();
-            if (a[0] == "poicheck" && a.Length == 6) return Net.Entities.ReproPoiCheck(int.Parse(a[1], CultureInfo.InvariantCulture), N(a[2]), N(a[3]), N(a[4]), int.Parse(a[5], CultureInfo.InvariantCulture));
+            if (a[0] == "players" && a.Length == 1) return Net.RemoteReproPlayback.ReproState();
+            if (a[0] == "poicheck" && a.Length == 6) return Net.EntityReproPlayback.ReproPoiCheck(int.Parse(a[1], CultureInfo.InvariantCulture), N(a[2]), N(a[3]), N(a[4]), int.Parse(a[5], CultureInfo.InvariantCulture));
             if (a[0] == "act" && a.Length == 17)
             {
                 var r = new ReproRow { Kind = (ReproKind)int.Parse(a[1], CultureInfo.InvariantCulture), Net = uint.Parse(a[2], CultureInfo.InvariantCulture),
@@ -45,7 +45,7 @@ namespace TLDRevamp
                 if (r.Kind == ReproKind.Mark) return ReplayMark();
                 if (r.Kind == ReproKind.Network) return NetworkConditions.Apply(new NetworkSimulation { Latency = (int)r.X, Jitter = (int)r.Y, Loss = (float)r.A, Duplication = (float)r.B, Reorder = (float)r.C, SendOnly = r.D == 1 });
                 bool was = Net.Entities.TestAsPlayer;
-                try { Net.Entities.TestAsPlayer = true; return Net.Entities.ReproAct(r); }
+                try { Net.Entities.TestAsPlayer = true; return Net.EntityReproPlayback.ReproAct(r); }
                 finally { Net.Entities.TestAsPlayer = was; }
             }
             return "{\"error\":\"repro [start|stop|status|arm|end|resolve prefab x y z|check net|peer|act row]\"}";

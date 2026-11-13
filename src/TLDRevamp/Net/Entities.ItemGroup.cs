@@ -19,7 +19,7 @@ namespace TLDRevamp.Net
             return null;
         }
 
-        private static bool PartIsProxy(attachablescript at)
+        internal static bool PartIsProxy(attachablescript at)
         {
             if (CarriedFar(at, out var carrier)) return carrier.Proxy;
             var e = at != null ? EditEntityOf(at.tosave) : null;
@@ -68,7 +68,7 @@ namespace TLDRevamp.Net
         }
 
         /// The part's owner handles removal, even when its slot sits on another player's frame.
-        private static bool RequestDetach(attachablescript at)
+        internal static bool RequestDetach(attachablescript at)
         {
             var ts = at != null ? at.tosave : null;
             var e = EditEntityOf(ts);

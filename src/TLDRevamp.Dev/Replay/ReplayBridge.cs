@@ -38,9 +38,9 @@ namespace TLDRevamp.Replay
                 case "stop": return ReplayRecorder.Stop();
                 case "truth":
                     if (!Number(a, out double every) || every < 0 || every > 60) return "{\"error\":\"replay truth <seconds between truth frames, 0 off>\"}";
-                    ReplayRecorder.TruthEvery = (float)every;
+                    ReplayTruthCapture.TruthEvery = (float)every;
                     return "{\"truthEvery\":" + Json.Num(every, "F2") + "}";
-                case "verify": return ReplayViewer.Verify();
+                case "verify": return ReplayTruthVerify.Verify();
                 case "play":
                     if (a.Length == 3 && a[2] == "disk") return ReplayViewer.PlayFile(a[1], fromDisk: true);
                     return a.Length == 2 ? ReplayViewer.PlayFile(a[1]) : a.Length == 1 ? ReplayViewer.PlayLatest() : "{\"error\":\"replay play [name [disk]]\"}";

@@ -34,7 +34,7 @@ namespace TLDRevamp.Net
         }
 
         /// The game's own lookup (syncScript.RecUsable): generator → chunk → poi → usable index.
-        private static usablescript PoiUsableOf(PoiKey k)
+        internal static usablescript PoiUsableOf(PoiKey k)
         {
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
             if (map == null || map.poiGens == null || k.Gen < 0 || k.Gen >= map.poiGens.Count || map.poiGens[k.Gen] == null) return null;

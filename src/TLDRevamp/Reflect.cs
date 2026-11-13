@@ -20,6 +20,27 @@ namespace TLDRevamp
         private static Dictionary<string, Type> _types;
         private static int _assemblyCount;
 
+        private static readonly Dictionary<string, string> _memberAliases = new Dictionary<string, string>();
+
+        /// Keep existing bridge paths when an optional plugin takes ownership of a member.
+        internal static void RegisterMovedMembers(Type original, params Type[] owners)
+        {
+            foreach (var type in owners)
+                foreach (var member in type.GetMembers(All | BindingFlags.DeclaredOnly))
+                {
+                    if (!(member is FieldInfo || member is PropertyInfo || member is MethodInfo) || original.GetMember(member.Name, All).Length != 0) continue;
+                    _memberAliases[original.FullName + "." + member.Name] = type.FullName + "." + member.Name;
+                    _memberAliases[original.Name + "." + member.Name] = type.FullName + "." + member.Name;
+                }
+        }
+
+        internal static string MemberPath(string path)
+        {
+            for (int end = path.Length; end > 0; end = path.LastIndexOf('.', end - 1))
+                if (_memberAliases.TryGetValue(path.Substring(0, end), out string target)) return target + path.Substring(end);
+            return path;
+        }
+
         public static Type FindType(string name)
         {
             var asms = AppDomain.CurrentDomain.GetAssemblies();
@@ -45,6 +66,7 @@ namespace TLDRevamp
         /// Resolves the longest type prefix, then walks members. Returns (owner instance, member, owner type).
         private static void Resolve(string path, out object owner, out MemberInfo member, out Type ownerType)
         {
+            path = MemberPath(path);
             var parts = path.Split('.');
             Type type = null;
             int i = parts.Length - 1;
@@ -108,6 +130,7 @@ namespace TLDRevamp
         /// (owner, member) for every member step of the path; owners of value-type steps are the boxed copies.
         private static List<(object owner, MemberInfo member)> ResolveChain(string path)
         {
+            path = MemberPath(path);
             var parts = path.Split('.');
             Type type = null;
             int i = parts.Length - 1;
@@ -136,6 +159,7 @@ namespace TLDRevamp
         /// Picks the overload whose required parameter count fits the given args; missing optional args use defaults.
         public static string Call(string path, string[] args)
         {
+            path = MemberPath(path);
             int dot = path.LastIndexOf('.');
             string ownerPath = path.Substring(0, dot), name = path.Substring(dot + 1);
             object owner = null;

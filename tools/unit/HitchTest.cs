@@ -23,7 +23,7 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
-        private sealed class Ent
+        internal sealed class Ent
         {
             internal uint NetId, Epoch = 1; internal int OwnerId, HitchAuthorityOwner = -1; internal bool Proxy, HitchWaiting, SentAtRest, HitchHasVelocity;
             internal HashSet<int> Split;

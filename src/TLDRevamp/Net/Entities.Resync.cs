@@ -14,7 +14,7 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         public const byte Resync = 31;
-        private const uint CanonBase = 0xF0000000u;
+        internal const uint CanonBase = 0xF0000000u;
         public static float ResyncInterval = 3f, ResyncBudgetMs = 0.5f;
         public static long ResyncsSent, ResyncsApplied, ResyncItemsLoaded, ResyncSkipped, PartStatesChanged, ResyncBytes, ResyncItemsSent, ResyncHeld;
         public static double ResyncCaptureMsMax, ResyncCaptureMsTotal;
@@ -89,14 +89,14 @@ namespace TLDRevamp.Net
             SessionLog.Event("resync-sent", e.NetId, from: MyId, count: changed, epoch: e.Epoch);
         }
 
-        private static Dictionary<uint, uint> CanonMap(List<tosaveitemscript> items)
+        internal static Dictionary<uint, uint> CanonMap(List<tosaveitemscript> items)
         {
             var map = new Dictionary<uint, uint>();
             for (int i = 0; i < items.Count; i++) if (items[i] != null) map[items[i].idInSave] = CanonBase + (uint)i;
             return map;
         }
 
-        private static byte[] StateRecord(itemDataClass captured, Dictionary<uint, uint> map, out ulong hash, bool withCar = true)
+        internal static byte[] StateRecord(itemDataClass captured, Dictionary<uint, uint> map, out ulong hash, bool withCar = true)
         {
             var d = StateOnly(captured);
             if (!withCar) d.car = new List<save_carscript>();   // the driver's controls: never someone else's edit
@@ -317,7 +317,7 @@ namespace TLDRevamp.Net
         /// Only the lists ApplyState uses. The rest would make every item look changed on every tick while its car
         /// moves — attached parts' local positions jitter by micrometres on their joints, dashboard needles move — and
         /// none of it is applied (poses and wheels stream on their own).
-        private static itemDataClass StateOnly(itemDataClass d)
+        internal static itemDataClass StateOnly(itemDataClass d)
         {
             var o = new itemDataClass();
             o.partconditions = d.partconditions; o.tanks = d.tanks; o.usable = d.usable; o.colors = d.colors; o.door_rots = d.door_rots;

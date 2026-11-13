@@ -302,7 +302,7 @@ namespace TLDRevamp.Net
         }
 
         // ---------------------------------------------------------------- helpers
-        private static Ent EntOfRoot(Transform root)
+        internal static Ent EntOfRoot(Transform root)
         {
             var own = PlacedOfTransform(root);
             if (own != null) return own;

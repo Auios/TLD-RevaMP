@@ -52,7 +52,7 @@ namespace TLDRevamp.Net
         private static readonly NetWriter WL = new NetWriter();
 
         /// The save's registered order includes linked controls outside the item's transform hierarchy.
-        private static usablescript[] ItemUsables(tosaveitemscript it)
+        internal static usablescript[] ItemUsables(tosaveitemscript it)
         {
             if (_usableHierarchy.TryGetValue(it, out var h))
             {

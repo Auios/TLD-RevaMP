@@ -26,7 +26,7 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<uint, HitchAuthority.Transfer> _hitchTransfers = new Dictionary<uint, HitchAuthority.Transfer>();
         private static readonly Dictionary<uint, HitchOp> _hitchCommands = new Dictionary<uint, HitchOp>();
 
-        private static bool HitchTrailer(Ent e) => e != null && e.Root != null && e.Root.attachable != null && e.Root.attachable.utanfuto != null;
+        internal static bool HitchTrailer(Ent e) => e != null && e.Root != null && e.Root.attachable != null && e.Root.attachable.utanfuto != null;
         private static bool HitchTrailer(SEnt e)
         {
             if (e.Hitch) return true;
@@ -51,7 +51,7 @@ namespace TLDRevamp.Net
         private static HitchOp ReadHitch(NetReader r) => new HitchOp { Trailer = r.U32(), Car = r.U32(), TrailerEpoch = r.U32(), CarEpoch = r.U32(),
             Slot = r.VarI32(), From = r.VarI32(), Connect = r.Bool(), ReleaseBrake = r.Bool() };
 
-        private static void RequestHitch(Ent tr, Ent car, partslotscript slot, bool connect, bool releaseBrake = false)
+        internal static void RequestHitch(Ent tr, Ent car, partslotscript slot, bool connect, bool releaseBrake = false)
         {
             var op = new HitchOp { Trailer = tr.NetId, Car = car.NetId, TrailerEpoch = tr.Epoch, CarEpoch = car.Epoch,
                 Slot = car.Root.partslotscripts.IndexOf(slot), From = MyId, Connect = connect, ReleaseBrake = releaseBrake };

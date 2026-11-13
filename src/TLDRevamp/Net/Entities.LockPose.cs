@@ -93,7 +93,7 @@ namespace TLDRevamp.Net
                 }
         }
 
-        private static mountStuff[] LockMounts(tosaveitemscript item) =>
+        internal static mountStuff[] LockMounts(tosaveitemscript item) =>
             ContainerMounts.GetValue(item, it => new MountCache {
                 Mounts = System.Array.FindAll(it.GetComponentsInChildren<mountStuff>(true), m => m.parentTosave == it)
             }).Mounts;

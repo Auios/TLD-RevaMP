@@ -66,7 +66,7 @@ namespace TLDRevamp.Net
             if (!InSession) return;
             HitchTick(); EditBackTick();
             HitchPhysicsTelemetry();
-            TraceTick();
+            DevHooks.EntityTrace?.Invoke();
             TelemetryPhysicsTick();
             float dt = Time.fixedDeltaTime;
             CrashHoldTick();
@@ -94,7 +94,7 @@ namespace TLDRevamp.Net
             BodyNearTick(dt);    // the same for loose items the local player walks into (Entities.BodyPush)
             ItemNearTick(dt);    // and for loose items a moving item of ours is about to hit (Entities.ItemPush)
             RabbitNearTick(dt);
-            WatchTick();
+            DevHooks.EntityWatch?.Invoke();
             if (CopiesMoveByBody) BodyMotionTick(dt);
             else foreach (var e in ByNet.Values) if (e.MovedByBody) StopBodyMotion(e);   // switched off: back to transform writes
             StandInterpTick();

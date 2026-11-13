@@ -1,3 +1,4 @@
+using static TLDRevamp.Net.Entities;
 using HarmonyLib;
 using UnityEngine;
 
@@ -5,7 +6,7 @@ namespace TLDRevamp.Net
 {
     // Test tooling for held-item lag (bridge `mp fakeinput`, `mp myhands`): mouse input the game reads as if the player
     // gave it, and the local player's hand targets.
-    public static partial class Entities
+    internal static class EntityFakeInput
     {
         // Test (bridge `mp fakeinput mmb rmb lookX lookY scroll seconds`): mouse input the game reads as if the player gave it
         // (turn, rotate or move a held item with the middle/right button, scroll), for a while.
@@ -40,7 +41,7 @@ namespace TLDRevamp.Net
         }
 
         /// `mp itemcheck <net> grab`: the point of the item's colliders nearest the local camera.
-        private static bool GrabPoint(Ent e, out Vector3 at)
+        internal static bool GrabPoint(Ent e, out Vector3 at)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var cam = pl != null && pl.Cam != null ? pl.Cam.transform : null;
