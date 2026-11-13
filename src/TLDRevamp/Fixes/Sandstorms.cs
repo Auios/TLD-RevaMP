@@ -54,7 +54,7 @@ namespace TLDRevamp.Fixes
         private static readonly Dictionary<sandstormscript, bool> _offBiome = new Dictionary<sandstormscript, bool>();
         private static readonly Dictionary<sandstormscript, float> _bornAt = new Dictionary<sandstormscript, float>(), _lifeS = new Dictionary<sandstormscript, float>();
 
-        private static readonly AccessTools.FieldRef<sandstormscript, float> Dist = AccessTools.FieldRefAccess<sandstormscript, float>("currentDistance");
+        private static readonly AccessTools.FieldRef<sandstormscript, float> Dist = GameLookups.FieldRefAccess<sandstormscript, float>(typeof(sandstormscript), "currentDistance");
 
         /// The world's spawner: made once a world has its main script (before a save's data is set: it fills it in).
         internal static void Ensure()

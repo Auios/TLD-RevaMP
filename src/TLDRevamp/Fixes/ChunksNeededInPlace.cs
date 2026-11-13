@@ -28,20 +28,22 @@ namespace TLDRevamp.Fixes
         public static int Patched;
         private static readonly HashSet<Vector3d> Seen = new HashSet<Vector3d>();
 
-        private static readonly MethodInfo Original = AccessTools.Method(typeof(mapSettingScript), nameof(mapSettingScript.GetChunksNeeded));
+        private static readonly MethodInfo Original = GameLookups.Method(typeof(mapSettingScript), nameof(mapSettingScript.GetChunksNeeded));
         private static readonly MethodInfo Replacement = AccessTools.Method(typeof(ChunksNeededInPlace), nameof(Get));
         private static double[] _keys = new double[64];
 
         private static IEnumerable<MethodBase> TargetMethods()
         {
-            yield return AccessTools.Method(typeof(roadGenScript), nameof(roadGenScript.UpdChunksNeeded), new System.Type[0]);
-            yield return AccessTools.Method(typeof(objGenScript.categoryClass), nameof(objGenScript.categoryClass.UpdChunksNeeded));
+            yield return GameLookups.Method(typeof(roadGenScript), nameof(roadGenScript.UpdChunksNeeded), new System.Type[0]);
+            yield return GameLookups.Method(typeof(objGenScript.categoryClass), nameof(objGenScript.categoryClass.UpdChunksNeeded));
         }
 
         [HarmonyTranspiler]
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, MethodBase original)
         {
-            var field = AccessTools.Field(original.DeclaringType, "chunksNeeded");
+            var field = original.DeclaringType == typeof(roadGenScript)
+                ? GameLookups.Field(typeof(roadGenScript), "chunksNeeded")
+                : GameLookups.Field(typeof(objGenScript.categoryClass), "chunksNeeded");
             foreach (var ins in instructions)
             {
                 if (ins.Calls(Original))

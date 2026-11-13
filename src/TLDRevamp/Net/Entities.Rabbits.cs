@@ -40,11 +40,11 @@ namespace TLDRevamp.Net
 
         private const byte RfRoar = 0, RfAttack = 1, RfIdle = 2, RfDie = 3, RfEyes = 4, RfEars = 5, RfEvil = 6;
 
-        private static readonly AccessTools.FieldRef<nyulscript, float> NyLastRoar = AccessTools.FieldRefAccess<nyulscript, float>("lastRoarTime");
-        private static readonly AccessTools.FieldRef<nyulscript, float> NyLastAttack = AccessTools.FieldRefAccess<nyulscript, float>("lastAttackTime");
-        private static readonly AccessTools.FieldRef<nyulscript, float> NyLastSee = AccessTools.FieldRefAccess<nyulscript, float>("lastSeeTarget");
-        private static readonly AccessTools.FieldRef<nyulscript, bool> NyEvil = AccessTools.FieldRefAccess<nyulscript, bool>("alreadyEvil");
-        private static readonly AccessTools.FieldRef<nyulscript, GameObject> NyIdleGo = AccessTools.FieldRefAccess<nyulscript, GameObject>("GIdleSound");
+        private static readonly AccessTools.FieldRef<nyulscript, float> NyLastRoar = GameLookups.FieldRefAccess<nyulscript, float>(typeof(nyulscript), "lastRoarTime");
+        private static readonly AccessTools.FieldRef<nyulscript, float> NyLastAttack = GameLookups.FieldRefAccess<nyulscript, float>(typeof(nyulscript), "lastAttackTime");
+        private static readonly AccessTools.FieldRef<nyulscript, float> NyLastSee = GameLookups.FieldRefAccess<nyulscript, float>(typeof(nyulscript), "lastSeeTarget");
+        private static readonly AccessTools.FieldRef<nyulscript, bool> NyEvil = GameLookups.FieldRefAccess<nyulscript, bool>(typeof(nyulscript), "alreadyEvil");
+        private static readonly AccessTools.FieldRef<nyulscript, GameObject> NyIdleGo = GameLookups.FieldRefAccess<nyulscript, GameObject>(typeof(nyulscript), "GIdleSound");
 
         private sealed class RabSent { public byte Flags; public byte Run; public Vector3d Interest; public bool Seen, Audience; public float SentAt; public uint Epoch; public byte RawFlags, RawRun; public Vector3 RawInterest; public float RawAt = -10f; }
         private static readonly Dictionary<nyulscript, RabSent> RabLastSent = new Dictionary<nyulscript, RabSent>();
@@ -168,7 +168,7 @@ namespace TLDRevamp.Net
             [HarmonyTargetMethods]
             private static IEnumerable<System.Reflection.MethodBase> Targets()
             {
-                foreach (var m in typeof(mainscript).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+                foreach (var m in GameLookups.Methods(typeof(mainscript), nameof(mainscript.PlayClipAtPoint), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
                     if (m.Name == nameof(mainscript.PlayClipAtPoint) && m.GetParameters().Length > 0 && m.GetParameters()[0].ParameterType == typeof(AudioClip)) yield return m;
             }
             [HarmonyPostfix] private static void Postfix(AudioClip __0) { if (_voiceOf != null && _voiceClip == null) _voiceClip = __0; }

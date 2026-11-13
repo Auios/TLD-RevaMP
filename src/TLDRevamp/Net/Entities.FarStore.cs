@@ -223,7 +223,7 @@ namespace TLDRevamp.Net
         private static readonly HashSet<string> FarStateLists = new HashSet<string>
             { "partconditions", "tanks", "usable", "colors", "door_rots", "car", "ammo", "ginlamp", "busdoorscript", "painting", "food", "rendszam" };
 
-        private static FieldInfo _idField(object o) => o.GetType().GetField("id", BindingFlags.Public | BindingFlags.Instance);
+        private static FieldInfo _idField(object o) => GameLookups.SaveIdField(typeof(itemDataClass), "id", o.GetType());
 
         /// Is this global point beyond the game's item range of every generation centre here (where the game would
         /// stream an item out)? Then a received object goes to the far store, not into the scene.

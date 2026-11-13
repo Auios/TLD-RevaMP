@@ -17,7 +17,7 @@ namespace TLDRevamp
             if (System.IO.File.Exists(path)) return "{\"error\":" + Json.Str("a save named " + name + " exists") + "}";
             string lastPath = UnityEngine.PlayerPrefs.GetString("LastSavePath"), lastName = UnityEngine.PlayerPrefs.GetString("LastSaveName"),
                    lastVer = UnityEngine.PlayerPrefs.GetString("LastSaveVersion");
-            sc.TextSaveNameInput.GetType().GetProperty("text").SetValue(sc.TextSaveNameInput, name);
+            GameLookups.ReflectionProperty(typeof(TMPro.TextMeshProUGUI), "text", runtimeType: sc.TextSaveNameInput.GetType()).SetValue(sc.TextSaveNameInput, name);
             long b0 = Blocked;
             string err = "";
             try { sc.SaveAndRefresh(); } catch (System.Exception e) { err = e.GetType().Name + ": " + e.Message; }

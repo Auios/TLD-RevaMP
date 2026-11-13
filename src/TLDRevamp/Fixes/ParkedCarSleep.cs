@@ -24,8 +24,8 @@ namespace TLDRevamp.Fixes
         public static long Assigned, Skipped;
         public static bool Patched;
 
-        private static readonly MethodInfo SetVelocity = AccessTools.PropertySetter(typeof(Rigidbody), nameof(Rigidbody.velocity));
-        private static readonly MethodInfo Clamp = AccessTools.Method(typeof(Vector3), nameof(Vector3.ClampMagnitude));
+        private static readonly MethodInfo SetVelocity = GameLookups.PropertySetter(typeof(Rigidbody), nameof(Rigidbody.velocity));
+        private static readonly MethodInfo Clamp = GameLookups.Method(typeof(Vector3), nameof(Vector3.ClampMagnitude));
         private static readonly MethodInfo Helper = AccessTools.Method(typeof(ParkedCarSleep), nameof(Assign));
 
         [HarmonyTranspiler]

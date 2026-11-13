@@ -75,7 +75,7 @@ namespace TLDRevamp
                 if (!(mr is FieldReference fr)) continue;
                 var owner = GameType(game, gameName, fr.DeclaringType);
                 if (owner == null) continue;
-                var fi = owner.GetField(fr.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+                var fi = GameLookups.RuntimeField(owner, fr.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
                 if (fi == null) continue;
                 var swap = OtherSign(fr.FieldType.MetadataType, fi.FieldType);
                 if (swap == null) continue;
@@ -302,7 +302,7 @@ namespace TLDRevamp
             string name = tr.Name;
             for (var d = tr.DeclaringType; d != null; d = d.DeclaringType) name = d.Name + "+" + name;
             if (!string.IsNullOrEmpty(root.Namespace)) name = root.Namespace + "." + name;
-            return game.GetType(name, false);
+            return GameLookups.RuntimeType(game, name, false);
         }
 
         private static Func<TypeSystem, TypeReference> OtherSign(MetadataType mine, Type real)

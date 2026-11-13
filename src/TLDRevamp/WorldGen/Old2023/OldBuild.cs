@@ -157,7 +157,7 @@ namespace TLDRevamp.WorldGen.Old2023
 
         private static void Bind()
         {
-            Type T(string n) => Asm.GetType("Old2023." + n, true);
+            Type T(string n) => GameLookups.RuntimeType(Asm, "Old2023." + n, true);
             Job = T("TerrainGenerationJob");
             Generator = T("TerrainGenerator");
             Manager = T("TerrainManager");
@@ -180,18 +180,18 @@ namespace TLDRevamp.WorldGen.Old2023
 
             // TerrainGenerationJob.randomize(c, edgeOfTheWorld: false, alignToRoad: false, alignToBuilding: false) and
             // VertexColor(c, h): instance methods of a struct, called on a boxed job of the calling thread
-            var randomize = Job.GetMethod("randomize", new[] { typeof(Vector2), typeof(bool), typeof(bool), typeof(bool) });
+            var randomize = GameLookups.RuntimeMethod(Job, "randomize", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, new[] { typeof(Vector2), typeof(bool), typeof(bool), typeof(bool) });
             _randomize = (Func<object, Vector2, float>)StructCall("randomize", randomize, typeof(Func<object, Vector2, float>),
                 typeof(float), new[] { typeof(object), typeof(Vector2) }, il => { il.Emit(OpCodes.Ldc_I4_0); il.Emit(OpCodes.Ldc_I4_0); il.Emit(OpCodes.Ldc_I4_0); });
-            var color = Job.GetMethod("VertexColor", new[] { typeof(Vector2), typeof(float) });
+            var color = GameLookups.RuntimeMethod(Job, "VertexColor", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, new[] { typeof(Vector2), typeof(float) });
             _vertexColor = (Func<object, Vector2, float, Color>)StructCall("VertexColor", color, typeof(Func<object, Vector2, float, Color>),
                 typeof(Color), new[] { typeof(object), typeof(Vector2), typeof(float) }, null);
-            _calcOneRoad = Road.GetMethod("CalcOneRoad", Type.EmptyTypes);
-            _roadStart = Road.GetMethod("FStart", Type.EmptyTypes);
-            _buildingsStart = Buildings.GetMethod("FStart", Type.EmptyTypes);
+            _calcOneRoad = GameLookups.RuntimeMethod(Road, "CalcOneRoad", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, Type.EmptyTypes);
+            _roadStart = GameLookups.RuntimeMethod(Road, "FStart", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, Type.EmptyTypes);
+            _buildingsStart = GameLookups.RuntimeMethod(Buildings, "FStart", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, Type.EmptyTypes);
 
             // The -z road and its buildings are computed on the terrain turned by 180 degrees (OldScene.Mirror)
-            var height = Generator.GetMethod("GetTerrainHeightWorld", new[] { typeof(Vector2), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) });
+            var height = GameLookups.RuntimeMethod(Generator, "GetTerrainHeightWorld", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, new[] { typeof(Vector2), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) });
             new Harmony("tldrevamp.old2023").Patch(height, prefix: new HarmonyMethod(typeof(OldBuild), nameof(MirrorPrefix)));
         }
 
@@ -238,7 +238,7 @@ namespace TLDRevamp.WorldGen.Old2023
             lock (Fields)
             {
                 if (Fields.TryGetValue((t, name), out var f)) return f;
-                f = t.GetField(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                f = GameLookups.RuntimeField(t, name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
                     ?? throw new MissingFieldException(t.FullName, name);
                 Fields[(t, name)] = f;
                 return f;

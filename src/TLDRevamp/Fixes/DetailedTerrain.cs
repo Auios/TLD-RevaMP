@@ -52,7 +52,7 @@ namespace TLDRevamp.Fixes
         private static readonly Dictionary<Material, PushDown> PushDowns = new Dictionary<Material, PushDown>();
 
         private static readonly AccessTools.FieldRef<terrainGenScript, List<Vector3d>> CoordsNeeded =
-            AccessTools.FieldRefAccess<terrainGenScript, List<Vector3d>>("coordsNeeded");
+            GameLookups.FieldRefAccess<terrainGenScript, List<Vector3d>>(typeof(terrainGenScript), "coordsNeeded");
 
         internal static bool On => DistanceM > 0f;
 

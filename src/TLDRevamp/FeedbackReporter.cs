@@ -60,7 +60,7 @@ namespace TLDRevamp
 
             var sb = new System.Text.StringBuilder();
             sb.Append("{\"note\":").Append(TelemetryPrivacy.Str(TelemetryPrivacy.Clean(note))).Append(",\"mod\":").Append(TelemetryPrivacy.Str(Plugin.Version)).Append(",\"build\":").Append(TelemetryPrivacy.Str(Plugin.BuildHash)).Append(",\"commit\":").Append(TelemetryPrivacy.Str(Plugin.CommitLabel)).Append(",\"game\":").Append(TelemetryPrivacy.Str(Plugin.GameBuild))
-              .Append(",\"time\":").Append(TelemetryPrivacy.DateStr()).Append(",\"system\":").Append(SystemJson())
+              .Append(",\"gameLookups\":").Append(GameLookups.Json()).Append(",\"time\":").Append(TelemetryPrivacy.DateStr()).Append(",\"system\":").Append(SystemJson())
               .Append(",\"frame\":").Append(Safe(() => TelemetryPrivacy.Bridge("stats", _t.FrameStatsJson()))).Append(",\"scene\":").Append(Safe(() => TelemetryPrivacy.Numbers(_t.SceneStatsJson(), "focused rigidbodies rigidbodiesAwake renderers monobehaviours scanMs sampleSt playerPos")));
             foreach (var c in StatCmds) sb.Append(",").Append(TelemetryPrivacy.Str(c)).Append(":").Append(Safe(() => TelemetryPrivacy.Bridge(c, ReportSection(c))));
             long snapshotStart = System.Diagnostics.Stopwatch.GetTimestamp();

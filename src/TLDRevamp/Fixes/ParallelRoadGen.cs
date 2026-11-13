@@ -255,14 +255,14 @@ namespace TLDRevamp.Fixes
             IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions)
             {
                 var p = new GamePatch(nameof(ParallelRoadGen) + ".Generate", instructions);
-                var elements = AccessTools.Field(typeof(roadGenScript.roadClass), nameof(roadGenScript.roadClass.roadElements));
+                var elements = GameLookups.Field(typeof(roadGenScript.roadClass), nameof(roadGenScript.roadClass.roadElements));
                 p.Loads(elements, Our(nameof(Elements)), -1);
-                p.Calls(AccessTools.Method(typeof(List<roadGenScript.roadElementClass>), nameof(List<roadGenScript.roadElementClass>.Add)), Our(nameof(AddElement)), 2);
-                p.Calls(AccessTools.Method(typeof(roadGenScript), nameof(roadGenScript.UpdInnerChunk)), Our(nameof(AddInner)), 2);
-                p.Stores(AccessTools.Field(typeof(roadGenScript.roadClass), nameof(roadGenScript.roadClass.generated)), Our(nameof(NotYet)), 1);
-                p.Calls(AccessTools.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.GetBiomeInt), new[] { typeof(Vector3d) }), Our(nameof(BiomeInt)), 2);
-                p.Calls(AccessTools.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.GetBiomeIntNoSnow), new[] { typeof(Vector3d) }), Our(nameof(BiomeIntNoSnow)), 2);
-                p.Calls(AccessTools.Method(typeof(roadGenScript), nameof(roadGenScript.PointOnRoad)), Our(nameof(PointOnRoad)), 1);
+                p.Calls(GameLookups.Method(typeof(List<roadGenScript.roadElementClass>), nameof(List<roadGenScript.roadElementClass>.Add)), Our(nameof(AddElement)), 2);
+                p.Calls(GameLookups.Method(typeof(roadGenScript), nameof(roadGenScript.UpdInnerChunk)), Our(nameof(AddInner)), 2);
+                p.Stores(GameLookups.Field(typeof(roadGenScript.roadClass), nameof(roadGenScript.roadClass.generated)), Our(nameof(NotYet)), 1);
+                p.Calls(GameLookups.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.GetBiomeInt), new[] { typeof(Vector3d) }), Our(nameof(BiomeInt)), 2);
+                p.Calls(GameLookups.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.GetBiomeIntNoSnow), new[] { typeof(Vector3d) }), Our(nameof(BiomeIntNoSnow)), 2);
+                p.Calls(GameLookups.Method(typeof(roadGenScript), nameof(roadGenScript.PointOnRoad)), Our(nameof(PointOnRoad)), 1);
                 return p.Result(ref GeneratePatched);
             }
             _ = Swap(null);
@@ -305,7 +305,7 @@ namespace TLDRevamp.Fixes
             IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions)
             {
                 var p = new GamePatch(nameof(ParallelRoadGen) + ".PointOnRoad", instructions);
-                p.Calls(AccessTools.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.Height), new[] { typeof(Vector3d) }), Our(nameof(Height)), 1);
+                p.Calls(GameLookups.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.Height), new[] { typeof(Vector3d) }), Our(nameof(Height)), 1);
                 return p.Result(ref PointOnRoadPatched);
             }
             _ = Swap(null);

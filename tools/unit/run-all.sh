@@ -21,6 +21,8 @@ for project in "${projects[@]}"; do
   name=$(basename "$project" .csproj)
   if out=$("$DOTNET" run --project "$project" --configuration Release --disable-build-servers \
         --property:BaseIntermediateOutputPath="obj/$name/" --property:OutputPath="bin/$name/" 2>&1); then
+    # The lookup check carries the game-update findings even when only known optional probes are missing.
+    if [ "$name" = GameLookupsTest ]; then printf '%s\n' "$out"; fi
     echo "PASS $name"; passed=$((passed + 1))
   else
     echo "FAIL $name"; printf '%s\n' "$out" | grep -E '^FAIL|error' | head -5 | sed 's/^/    /'

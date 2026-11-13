@@ -311,3 +311,5 @@ namespace HarmonyLib
 }
 
 namespace TLDRevamp { static class DevHooks { internal static System.Func<usablescript, bool> UsableHeld; internal static System.Action UsableDragTick, UsableProbeTick, UsableReset; } }
+
+namespace TLDRevamp { static class GameLookups { internal static System.Reflection.MethodBase Method(Type type, string name, Type[] args) => HarmonyLib.AccessTools.Method(type, name, args); } }

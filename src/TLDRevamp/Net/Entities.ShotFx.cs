@@ -23,9 +23,9 @@ namespace TLDRevamp.Net
         private const byte SSand = 0, SGlass = 1, SFlesh = 2, SPlant = 3, SWood = 4, SOther = 5, SNone = 255;
         private const byte FReal = 1, FFalse = 2, FGun = 4;
 
-        private static readonly AccessTools.FieldRef<weaponscript, RaycastHit[]> GunHits = AccessTools.FieldRefAccess<weaponscript, RaycastHit[]>("hit");
-        private static readonly AccessTools.FieldRef<weaponscript, int> GunTempInt = AccessTools.FieldRefAccess<weaponscript, int>("tempInt");
-        private static readonly AccessTools.FieldRef<weaponscript, bool> GunFalseShot = AccessTools.FieldRefAccess<weaponscript, bool>("alreadyShotFalse");
+        private static readonly AccessTools.FieldRef<weaponscript, RaycastHit[]> GunHits = GameLookups.FieldRefAccess<weaponscript, RaycastHit[]>(typeof(weaponscript), "hit");
+        private static readonly AccessTools.FieldRef<weaponscript, int> GunTempInt = GameLookups.FieldRefAccess<weaponscript, int>(typeof(weaponscript), "tempInt");
+        private static readonly AccessTools.FieldRef<weaponscript, bool> GunFalseShot = GameLookups.FieldRefAccess<weaponscript, bool>(typeof(weaponscript), "alreadyShotFalse");
 
         private static weaponscript _fxGun;
         private static readonly List<tankcapscript> _fxHoles = new List<tankcapscript>();

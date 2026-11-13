@@ -92,14 +92,14 @@ namespace TLDRevamp.Net
         [HarmonyPatch]
         internal static class PhysLockFromHost
         {
-            private static readonly FieldInfo Field = AccessTools.Field(typeof(settingsscript.setting), nameof(settingsscript.setting.IPhysicsLock));
+            private static readonly FieldInfo Field = GameLookups.Field(typeof(settingsscript.setting), nameof(settingsscript.setting.IPhysicsLock));
             private static readonly MethodInfo Replacement = AccessTools.Method(typeof(Entities), nameof(PhysicsLockSetting));
             public static int Patched;
 
             private static IEnumerable<MethodBase> TargetMethods()
             {
-                yield return AccessTools.Method(typeof(mountStuff), nameof(mountStuff.CanStore));
-                yield return AccessTools.Method(typeof(mountStuff), "Update");
+                yield return GameLookups.Method(typeof(mountStuff), nameof(mountStuff.CanStore));
+                yield return GameLookups.Method(typeof(mountStuff), "Update");
             }
 
             [HarmonyTranspiler]

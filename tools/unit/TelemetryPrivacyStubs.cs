@@ -311,3 +311,5 @@ namespace TLDRevamp.Net
 }
 
 namespace TLDRevamp { static class DevHooks { internal static System.Action TrailReset; internal static System.Action<TelemetryEvent> TrailEvent; } }
+
+namespace TLDRevamp { internal static class GameLookups { internal static string Json() => "{\"resolved\":2,\"missing\":[{\"lookupKind\":\"field\",\"declaringType\":\"fpscontroller\",\"memberName\":\"exampleMissing\",\"parameterTypes\":\"\",\"sourceFile\":\"src/TLDRevamp/Example.cs\",\"line\":12}],\"patchFailures\":[\"ExamplePatch\"]}"; } }

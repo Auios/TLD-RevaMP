@@ -36,13 +36,12 @@ namespace TLDRevamp.Fixes
             var toList = AccessTools.Method(typeof(Enumerable), nameof(Enumerable.ToList)).MakeGenericMethod(typeof(Vector3d));
             var orderBy = typeof(Enumerable).GetMethods().First(m => m.Name == nameof(Enumerable.OrderBy) && m.GetParameters().Length == 2)
                 .MakeGenericMethod(typeof(Vector3d), typeof(double));
-            var instantiate = typeof(Object).GetMethods().First(m => m.Name == nameof(Object.Instantiate) && m.IsGenericMethodDefinition &&
-                m.GetParameters().Length == 4 && m.GetParameters()[3].ParameterType == typeof(Transform)).MakeGenericMethod(typeof(GameObject));
+            var instantiate = GameLookups.GenericMethod(typeof(Object), nameof(Object.Instantiate), 4, typeof(Transform)).MakeGenericMethod(typeof(GameObject));
             var p = new GamePatch(nameof(ObjPlaceInPlace), instructions);
             p.Calls(toList, Our(nameof(ToList)), 2, withThis: true);
             p.Calls(orderBy, Our(nameof(OrderInPlace)), 1);
             p.Calls(instantiate, Our(nameof(Instantiate)), 1);
-            p.Calls(AccessTools.Method(typeof(Object), nameof(Object.Destroy), new[] { typeof(Object) }), Our(nameof(Destroy)), 1);
+            p.Calls(GameLookups.Method(typeof(Object), nameof(Object.Destroy), new[] { typeof(Object) }), Our(nameof(Destroy)), 1);
             return p.Result(ref Patched);
         }
 

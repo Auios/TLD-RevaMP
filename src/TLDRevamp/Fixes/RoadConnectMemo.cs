@@ -99,8 +99,8 @@ namespace TLDRevamp.Fixes
         /// Vector3d.Equals(object) without boxing: the same comparison (double.Equals per component).
         internal static bool Eq(Vector3d a, Vector3d b) => a.x.Equals(b.x) && a.y.Equals(b.y) && a.z.Equals(b.z);
 
-        private static readonly AccessTools.FieldRef<roadGenScript, roadGenScript.dotChunkClass> Dccc = AccessTools.FieldRefAccess<roadGenScript, roadGenScript.dotChunkClass>("dccc");
-        private static readonly AccessTools.FieldRef<roadGenScript, int> ConnectIndex = AccessTools.FieldRefAccess<roadGenScript, int>("connectIndex");
+        private static readonly AccessTools.FieldRef<roadGenScript, roadGenScript.dotChunkClass> Dccc = GameLookups.FieldRefAccess<roadGenScript, roadGenScript.dotChunkClass>(typeof(roadGenScript), "dccc");
+        private static readonly AccessTools.FieldRef<roadGenScript, int> ConnectIndex = GameLookups.FieldRefAccess<roadGenScript, int>(typeof(roadGenScript), "connectIndex");
         public static bool ReplicaVerify = false;
         public static long RoadsReused, RoadsNew, ReplicaChecks, ReplicaMismatches;
 

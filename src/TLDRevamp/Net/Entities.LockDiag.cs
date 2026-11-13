@@ -75,7 +75,7 @@ namespace TLDRevamp.Net
                     bool In(Collider[] cs) { if (cs != null) foreach (var c in cs) if (c != null && (c.transform.root == it.transform.root)) return true; return false; }
                     var lp = m.col.transform.InverseTransformPoint(it.transform.position) - m.col.center;
                     bool inBox = Mathf.Abs(lp.x) <= m.col.size.x * 0.5f && Mathf.Abs(lp.y) <= m.col.size.y * 0.5f && Mathf.Abs(lp.z) <= m.col.size.z * 0.5f;
-                    bool started = HarmonyLib.Traverse.Create(m).Field("started").GetValue<bool>();
+                    bool started = GameLookups.FieldValue<bool>(typeof(mountStuff), "started", m);
                     rows.Add("{\"name\":" + Json.Str(m.name + " of " + m.transform.root.name) + ",\"type\":" + Json.Str(m.sType.ToString()) + ",\"centreInBox\":" + (inBox ? "true" : "false") +
                              ",\"inScan\":" + (In(m.cols) ? "true" : "false") + ",\"inLastScan\":" + (In(m.lastcols) ? "true" : "false") + ",\"canStore\":" + (m.CanStore() ? "true" : "false") +
                              ",\"started\":" + (started ? "true" : "false") + ",\"manual\":" + (m.onlyManual ? "true" : "false") + ",\"noLock\":" + (m.noPhysicsLock ? "true" : "false") +
@@ -85,7 +85,7 @@ namespace TLDRevamp.Net
                 foreach (var c in it.GetComponentsInChildren<Collider>()) if (c.enabled && !c.isTrigger) layers.Add(Json.Str(c.name + ":" + LayerMask.LayerToName(c.gameObject.layer) + ((lm & (1 << c.gameObject.layer)) != 0 ? "" : " (not in the mount mask)")));
                 var tsv = it;
                 return "{\"item\":" + Json.Str(it.name) + ",\"physlock\":" + Json.Str(p.physlock != null ? p.physlock.name : "") + ",\"dontMount\":" + (p.dontMount ? "true" : "false") +
-                       ",\"pickedUp\":" + (p.pickedUp ? "true" : "false") + ",\"dontMountTillPickup\":" + (HarmonyLib.Traverse.Create(p).Field("dontMountTillPickup").GetValue<bool>() ? "true" : "false") + ",\"sinceDropped\":" + (Time.time - p.DroppedTime).ToString("F1", ic) +
+                       ",\"pickedUp\":" + (p.pickedUp ? "true" : "false") + ",\"dontMountTillPickup\":" + (GameLookups.FieldValue<bool>(typeof(pickupable), "dontMountTillPickup", p) ? "true" : "false") + ",\"sinceDropped\":" + (Time.time - p.DroppedTime).ToString("F1", ic) +
                        ",\"mpConnected\":" + (syncScript.IsConnected() ? "true" : "false") + ",\"mpFlags\":" + Json.Str((tsv.mppickedup ? "pickedup " : "") + (tsv.mpequipped ? "equipped " : "") + (tsv.mpstored ? "stored " : "") + (tsv.mpweared ? "weared" : "")) +
                        ",\"setting\":" + settingsscript.s.S.IPhysicsLock + ",\"colliders\":[" + string.Join(",", layers) + "],\"areas\":[" + string.Join(",", rows) + "]" + LockFacts(it) + "}";
         }
@@ -100,7 +100,7 @@ namespace TLDRevamp.Net
             string owner = "null";
             if (net != 0 && ByNet.TryGetValue(net, out var e)) owner = "{\"net\":" + net + ",\"owner\":" + e.OwnerId + ",\"mine\":" + B(e.OwnerId == MyId) + ",\"proxy\":" + B(e.Proxy) + ",\"held\":" + B(e.Held) + "}";
             return ",\"mod\":{\"entity\":" + owner + ",\"attachable\":" + (at == null ? "null" : "{\"attached\":" + B(at.attached) + ",\"crafted\":" + B(p != null && p.crafted) + ",\"slot\":" + B(at.slot != null) + "}") +
-                   ",\"started\":" + B(it.started) + ",\"pickupStarted\":" + B(p != null && HarmonyLib.Traverse.Create(p).Field("started").GetValue<bool>()) + ",\"colliderLinks\":" + links + ",\"unlinked\":" + unlinked +
+                   ",\"started\":" + B(it.started) + ",\"pickupStarted\":" + B(p != null && GameLookups.FieldValue<bool>(typeof(pickupable), "started", p)) + ",\"colliderLinks\":" + links + ",\"unlinked\":" + unlinked +
                    ",\"storesRefused\":" + ContainerStoresRefused + ",\"attachedStoresRefused\":" + AttachedStoresRefused + ",\"insideBox\":" + (it.transform.parent != null ? Json.Str(it.transform.parent.name) : "null") + "}";
         }
     }

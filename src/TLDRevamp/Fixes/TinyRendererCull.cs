@@ -23,8 +23,8 @@ namespace TLDRevamp.Fixes
         /// ambiguous and silently failed in v0.16.2 (only the one-time initial scan registered anything).
         private static IEnumerable<System.Reflection.MethodBase> TargetMethods()
         {
-            yield return AccessTools.Method(typeof(tosaveitemscript), nameof(tosaveitemscript.FStart), new System.Type[0]);
-            yield return AccessTools.Method(typeof(tosaveitemscript), nameof(tosaveitemscript.FStart), new[] { typeof(uint) });
+            yield return GameLookups.Method(typeof(tosaveitemscript), nameof(tosaveitemscript.FStart), new System.Type[0]);
+            yield return GameLookups.Method(typeof(tosaveitemscript), nameof(tosaveitemscript.FStart), new[] { typeof(uint) });
         }
 
         /// Objects waiting to be registered (from the FStart hook), processed a few per frame to avoid spikes.

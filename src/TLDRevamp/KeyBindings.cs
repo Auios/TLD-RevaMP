@@ -125,7 +125,7 @@ namespace TLDRevamp
             internal static bool Patched;
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)
             {
-                var getKeyDown = AccessTools.Method(typeof(Input), nameof(Input.GetKeyDown), new[] { typeof(KeyCode) });
+                var getKeyDown = GameLookups.Method(typeof(Input), nameof(Input.GetKeyDown), new[] { typeof(KeyCode) });
                 var list = new List<CodeInstruction>(code);
                 for (int i = 0; i + 1 < list.Count; i++)
                 {

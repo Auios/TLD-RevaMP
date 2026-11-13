@@ -34,13 +34,13 @@ namespace TLDRevamp.Fixes
 
         private const double NoiseBound = 2.74, StepSlack = 30.0;
 
-        private static readonly MethodInfo RoadsNearM = AccessTools.Method(typeof(roadGenScript), nameof(roadGenScript.RoadsNear),
+        private static readonly MethodInfo RoadsNearM = GameLookups.Method(typeof(roadGenScript), nameof(roadGenScript.RoadsNear),
             new[] { typeof(Vector3d), typeof(bool), typeof(poiGenScript.alignToRoadEmu) });
         private static readonly MethodInfo Replacement = AccessTools.Method(typeof(AlignNearestRoad), nameof(Candidates_));
 
-        private static readonly AccessTools.FieldRef<roadGenScript, int> Octaves = AccessTools.FieldRefAccess<roadGenScript, int>("octaves");
-        private static readonly AccessTools.FieldRef<roadGenScript, double> Ampl = AccessTools.FieldRefAccess<roadGenScript, double>("ampl");
-        private static readonly AccessTools.FieldRef<roadGenScript, double> Persistence = AccessTools.FieldRefAccess<roadGenScript, double>("persistence");
+        private static readonly AccessTools.FieldRef<roadGenScript, int> Octaves = GameLookups.FieldRefAccess<roadGenScript, int>(typeof(roadGenScript), "octaves");
+        private static readonly AccessTools.FieldRef<roadGenScript, double> Ampl = GameLookups.FieldRefAccess<roadGenScript, double>(typeof(roadGenScript), "ampl");
+        private static readonly AccessTools.FieldRef<roadGenScript, double> Persistence = GameLookups.FieldRefAccess<roadGenScript, double>(typeof(roadGenScript), "persistence");
 
         [HarmonyTranspiler]
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -111,7 +111,7 @@ namespace TLDRevamp.Fixes
             IEnumerable<CodeInstruction> WithoutGenerate(IEnumerable<CodeInstruction> instructions)
             {
                 var p = new GamePatch(nameof(AlignNearestRoad) + ".Collect", instructions);
-                p.Calls(AccessTools.Method(typeof(roadGenScript.roadClass), nameof(roadGenScript.roadClass.Generate)), AccessTools.Method(typeof(AlignNearestRoad), nameof(NoGenerate)), 1);
+                p.Calls(GameLookups.Method(typeof(roadGenScript.roadClass), nameof(roadGenScript.roadClass.Generate)), AccessTools.Method(typeof(AlignNearestRoad), nameof(NoGenerate)), 1);
                 return p.Result(ref CollectPatched);
             }
             _ = WithoutGenerate(null);

@@ -218,7 +218,7 @@ namespace TLDRevamp.VR.Native
         }
 
         private static readonly AccessTools.FieldRef<fpscontroller, Transform> _pickedUpPoint =
-            AccessTools.FieldRefAccess<fpscontroller, Transform>("pickedUpPoint");
+            GameLookups.FieldRefAccess<fpscontroller, Transform>(typeof(fpscontroller), "pickedUpPoint");
         private static Transform PickedUpPoint(fpscontroller pl) { try { return _pickedUpPoint(pl); } catch { return null; } }
 
         private static void Grab(fpscontroller pl, int h)

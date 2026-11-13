@@ -5,7 +5,7 @@ using UnityEngine;
 namespace TLDRevamp.Fixes
 {
     /// The game's Vector3d struct overrides Equals(object) but doesn't implement IEquatable&lt;Vector3d&gt;, so
-    /// .NET's default comparer boxes both keys on every Dictionary&lt;Vector3d,…&gt; lookup and List.Contains.
+    /// .NET's default comparer boxes both keys on every Dictionary&lt;Vector3d,â€¦&gt; lookup and List.Contains.
     /// World generation (roads, POIs, objects, terrain) does thousands of those per frame.
     ///
     /// We install an allocation-free comparer as EqualityComparer&lt;Vector3d&gt;.Default before the world loads,

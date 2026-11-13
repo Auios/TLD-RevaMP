@@ -64,8 +64,8 @@ namespace TLDRevamp.Fixes
         private static readonly ConditionalWeakTable<roadGenScript, roadGenScript> IsShadowOf = new ConditionalWeakTable<roadGenScript, roadGenScript>();
         private static readonly List<Shadow> All = new List<Shadow>();
 
-        private static readonly AccessTools.FieldRef<roadGenScript, int> Baround = AccessTools.FieldRefAccess<roadGenScript, int>("baround");
-        private static readonly AccessTools.FieldRef<roadGenScript, int> Iaround = AccessTools.FieldRefAccess<roadGenScript, int>("iaround");
+        private static readonly AccessTools.FieldRef<roadGenScript, int> Baround = GameLookups.FieldRefAccess<roadGenScript, int>(typeof(roadGenScript), "baround");
+        private static readonly AccessTools.FieldRef<roadGenScript, int> Iaround = GameLookups.FieldRefAccess<roadGenScript, int>(typeof(roadGenScript), "iaround");
 
         /// A shadow generator: the fixes that react to roads being made for the world (scenery, telemetry) skip it.
         internal static bool IsShadow(roadGenScript g) => g != null && IsShadowOf.TryGetValue(g, out _);
@@ -518,7 +518,7 @@ namespace TLDRevamp.Fixes
         private static IEnumerable<CodeInstruction> HeightRoadsPatch(IEnumerable<CodeInstruction> instructions)
         {
             var p = new GamePatch(nameof(PureRoads), instructions);
-            p.Calls(AccessTools.Method(typeof(mapSettingScript), nameof(mapSettingScript.RoadsNear), new[] { typeof(Vector3d) }),
+            p.Calls(GameLookups.Method(typeof(mapSettingScript), nameof(mapSettingScript.RoadsNear), new[] { typeof(Vector3d) }),
                 AccessTools.Method(typeof(PureRoads), nameof(HeightRoads)), 1);
             return p.Result(ref HeightPatched);
         }

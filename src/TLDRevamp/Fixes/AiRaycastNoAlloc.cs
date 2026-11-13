@@ -31,7 +31,7 @@ namespace TLDRevamp.Fixes
         public static long Calls, Fallbacks, VerifyChecks, VerifyMismatches;
         public static int Patched;
 
-        private static readonly MethodInfo RaycastAll = AccessTools.Method(typeof(Physics), nameof(Physics.RaycastAll),
+        private static readonly MethodInfo RaycastAll = GameLookups.Method(typeof(Physics), nameof(Physics.RaycastAll),
             new[] { typeof(Vector3), typeof(Vector3), typeof(float), typeof(int) });
         private static readonly MethodInfo[] Sites =
         {
@@ -43,9 +43,9 @@ namespace TLDRevamp.Fixes
 
         private static IEnumerable<MethodBase> TargetMethods()
         {
-            yield return AccessTools.Method(typeof(newAiScript), "Update");
-            yield return AccessTools.Method(typeof(newAiScript), nameof(newAiScript.AvoidWalls));
-            yield return AccessTools.Method(typeof(newAiScript), nameof(newAiScript.Attack));
+            yield return GameLookups.Method(typeof(newAiScript), "Update");
+            yield return GameLookups.Method(typeof(newAiScript), nameof(newAiScript.AvoidWalls));
+            yield return GameLookups.Method(typeof(newAiScript), nameof(newAiScript.Attack));
         }
 
         [HarmonyTranspiler]

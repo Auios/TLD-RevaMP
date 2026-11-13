@@ -21,16 +21,15 @@ namespace TLDRevamp.Fixes
         public static int Patched;
 
         private static MethodInfo Our(string name) => AccessTools.Method(typeof(WheelSizeWrites), name);
-        private static MethodInfo Setter(string name) => AccessTools.PropertySetter(typeof(WheelCollider), name);
 
         [HarmonyTranspiler]
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             var p = new GamePatch(nameof(WheelSizeWrites), instructions);
-            p.Calls(Setter(nameof(WheelCollider.radius)), Our(nameof(Radius)), 2);
-            p.Calls(Setter(nameof(WheelCollider.mass)), Our(nameof(Mass)), 4);
-            p.Calls(Setter(nameof(WheelCollider.forwardFriction)), Our(nameof(Forward)), 4);
-            p.Calls(Setter(nameof(WheelCollider.sidewaysFriction)), Our(nameof(Sideways)), 4);
+            p.Calls(GameLookups.PropertySetter(typeof(WheelCollider), nameof(WheelCollider.radius)), Our(nameof(Radius)), 2);
+            p.Calls(GameLookups.PropertySetter(typeof(WheelCollider), nameof(WheelCollider.mass)), Our(nameof(Mass)), 4);
+            p.Calls(GameLookups.PropertySetter(typeof(WheelCollider), nameof(WheelCollider.forwardFriction)), Our(nameof(Forward)), 4);
+            p.Calls(GameLookups.PropertySetter(typeof(WheelCollider), nameof(WheelCollider.sidewaysFriction)), Our(nameof(Sideways)), 4);
             return p.Result(ref Patched);
         }
 

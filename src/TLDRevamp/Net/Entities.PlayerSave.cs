@@ -38,7 +38,7 @@ namespace TLDRevamp.Net
             foreach (var f in ItemSnapshot.ListFields)
             {
                 if (!(f.GetValue(d) is IList list) || list.Count == 0) continue;
-                var idf = list[0]?.GetType().GetField("id", BindingFlags.Public | BindingFlags.Instance);
+                var idf = GameLookups.SaveIdField(typeof(itemDataClass), "id", list[0]?.GetType());
                 if (idf == null || idf.FieldType != typeof(uint)) continue;
                 for (int i = list.Count - 1; i >= 0; i--)
                     if (list[i] != null && ids.Contains((uint)idf.GetValue(list[i]))) { list.RemoveAt(i); n++; }

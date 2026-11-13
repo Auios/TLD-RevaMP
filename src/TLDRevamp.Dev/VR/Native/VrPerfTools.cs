@@ -29,12 +29,12 @@ namespace TLDRevamp.VR.Native
                 if (c == null || c.GetType().Name != "PostProcessLayer") continue;
                 if (!first) b.Append(',');
                 first = false;
-                var aa = c.GetType().GetField("antialiasingMode")?.GetValue(c);
+                var aa = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessLayer:antialiasingMode", c.GetType())?.GetValue(c);
                 var cam = c.GetComponent<Camera>();
                 b.Append("{\"go\":").Append(Json.Str(c.gameObject.name)).Append(",\"camDepth\":").Append(cam != null ? VrNative.F(cam.depth) : "null")
                  .Append(",\"camOn\":").Append(cam != null && cam.isActiveAndEnabled ? "true" : "false").Append(",\"on\":").Append(c.isActiveAndEnabled ? "true" : "false")
                  .Append(",\"aa\":").Append(Json.Str(aa != null ? aa.ToString() : "?"))
-                 .Append(",\"volumeLayer\":").Append(c.GetType().GetField("volumeLayer")?.GetValue(c) is LayerMask vm ? vm.value : -1).Append('}');
+                 .Append(",\"volumeLayer\":").Append(GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessLayer:volumeLayer", c.GetType())?.GetValue(c) is LayerMask vm ? vm.value : -1).Append('}');
             }
             b.Append("],\"volumes\":[");
             first = true;
@@ -44,12 +44,12 @@ namespace TLDRevamp.VR.Native
                 if (!first) b.Append(',');
                 first = false;
                 var t = c.GetType();
-                var prof = (t.GetField("sharedProfile")?.GetValue(c) as Object) ?? (t.GetField("profile")?.GetValue(c) as Object);
+                var prof = (GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessVolume:sharedProfile", t)?.GetValue(c) as Object) ?? (GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessVolume:profile", t)?.GetValue(c) as Object);
                 b.Append("{\"go\":").Append(Json.Str(c.gameObject.name)).Append(",\"layer\":").Append(c.gameObject.layer)
                  .Append(",\"on\":").Append(c.isActiveAndEnabled ? "true" : "false")
-                 .Append(",\"global\":").Append(t.GetField("isGlobal")?.GetValue(c) is bool g && g ? "true" : "false")
-                 .Append(",\"weight\":").Append(t.GetField("weight")?.GetValue(c) is float w ? VrNative.F(w) : "null")
-                 .Append(",\"priority\":").Append(t.GetField("priority")?.GetValue(c) is float pr ? VrNative.F(pr) : "null")
+                 .Append(",\"global\":").Append(GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessVolume:isGlobal", t)?.GetValue(c) is bool g && g ? "true" : "false")
+                 .Append(",\"weight\":").Append(GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessVolume:weight", t)?.GetValue(c) is float w ? VrNative.F(w) : "null")
+                 .Append(",\"priority\":").Append(GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessVolume:priority", t)?.GetValue(c) is float pr ? VrNative.F(pr) : "null")
                  .Append(",\"profile\":").Append(Json.Str(prof != null ? prof.name : "")).Append('}');
             }
             b.Append("],\"effects\":[");
@@ -180,8 +180,8 @@ namespace TLDRevamp.VR.Native
             foreach (var e in Effects())
             {
                 if (e.Setting.GetType().Name != type) continue;
-                var en = e.Setting.GetType().GetField("enabled")?.GetValue(e.Setting);
-                en?.GetType().GetField("value")?.SetValue(en, on);
+                var en = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessEffectSettings:enabled", e.Setting.GetType())?.GetValue(e.Setting);
+                GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.BoolParameter:value", en?.GetType())?.SetValue(en, on);
                 n++;
             }
             return "{\"type\":" + Json.Str(type) + ",\"changed\":" + n + "}";
@@ -198,7 +198,7 @@ namespace TLDRevamp.VR.Native
                 if (what == "on" || what == "off") c.enabled = what == "on";
                 else
                 {
-                    var f = c.GetType().GetField("antialiasingMode");
+                    var f = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessLayer:antialiasingMode", c.GetType());
                     if (f != null) f.SetValue(c, System.Enum.Parse(f.FieldType, what));
                 }
                 return "{\"layer\":" + index + ",\"go\":" + Json.Str(c.gameObject.name) + ",\"set\":" + Json.Str(what) + "}";
@@ -216,9 +216,11 @@ namespace TLDRevamp.VR.Native
                 if (c == null || c.GetType().Name != "PostProcessVolume") continue;
                 foreach (var f in new[] { "sharedProfile", "profile" })
                 {
-                    var prof = c.GetType().GetField(f)?.GetValue(c) as Object;
+                    var prof = (f == "sharedProfile"
+                        ? GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessVolume:sharedProfile", c.GetType())
+                        : GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessVolume:profile", c.GetType()))?.GetValue(c) as Object;
                     if (prof == null || !seen.Add(prof.GetInstanceID())) continue;
-                    if (!(prof.GetType().GetField("settings")?.GetValue(prof) is System.Collections.IList list)) continue;
+                    if (!(GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessProfile:settings", prof.GetType())?.GetValue(prof) is System.Collections.IList list)) continue;
                     foreach (var st in list) if (st != null) yield return new Effect { Profile = prof.name, Setting = st };
                 }
             }
@@ -226,8 +228,8 @@ namespace TLDRevamp.VR.Native
 
         private static bool Enabled(object setting)
         {
-            var en = setting.GetType().GetField("enabled")?.GetValue(setting);
-            return en?.GetType().GetField("value")?.GetValue(en) is bool v && v;
+            var en = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessEffectSettings:enabled", setting.GetType())?.GetValue(setting);
+            return GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.BoolParameter:value", en?.GetType())?.GetValue(en) is bool v && v;
         }
 
     }

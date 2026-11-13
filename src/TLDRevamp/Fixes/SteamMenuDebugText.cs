@@ -22,8 +22,8 @@ namespace TLDRevamp.Fixes
     {
         public static long Built, Skipped, Patched;
 
-        private static readonly FieldInfo Field = AccessTools.Field(typeof(SteamP2PMenuHandlerScript), "deguText");
-        private static readonly MethodInfo SetText = AccessTools.PropertySetter(typeof(TMP_Text), nameof(TMP_Text.text));
+        private static readonly FieldInfo Field = GameLookups.Field(typeof(SteamP2PMenuHandlerScript), "deguText");
+        private static readonly MethodInfo SetText = GameLookups.PropertySetter(typeof(TMP_Text), nameof(TMP_Text.text));
         private static readonly MethodInfo Helper = AccessTools.Method(typeof(SteamMenuDebugText), nameof(Text));
         private static readonly string[] Labels = new string[4];
         private static int _last = -1;

@@ -18,8 +18,8 @@ namespace TLDRevamp.Fixes
     {
         public static bool Patched;
 
-        private static readonly FieldInfo DbS = AccessTools.Field(typeof(itemdatabase), nameof(itemdatabase.s));
-        private static readonly FieldInfo Items = AccessTools.Field(typeof(itemdatabase), nameof(itemdatabase.items));
+        private static readonly FieldInfo DbS = GameLookups.Field(typeof(itemdatabase), nameof(itemdatabase.s));
+        private static readonly FieldInfo Items = GameLookups.Field(typeof(itemdatabase), nameof(itemdatabase.items));
         private static readonly MethodInfo Empty = AccessTools.Method(typeof(SpawnMenuGaps), nameof(IsEmpty));
 
         public static bool IsEmpty(int i) => itemdatabase.s.items[i] == null;

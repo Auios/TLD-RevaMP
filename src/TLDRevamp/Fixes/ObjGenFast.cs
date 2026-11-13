@@ -56,15 +56,14 @@ namespace TLDRevamp.Fixes
         [HarmonyTranspiler]
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            var cat = typeof(objGenScript.categoryClass);
             var newRandom = AccessTools.Constructor(typeof(System.Random), new[] { typeof(int) });
             var p = new GamePatch(nameof(ObjGenFast), instructions);
-            p.Constructs(newRandom, AccessTools.Field(cat, "chunkRnd"), Our(nameof(ChunkRandom)), 1, withThis: true);
-            p.Constructs(newRandom, AccessTools.Field(cat, "objRnd"), Our(nameof(ObjRandom)), 1, withThis: true);
-            p.Calls(AccessTools.Method(cat, nameof(objGenScript.categoryClass.UpdChunksNeeded)), Our(nameof(ChunksNeeded)), 1);
+            p.Constructs(newRandom, GameLookups.Field(typeof(objGenScript.categoryClass), "chunkRnd"), Our(nameof(ChunkRandom)), 1, withThis: true);
+            p.Constructs(newRandom, GameLookups.Field(typeof(objGenScript.categoryClass), "objRnd"), Our(nameof(ObjRandom)), 1, withThis: true);
+            p.Calls(GameLookups.Method(typeof(objGenScript.categoryClass), nameof(objGenScript.categoryClass.UpdChunksNeeded)), Our(nameof(ChunksNeeded)), 1);
             // the cached branch's pair comes first, the uncached one's second
-            p.CallAt(AccessTools.Method(typeof(mapSettingScript), nameof(mapSettingScript.RoadsNear)), 0, 2, Our(nameof(TileRoadsNear)), withThis: true);
-            p.CallAt(AccessTools.Method(typeof(mapSettingScript), nameof(mapSettingScript.POIsNear)), 0, 2, Our(nameof(TilePoisNear)), withThis: true);
+            p.CallAt(GameLookups.Method(typeof(mapSettingScript), nameof(mapSettingScript.RoadsNear)), 0, 2, Our(nameof(TileRoadsNear)), withThis: true);
+            p.CallAt(GameLookups.Method(typeof(mapSettingScript), nameof(mapSettingScript.POIsNear)), 0, 2, Our(nameof(TilePoisNear)), withThis: true);
             return p.Result(ref Patched);
         }
 

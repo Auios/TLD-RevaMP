@@ -53,10 +53,10 @@ namespace TLDRevamp.VR.Native
             return camera.transform;
         }
 
-        private static readonly MethodInfo GetTransform = AccessTools.PropertyGetter(typeof(Component), nameof(Component.transform));
+        private static readonly MethodInfo GetTransform = GameLookups.PropertyGetter(typeof(Component), nameof(Component.transform));
         private static readonly MethodInfo RayMethod = AccessTools.Method(typeof(VrPointer), nameof(Ray));
-        private static readonly FieldInfo CamField = AccessTools.Field(typeof(fpscontroller), nameof(fpscontroller.Cam));
-        private static readonly FieldInfo MainCamField = AccessTools.Field(typeof(fpscontroller), nameof(fpscontroller.mainCam));
+        private static readonly FieldInfo CamField = GameLookups.Field(typeof(fpscontroller), nameof(fpscontroller.Cam));
+        private static readonly FieldInfo MainCamField = GameLookups.Field(typeof(fpscontroller), nameof(fpscontroller.mainCam));
 
         /// `ldfld Cam|mainCam ; callvirt Component::get_transform` -> `ldfld Cam|mainCam ; call VrPointer.Ray`.
         internal static IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions, string method)

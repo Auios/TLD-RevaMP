@@ -20,9 +20,9 @@ namespace TLDRevamp.Net
         {
             private static IEnumerable<System.Reflection.MethodBase> TargetMethods()
             {
-                yield return AccessTools.Method(typeof(fpscontroller), nameof(fpscontroller.Shit));
-                yield return AccessTools.Method(typeof(fpscontroller), nameof(fpscontroller.usePickedUpStuff));
-                yield return AccessTools.Method(typeof(fpscontroller), nameof(fpscontroller.RayStuff));
+                yield return GameLookups.Method(typeof(fpscontroller), nameof(fpscontroller.Shit));
+                yield return GameLookups.Method(typeof(fpscontroller), nameof(fpscontroller.usePickedUpStuff));
+                yield return GameLookups.Method(typeof(fpscontroller), nameof(fpscontroller.RayStuff));
             }
 
             [HarmonyPrefix] private static void Prefix(fpscontroller __instance) { if (InSession && mainscript.s != null && __instance == mainscript.s.player) _playerAction++; }

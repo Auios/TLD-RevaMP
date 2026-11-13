@@ -1,0 +1,150 @@
+# Exact source expressions, with a reason for each exception. Stale entries fail the guard.
+src/TLDRevamp/DevModeKeys.cs	AccessTools.Method(typeof(DevModeKeys), with)	Our patch/helper method DevModeKeys; not game code.
+src/TLDRevamp/KeyBindings.cs	AccessTools.Method(typeof(DevMenuKey), nameof(Down))	Our patch/helper method DevMenuKey; not game code.
+src/TLDRevamp/LoaderRetarget.cs	GameLookups.RuntimeField(owner, fr.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)	Member/type names come from external mod IL; core records game resolutions at runtime, no fixed source target.
+src/TLDRevamp/LoaderRetarget.cs	GameLookups.RuntimeType(game, name, false)	Member/type names come from external mod IL; core records game resolutions at runtime, no fixed source target.
+src/TLDRevamp/ModHost.cs	stub.GetType("TLDLoader.Mod")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	stub.GetType("TLDLoader.ModLoader").GetField("ConfigRoot")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	stub.GetType("TLDLoader.ModLoader")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	stub.GetType("TLDLoader.ModLoader").GetField("ModsFolder")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	stub.GetType("TLDLoader.HostLogger")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	Loader.GetField("Echo")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	modBase.GetProperty("ID")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	modBase.GetProperty("Name")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	modBase.GetProperty("Version")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	stub.GetType("TLDLoader.Logger")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	modBase.GetProperty("Logger")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	Loader.GetMethod("HostAdd", BindingFlags.NonPublic | BindingFlags.Static)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	modBase.GetProperty("LoadInMenu")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	modBase.GetMethod("OnLoad")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	modBase.GetProperty("LoadInDB")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	modBase.GetProperty(name)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	Loader.GetMethod("HostConfigPass", BindingFlags.NonPublic | BindingFlags.Static)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	Loader.GetMethod("HostScene", BindingFlags.NonPublic | BindingFlags.Static)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	t.GetMethod(name, BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.cs	type.GetField(name, BindingFlags.Public | BindingFlags.Static)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	.GetField("loading", BindingFlags.Public | BindingFlags.Static)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	.GetField("HarmonyInstance")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	HarmonyLib.AccessTools.Method(t, "TargetMethod")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	HarmonyLib.AccessTools.Method(t, "TargetMethods")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	GameLookups.RuntimeHarmonyGetter(dt, m.methodName)	External mod Harmony attribute preview; names and signatures come from a mod binary. Game resolutions are recorded at runtime.
+src/TLDRevamp/ModHost.Game.cs	GameLookups.RuntimeHarmonySetter(dt, m.methodName)	External mod Harmony attribute preview; names and signatures come from a mod binary. Game resolutions are recorded at runtime.
+src/TLDRevamp/ModHost.Game.cs	GameLookups.RuntimeHarmonyConstructor(dt, args)	External mod Harmony attribute preview; names and signatures come from a mod binary. Game resolutions are recorded at runtime.
+src/TLDRevamp/ModHost.Game.cs	GameLookups.RuntimeHarmonyMethod(dt, m.methodName, args)	External mod Harmony attribute preview; names and signatures come from a mod binary. Game resolutions are recorded at runtime.
+src/TLDRevamp/ModHost.Game.cs	stub.GetType("TLDLoader.Events")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	t.GetMethod("RaiseOnSit", f)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	t.GetMethod("RaiseOnStand", f)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	t.GetMethod("RaiseOnSave", f)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	t.GetMethod("RaiseOnSaveLoad", f)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	t.GetMethod("RaiseOnSaveDelete", f)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	t.GetMethod("RaiseOnPause", f)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	t.GetMethod("RaiseOnUnpause", f)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ScriptProfiler.cs	type.GetMethod(owner == SetCoarse ? "PrefixCoarse" : alloc ? "PrefixAlloc" : "Prefix")	Our profiler prefix/postfix methods; not game code.
+src/TLDRevamp/ScriptProfiler.cs	type.GetMethod(owner == SetCoarse ? "PostfixCoarse" : alloc ? "PostfixAlloc" : "Postfix")	Our profiler prefix/postfix methods; not game code.
+src/TLDRevamp/ScriptProfiler.cs	GameLookups.RuntimeMethod(type, name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly, Type.EmptyTypes)	Profiler discovers callbacks and compiler-generated iterator classes at runtime; not a required game member on every scanned type.
+src/TLDRevamp/ScriptProfiler.cs	GameLookups.RuntimeMethod(type, "MoveNext", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)	Profiler discovers callbacks and compiler-generated iterator classes at runtime; not a required game member on every scanned type.
+src/TLDRevamp/Switches.cs	.GetField(path.Substring(dot + 1), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)	Our switch fields selected from the switch table; not game code.
+src/TLDRevamp/TelemetryHooks.cs	AccessTools.Method(typeof(TelemetryHooks), nameof(SceneryFinished))	Our patch/helper method TelemetryHooks; not game code.
+src/TLDRevamp/TelemetryHooks.cs	AccessTools.Method(typeof(TelemetryHooks), nameof(SetActive))	Our patch/helper method TelemetryHooks; not game code.
+src/TLDRevamp/TelemetryHooks.cs	AccessTools.Method(typeof(TelemetryHooks), nameof(Instantiated))	Our patch/helper method TelemetryHooks; not game code.
+src/TLDRevamp/TelemetryHooks.cs	AccessTools.Method(typeof(TelemetryHooks), nameof(Destroyed))	Our patch/helper method TelemetryHooks; not game code.
+src/TLDRevamp/Fixes/AiRaycastNoAlloc.cs	AccessTools.Method(typeof(AiRaycastNoAlloc), nameof(Site0))	Our patch/helper method AiRaycastNoAlloc; not game code.
+src/TLDRevamp/Fixes/AiRaycastNoAlloc.cs	AccessTools.Method(typeof(AiRaycastNoAlloc), nameof(Site1))	Our patch/helper method AiRaycastNoAlloc; not game code.
+src/TLDRevamp/Fixes/AiRaycastNoAlloc.cs	AccessTools.Method(typeof(AiRaycastNoAlloc), nameof(Site2))	Our patch/helper method AiRaycastNoAlloc; not game code.
+src/TLDRevamp/Fixes/AiRaycastNoAlloc.cs	AccessTools.Method(typeof(AiRaycastNoAlloc), nameof(KeepOrder))	Our patch/helper method AiRaycastNoAlloc; not game code.
+src/TLDRevamp/Fixes/AiRaycastNoAlloc.cs	AccessTools.Method(typeof(AiRaycastNoAlloc), nameof(AsArray))	Our patch/helper method AiRaycastNoAlloc; not game code.
+src/TLDRevamp/Fixes/AlignNearestRoad.cs	AccessTools.Method(typeof(AlignNearestRoad), nameof(Candidates_))	Our patch/helper method AlignNearestRoad; not game code.
+src/TLDRevamp/Fixes/AlignNearestRoad.cs	AccessTools.Method(typeof(AlignNearestRoad), nameof(NoGenerate))	Our patch/helper method AlignNearestRoad; not game code.
+src/TLDRevamp/Fixes/AsyncTerrain.cs	AccessTools.Method(typeof(AsyncTerrain), nameof(JobRoads))	Our patch/helper method AsyncTerrain; not game code.
+src/TLDRevamp/Fixes/AsyncTerrain.cs	AccessTools.Method(typeof(AsyncTerrain), nameof(JobPois))	Our patch/helper method AsyncTerrain; not game code.
+src/TLDRevamp/Fixes/AsyncTerrain.cs	AccessTools.Method(typeof(AsyncTerrain), nameof(Height))	Our patch/helper method AsyncTerrain; not game code.
+src/TLDRevamp/Fixes/AsyncTerrain.cs	AccessTools.Method(typeof(AsyncTerrain), nameof(Biome))	Our patch/helper method AsyncTerrain; not game code.
+src/TLDRevamp/Fixes/AsyncTerrain.cs	AccessTools.Method(typeof(AsyncTerrain), nameof(NoiseOnCopy))	Our patch/helper method AsyncTerrain; not game code.
+src/TLDRevamp/Fixes/AxisLabelCache.cs	AccessTools.Method(typeof(string), nameof(string.Format), new[] { typeof(string), typeof(object) })	Framework implementation or LINQ helper; not a game assembly member.
+src/TLDRevamp/Fixes/AxisLabelCache.cs	AccessTools.Method(typeof(AxisLabelCache), nameof(Format))	Our patch/helper method AxisLabelCache; not game code.
+src/TLDRevamp/Fixes/ChunksNeededInPlace.cs	AccessTools.Method(typeof(ChunksNeededInPlace), nameof(Get))	Our patch/helper method ChunksNeededInPlace; not game code.
+src/TLDRevamp/Fixes/DotChunkMemo.cs	AccessTools.FieldRefAccess<System.Random, int>("_inext")	Our patch/helper method AccessTools.FieldRefAccess<System.Random, int>("_inext"; not game code.
+src/TLDRevamp/Fixes/DotChunkMemo.cs	AccessTools.FieldRefAccess<System.Random, int>("_inextp")	Our patch/helper method AccessTools.FieldRefAccess<System.Random, int>("_inextp"; not game code.
+src/TLDRevamp/Fixes/DotChunkMemo.cs	AccessTools.FieldRefAccess<System.Random, int[]>("_seedArray")	Our patch/helper method AccessTools.FieldRefAccess<System.Random, int[]>("_seedArray"; not game code.
+src/TLDRevamp/Fixes/FarItemLookup.cs	AccessTools.Method(typeof(FarItemLookup), nameof(SelectIndex))	Our patch/helper method FarItemLookup; not game code.
+src/TLDRevamp/Fixes/FarItemLookup.cs	AccessTools.Method(typeof(FarItemLookup), nameof(PlaceIndex))	Our patch/helper method FarItemLookup; not game code.
+src/TLDRevamp/Fixes/FastNoise.cs	AccessTools.StaticFieldRefAccess<int[]>(GameLookups.Field(typeof(NoiseS3D), "perm_"))	Our patch/helper method NoiseS3D; not game code.
+src/TLDRevamp/Fixes/FastNoise.cs	AccessTools.Method(typeof(FastNoise), nameof(Noise2))	Our patch/helper method FastNoise; not game code.
+src/TLDRevamp/Fixes/FastNoise.cs	AccessTools.Method(typeof(FastNoise), nameof(Noise3))	Our patch/helper method FastNoise; not game code.
+src/TLDRevamp/Fixes/GamePatch.cs	AccessTools.Field(typeof(CodeInstruction), "labels")	Harmony instruction metadata; not game code.
+src/TLDRevamp/Fixes/LookRayNoAlloc.cs	AccessTools.Method(typeof(Enumerable), nameof(Enumerable.ToArray))	Framework implementation or LINQ helper; not a game assembly member.
+src/TLDRevamp/Fixes/LookRayNoAlloc.cs	AccessTools.Method(typeof(LookRayNoAlloc), nameof(Cast))	Our patch/helper method LookRayNoAlloc; not game code.
+src/TLDRevamp/Fixes/LookRayNoAlloc.cs	AccessTools.Method(typeof(LookRayNoAlloc), nameof(Sort))	Our patch/helper method LookRayNoAlloc; not game code.
+src/TLDRevamp/Fixes/LookRayNoAlloc.cs	AccessTools.Method(typeof(LookRayNoAlloc), nameof(AsArray))	Our patch/helper method LookRayNoAlloc; not game code.
+src/TLDRevamp/Fixes/ObjGenFast.cs	AccessTools.Method(typeof(ObjGenFast), name)	Our patch/helper method ObjGenFast; not game code.
+src/TLDRevamp/Fixes/ObjGenFast.cs	AccessTools.Constructor(typeof(System.Random), new[] { typeof(int) })	Framework implementation or LINQ helper; not a game assembly member.
+src/TLDRevamp/Fixes/ObjPlaceInPlace.cs	AccessTools.Method(typeof(ObjPlaceInPlace), name)	Our patch/helper method ObjPlaceInPlace; not game code.
+src/TLDRevamp/Fixes/ObjPlaceInPlace.cs	AccessTools.Method(typeof(Enumerable), nameof(Enumerable.ToList))	Framework implementation or LINQ helper; not a game assembly member.
+src/TLDRevamp/Fixes/OutfitDistanceNoAlloc.cs	AccessTools.Method(typeof(OutfitDistanceNoAlloc), nameof(Materials))	Our patch/helper method OutfitDistanceNoAlloc; not game code.
+src/TLDRevamp/Fixes/OutfitDistanceNoAlloc.cs	AccessTools.Method(typeof(OutfitDistanceNoAlloc), nameof(SetFloat))	Our patch/helper method OutfitDistanceNoAlloc; not game code.
+src/TLDRevamp/Fixes/ParallelRoadGen.cs	AccessTools.Method(typeof(ParallelRoadGen), name)	Our patch/helper method ParallelRoadGen; not game code.
+src/TLDRevamp/Fixes/ParkedCarSleep.cs	AccessTools.Method(typeof(ParkedCarSleep), nameof(Assign))	Our patch/helper method ParkedCarSleep; not game code.
+src/TLDRevamp/Fixes/PureRoads.cs	AccessTools.Method(typeof(PureRoads), nameof(HeightRoads))	Our patch/helper method PureRoads; not game code.
+src/TLDRevamp/Fixes/SpawnMenuGaps.cs	AccessTools.Method(typeof(SpawnMenuGaps), nameof(IsEmpty))	Our patch/helper method SpawnMenuGaps; not game code.
+src/TLDRevamp/Fixes/SpawnMenuGaps.cs	AccessTools.Field(typeof(CodeInstruction), "labels")	Harmony instruction metadata; not game code.
+src/TLDRevamp/Fixes/SpawnMenuGaps.cs	typeof(ILGenerator).GetMethod("DefineLabel")	Framework implementation or LINQ helper; not a game assembly member.
+src/TLDRevamp/Fixes/SteamMenuDebugText.cs	AccessTools.Method(typeof(SteamMenuDebugText), nameof(Text))	Our patch/helper method SteamMenuDebugText; not game code.
+src/TLDRevamp/Fixes/TankcapIdle.cs	AccessTools.Method(typeof(TankcapIdle), name)	Our patch/helper method TankcapIdle; not game code.
+src/TLDRevamp/Fixes/Vector3dComparer.cs	typeof(EqualityComparer<Vector3d>).GetField("defaultComparer", BindingFlags.NonPublic | BindingFlags.Static)	Framework implementation or LINQ helper; not a game assembly member.
+src/TLDRevamp/Fixes/WheelSizeWrites.cs	AccessTools.Method(typeof(WheelSizeWrites), name)	Our patch/helper method WheelSizeWrites; not game code.
+src/TLDRevamp/Net/Entities.Telemetry.cs	AccessTools.Method(typeof(TelemetryCrosshair), nameof(Raycast))	Our patch/helper method TelemetryCrosshair; not game code.
+src/TLDRevamp/Net/PlayerCombat.cs	AccessTools.Method(typeof(PlayerCombat), nameof(Raycast))	Our patch/helper method PlayerCombat; not game code.
+src/TLDRevamp/Replay/ReplayViewer.cs	AccessTools.FieldRefAccess<inputscript, bool>(f)	FieldInfo already resolved through GameLookups or enumeration; this overload has no member name lookup.
+src/TLDRevamp/Replay/ReplayViewer.cs	AccessTools.FieldRefAccess<inputscript, float>(f)	FieldInfo already resolved through GameLookups or enumeration; this overload has no member name lookup.
+src/TLDRevamp/VR/Native/VrPointer.cs	AccessTools.Method(typeof(VrPointer), nameof(Ray))	Our patch/helper method VrPointer; not game code.
+src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeType(Asm, "Old2023." + n, true)	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
+src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeMethod(Job, "randomize", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, new[] { typeof(Vector2), typeof(bool), typeof(bool), typeof(bool) })	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
+src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeMethod(Job, "VertexColor", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, new[] { typeof(Vector2), typeof(float) })	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
+src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeMethod(Road, "CalcOneRoad", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, Type.EmptyTypes)	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
+src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeMethod(Road, "FStart", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, Type.EmptyTypes)	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
+src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeMethod(Buildings, "FStart", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, Type.EmptyTypes)	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
+src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeMethod(Generator, "GetTerrainHeightWorld", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, new[] { typeof(Vector2), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) })	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
+src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeField(t, name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
+src/TLDRevamp.Dev/AutopilotBridge.cs	asm.GetType("TLDAutopilot.Plugin.Game.Traffic")	Optional TLDAutopilot mod API; not game code.
+src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField("VelocityOf")	Optional TLDAutopilot mod API; not game code.
+src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField("Pedestrians")	Optional TLDAutopilot mod API; not game code.
+src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField("HomeLaneOffsetM")	Optional TLDAutopilot mod API; not game code.
+src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField(n)	Optional TLDAutopilot mod API; not game code.
+src/TLDRevamp.Dev/DebugBridge.cs	GameLookups.RuntimeType(typeof(mainscript).Assembly, arg.Trim())	Arbitrary bridge user path, including game, own and mod types; game resolutions are recorded at runtime.
+src/TLDRevamp.Dev/LoaderScan.cs	mod.GetMethod(lifecycle, lifecycleFlags, null, Type.EmptyTypes, null)	External loader mod lifecycle and ID getters, unknown until a mod is scanned.
+src/TLDRevamp.Dev/LoaderScan.cs	t.GetProperty(prop, BindingFlags.Public | BindingFlags.Instance)	External loader mod lifecycle and ID getters, unknown until a mod is scanned.
+src/TLDRevamp.Dev/ScriptProfiler.cs	typeof(ScriptProfilerTools).GetMethod(nameof(Empty), BindingFlags.Static | BindingFlags.NonPublic)	Our profiler prefix/postfix methods; not game code.
+src/TLDRevamp.Dev/Net/Entities.MountLab.cs	typeof(EntityMountLab).GetMethod(nameof(WatchSetParent), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)	Our patch/helper method EntityMountLab; not game code.
+src/TLDRevamp.Dev/Net/Entities.MountLab.cs	typeof(EntityMountLab).GetMethod(nameof(WatchLoad), bf)	Our patch/helper method EntityMountLab; not game code.
+src/TLDRevamp.Dev/Net/Entities.MountLab.cs	typeof(EntityMountLab).GetMethod(nameof(WatchAttachEx), bf)	Our patch/helper method EntityMountLab; not game code.
+src/TLDRevamp.Dev/Net/Entities.MountLab.cs	typeof(EntityMountLab).GetMethod(nameof(WatchSetParentProp), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)	Our patch/helper method EntityMountLab; not game code.
+src/TLDRevamp.Dev/Net/Entities.PhysLock.cs	AccessTools.Method(typeof(Entities), nameof(PhysicsLockSetting))	Our patch/helper method Entities; not game code.
+src/TLDRevamp.Preloader/LoaderAliases.cs	module.GetType(a[0])	Preloader searches Mono.Cecil game metadata before core loads; core depends on preloader, so it cannot reference core. Loader alias tables are validated separately.
+src/TLDRevamp.Preloader/LoaderAliases.cs	module.GetType(a[2])	Preloader searches Mono.Cecil game metadata before core loads; core depends on preloader, so it cannot reference core. Loader alias tables are validated separately.
+src/TLDLoaderShim/LoaderExtras.cs	instance.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)	Standalone loader compatibility API takes arbitrary names from external mods; cannot reference core without making the standalone loader depend on the plugin.
+src/TLDRevamp.Dev/LoaderScan.cs	Field(rep, seen, f, where)	Our loader scan field reporter; not a member lookup.
+src/TLDRevamp.Dev/ObjectPanelData.cs	Field(key, N(local), N(remote))	Our object panel field comparison formatter; not reflection.
+src/TLDRevamp.Dev/ObjectPanelData.cs	Field("owner", mine.Owner.ToString(), Owner.ToString())	Our object panel field comparison formatter; not reflection.
+src/TLDRevamp.Dev/ObjectPanelData.cs	Field("epoch", mine.Epoch.ToString(), Epoch.ToString())	Our object panel field comparison formatter; not reflection.
+src/TLDRevamp.Dev/ObjectPanelData.cs	Field("state", (mine.Flags & mask).ToString(), (Flags & mask).ToString())	Our object panel field comparison formatter; not reflection.
+src/TLDRevamp.Dev/ObjectPanelData.cs	Field("attachment", mine.Parent + "/" + mine.Part, Parent + "/" + Part)	Our object panel field comparison formatter; not reflection.
+src/TLDRevamp.Dev/ObjectPanelData.cs	Field("locked to", mine.LockedTo.ToString(), LockedTo.ToString())	Our object panel field comparison formatter; not reflection.
+src/TLDRevamp.Dev/ObjectPanelData.cs	Field("usable count", mine.UsableCount.ToString(), UsableCount.ToString())	Our object panel field comparison formatter; not reflection.
+src/TLDRevamp.Dev/ObjectPanelData.cs	Field("slot count", mine.SlotCount.ToString(), SlotCount.ToString())	Our object panel field comparison formatter; not reflection.
+src/TLDRevamp/Reflect.cs	GameLookups.RuntimeFoundType(name, _types.TryGetValue(name, out var found) ? found : null)	Universal user/mod type table; records discovered game types, no fixed source type name.
+src/TLDRevamp/ScriptProfiler.cs	GameLookups.RuntimeMethods(type, spec.Substring(dot + 1), BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)	Profiler user method path; member names are not known until requested.
+src/TLDRevamp.Dev/BridgeReflect.cs	ownerType.GetField(parts[i], All)	Arbitrary bridge user path (game, own and mod types), tried as a field then a property: not a lookup the mod depends on, so not recorded (a property always "missed" as a field).
+src/TLDRevamp.Dev/BridgeReflect.cs	ownerType.GetProperty(parts[i], All)	Arbitrary bridge user path (game, own and mod types), tried as a field then a property: not a lookup the mod depends on, so not recorded (a property always "missed" as a field).
+src/TLDRevamp/LoaderRetarget.cs	mod.GetType(name)	Cecil lookup in the mod's own module (picks a free helper type name); not game reflection.
+src/TLDRevamp/LoaderRetarget.cs	game.GetType(a[0]).GetField(a[1], PublicFields)	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	game.GetType(a[0])	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	game.GetType(a[3])	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	current.GetField(name, PublicFields)	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	game.GetType("mainscript").GetMethod(a[0])	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	game.GetType("mainscript")	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	game.GetType("kaposztaleves")	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	.GetField("s", PublicFields)	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	.GetMethod(a[1], new[] { typeof(float) })	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	owner.GetField("switchToState", PublicFields)	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	owner.GetField("states", PublicFields)	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.
+src/TLDRevamp/LoaderRetarget.cs	.FieldType.GetProperty("Count")	Loader alias table probe: decides per game build whether a TLD Loader mod's old member needs an alias, so absence is expected and not a missing game lookup. The alias tables are checked by LoaderRetargetTest.

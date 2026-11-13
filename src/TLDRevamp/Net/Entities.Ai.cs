@@ -393,8 +393,8 @@ namespace TLDRevamp.Net
             return bi >= 0 && bi < all.Count ? all[bi] : null;
         }
 
-        private static readonly AccessTools.FieldRef<breakablescript, GameObject> _spawnedGib = AccessTools.FieldRefAccess<breakablescript, GameObject>("spawnedGib");
-        private static readonly System.Reflection.MethodInfo DamageFromM = AccessTools.Method(typeof(breakablescript), "DamageFrom");
+        private static readonly AccessTools.FieldRef<breakablescript, GameObject> _spawnedGib = GameLookups.FieldRefAccess<breakablescript, GameObject>(typeof(breakablescript), "spawnedGib");
+        private static readonly System.Reflection.MethodInfo DamageFromM = GameLookups.Method(typeof(breakablescript), "DamageFrom");
 
         private static void ServerBreakHit(int from, NetReader r)
         {
@@ -560,8 +560,8 @@ namespace TLDRevamp.Net
         }
 
         // ================================================================ creatures: the owner sees and attacks remote players
-        private static readonly AccessTools.FieldRef<newAiScript, float> ChaseStartF = AccessTools.FieldRefAccess<newAiScript, float>("chaseStart");
-        private static readonly AccessTools.FieldRef<newAiScript, float> CurChaseF = AccessTools.FieldRefAccess<newAiScript, float>("currentChaseTime");
+        private static readonly AccessTools.FieldRef<newAiScript, float> ChaseStartF = GameLookups.FieldRefAccess<newAiScript, float>(typeof(newAiScript), "chaseStart");
+        private static readonly AccessTools.FieldRef<newAiScript, float> CurChaseF = GameLookups.FieldRefAccess<newAiScript, float>(typeof(newAiScript), "currentChaseTime");
         private static readonly RaycastHit[] AiHits = new RaycastHit[32];
         private static readonly Dictionary<int, float> _aiDmgAcc = new Dictionary<int, float>();
         private static readonly Dictionary<int, Vector3> _aiDmgDir = new Dictionary<int, Vector3>();

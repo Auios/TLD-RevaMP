@@ -51,10 +51,10 @@ namespace TLDRevamp.Fixes
 
         private static readonly Action<terrainGenScript, Vector3d, terrainGenScript.smesh> PlaceMesh =
             AccessTools.MethodDelegate<Action<terrainGenScript, Vector3d, terrainGenScript.smesh>>(
-                AccessTools.Method(typeof(terrainGenScript), "PlaceMesh"));
+                GameLookups.Method(typeof(terrainGenScript), "PlaceMesh"));
         private static readonly Func<terrainGenScript, Vector3d, terrainGenScript.smesh> OriginalGenerate =
             AccessTools.MethodDelegate<Func<terrainGenScript, Vector3d, terrainGenScript.smesh>>(
-                AccessTools.Method(typeof(terrainGenScript), "GenerateTileMesh"));
+                GameLookups.Method(typeof(terrainGenScript), "GenerateTileMesh"));
 
         private class Job
         {
@@ -220,17 +220,16 @@ namespace TLDRevamp.Fixes
 
         private static readonly FieldInfo[] GenFields = AccessTools.GetDeclaredFields(typeof(terrainGenScript)).FindAll(f => !f.IsStatic).ToArray();
         /// The generator's scratch arrays GenerateTileMesh fills and returns: each job gets its own.
-        private static readonly FieldInfo[] ScratchFields = Fields("v", "v2", "n", "n2", "c");
+        private static readonly FieldInfo[] ScratchFields = Fields(GameLookups.Field(typeof(terrainGenScript), "v"), GameLookups.Field(typeof(terrainGenScript), "v2"),
+            GameLookups.Field(typeof(terrainGenScript), "n"), GameLookups.Field(typeof(terrainGenScript), "n2"), GameLookups.Field(typeof(terrainGenScript), "c"));
 
-        private static FieldInfo[] Fields(params string[] names)
+        private static FieldInfo[] Fields(params FieldInfo[] all)
         {
-            var all = new FieldInfo[names.Length];
-            for (int i = 0; i < names.Length; i++)
+            for (int i = 0; i < all.Length; i++)
             {
-                all[i] = AccessTools.Field(typeof(terrainGenScript), names[i]);
                 if (all[i] == null || !all[i].FieldType.IsArray)
                 {
-                    Plugin.Log.LogError("AsyncTerrain: terrainGenScript." + names[i] + " isn't an array field any more; tiles stay on the main thread");
+                    Plugin.Log.LogError("AsyncTerrain: terrainGenScript scratch field " + i + " isn't an array field any more; tiles stay on the main thread");
                     return null;
                 }
             }
@@ -270,8 +269,8 @@ namespace TLDRevamp.Fixes
             IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions)
             {
                 var p = new GamePatch(nameof(AsyncTerrain) + ".GenerateTileMesh", instructions);
-                p.Calls(AccessTools.Method(typeof(mapSettingScript), nameof(mapSettingScript.RoadsNear), new[] { typeof(Vector3d) }), AccessTools.Method(typeof(AsyncTerrain), nameof(JobRoads)), 1);
-                p.Calls(AccessTools.Method(typeof(mapSettingScript), nameof(mapSettingScript.POIsNear), new[] { typeof(Vector3d), typeof(float) }), AccessTools.Method(typeof(AsyncTerrain), nameof(JobPois)), 1);
+                p.Calls(GameLookups.Method(typeof(mapSettingScript), nameof(mapSettingScript.RoadsNear), new[] { typeof(Vector3d) }), AccessTools.Method(typeof(AsyncTerrain), nameof(JobRoads)), 1);
+                p.Calls(GameLookups.Method(typeof(mapSettingScript), nameof(mapSettingScript.POIsNear), new[] { typeof(Vector3d), typeof(float) }), AccessTools.Method(typeof(AsyncTerrain), nameof(JobPois)), 1);
                 p.Calls(HeightM, AccessTools.Method(typeof(AsyncTerrain), nameof(Height)), 1);
                 p.Calls(BiomeM, AccessTools.Method(typeof(AsyncTerrain), nameof(Biome)), 1);
                 return p.Result(ref WorkerPatched);
@@ -283,9 +282,9 @@ namespace TLDRevamp.Fixes
         public static List<roadGenScript.roadClass> JobRoads(Vector3d _) => _current.Roads;
         public static List<poiGenScript.poiClass> JobPois(Vector3d _, float __) => _current.Pois;
 
-        private static readonly MethodInfo HeightM = AccessTools.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.Height),
+        private static readonly MethodInfo HeightM = GameLookups.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.Height),
             new[] { typeof(Vector3d), typeof(List<roadGenScript.roadClass>), typeof(List<poiGenScript.poiClass>) });
-        private static readonly MethodInfo BiomeM = AccessTools.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.Biome), new[] { typeof(Vector3d), typeof(double) });
+        private static readonly MethodInfo BiomeM = GameLookups.Method(typeof(terrainGenSettings), nameof(terrainGenSettings.Biome), new[] { typeof(Vector3d), typeof(double) });
 
         /// terrainGenSettings.Height(gpos, roads, pois) safe on any thread (imageMapLoad excluded at dispatch).
         internal static double Height(terrainGenSettings s, Vector3d _gpos, List<roadGenScript.roadClass> _roadlist, List<poiGenScript.poiClass> _poiList)
@@ -332,7 +331,7 @@ namespace TLDRevamp.Fixes
             throw new NotImplementedException("a reverse patch: replaced at runtime");
         }
 
-        private static readonly MethodInfo NoisesNoise = AccessTools.Method(typeof(terrainGenSettings.Noises), nameof(terrainGenSettings.Noises.Noise));
+        private static readonly MethodInfo NoisesNoise = GameLookups.Method(typeof(terrainGenSettings.Noises), nameof(terrainGenSettings.Noises.Noise));
 
         /// `noises[i].Noise(gpos)` on a copy: Noise writes its scratch (r, d, s) into the struct it runs on.
         public static double NoiseOnCopy(ref terrainGenSettings.Noises n, Vector3d gpos)

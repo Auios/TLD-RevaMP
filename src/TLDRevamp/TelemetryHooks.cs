@@ -74,7 +74,7 @@ namespace TLDRevamp
         [HarmonyPatch(typeof(objGenScript.categoryClass), nameof(objGenScript.categoryClass.UpdGen)), HarmonyTranspiler]
         private static IEnumerable<CodeInstruction> Scenery(IEnumerable<CodeInstruction> instructions)
         {
-            var field = AccessTools.Field(typeof(objGenScript.chunkClass), nameof(objGenScript.chunkClass.generated));
+            var field = GameLookups.Field(typeof(objGenScript.chunkClass), nameof(objGenScript.chunkClass.generated));
             var count = AccessTools.Method(typeof(TelemetryHooks), nameof(SceneryFinished));
             foreach (var instruction in instructions)
             {
@@ -136,7 +136,7 @@ namespace TLDRevamp
             }
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                var active = AccessTools.Method(typeof(GameObject), nameof(GameObject.SetActive));
+                var active = GameLookups.Method(typeof(GameObject), nameof(GameObject.SetActive));
                 foreach (var instruction in instructions)
                 {
                     if (instruction.Calls(active)) { instruction.opcode = OpCodes.Call; instruction.operand = AccessTools.Method(typeof(TelemetryHooks), nameof(SetActive)); }
@@ -201,8 +201,8 @@ namespace TLDRevamp
         {
             private static IEnumerable<MethodBase> TargetMethods()
             {
-                yield return AccessTools.Method(typeof(pathscript), "SaveBinaryAsync").MakeGenericMethod(typeof(savedata));
-                yield return AccessTools.Method(typeof(pathscript), "SaveJSONAsync").MakeGenericMethod(typeof(savedata));
+                yield return GameLookups.Method(typeof(pathscript), "SaveBinaryAsync").MakeGenericMethod(typeof(savedata));
+                yield return GameLookups.Method(typeof(pathscript), "SaveJSONAsync").MakeGenericMethod(typeof(savedata));
             }
             private static void Postfix(string __0, object __1, Task __result)
             {

@@ -49,8 +49,8 @@ namespace TLDRevamp.Net
 
         // ---- test hooks (bridge `mp grip net [secs] [steer]`, `mp grip stop`): take the vehicle's grip the way the
         // game does (fpscontroller's push-key branch on a pushgripable) and walk with the forward key held
-        internal static readonly AccessTools.FieldRef<fpscontroller, ConfigurableJoint> GripJoint = AccessTools.FieldRefAccess<fpscontroller, ConfigurableJoint>("pushGripJoint");
-        internal static readonly AccessTools.FieldRef<fpscontroller, bool> GripNow = AccessTools.FieldRefAccess<fpscontroller, bool>("pushgripnow");
+        internal static readonly AccessTools.FieldRef<fpscontroller, ConfigurableJoint> GripJoint = GameLookups.FieldRefAccess<fpscontroller, ConfigurableJoint>(typeof(fpscontroller), "pushGripJoint");
+        internal static readonly AccessTools.FieldRef<fpscontroller, bool> GripNow = GameLookups.FieldRefAccess<fpscontroller, bool>(typeof(fpscontroller), "pushgripnow");
         private static float _gripWalkUntil, _gripSteer;
         internal static float ObservedGripSteer { get => _gripSteer; set => _gripSteer = value; }
         internal static float ObservedGripWalkUntil { get => _gripWalkUntil; set => _gripWalkUntil = value; }

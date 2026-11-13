@@ -214,3 +214,5 @@ namespace TLDRevamp.Net
 }
 
 namespace TLDRevamp.Net { static class EntityProxyTools { internal static bool TestAsPlayer { get => Entities.TestAsPlayer; set => Entities.TestAsPlayer = value; } } }
+
+namespace TLDRevamp { static class GameLookups { internal static System.Reflection.MethodInfo Method(Type type, string name, Type[] args = null) => HarmonyLib.AccessTools.Method(type, name, args); } }

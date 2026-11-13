@@ -46,7 +46,7 @@ namespace TLDRevamp
             {
                 _aliasLooked = true;
                 const BindingFlags f = BindingFlags.Public | BindingFlags.Instance;
-                _fSeed = typeof(mainscript).GetField("seed", f); _fLoad = typeof(mainscript).GetField("load", f); _fNapszak = typeof(mainscript).GetField("napszak", f);
+                _fSeed = GameLookups.ReflectionField(typeof(mainscript), "seed", f); _fLoad = GameLookups.ReflectionField(typeof(mainscript), "load", f); _fNapszak = GameLookups.ReflectionField(typeof(mainscript), "napszak", f);
             }
             var dm = DataFromMenuScript.s;
             bool signal = _loadSignal; _loadSignal = false;
@@ -143,11 +143,11 @@ namespace TLDRevamp
                 object target;
                 switch (m.methodType ?? HarmonyLib.MethodType.Normal)
                 {
-                    case HarmonyLib.MethodType.Getter: target = HarmonyLib.AccessTools.PropertyGetter(dt, m.methodName); break;
-                    case HarmonyLib.MethodType.Setter: target = HarmonyLib.AccessTools.PropertySetter(dt, m.methodName); break;
-                    case HarmonyLib.MethodType.Constructor: target = HarmonyLib.AccessTools.Constructor(dt, args); break;
+                    case HarmonyLib.MethodType.Getter: target = GameLookups.RuntimeHarmonyGetter(dt, m.methodName); break;
+                    case HarmonyLib.MethodType.Setter: target = GameLookups.RuntimeHarmonySetter(dt, m.methodName); break;
+                    case HarmonyLib.MethodType.Constructor: target = GameLookups.RuntimeHarmonyConstructor(dt, args); break;
                     case HarmonyLib.MethodType.StaticConstructor: target = dt.TypeInitializer; break;
-                    default: target = m.methodName == null ? (object)dt : HarmonyLib.AccessTools.Method(dt, m.methodName, args); break;
+                    default: target = m.methodName == null ? (object)dt : GameLookups.RuntimeHarmonyMethod(dt, m.methodName, args); break;
                 }
                 return target == null ? "its target " + dt.Name + "." + m.methodName + " doesn't exist on the beta" : null;
             }
@@ -197,10 +197,9 @@ namespace TLDRevamp
                     try
                     {
                         // the beta's own choice in PressedDeleteYes: an autosave slot, or the selected save
-                        var tr = HarmonyLib.Traverse.Create(__instance);
-                        var which = tr.Field("BautoSaveSelected").GetValue<bool>()
+                        var which = GameLookups.FieldValue<bool>(typeof(newSaveScreenScript), "BautoSaveSelected", __instance)
                             ? __instance.AutoSaveReferences[__instance.selectedAutoSaveIndex]
-                            : __instance.LSaveReferences[tr.Field("CurrentSelected").GetValue<int>()];
+                            : __instance.LSaveReferences[GameLookups.FieldValue<int>(typeof(newSaveScreenScript), "CurrentSelected", __instance)];
                         if (which != null) Raise(_delete, which.name);
                     }
                     catch { }

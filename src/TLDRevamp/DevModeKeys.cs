@@ -97,9 +97,9 @@ namespace TLDRevamp
         {
             var calls = new Dictionary<MethodInfo, string>
             {
-                { AccessTools.Method(typeof(Input), nameof(Input.GetKeyDown), new[] { typeof(KeyCode) }), nameof(Down) },
-                { AccessTools.Method(typeof(Input), nameof(Input.GetKey), new[] { typeof(KeyCode) }), nameof(Held) },
-                { AccessTools.Method(typeof(Input), nameof(Input.GetKeyUp), new[] { typeof(KeyCode) }), nameof(Up) },
+                { GameLookups.Method(typeof(Input), nameof(Input.GetKeyDown), new[] { typeof(KeyCode) }), nameof(Down) },
+                { GameLookups.Method(typeof(Input), nameof(Input.GetKey), new[] { typeof(KeyCode) }), nameof(Held) },
+                { GameLookups.Method(typeof(Input), nameof(Input.GetKeyUp), new[] { typeof(KeyCode) }), nameof(Up) },
             };
             var list = new List<CodeInstruction>(code);
             var found = new HashSet<KeyCode>();

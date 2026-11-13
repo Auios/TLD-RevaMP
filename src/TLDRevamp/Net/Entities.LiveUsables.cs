@@ -122,10 +122,10 @@ namespace TLDRevamp.Net
         {
             private static IEnumerable<System.Reflection.MethodBase> TargetMethods()
             {
-                yield return HarmonyLib.AccessTools.Method(typeof(usablescript), nameof(usablescript.Rot), new[] { typeof(float), typeof(float), typeof(bool), typeof(bool) });
-                yield return HarmonyLib.AccessTools.Method(typeof(usablescript), nameof(usablescript.Slide), new[] { typeof(float), typeof(float), typeof(float), typeof(bool) });
-                yield return HarmonyLib.AccessTools.Method(typeof(usablescript), nameof(usablescript.Tuned), new[] { typeof(float), typeof(bool) });
-                yield return HarmonyLib.AccessTools.Method(typeof(usablescript), nameof(usablescript.UpdTurnState), new[] { typeof(int), typeof(bool) });
+                yield return GameLookups.Method(typeof(usablescript), nameof(usablescript.Rot), new[] { typeof(float), typeof(float), typeof(bool), typeof(bool) });
+                yield return GameLookups.Method(typeof(usablescript), nameof(usablescript.Slide), new[] { typeof(float), typeof(float), typeof(float), typeof(bool) });
+                yield return GameLookups.Method(typeof(usablescript), nameof(usablescript.Tuned), new[] { typeof(float), typeof(bool) });
+                yield return GameLookups.Method(typeof(usablescript), nameof(usablescript.UpdTurnState), new[] { typeof(int), typeof(bool) });
             }
             [HarmonyLib.HarmonyPrefix]
             private static void Prefix(usablescript __instance, bool syncinmulti)

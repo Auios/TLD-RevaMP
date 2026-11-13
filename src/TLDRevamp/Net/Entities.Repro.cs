@@ -58,10 +58,10 @@ namespace TLDRevamp.Net
         {
             private static IEnumerable<MethodBase> TargetMethods()
             {
-                yield return AccessTools.Method(typeof(fpscontroller), nameof(fpscontroller.InvSwitchTo), new[] { typeof(int), typeof(bool) });
-                yield return AccessTools.Method(typeof(fpscontroller), nameof(fpscontroller.InvSwapTo));
-                yield return AccessTools.Method(typeof(fpscontroller), nameof(fpscontroller.InvStore));
-                yield return AccessTools.Method(typeof(fpscontroller), nameof(fpscontroller.InvUnStore));
+                yield return GameLookups.Method(typeof(fpscontroller), nameof(fpscontroller.InvSwitchTo), new[] { typeof(int), typeof(bool) });
+                yield return GameLookups.Method(typeof(fpscontroller), nameof(fpscontroller.InvSwapTo));
+                yield return GameLookups.Method(typeof(fpscontroller), nameof(fpscontroller.InvStore));
+                yield return GameLookups.Method(typeof(fpscontroller), nameof(fpscontroller.InvUnStore));
             }
             private static void Prefix(fpscontroller __instance, int i, MethodBase __originalMethod, out bool __state)
             {

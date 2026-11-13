@@ -24,9 +24,9 @@ namespace TLDRevamp.Fixes
         public static bool Enabled = false;
         public static int Patched;
 
-        private static readonly AccessTools.FieldRef<int[]> PermRef = AccessTools.StaticFieldRefAccess<int[]>(AccessTools.Field(typeof(NoiseS3D), "perm_"));
-        private static readonly MethodInfo Game2 = AccessTools.Method(typeof(NoiseS3D), nameof(NoiseS3D.Noise), new[] { typeof(double), typeof(double) });
-        private static readonly MethodInfo Game3 = AccessTools.Method(typeof(NoiseS3D), nameof(NoiseS3D.Noise), new[] { typeof(double), typeof(double), typeof(double) });
+        private static readonly AccessTools.FieldRef<int[]> PermRef = AccessTools.StaticFieldRefAccess<int[]>(GameLookups.Field(typeof(NoiseS3D), "perm_"));
+        private static readonly MethodInfo Game2 = GameLookups.Method(typeof(NoiseS3D), nameof(NoiseS3D.Noise), new[] { typeof(double), typeof(double) });
+        private static readonly MethodInfo Game3 = GameLookups.Method(typeof(NoiseS3D), nameof(NoiseS3D.Noise), new[] { typeof(double), typeof(double), typeof(double) });
 
         // The reference's 12 gradients (the edge midpoints of a cube), flattened, as doubles
         private static readonly double[] Grad3 = { 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1 };
@@ -50,8 +50,8 @@ namespace TLDRevamp.Fixes
         [HarmonyTargetMethods]
         private static IEnumerable<MethodBase> TargetMethods()
         {
-            yield return AccessTools.Method(typeof(terrainGenSettings.noiseSetting), nameof(terrainGenSettings.noiseSetting.NoOctaveNoise));
-            yield return AccessTools.Method(typeof(roadGenScript), nameof(roadGenScript.PointOnRoad));
+            yield return GameLookups.Method(typeof(terrainGenSettings.noiseSetting), nameof(terrainGenSettings.noiseSetting.NoOctaveNoise));
+            yield return GameLookups.Method(typeof(roadGenScript), nameof(roadGenScript.PointOnRoad));
         }
 
         [HarmonyTranspiler]

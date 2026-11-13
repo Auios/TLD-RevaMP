@@ -48,8 +48,8 @@ namespace TLDRevamp.Fixes
 
         private static IEnumerable<System.Reflection.MethodBase> TargetMethods()
         {
-            yield return AccessTools.Method(typeof(tosaveitemscript), nameof(tosaveitemscript.FStart), new System.Type[0]);
-            yield return AccessTools.Method(typeof(tosaveitemscript), nameof(tosaveitemscript.FStart), new[] { typeof(uint) });
+            yield return GameLookups.Method(typeof(tosaveitemscript), nameof(tosaveitemscript.FStart), new System.Type[0]);
+            yield return GameLookups.Method(typeof(tosaveitemscript), nameof(tosaveitemscript.FStart), new[] { typeof(uint) });
         }
 
         [HarmonyPostfix]

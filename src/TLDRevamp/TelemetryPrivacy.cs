@@ -204,12 +204,28 @@ namespace TLDRevamp
             Regex.IsMatch(key, @"\A[A-Za-z0-9_.:/-]+\z", RegexOptions.CultureInvariant);
         internal static bool PrivateKey(string key) => key == "steamId" || key == "accountId" || key == "lobbyId" || key == "port";
         private static bool Symbol(string value) => value.IndexOf('.') >= 0 && Regex.IsMatch(value, @"^[A-Za-z_<][A-Za-z0-9_.:+<>`/?-]*$", RegexOptions.CultureInvariant);
+        internal static bool LookupString(string field, string value)
+        {
+            if (value == "" || value == Removed) return true;
+            if (value == null || Clean(value) != value) return false;
+            switch (field)
+            {
+                case "lookupKind": return Array.IndexOf(new[] { "field", "method", "property", "getter", "setter", "constructor", "inner", "type", "fieldref", "reflection field", "reflection method", "reflection property", "generic method" }, value) >= 0;
+                case "sourceFile": return !value.Contains("..") && Regex.IsMatch(value, @"^(?:src/(?:TLDRevamp(?:\.Dev|\.Preloader)?|TLDLoaderShim)/)?[A-Za-z0-9_./-]+\.cs$", RegexOptions.CultureInvariant);
+                case "declaringType": case "memberName": case "parameterTypes":
+                    return Regex.IsMatch(value, @"^[A-Za-z_<.][A-Za-z0-9_.,+<>`\[\]&= *-]*$", RegexOptions.CultureInvariant);
+                case "patchFailures": return Regex.IsMatch(value, @"^[A-Za-z_][A-Za-z0-9_.+`]*(?: \(site missing\))?$", RegexOptions.CultureInvariant);
+                default: return false;
+            }
+        }
+        internal static string LookupStr(string field, string value) => Json.Str(value == null ? "" : LookupString(field, value) ? value : Removed);
         internal static bool ShareString(string field, string value)
         {
             if (field == "sid" || field == "recording") return RandomId(value) != "null";
             if (value == "" || value == Removed || value == "[player]") return true;
             switch (field)
             {
+                case "lookupKind": case "sourceFile": case "declaringType": case "memberName": case "parameterTypes": case "patchFailures": return LookupString(field, value);
                 case "note": return value.Length <= 500 && Clean(value) == value;
                 case "marksFolder": return Regex.IsMatch(value, @"^marks/\d{4}-\d{2}-\d{2}-[0-9a-f]{16}$", RegexOptions.CultureInvariant);
                 case "cpu": case "gpu": return Clean(value) == value;
@@ -245,6 +261,7 @@ namespace TLDRevamp
         }
 
         private static readonly HashSet<string> ExportKeys = new HashSet<string>((
+            "gameLookups resolved missing patchFailures lookupKind declaringType memberName parameterTypes sourceFile line " +
             "date crosshair dragging closestPlayer distance origin marksFolder bandwidth identical corpseRoot unknown creatureRange deadAnimation idlePose physlocked attachedPart rabbitAnimation ragdollPose " +
             "commit head tick hitch warn load save mark warning error exception solo host client dedicated local me player " +
             "new firstUsable firstState xCm yCm zCm interval age mode correction activated ageS ai alloc allocBytesPerFrame " +

@@ -23,8 +23,8 @@ namespace TLDRevamp.Net
 
         internal static IntPtr CSteamUtils()
         {
-            var ctx = typeof(SteamClient).Assembly.GetType("Steamworks.CSteamAPIContext");
-            return (IntPtr)ctx.GetMethod("GetSteamNetworkingUtils", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
+            var ctx = GameLookups.AssemblyType(typeof(SteamClient), "Steamworks.CSteamAPIContext");
+            return (IntPtr)GameLookups.NamedMethod(typeof(SteamClient), "Steamworks.CSteamAPIContext:GetSteamNetworkingUtils", ctx, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
         }
 
         /// Every relay datacenter with this machine's ping to it (through the best relay route, and direct).

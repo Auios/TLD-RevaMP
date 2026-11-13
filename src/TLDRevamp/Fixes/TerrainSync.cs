@@ -36,9 +36,9 @@ namespace TLDRevamp.Fixes
         private static List<poiGenScript.poiClass> _nextPois;
 
         private static readonly Func<terrainGenScript, Vector3d, terrainGenScript.smesh> GenerateTileMesh =
-            AccessTools.MethodDelegate<Func<terrainGenScript, Vector3d, terrainGenScript.smesh>>(AccessTools.Method(typeof(terrainGenScript), "GenerateTileMesh"));
+            AccessTools.MethodDelegate<Func<terrainGenScript, Vector3d, terrainGenScript.smesh>>(GameLookups.Method(typeof(terrainGenScript), "GenerateTileMesh"));
         private static readonly Func<terrainGenScript, terrainGenScript.smesh, Mesh> MeshFromSmesh =
-            AccessTools.MethodDelegate<Func<terrainGenScript, terrainGenScript.smesh, Mesh>>(AccessTools.Method(typeof(terrainGenScript), "MeshFromSmesh"));
+            AccessTools.MethodDelegate<Func<terrainGenScript, terrainGenScript.smesh, Mesh>>(GameLookups.Method(typeof(terrainGenScript), "MeshFromSmesh"));
 
         internal static List<roadGenScript.roadClass> RoadsFor(terrainGenScript gen, Vector3d key) => gen.roadAffectsThis ? mapSettingScript.RoadsNear(key) : null;
         internal static List<poiGenScript.poiClass> PoisFor(terrainGenScript gen, Vector3d key) => gen.poiAffectsThis ? mapSettingScript.POIsNear(key, gen.tileSize) : null;

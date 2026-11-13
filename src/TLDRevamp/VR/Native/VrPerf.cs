@@ -115,7 +115,7 @@ namespace TLDRevamp.VR.Native
             foreach (var c in Object.FindObjectsOfType<Behaviour>())
             {
                 if (c == null || c.GetType().Name != "PostProcessLayer") continue;
-                var f = c.GetType().GetField("antialiasingMode");
+                var f = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessLayer:antialiasingMode", c.GetType());
                 if (f == null || f.GetValue(c).ToString() != "TemporalAntialiasing") continue;
                 SetAa(c, "None");
                 if (!_taaLayers.Contains(c)) _taaLayers.Add(c);
@@ -148,7 +148,7 @@ namespace TLDRevamp.VR.Native
             }
             foreach (var c in layers)
             {
-                if (!(c.GetType().GetField("volumeLayer")?.GetValue(c) is LayerMask m)) continue;
+                if (!(GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessLayer:volumeLayer", c.GetType())?.GetValue(c) is LayerMask m)) continue;
                 bool idle = (m.value & volumeLayers) == 0;
                 if (idle && c.enabled) { c.enabled = false; if (!_idleLayers.Contains(c)) _idleLayers.Add(c); }
                 else if (!idle && _idleLayers.Contains(c)) { c.enabled = true; _idleLayers.Remove(c); }
@@ -159,7 +159,7 @@ namespace TLDRevamp.VR.Native
         {
             try
             {
-                var f = layer.GetType().GetField("antialiasingMode");
+                var f = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessLayer:antialiasingMode", layer.GetType());
                 if (f != null) f.SetValue(layer, System.Enum.Parse(f.FieldType, mode));
             }
             catch (System.Exception e) { VrHands.Fault("taa", e); }

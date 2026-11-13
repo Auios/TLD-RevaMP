@@ -47,7 +47,7 @@ namespace TLDRevamp.Fixes
         private static readonly HashSet<Vector3d> RoadEvSeen = new HashSet<Vector3d>();
         private static readonly List<poiGenScript.poiClass> NewPois = new List<poiGenScript.poiClass>();
         private static readonly ConditionalWeakTable<poiGenScript.poiClass, object> KnownPois = new ConditionalWeakTable<poiGenScript.poiClass, object>();
-        private static readonly AccessTools.FieldRef<roadGenScript, int> IAround = AccessTools.FieldRefAccess<roadGenScript, int>("iaround");
+        private static readonly AccessTools.FieldRef<roadGenScript, int> IAround = GameLookups.FieldRefAccess<roadGenScript, int>(typeof(roadGenScript), "iaround");
 
         private sealed class Pending { public readonly List<Vector3d> Keys = new List<Vector3d>(); }
         private static readonly ConditionalWeakTable<objGenScript.categoryClass, Pending> Queue = new ConditionalWeakTable<objGenScript.categoryClass, Pending>();

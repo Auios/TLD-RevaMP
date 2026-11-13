@@ -278,13 +278,13 @@ namespace TLDRevamp.Net
             if (_watchHarmony != null) return;
             _watchHarmony = new HarmonyLib.Harmony("tldrevamp.mountwatch");
             var pre = new HarmonyLib.HarmonyMethod(typeof(EntityMountLab).GetMethod(nameof(WatchSetParent), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static));
-            _watchHarmony.Patch(HarmonyLib.AccessTools.Method(typeof(Transform), nameof(Transform.SetParent), new[] { typeof(Transform), typeof(bool) }), pre);
+            _watchHarmony.Patch(GameLookups.Method(typeof(Transform), nameof(Transform.SetParent), new[] { typeof(Transform), typeof(bool) }), pre);
             var bf = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-            _watchHarmony.Patch(HarmonyLib.AccessTools.Method(typeof(save_attachable), nameof(save_attachable.Load), new[] { typeof(attachablescript), typeof(int), typeof(int), typeof(uint), typeof(int), typeof(Vector3d), typeof(int), typeof(Vector3d), typeof(Vector3d) }),
+            _watchHarmony.Patch(GameLookups.Method(typeof(save_attachable), nameof(save_attachable.Load), new[] { typeof(attachablescript), typeof(int), typeof(int), typeof(uint), typeof(int), typeof(Vector3d), typeof(int), typeof(Vector3d), typeof(Vector3d) }),
                 new HarmonyLib.HarmonyMethod(typeof(EntityMountLab).GetMethod(nameof(WatchLoad), bf)));
-            _watchHarmony.Patch(HarmonyLib.AccessTools.Method(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(Transform) }),
+            _watchHarmony.Patch(GameLookups.Method(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(Transform) }),
                 finalizer: new HarmonyLib.HarmonyMethod(typeof(EntityMountLab).GetMethod(nameof(WatchAttachEx), bf)));
-            _watchHarmony.Patch(HarmonyLib.AccessTools.PropertySetter(typeof(Transform), nameof(Transform.parent)),
+            _watchHarmony.Patch(GameLookups.PropertySetter(typeof(Transform), nameof(Transform.parent)),
                 new HarmonyLib.HarmonyMethod(typeof(EntityMountLab).GetMethod(nameof(WatchSetParentProp), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)));
         }
         [HarmonyLib.HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Detach))]

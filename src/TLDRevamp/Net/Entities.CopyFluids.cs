@@ -152,8 +152,8 @@ namespace TLDRevamp.Net
         {
             private static IEnumerable<System.Reflection.MethodBase> TargetMethods()
             {
-                yield return AccessTools.Method(typeof(mainscript.fluidcontainer), nameof(mainscript.fluidcontainer.ChangeWithoutMix), new[] { typeof(float) });
-                yield return AccessTools.Method(typeof(mainscript.fluidcontainer), nameof(mainscript.fluidcontainer.ChangeWithoutMix), new[] { typeof(float), typeof(bool) });
+                yield return GameLookups.Method(typeof(mainscript.fluidcontainer), nameof(mainscript.fluidcontainer.ChangeWithoutMix), new[] { typeof(float) });
+                yield return GameLookups.Method(typeof(mainscript.fluidcontainer), nameof(mainscript.fluidcontainer.ChangeWithoutMix), new[] { typeof(float), typeof(bool) });
             }
 
             [HarmonyPrefix]

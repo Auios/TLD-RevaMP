@@ -116,6 +116,11 @@ static class TelemetryPrivacyTest
 
     static int Main(string[] args)
     {
+        string lookupJson = "{\"gameLookups\":" + GameLookups.Json() + "}";
+        Check(Encoding.UTF8.GetString(TLDRevamp.Net.ReportTransfer.Json(Encoding.UTF8.GetBytes(lookupJson), false, "", 0, privacy: true)) == lookupJson, "lookup identifiers survive shared report validation");
+        Check(!TelemetryPrivacy.LookupString("sourceFile", "D:/elsewhere/private.cs") && !TelemetryPrivacy.LookupString("sourceFile", "src/TLDRevamp/../../private.cs"), "lookup source paths cannot escape the code tree");
+        Check(TelemetryPrivacy.LookupStr("memberName", "https://private.example/token").Contains(TelemetryPrivacy.Removed), "arbitrary lookup requests are filtered before export");
+
         BepInEx.Paths.BepInExRootPath = Path.GetFullPath(args.Length > 0 ? args[0] : Path.Combine(Path.GetTempPath(), "telprivacy-" + Guid.NewGuid().ToString("N")));
         TelemetryPrivacy.Name(Secrets[0]); TelemetryPrivacy.Name(Secrets[1]); TelemetryPrivacy.Name(Secrets[2]);
         TelemetryPrivacy.Identity(3987654321); TelemetryPrivacy.Identity(3987654322);

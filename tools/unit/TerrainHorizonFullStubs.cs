@@ -147,3 +147,5 @@ namespace TLDRevamp.Fixes { internal static class DetailedTerrain { internal sta
 // PureRoads (the shadow road generator) is not part of this test: no shadow, so distant tiles take the old path.
 namespace TLDRevamp.Fixes { internal static class PureRoads { internal static bool ShadowUsable(roadGenScript g) => false;
     internal static System.Collections.Generic.List<roadGenScript.roadClass> RoadsAround(roadGenScript g, double a, double b, double c, double d, double e, System.Diagnostics.Stopwatch w, double ms) => null; } }
+
+namespace TLDRevamp { static class GameLookups { internal static HarmonyLib.AccessTools.FieldRef<T, F> FieldRefAccess<T, F>(System.Type type, string name) => HarmonyLib.AccessTools.FieldRefAccess<T, F>(name); } }

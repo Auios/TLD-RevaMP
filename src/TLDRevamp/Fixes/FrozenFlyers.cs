@@ -18,7 +18,7 @@ namespace TLDRevamp.Fixes
     public static class FrozenFlyers
     {
         public static long Skipped;
-        private static readonly AccessTools.FieldRef<randomFlyer, Rigidbody> Rb = AccessTools.FieldRefAccess<randomFlyer, Rigidbody>("rb");
+        private static readonly AccessTools.FieldRef<randomFlyer, Rigidbody> Rb = GameLookups.FieldRefAccess<randomFlyer, Rigidbody>(typeof(randomFlyer), "rb");
 
         [HarmonyPrefix]
         private static bool Prefix(randomFlyer __instance)

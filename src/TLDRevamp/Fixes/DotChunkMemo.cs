@@ -43,7 +43,7 @@ namespace TLDRevamp.Fixes
             new ConditionalWeakTable<roadGenScript, Dictionary<Vector3d, Entry>>();
 
         private static readonly AccessTools.FieldRef<roadGenScript, roadGenScript.dotChunkClass> Dcc0 =
-            AccessTools.FieldRefAccess<roadGenScript, roadGenScript.dotChunkClass>("dcc0");
+            GameLookups.FieldRefAccess<roadGenScript, roadGenScript.dotChunkClass>(typeof(roadGenScript), "dcc0");
         private static readonly AccessTools.FieldRef<System.Random, int> InextRef = AccessTools.FieldRefAccess<System.Random, int>("_inext");
         private static readonly AccessTools.FieldRef<System.Random, int> InextpRef = AccessTools.FieldRefAccess<System.Random, int>("_inextp");
         private static readonly AccessTools.FieldRef<System.Random, int[]> SeedArrayRef = AccessTools.FieldRefAccess<System.Random, int[]>("_seedArray");

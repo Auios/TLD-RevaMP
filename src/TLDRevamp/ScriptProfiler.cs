@@ -205,7 +205,7 @@ namespace TLDRevamp
             int dot = spec.LastIndexOf('.');
             var type = dot > 0 ? Reflect.FindType(spec.Substring(0, dot)) : null;
             if (type == null) yield break;
-            foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+            foreach (var m in GameLookups.RuntimeMethods(type, spec.Substring(dot + 1), BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
                 if (m.Name == spec.Substring(dot + 1) && !m.IsAbstract && !m.IsGenericMethodDefinition && !m.ContainsGenericParameters) yield return m;
         }
 
@@ -218,7 +218,7 @@ namespace TLDRevamp
                 if (!typeof(UnityEngine.MonoBehaviour).IsAssignableFrom(type) || type.IsGenericTypeDefinition) continue;
                 foreach (var name in Targets)
                 {
-                    var m = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly, null, Type.EmptyTypes, null);
+                    var m = GameLookups.RuntimeMethod(type, name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly, Type.EmptyTypes);
                     if (m != null && !m.IsAbstract) yield return m;
                 }
                 // Physics callbacks take a Collision/Collider argument
@@ -234,7 +234,7 @@ namespace TLDRevamp
             foreach (var type in asms.SelectMany(x => { try { return x.GetTypes(); } catch (ReflectionTypeLoadException e) { return e.Types.Where(t => t != null).ToArray(); } }))
             {
                 if (!type.Name.StartsWith("<") || !typeof(System.Collections.IEnumerator).IsAssignableFrom(type) || type.IsGenericTypeDefinition || type.ContainsGenericParameters) continue;
-                var m = type.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+                var m = GameLookups.RuntimeMethod(type, "MoveNext", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
                 if (m != null) yield return m;
             }
         }

@@ -32,16 +32,16 @@ namespace TLDRevamp.Fixes
         [HarmonyTargetMethods]
         private static IEnumerable<MethodBase> Targets()
         {
-            yield return AccessTools.Method(typeof(playermodeloutfitscript), nameof(playermodeloutfitscript.SetDistance));
-            yield return AccessTools.Method(typeof(playermodeloutfitscript), nameof(playermodeloutfitscript.ReSetDistance));
+            yield return GameLookups.Method(typeof(playermodeloutfitscript), nameof(playermodeloutfitscript.SetDistance));
+            yield return GameLookups.Method(typeof(playermodeloutfitscript), nameof(playermodeloutfitscript.ReSetDistance));
         }
 
         [HarmonyTranspiler]
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, MethodBase original)
         {
             var p = new GamePatch(nameof(OutfitDistanceNoAlloc) + "." + original.Name, instructions);
-            p.Calls(AccessTools.PropertyGetter(typeof(Renderer), nameof(Renderer.materials)), AccessTools.Method(typeof(OutfitDistanceNoAlloc), nameof(Materials)), 1);
-            p.Calls(AccessTools.Method(typeof(Material), nameof(Material.SetFloat), new[] { typeof(string), typeof(float) }), AccessTools.Method(typeof(OutfitDistanceNoAlloc), nameof(SetFloat)), 1);
+            p.Calls(GameLookups.PropertyGetter(typeof(Renderer), nameof(Renderer.materials)), AccessTools.Method(typeof(OutfitDistanceNoAlloc), nameof(Materials)), 1);
+            p.Calls(GameLookups.Method(typeof(Material), nameof(Material.SetFloat), new[] { typeof(string), typeof(float) }), AccessTools.Method(typeof(OutfitDistanceNoAlloc), nameof(SetFloat)), 1);
             int ok = 0;
             var code = p.Result(ref ok);
             Patched += ok;

@@ -69,9 +69,9 @@ namespace TLDRevamp.VR.Native
                 {
                     _looked = true;
                     var t = typeof(postprocesscontrol);
-                    _dof = AccessTools.Field(t, "dof");
-                    _mblur = AccessTools.Field(t, "mblur");
-                    _profileP = AccessTools.Field(t, "P");
+                    _dof = GameLookups.Field(typeof(postprocesscontrol), "dof");
+                    _mblur = GameLookups.Field(typeof(postprocesscontrol), "mblur");
+                    _profileP = GameLookups.Field(typeof(postprocesscontrol), "P");
                 }
                 if (vr)
                 {
@@ -112,8 +112,8 @@ namespace TLDRevamp.VR.Native
             if (effect == null) return "null";
             try
             {
-                var p = effect.GetType().GetField("enabled")?.GetValue(effect);
-                var v = p?.GetType().GetField("value")?.GetValue(p);
+                var p = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessEffectSettings:enabled", effect.GetType())?.GetValue(effect);
+                var v = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.BoolParameter:value", p?.GetType())?.GetValue(p);
                 return v is bool on ? (on ? "true" : "false") : "null";
             }
             catch { return "null"; }
@@ -125,7 +125,7 @@ namespace TLDRevamp.VR.Native
             {
                 var profile = _profileP?.GetValue(pc);
                 if (profile == null) return null;
-                var settings = profile.GetType().GetField("settings")?.GetValue(profile) as System.Collections.IList;
+                var settings = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessProfile:settings", profile.GetType())?.GetValue(profile) as System.Collections.IList;
                 if (settings == null) return null;
                 foreach (var s in settings)
                     if (s != null && s.GetType().Name == "MotionBlur") return s;
@@ -139,8 +139,8 @@ namespace TLDRevamp.VR.Native
             if (effect == null) return;
             try
             {
-                var p = effect.GetType().GetField("enabled")?.GetValue(effect);
-                var f = p?.GetType().GetField("value");
+                var p = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessEffectSettings:enabled", effect.GetType())?.GetValue(effect);
+                var f = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.BoolParameter:value", p?.GetType());
                 if (f != null && !Equals(f.GetValue(p), on)) f.SetValue(p, on);
             }
             catch { }

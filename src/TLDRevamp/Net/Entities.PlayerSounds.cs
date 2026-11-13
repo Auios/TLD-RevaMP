@@ -73,9 +73,9 @@ namespace TLDRevamp.Net
         [HarmonyPatch(typeof(stepSoundScript), nameof(stepSoundScript.Step), typeof(float))]
         private static class StepSounds
         {
-            private static readonly AccessTools.FieldRef<stepSoundScript, mainscript.walkSoundType> Type = AccessTools.FieldRefAccess<stepSoundScript, mainscript.walkSoundType>("currentType");
-            private static readonly AccessTools.FieldRef<stepSoundScript, float> Vol = AccessTools.FieldRefAccess<stepSoundScript, float>("StepSoundVolume");
-            private static readonly AccessTools.FieldRef<stepSoundScript, AudioClip> Clip = AccessTools.FieldRefAccess<stepSoundScript, AudioClip>("StepSoundClip");
+            private static readonly AccessTools.FieldRef<stepSoundScript, mainscript.walkSoundType> Type = GameLookups.FieldRefAccess<stepSoundScript, mainscript.walkSoundType>(typeof(stepSoundScript), "currentType");
+            private static readonly AccessTools.FieldRef<stepSoundScript, float> Vol = GameLookups.FieldRefAccess<stepSoundScript, float>(typeof(stepSoundScript), "StepSoundVolume");
+            private static readonly AccessTools.FieldRef<stepSoundScript, AudioClip> Clip = GameLookups.FieldRefAccess<stepSoundScript, AudioClip>(typeof(stepSoundScript), "StepSoundClip");
 
             [HarmonyPrefix]
             private static bool Prefix(stepSoundScript __instance, out bool __state)

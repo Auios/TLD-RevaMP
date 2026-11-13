@@ -31,7 +31,7 @@ namespace TLDRevamp.Fixes
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)
         {
-            var raycastAll = AccessTools.Method(typeof(Physics), nameof(Physics.RaycastAll), new[] { typeof(Vector3), typeof(Vector3), typeof(float), typeof(int) });
+            var raycastAll = GameLookups.Method(typeof(Physics), nameof(Physics.RaycastAll), new[] { typeof(Vector3), typeof(Vector3), typeof(float), typeof(int) });
             var orderBy = typeof(Enumerable).GetMethods().First(m => m.Name == nameof(Enumerable.OrderBy) && m.GetParameters().Length == 2)
                 .MakeGenericMethod(typeof(RaycastHit), typeof(float));
             var toArray = AccessTools.Method(typeof(Enumerable), nameof(Enumerable.ToArray)).MakeGenericMethod(typeof(RaycastHit));

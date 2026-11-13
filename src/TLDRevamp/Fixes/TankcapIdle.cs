@@ -37,11 +37,11 @@ namespace TLDRevamp.Fixes
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             var p = new GamePatch(nameof(TankcapIdle), instructions);
-            p.Stores(AccessTools.Field(typeof(tankcapscript), nameof(tankcapscript.V)), Our(nameof(StoreV)), 1);
-            p.Calls(AccessTools.PropertySetter(typeof(ParticleSystem.CollisionModule), nameof(ParticleSystem.CollisionModule.bounce)), Our(nameof(SetBounce)), 1, withThis: true);
-            p.Calls(AccessTools.PropertySetter(typeof(ParticleSystem.CollisionModule), nameof(ParticleSystem.CollisionModule.dampen)), Our(nameof(SetDampen)), 1, withThis: true);
-            p.CallsWithConst(AccessTools.PropertySetter(typeof(ParticleSystem.EmissionModule), nameof(ParticleSystem.EmissionModule.enabled)), 0, Our(nameof(EmissionOff)), 2);
-            p.Calls(AccessTools.Method(typeof(AudioSource), nameof(AudioSource.Stop)), Our(nameof(Stop)), 2);
+            p.Stores(GameLookups.Field(typeof(tankcapscript), nameof(tankcapscript.V)), Our(nameof(StoreV)), 1);
+            p.Calls(GameLookups.PropertySetter(typeof(ParticleSystem.CollisionModule), nameof(ParticleSystem.CollisionModule.bounce)), Our(nameof(SetBounce)), 1, withThis: true);
+            p.Calls(GameLookups.PropertySetter(typeof(ParticleSystem.CollisionModule), nameof(ParticleSystem.CollisionModule.dampen)), Our(nameof(SetDampen)), 1, withThis: true);
+            p.CallsWithConst(GameLookups.PropertySetter(typeof(ParticleSystem.EmissionModule), nameof(ParticleSystem.EmissionModule.enabled)), 0, Our(nameof(EmissionOff)), 2);
+            p.Calls(GameLookups.Method(typeof(AudioSource), nameof(AudioSource.Stop)), Our(nameof(Stop)), 2);
             return p.Result(ref Patched);
         }
 

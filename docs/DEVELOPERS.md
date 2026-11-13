@@ -367,3 +367,17 @@ licence. That includes other mods: a mod that uses TLD RevaMP's code, such as th
 `TLDRevamp.Multiplayer.dll`, must be released under GPL-3.0 or a GPL-3.0-compatible licence (see
 [MODDING-MULTIPLAYER.md](MODDING-MULTIPLAYER.md)). The Long Drive itself, BepInEx, HarmonyX and UnityDoorstop keep
 their own licences; none of their code is in this repository.
+
+## After a game update
+
+Refresh `lib/` with `tools/libs.sh`, build the core and Dev plugins, then run
+`bash tools/unit/run-all.sh GameLookupsTest`. The test lists unresolved lookups and patch targets,
+plus dynamic targets it cannot check. Known optional input probes and preloader-injected aliases
+are printed separately; other missing members fail the test. Optional rendering types need
+`Unity.Postprocessing.Runtime.dll` in `lib/` to be checked offline.
+
+The startup block appears in BepInEx's `LogOutput.log`. A later missing lookup logs once at its
+first use. Current totals and missing names are in Dev bridge `ping` (`gameLookups`) and in
+bug/feedback reports (`stats.json`, also `gameLookups`). Caller locations contain source paths
+only, without the build machine's parent directories. `GameLookupsAllowlist.tsv` names each
+source-guard exception and its reason; unbounded bridge/mod requests are recorded at runtime.

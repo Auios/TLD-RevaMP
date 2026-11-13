@@ -499,7 +499,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyTargetMethods]
             private static IEnumerable<System.Reflection.MethodBase> Targets()
             {
-                foreach (var m in typeof(mainscript).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                foreach (var m in GameLookups.Methods(typeof(mainscript), nameof(mainscript.Spawn), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
                     if (m.Name == nameof(mainscript.Spawn) && m.ReturnType == typeof(GameObject)) yield return m;
             }
 

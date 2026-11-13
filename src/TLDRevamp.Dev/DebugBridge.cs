@@ -341,7 +341,7 @@ namespace TLDRevamp
                 case "openxr": return TLDRevamp.Fixes.OpenXrBridgeTools.Command(arg);
                 // The detailed terrain ring (issue #37): how far it reaches, its tiles, what it raised.
                 case "detailedterrain": return TLDRevamp.Fixes.DetailedTerrain.Stats();
-                case "ping": return "{\"ok\":true,\"version\":\"" + Plugin.Version + "\",\"build\":\"" + Plugin.BuildHash + "\",\"commit\":\"" + Plugin.BuildCommit + "\",\"dirty\":" + (Plugin.BuildDirty ? "true" : "false") + ",\"game\":\"" + Plugin.GameBuild + "\",\"port\":" + _boundPort + ",\"dataPath\":" + Json.Str(Application.dataPath) + ",\"patchFailures\":" + Plugin.PatchFailures + ",\"failedPatches\":" + Json.Str(string.Join(",", Plugin.FailedPatches)) + "}";
+                case "ping": return "{\"ok\":true,\"version\":\"" + Plugin.Version + "\",\"build\":\"" + Plugin.BuildHash + "\",\"commit\":\"" + Plugin.BuildCommit + "\",\"dirty\":" + (Plugin.BuildDirty ? "true" : "false") + ",\"game\":\"" + Plugin.GameBuild + "\",\"port\":" + _boundPort + ",\"dataPath\":" + Json.Str(Application.dataPath) + ",\"patchFailures\":" + Plugin.PatchFailures + ",\"failedPatches\":" + Json.Str(string.Join(",", Plugin.FailedPatches)) + ",\"gameLookups\":" + GameLookups.Json() + "}";
                 case "stats": return p.Telemetry.FrameStatsJson();
                 case "scene": return p.Telemetry.SceneStatsJson();
                 case "breakdown": return p.Telemetry.Breakdown.Json();
@@ -393,7 +393,7 @@ namespace TLDRevamp
                 case "prefabswith":
                 {
                     // test: item ids whose prefab carries a game script of that type (e.g. sprayscript)
-                    var ty = typeof(mainscript).Assembly.GetType(arg.Trim());
+                    var ty = GameLookups.RuntimeType(typeof(mainscript).Assembly, arg.Trim());
                     if (ty == null) return "{\"error\":\"no type " + arg + "\"}";
                     var rows = new System.Collections.Generic.List<string>();
                     for (int k = 0; k < itemdatabase.s.items.Length; k++)
@@ -429,7 +429,7 @@ namespace TLDRevamp
                     if (ia[0] == "groupdiag") return TLDRevamp.Net.ItemSnapshotTools.GroupDiag(ia.Length > 1 ? float.Parse(ia[1], System.Globalization.CultureInfo.InvariantCulture) : 15f);
                     return "{\"error\":\"itemsnap test [n]\"}";
                 }
-                case "devaccess": { var da = Net.DeveloperAccess.Status(); return da.Substring(0, da.Length - 1) + ",\"patchFailures\":" + Plugin.PatchFailures + ",\"failedPatches\":" + Json.Str(string.Join(",", Plugin.FailedPatches)) + "}"; }   // Status() closes its object: the patch fields go inside it
+                case "devaccess": { var da = Net.DeveloperAccess.Status(); return da.Substring(0, da.Length - 1) + ",\"patchFailures\":" + Plugin.PatchFailures + ",\"failedPatches\":" + Json.Str(string.Join(",", Plugin.FailedPatches)) + ",\"gameLookups\":" + GameLookups.Json() + "}"; }   // Status() closes its object: the patch fields go inside it
                 case "mp":
                 {
                     var ma = arg.Split(' ');

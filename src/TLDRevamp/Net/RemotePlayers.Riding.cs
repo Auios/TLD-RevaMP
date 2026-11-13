@@ -118,7 +118,7 @@ namespace TLDRevamp.Net
         /// place (defLHPos/defRHPos: the game steers one-handed and parks the other hand there), or at a usable of a shared
         /// object (the game's usingHand: a lever, a knob, a door handle), sent as that usable's address and the spot on it -
         /// fpscontroller's own per-hand choice (VCurrentLHT/RHT), not a distance. A hand holding an item is sent as it is.
-        private static readonly HarmonyLib.AccessTools.FieldRef<fpscontroller, usablescript> Selected = HarmonyLib.AccessTools.FieldRefAccess<fpscontroller, usablescript>("selectedU");
+        private static readonly HarmonyLib.AccessTools.FieldRef<fpscontroller, usablescript> Selected = GameLookups.FieldRefAccess<fpscontroller, usablescript>(typeof(fpscontroller), "selectedU");
         internal static PlayerLook.DriverHandsOut LocalDriverHands(fpscontroller pl, playeranimationscript a)
         {
             var o = new PlayerLook.DriverHandsOut();

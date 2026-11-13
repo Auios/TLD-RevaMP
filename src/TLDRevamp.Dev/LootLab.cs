@@ -13,7 +13,7 @@ namespace TLDRevamp
     /// world (each building type's once).
     public static class LootLab
     {
-        private static readonly FieldInfo CiField = typeof(newRandomStuffSpawnScript).GetField("ci", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        private static readonly FieldInfo CiField = GameLookups.ReflectionField(typeof(newRandomStuffSpawnScript), "ci", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
         public static string Odds(string ids, string where)
         {

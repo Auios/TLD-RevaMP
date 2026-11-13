@@ -164,8 +164,8 @@ namespace TLDRevamp
             if (map.roadGens != null)
                 foreach (var g in map.roadGens)
                     sb.Append("\"road\":{\"chunk\":").Append(g.chunkSize.ToString(ic)).Append(",\"inner\":").Append(g.innerChunkSize.ToString(ic))
-                      .Append(",\"iaround\":").Append(HarmonyLib.Traverse.Create(g).Field("iaround").GetValue())
-                      .Append(",\"baround\":").Append(HarmonyLib.Traverse.Create(g).Field("baround").GetValue()).Append("},");
+                      .Append(",\"iaround\":").Append(GameLookups.FieldValue<object>(typeof(roadGenScript), "iaround", g))
+                      .Append(",\"baround\":").Append(GameLookups.FieldValue<object>(typeof(roadGenScript), "baround", g)).Append("},");
             if (map.poiGens != null)
                 foreach (var g in map.poiGens)
                 {
@@ -183,7 +183,7 @@ namespace TLDRevamp
                           .Append(",\"terrainH\":").Append(c.useTerrainHeight ? 1 : 0).Append(",\"insidePOI\":").Append(c.useRemoveInsidePOI ? 1 : 0)
                           .Append(",\"minRoad\":").Append(c.minDistFromRoad.ToString(ic)).Append(",\"maxRoad\":").Append(c.maxDistFromRoad.ToString(ic))
                           .Append(",\"minPOI\":").Append(c.minDistFromPOI.ToString(ic)).Append(",\"grid\":").Append(c.gridSize.ToString(ic))
-                          .Append(",\"chunk\":").Append(HarmonyLib.Traverse.Create(c).Field("currentChunkSize").GetValue<float>().ToString(ic))
+                          .Append(",\"chunk\":").Append(GameLookups.FieldValue<float>(typeof(objGenScript.categoryClass), "currentChunkSize", c).ToString(ic))
                           .Append(",\"chunks\":").Append(c.generatedChunks.Count).Append("},");
                     sb.Length--; sb.Append("]},");
                 }

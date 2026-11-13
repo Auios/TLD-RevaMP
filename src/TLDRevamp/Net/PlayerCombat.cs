@@ -24,7 +24,7 @@ namespace TLDRevamp.Net
 
         // ---------------------------------------------------------------- guns
         private static weaponscript _shooter;
-        private static readonly FieldInfo TempForce = AccessTools.Field(typeof(weaponscript), "tempForce");
+        private static readonly FieldInfo TempForce = GameLookups.Field(typeof(weaponscript), "tempForce");
 
         [HarmonyPatch(typeof(weaponscript), nameof(weaponscript.Shot))]
         private static class ShotHook
@@ -32,7 +32,7 @@ namespace TLDRevamp.Net
             [HarmonyPrefix] private static void Prefix(weaponscript __instance) => _shooter = __instance;
             [HarmonyPostfix] private static void Postfix() => _shooter = null;
 
-            private static readonly MethodInfo Original = AccessTools.Method(typeof(Physics), nameof(Physics.RaycastNonAlloc),
+            private static readonly MethodInfo Original = GameLookups.Method(typeof(Physics), nameof(Physics.RaycastNonAlloc),
                 new[] { typeof(Vector3), typeof(Vector3), typeof(RaycastHit[]), typeof(float), typeof(int) });
 
             [HarmonyTranspiler]

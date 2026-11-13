@@ -22,11 +22,11 @@ namespace TLDRevamp.Fixes
         public static bool Verify = false;
         public static long VerifyChecks, VerifyMismatches, Removes, Places;
 
-        private static readonly AccessTools.FieldRef<terrainGenScript, List<Vector3d>> CoordsNeeded = AccessTools.FieldRefAccess<terrainGenScript, List<Vector3d>>("coordsNeeded");
-        private static readonly AccessTools.FieldRef<terrainGenScript, List<Vector3d>> CoordsToRemove = AccessTools.FieldRefAccess<terrainGenScript, List<Vector3d>>("coordsToRemove");
+        private static readonly AccessTools.FieldRef<terrainGenScript, List<Vector3d>> CoordsNeeded = GameLookups.FieldRefAccess<terrainGenScript, List<Vector3d>>(typeof(terrainGenScript), "coordsNeeded");
+        private static readonly AccessTools.FieldRef<terrainGenScript, List<Vector3d>> CoordsToRemove = GameLookups.FieldRefAccess<terrainGenScript, List<Vector3d>>(typeof(terrainGenScript), "coordsToRemove");
         private static readonly Func<terrainGenScript, Vector3d, bool, bool, bool> Tile =
             AccessTools.MethodDelegate<Func<terrainGenScript, Vector3d, bool, bool, bool>>(
-                AccessTools.Method(typeof(terrainGenScript), "Tile", new[] { typeof(Vector3d), typeof(bool), typeof(bool) }));
+                GameLookups.Method(typeof(terrainGenScript), "Tile", new[] { typeof(Vector3d), typeof(bool), typeof(bool) }));
 
         private static readonly HashSet<Vector3d> Needed = new HashSet<Vector3d>();
         private static readonly HashSet<Vector3d> Seen = new HashSet<Vector3d>();

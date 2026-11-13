@@ -117,7 +117,7 @@ namespace TLDRevamp.Net
             {
                 gun.infinite = true; gun.S.rotation = Quaternion.LookRotation(dir); gun.Shot(0);
                 // what the shot's own ray met (sorted by Shot), nearest first
-                var hits = AccessTools.FieldRefAccess<weaponscript, RaycastHit[]>("hit")(gun);
+                var hits = GameLookups.FieldRefAccess<weaponscript, RaycastHit[]>(typeof(weaponscript), "hit")(gun);
                 for (int i = 0; i < LastN && i < hits.Length && i < 6; i++)
                     if (hits[i].collider != null) hitNames.Add(hits[i].collider.transform.root.name + "/" + hits[i].collider.name + "@" + hits[i].distance.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
             }

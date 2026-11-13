@@ -900,7 +900,7 @@ namespace TLDRevamp.Fixes
 
         /// The game keeps the tile it just placed in a private field.
         private static readonly AccessTools.FieldRef<terrainGenScript, newTerrainTileScript> TerrainField =
-            AccessTools.FieldRefAccess<terrainGenScript, newTerrainTileScript>("terrain");
+            GameLookups.FieldRefAccess<terrainGenScript, newTerrainTileScript>(typeof(terrainGenScript), "terrain");
 
         private static newTerrainTileScript TerrainRef(terrainGenScript gen)
         {

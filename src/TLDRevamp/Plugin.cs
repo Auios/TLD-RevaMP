@@ -195,7 +195,7 @@ namespace TLDRevamp
             var patchTypes = Array.FindAll(typeof(Plugin).Assembly.GetTypes(), type => type.GetCustomAttributes(typeof(HarmonyPatch), false).Length != 0);
             foreach (var type in patchTypes)
             {
-                try { harmony.CreateClassProcessor(type).Patch(); Log.LogInfo("Patched " + type.Name); }
+                try { var applied = harmony.CreateClassProcessor(type).Patch(); if (applied != null && applied.Count > 0) GameLookups.PatchApplied(); Log.LogInfo("Patched " + type.Name); }
                 catch (Exception e)
                 {
                     // A patch that fails is dead code: the feature it carries simply does not happen, and nothing
@@ -205,7 +205,7 @@ namespace TLDRevamp
                     Log.LogError("Patch failed for " + type.Name + ": " + e);
                 }
             }
-            if (PatchFailures > 0) Log.LogError(PatchFailures + " patch(es) failed to apply: " + string.Join(", ", FailedPatches));
+            GameLookups.Report(message => Log.LogInfo(message));
 
             // The BepInEx manager object can be destroyed or disabled by the game, which silently stops
             // Update/OnGUI. Run the per-frame work from our own hidden, persistent object instead.

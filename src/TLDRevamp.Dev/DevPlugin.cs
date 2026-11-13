@@ -166,7 +166,7 @@ namespace TLDRevamp
             var patchTypes = Array.FindAll(typeof(DevPlugin).Assembly.GetTypes(), type => type.GetCustomAttributes(typeof(HarmonyPatch), false).Length != 0);
             foreach (var type in patchTypes)
             {
-                try { harmony.CreateClassProcessor(type).Patch(); Logger.LogInfo("Patched " + type.Name); }
+                try { var applied = harmony.CreateClassProcessor(type).Patch(); if (applied != null && applied.Count > 0) GameLookups.PatchApplied(); Logger.LogInfo("Patched " + type.Name); }
                 catch (Exception e)
                 {
                     PatchFailures++; FailedPatches.Add(type.Name);

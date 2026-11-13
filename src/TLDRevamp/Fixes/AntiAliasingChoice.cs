@@ -42,7 +42,7 @@ namespace TLDRevamp.Fixes
         }
 
         // the post-processing stack is not referenced here (as in VR.Native.VrPerf): its layer and mode by reflection
-        private static readonly System.Reflection.FieldInfo LayerField = AccessTools.Field(typeof(pplayermelle), "pplayer");
+        private static readonly System.Reflection.FieldInfo LayerField = GameLookups.Field(typeof(pplayermelle), "pplayer");
         private static System.Reflection.FieldInfo _modeField;
 
         private static void Layer(pplayermelle pl)
@@ -55,7 +55,7 @@ namespace TLDRevamp.Fixes
                 pl.TurnOn(ms.AntialiasingJitterSpread, ms.AntialiasingStationaryBlending, ms.AntialiasingMotionBlending, ms.AntialiasingSharpness);
                 return;
             }
-            if (_modeField == null) _modeField = layer.GetType().GetField("antialiasingMode");
+            if (_modeField == null) _modeField = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessLayer:antialiasingMode", layer.GetType());
             if (_modeField == null) return;
             string name = Mode == 2 ? "FastApproximateAntialiasing" : Mode == 3 ? "SubpixelMorphologicalAntialiasing" : "None";
             _modeField.SetValue(layer, System.Enum.Parse(_modeField.FieldType, name));

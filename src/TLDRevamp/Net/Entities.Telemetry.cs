@@ -252,7 +252,7 @@ namespace TLDRevamp.Net
             private static void Prefix() { _telemetryLook = null; }
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                var ray = AccessTools.Method(typeof(Physics), nameof(Physics.Raycast), new[] { typeof(Vector3), typeof(Vector3), typeof(RaycastHit).MakeByRefType(), typeof(float), typeof(int) });
+                var ray = GameLookups.Method(typeof(Physics), nameof(Physics.Raycast), new[] { typeof(Vector3), typeof(Vector3), typeof(RaycastHit).MakeByRefType(), typeof(float), typeof(int) });
                 bool replaced = false;
                 foreach (var instruction in instructions)
                 {

@@ -94,6 +94,6 @@ namespace TLDRevamp.Net
                                  ",\"next\":" + (sp.lastTime + sp.nextTime - Time.time).ToString("F0", ic) + "}" : "") + "}";
         }
 
-        internal static readonly AccessTools.FieldRef<sandstormscript, float> StormDist = AccessTools.FieldRefAccess<sandstormscript, float>("currentDistance");
+        internal static readonly AccessTools.FieldRef<sandstormscript, float> StormDist = GameLookups.FieldRefAccess<sandstormscript, float>(typeof(sandstormscript), "currentDistance");
     }
 }

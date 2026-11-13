@@ -57,7 +57,7 @@ namespace TLDRevamp
                 _types = map;
                 _assemblyCount = asms.Length;
             }
-            return _types.TryGetValue(name, out var found) ? found : null;
+            return GameLookups.RuntimeFoundType(name, _types.TryGetValue(name, out var found) ? found : null);
         }
 
     }

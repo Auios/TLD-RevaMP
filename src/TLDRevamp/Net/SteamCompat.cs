@@ -42,9 +42,9 @@ namespace TLDRevamp.Net
         public static void Ensure()
         {
             if (Applied) return;
-            var ctx = typeof(SteamClient).Assembly.GetType("Steamworks.CSteamAPIContext");
-            var fs = ctx?.GetField("m_pSteamNetworkingSockets", BindingFlags.NonPublic | BindingFlags.Static);
-            var fu = ctx?.GetField("m_pSteamNetworkingUtils", BindingFlags.NonPublic | BindingFlags.Static);
+            var ctx = GameLookups.AssemblyType(typeof(SteamClient), "Steamworks.CSteamAPIContext");
+            var fs = ctx == null ? null : GameLookups.NamedField(typeof(SteamClient), "Steamworks.CSteamAPIContext:m_pSteamNetworkingSockets", ctx, BindingFlags.NonPublic | BindingFlags.Static);
+            var fu = ctx == null ? null : GameLookups.NamedField(typeof(SteamClient), "Steamworks.CSteamAPIContext:m_pSteamNetworkingUtils", ctx, BindingFlags.NonPublic | BindingFlags.Static);
             if (fs == null || fu == null) throw new InvalidOperationException("Steamworks.NET context fields not found");
             int user = SteamAPI.GetHSteamUser().m_HSteamUser;
             IntPtr s = FindOrCreateUserInterface(user, SocketsVersion), u = FindOrCreateUserInterface(user, UtilsVersion);
@@ -116,8 +116,8 @@ namespace TLDRevamp.Net
 
         private static IntPtr CSteamSockets()
         {
-            var ctx = typeof(SteamClient).Assembly.GetType("Steamworks.CSteamAPIContext");
-            return (IntPtr)ctx.GetMethod("GetSteamNetworkingSockets", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
+            var ctx = GameLookups.AssemblyType(typeof(SteamClient), "Steamworks.CSteamAPIContext");
+            return (IntPtr)GameLookups.NamedMethod(typeof(SteamClient), "Steamworks.CSteamAPIContext:GetSteamNetworkingSockets", ctx, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
         }
     }
 }

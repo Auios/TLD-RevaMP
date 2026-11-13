@@ -24,7 +24,7 @@ namespace TLDRevamp.Fixes
         public static double WorldTotal;
         public static float SleepCurveShown = -1f;
 
-        private static readonly AccessTools.FieldRef<napszakvaltakozas, float> Perlin = AccessTools.FieldRefAccess<napszakvaltakozas, float>("CloudPerlin");
+        private static readonly AccessTools.FieldRef<napszakvaltakozas, float> Perlin = GameLookups.FieldRefAccess<napszakvaltakozas, float>(typeof(napszakvaltakozas), "CloudPerlin");
         private static float _lastT = -1f;
         private static bool _hostPending, _curve;
         private static double _hostTotal, _hostPosition, _hostStamp, _hostRate;
