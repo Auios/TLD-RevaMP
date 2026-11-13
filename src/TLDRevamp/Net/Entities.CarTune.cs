@@ -29,8 +29,9 @@ namespace TLDRevamp.Net
         private sealed partial class SEnt { public byte[] Tune; }
 
         /// This machine's tuning per car: what it applied or sent, and the placing it went on.
-        private sealed class TuneHere { public CarTuning T; public byte[] Bytes; public int Key; public Transform Done; public float SentAt = -1000f; }
+        internal sealed class TuneHere { public CarTuning T; public byte[] Bytes; public int Key; public Transform Done; public float SentAt = -1000f; }
         private static readonly Dictionary<uint, TuneHere> _tuneHere = new Dictionary<uint, TuneHere>();
+        internal static System.Collections.Generic.IReadOnlyDictionary<uint, TLDRevamp.Net.Entities.TuneHere> ObservedTuneHere => _tuneHere;
         private static readonly Dictionary<int, int> _prefabTuneKey = new Dictionary<int, int>();
         private static readonly List<uint> _tuneGone = new List<uint>();
         private static float _tuneAt;
@@ -120,7 +121,7 @@ namespace TLDRevamp.Net
 
         // ------------------------------------------------------------------ every machine
 
-        private static bool IsTunableCar(Ent e) => e.PartIndex < 0 && e.Root != null && e.Root.car != null;
+        internal static bool IsTunableCar(Ent e) => e.PartIndex < 0 && e.Root != null && e.Root.car != null;
 
         /// Every CarTuneEveryS: known tunings onto cars placed anew, then the owner's own cars checked for a change.
         private static void CarTuneTick()
@@ -223,24 +224,6 @@ namespace TLDRevamp.Net
         internal static void TunedRootIds(HashSet<uint> into)
         {
             foreach (var kv in _tuneHere) if (ByNet.TryGetValue(kv.Key, out var e) && e.RootId != 0) into.Add(e.RootId);
-        }
-
-        /// Diagnostics (bridge `mp tune <net>`): the car's tuning here, and what this machine (and the server) keeps.
-        public static string CarTuneDiag(uint net)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || !IsTunableCar(e)) return "{\"error\":\"no such car here\"}";
-            var t = CaptureTuning(e.Root.car);
-            var ci = System.Globalization.CultureInfo.InvariantCulture;
-            var rows = new List<string>();
-            foreach (var x in t.Wheels)
-                rows.Add("[" + Json.Str(x.Name) + "," + x.X.ToString("F3", ci) + "," + x.Y.ToString("F3", ci) + "," + x.Z.ToString("F3", ci) + "," + x.Sus.ToString("F3", ci) + "," + x.Roles + "]");
-            _tuneHere.TryGetValue(net, out var th);
-            Server.TryGetValue(net, out var se);
-            return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"car\":" + Json.Str(e.Root.name) + ",\"diff\":" + t.Diff.ToString("F3", ci) +
-                   ",\"key\":" + t.Key() + ",\"prefabKey\":" + PrefabTuneKey(e.Root) + ",\"known\":" + (th != null ? th.Key.ToString() : "null") +
-                   ",\"serverKeeps\":" + (se != null && se.Tune != null ? "true" : "false") + ",\"wheels\":[" + string.Join(",", rows) + "]" +
-                   ",\"sent\":" + TunesSent + ",\"resent\":" + TunesResent + ",\"applied\":" + TunesApplied + ",\"reapplied\":" + TunesReapplied + ",\"replayed\":" + TunesReplayed +
-                   ",\"refused\":" + TunesRefused + ",\"kept\":" + TunesKept + ",\"last\":" + Json.Str(TuneLast) + "}";
         }
     }
 }

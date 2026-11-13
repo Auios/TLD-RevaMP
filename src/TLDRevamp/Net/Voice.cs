@@ -16,6 +16,12 @@ namespace TLDRevamp.Net
     ///              (starts after PrimeS of audio, catches up if it lags more than MaxLagS), lips moving with it
     public static class Voice
     {
+        internal static void EmitFrame(byte codec, byte[] data, int feed, bool everyone)
+        {
+            if (feed >= 0) { Play(feed, (byte)(codec | (everyone ? ToEveryone : 0)), ++_seq, data, 0, data.Length); return; }
+            bool previous = _toEveryone; _toEveryone = everyone;
+            Send(codec, data, 0, data.Length); _toEveryone = previous;
+        }
         public enum Mode { PushToTalk, OpenMic, Off }
         public static Mode Setting = Mode.PushToTalk;
         public static float Volume = 1f;
@@ -71,7 +77,7 @@ namespace TLDRevamp.Net
             // a capture error waits a moment and tries again: it set the player's voice setting to Off, which the next
             // settings save could keep
             catch (Exception e) { Plugin.Log.LogWarning("voice capture: " + e.Message); _recording = false; _captureRetryAt = now + 5f; }
-            ToneTick(now);
+            DevHooks.VoiceToneTick?.Invoke(now);
             Speakers(now);
         }
 
@@ -371,54 +377,8 @@ namespace TLDRevamp.Net
         {
             foreach (var id in new List<int>(_speakers.Keys)) Drop(id);
             if (_recording) { try { SteamUser.StopVoiceRecording(); } catch { } _recording = false; }
-            _toneUntil = 0f; _toEveryone = _sentToEveryone = false;
+            DevHooks.VoiceToneStopped?.Invoke(); _toEveryone = _sentToEveryone = false;
         }
-
-        // ---- test: a 440 Hz tone sent as voice (PCM16, no Steam codec), and a capture probe
-        private static float _toneUntil, _toneNext; private static double _tonePhase;
-        private static readonly byte[] _tone = new byte[Rate / 25 * 2];   // 40 ms
-
-        public static string Tone(float seconds, int feed = -1, bool everyone = false) { _toneUntil = Time.unscaledTime + seconds; _toneNext = 0f; _feed = feed; _toneEveryone = everyone; return Status(); }
-        private static bool _toneEveryone;   // the bridge's `mp voice tone s all`: the tone as if the everyone key were held
-        private static int _feed = -1;   // the bridge's `mp voice feed id s`: the tone straight into this machine's speaker for player id (no network)
-
-        private static void ToneTick(float now)
-        {
-            if (now >= _toneUntil) return;
-            if (_toneNext <= 0f || now - _toneNext > 0.2f) _toneNext = now;   // start (or after a stall): from now
-            for (int k = 0; k < 4 && now >= _toneNext; k++) { _toneNext += 0.04f; ToneBlock(); }   // real time: 25 blocks/s at any frame rate
-        }
-
-        private static void ToneBlock()
-        {
-            int n = _tone.Length / 2;
-            for (int i = 0; i < n; i++)
-            {
-                short v = (short)(Math.Sin(_tonePhase) * 12000);
-                _tonePhase += 2 * Math.PI * 440 / Rate;
-                _tone[2 * i] = (byte)v; _tone[2 * i + 1] = (byte)(v >> 8);
-            }
-            if (_feed >= 0) Play(_feed, (byte)(CodecPcm16 | (_toneEveryone ? ToEveryone : 0)), ++_seq, _tone, 0, _tone.Length);
-            else
-            {
-                bool keep = _toEveryone;
-                _toEveryone = _toneEveryone;
-                Send(CodecPcm16, _tone, 0, _tone.Length);
-                _toEveryone = keep;
-            }
-        }
-
-        /// Bridge `mp voice probe`: does Steam's capture work on this machine? (records 1 s, reports what came back)
-        public static string Probe()
-        {
-            if (!SteamTransport.SteamReady) return "{\"error\":\"steam not ready\"}";
-            uint rate = SteamUser.GetVoiceOptimalSampleRate();
-            SteamUser.StartVoiceRecording();
-            var first = SteamUser.GetAvailableVoice(out uint a0);
-            _probeUntil = Time.unscaledTime + 1f;
-            return "{\"optimalRate\":" + rate + ",\"first\":" + Json.Str(first.ToString()) + ",\"avail\":" + a0 + "}";
-        }
-        private static float _probeUntil;
 
         public static string Status()
         {
@@ -434,7 +394,7 @@ namespace TLDRevamp.Net
                          ",\"maxDistance\":" + (sp.Src != null ? sp.Src.maxDistance : 0f).ToString("F0", ic) +
                          ",\"mixer\":" + Json.Str(sp.Src != null && sp.Src.outputAudioMixerGroup != null ? sp.Src.outputAudioMixerGroup.name : null) + "}");
             }
-            if (_probeUntil > 0f && Time.unscaledTime > _probeUntil && !_recording) { try { SteamUser.StopVoiceRecording(); } catch { } _probeUntil = 0f; }
+            DevHooks.VoiceProbeStatus?.Invoke(_recording);
             uint avail = 0; EVoiceResult now = EVoiceResult.k_EVoiceResultNotRecording;
             try { now = SteamUser.GetAvailableVoice(out avail); } catch { }
             bool sessionAll = Mp.Server != null ? Mp.Server.SessionSettings.VoiceEveryone : DeveloperAccess.ClientSettings?.VoiceEveryone ?? false;

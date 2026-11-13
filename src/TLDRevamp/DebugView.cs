@@ -28,16 +28,7 @@ namespace TLDRevamp
             if (Active) return;
             Mode = mode; Ownership = Ghost = GhostAll = Links = false;
         }
-        internal static string Command(string action)
-        {
-            if (action != "state" && action != "")
-            {
-                if (!Enum.TryParse(action, true, out DebugViewMode mode) || !Enum.IsDefined(typeof(DebugViewMode), mode))
-                    return "{\"error\":\"use off|focus|problems|everything|state\"}";
-                Mode = mode;
-            }
-            return "{\"mode\":\"" + Mode.ToString().ToLowerInvariant() + "\"}";
-        }
+
     }
 
     internal struct DebugBox

@@ -370,14 +370,14 @@ static class OpenXrBridgeBehaviourTest
               State().GetProperty("originSupported").GetString().Contains("floor"));
 
         // an explicit `recenter origin` moves it, and the state says so afterwards
-        var moved = OpenXrBridge.Command("recenter origin");
+        var moved = OpenXrBridgeTools.Command("recenter origin");
         Check("the explicit origin request moved the origin", input.SetOriginCalls == 1);
         Check("the origin mode is reported after the move",
               moved.Contains("\"originMode\":\"device\""));
 
         // a plain recenter must NOT move it: the origin stays where it was
         var before = input.SetOriginCalls;
-        OpenXrBridge.Command("recenter");
+        OpenXrBridgeTools.Command("recenter");
         Check("a plain recenter did not move the origin", input.SetOriginCalls == before);
 
         // the state never carries a pose: the origin mode is a flag, not a position
@@ -415,13 +415,13 @@ static class OpenXrBridgeBehaviourTest
             Check("the usage line names " + part, syntax.Contains(part));
 
         // the bridge refuses an unknown form with the usage line
-        var unknown = OpenXrBridge.Command("nonsense");
+        var unknown = OpenXrBridgeTools.Command("nonsense");
         Check("an unknown form is refused", unknown.Contains("\"error\""));
         Check("the refusal carries the usage line", unknown.Contains(syntax));
 
         // the bare command and `state` really read the state
-        var bare = OpenXrBridge.Command("");
-        var state = OpenXrBridge.Command("state");
+        var bare = OpenXrBridgeTools.Command("");
+        var state = OpenXrBridgeTools.Command("state");
         Check("the bare command answers with the state", bare.Contains("\"state\""));
         Check("the state command answers with the state", state.Contains("\"state\""));
 
@@ -430,7 +430,7 @@ static class OpenXrBridgeBehaviourTest
         // told apart the way the tool tells it apart: a refusal has an "error" and no "state".
         foreach (var form in new[] { "", "state", "start", "retry", "stop", "recenter", "recenter origin" })
         {
-            var answer = OpenXrBridge.Command(form);
+            var answer = OpenXrBridgeTools.Command(form);
             Check("the form '" + form + "' is accepted", !Refused(answer));
             Check("the form '" + form + "' answers with the state", answer.Contains("\"state\""));
         }
@@ -438,13 +438,13 @@ static class OpenXrBridgeBehaviourTest
         // a form the bridge does not know is REFUSED, with the usage line
         foreach (var bad in new[] { "nonsense", "start now", "recenter sideways", "origin", "recenter origin origin" })
         {
-            var refusal = OpenXrBridge.Command(bad);
+            var refusal = OpenXrBridgeTools.Command(bad);
             Check("the form '" + bad + "' is refused", Refused(refusal));
             Check("the refusal of '" + bad + "' carries the usage line", refusal.Contains(VrBridgeCommandPolicy.Syntax));
         }
 
         // the argument is trimmed and case insensitive
-        Check("the argument is trimmed", !Refused(OpenXrBridge.Command("  state  ")));
-        Check("the argument is case insensitive", !Refused(OpenXrBridge.Command("STATE")));
+        Check("the argument is trimmed", !Refused(OpenXrBridgeTools.Command("  state  ")));
+        Check("the argument is case insensitive", !Refused(OpenXrBridgeTools.Command("STATE")));
     }
 }

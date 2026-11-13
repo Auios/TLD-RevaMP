@@ -25,10 +25,12 @@ namespace TLDRevamp.Fixes
     [HarmonyPatch]
     public static class PartConditionIdle
     {
+        internal static bool Sleeping(partconditionscript part) => Asleep.Contains(part);
         public static bool Enabled = true;
         public static long Sleeps, Wakes, Missed;
 
         private static readonly HashSet<partconditionscript> Asleep = new HashSet<partconditionscript>();
+        internal static System.Collections.Generic.IReadOnlyCollection<partconditionscript> ObservedAsleep => Asleep;
         private static readonly List<partconditionscript> Tmp = new List<partconditionscript>();
         private static float _checkAt;
 
@@ -77,32 +79,6 @@ namespace TLDRevamp.Fixes
                 if ((object)p != null && p != null && !p.enabled) Wake(p);
             }
             Tmp.Clear();
-        }
-
-        private static partconditionscript _probe;
-
-        /// Test: a sponge-sized repair stroke (Repair with gain 0.01, every type until one counts) on a sleeping part.
-        public static string Probe()
-        {
-            foreach (var p in Asleep)
-            {
-                if (p == null || p.state <= 0) continue;
-                for (int t = 0; t < 4 && p.repairValue == 0f; t++) p.Repair(t, 0.01f);
-                if (p.repairValue == 0f) continue;
-                _probe = p;
-                return "{\"part\":" + Json.Str(p.name) + ",\"repairValue\":" + p.repairValue.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) +
-                       ",\"enabled\":" + (p.enabled ? "true" : "false") + ",\"asleep\":" + (Asleep.Contains(p) ? "true" : "false") + "}";
-            }
-            return "{\"error\":\"no sleeping part that takes a repair stroke\"}";
-        }
-
-        /// Test: the probed part afterwards (its stroke faded out by its own Update, then asleep again).
-        public static string ProbeAfter()
-        {
-            var p = _probe;
-            if (p == null) return "{\"error\":\"no probe\"}";
-            return "{\"part\":" + Json.Str(p.name) + ",\"repairValue\":" + p.repairValue.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) +
-                   ",\"enabled\":" + (p.enabled ? "true" : "false") + ",\"asleep\":" + (Asleep.Contains(p) ? "true" : "false") + "}";
         }
 
         public static string Stats =>

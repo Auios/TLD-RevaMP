@@ -136,7 +136,7 @@ class MatchesTheMod(unittest.TestCase):
         self.assertIn("arg.Length == 0", policy)
 
     def test_the_bridge_calls_the_pure_policy(self):
-        bridge = self.source("src/TLDRevamp/DebugBridge.cs")
+        bridge = self.source("src/TLDRevamp.Dev/DebugBridge.cs")
         self.assertIn("Cinematic.CinematicCommandPolicy.IsReadOnly(arg)", bridge)
 
 

@@ -34,48 +34,48 @@ static class SettingsGateTest
 
         // ---- a joiner gets the policy signal for the policy command, like for anything else it may not run
         Check("G.1 a joiner may not run the policy command",
-            !SessionSettingsPolicy.BridgeAllowed(false, false, false, policyCmd, "policy everyone"),
+            !SessionSettingsPolicyTools.BridgeAllowed(false, false, false, policyCmd, "policy everyone"),
             "the joiner reached the handler");
         Check("G.2 a joiner may not run the policy command (no argument either)",
-            !SessionSettingsPolicy.BridgeAllowed(false, false, false, policyCmd, "policy"));
+            !SessionSettingsPolicyTools.BridgeAllowed(false, false, false, policyCmd, "policy"));
         Check("G.3 a joiner's policy command is refused for the policy, not for anything else",
-            SessionSettingsPolicy.BridgeAllowed(false, false, false, policyCmd, "policy everyone")
-            == SessionSettingsPolicy.BridgeAllowed(false, false, false, policyCmd, "anything else"),
+            SessionSettingsPolicyTools.BridgeAllowed(false, false, false, policyCmd, "policy everyone")
+            == SessionSettingsPolicyTools.BridgeAllowed(false, false, false, policyCmd, "anything else"),
             "the joiner gets a different signal for the policy command");
         // The property is that the gate treats the policy command like EVERY other command: the exemption
         // depends on whether this machine is the host and on nothing else. Under a permissive policy the
         // joiner may run any developer command, the policy command included -- and the handler still refuses
         // to change a policy it does not own, so a joiner can never widen its own policy.
         Check("G.4 the policy command is gated exactly like every other command on a joiner",
-            SessionSettingsPolicy.BridgeAllowed(false, true, false, policyCmd, "policy everyone")
-            == SessionSettingsPolicy.BridgeAllowed(false, true, false, "set", "TLDRevamp.X 1"),
+            SessionSettingsPolicyTools.BridgeAllowed(false, true, false, policyCmd, "policy everyone")
+            == SessionSettingsPolicyTools.BridgeAllowed(false, true, false, "set", "TLDRevamp.X 1"),
             "the policy command is gated differently from the other commands");
         Check("G.4b the policy command is gated exactly like every other command on the host",
-            SessionSettingsPolicy.BridgeAllowed(true, true, false, policyCmd, "policy everyone")
-            == SessionSettingsPolicy.BridgeAllowed(true, true, false, "set", "TLDRevamp.X 1"),
+            SessionSettingsPolicyTools.BridgeAllowed(true, true, false, policyCmd, "policy everyone")
+            == SessionSettingsPolicyTools.BridgeAllowed(true, true, false, "set", "TLDRevamp.X 1"),
             "the policy command is gated differently from the other commands");
 
         // ---- the host: its own session control always runs, even when the policy denies developer access
         Check("G.5 the host may change its own policy even when the policy denies it",
-            SessionSettingsPolicy.BridgeAllowed(true, false, false, policyCmd, "policy everyone"));
+            SessionSettingsPolicyTools.BridgeAllowed(true, false, false, policyCmd, "policy everyone"));
         Check("G.6 the host may read its own policy",
-            SessionSettingsPolicy.BridgeAllowed(true, false, false, policyCmd, "policy"));
+            SessionSettingsPolicyTools.BridgeAllowed(true, false, false, policyCmd, "policy"));
 
         // ---- a read-only command always runs, host or joiner
         Check("G.7 a read-only command runs on a joiner",
-            SessionSettingsPolicy.BridgeAllowed(false, false, true, "devaccess", ""));
+            SessionSettingsPolicyTools.BridgeAllowed(false, false, true, "devaccess", ""));
         Check("G.8 a read-only command runs on a host",
-            SessionSettingsPolicy.BridgeAllowed(true, false, true, "devaccess", ""));
+            SessionSettingsPolicyTools.BridgeAllowed(true, false, true, "devaccess", ""));
 
         // ---- the exemption is the policy command and nothing else
         Check("G.9 another mp command is not exempt on the host",
-            !SessionSettingsPolicy.BridgeAllowed(true, false, false, policyCmd, "players"));
+            !SessionSettingsPolicyTools.BridgeAllowed(true, false, false, policyCmd, "players"));
         Check("G.10 another command is not exempt on the host",
-            !SessionSettingsPolicy.BridgeAllowed(true, false, false, "set", "TLDRevamp.X 1"));
+            !SessionSettingsPolicyTools.BridgeAllowed(true, false, false, "set", "TLDRevamp.X 1"));
         Check("G.11 a command that merely starts with 'policy' is not exempt",
-            !SessionSettingsPolicy.BridgeAllowed(true, false, false, policyCmd, "policies everyone"));
+            !SessionSettingsPolicyTools.BridgeAllowed(true, false, false, policyCmd, "policies everyone"));
         Check("G.12 a command whose name merely starts with 'mp' is not exempt",
-            !SessionSettingsPolicy.BridgeAllowed(true, false, false, "mpolicy", "everyone"));
+            !SessionSettingsPolicyTools.BridgeAllowed(true, false, false, "mpolicy", "everyone"));
         Check("G.13 the exemption is the exact policy command",
             SessionSettingsPolicy.IsHostControlCommand(true, policyCmd, "policy")
             && SessionSettingsPolicy.IsHostControlCommand(true, policyCmd, "policy everyone"));

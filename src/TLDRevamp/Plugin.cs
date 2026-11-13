@@ -65,7 +65,6 @@ namespace TLDRevamp
         /// on different builds of the game can generate different worlds — a building that exists for one only (the
         /// missing diner, playtest 2026-10-09/10). Compared at join.
         public static readonly string GameBuild = ComputeGameBuild();
-        public static int BridgePort = 27050;
 
         /// The Harmony patches that did not apply. A patch that fails is dead code, and the game's log is the
         /// only place that says so: the count is here so the mod's own status can report it.
@@ -114,8 +113,6 @@ namespace TLDRevamp
 
         internal Telemetry Telemetry;
         internal Overlay Overlay;
-        internal DebugBridge Bridge;
-        internal static bool BridgeEnabled;
         internal FeedbackReporter Feedback;
 
         private void Awake()
@@ -146,10 +143,6 @@ namespace TLDRevamp
             Net.DedicatedServer.Awake(Config);
             Net.ModObjects.Install();   // the multiplayer API other mods reference (TLDRevamp.Multiplayer.dll)
             Replay.ReplayMods.Install();   // and its replay channels (API 4)
-            // The bridge runs any command it's sent (reflection included): developer test tooling only, off unless this
-            // machine's config turns it on (the test machines do; a player's install never does).
-            BridgeEnabled = Config.Bind("Debug", "Bridge", false,
-                "Developer test tooling: a command port on 127.0.0.1:27050 for automated tests. Leave it off.").Value && !IsPlayerEdition;
             // The XR session (issue #41). OpenXR is what the game ships and what it uses; the bridge only owns the
             // loader's life when the session is asked for. The no-pre-init loader is a deliberate fallback and is off
             // by default: the plain loader is the one the game expects.
@@ -157,14 +150,7 @@ namespace TLDRevamp
                 "Use the OpenXR loader for the VR session. Off: the game keeps its own XR setup.").Value;
             Fixes.OpenXrBridge.AllowNoPreInit = Config.Bind("Multiplayer", "OpenXrAllowNoPreInit", false,
                 "Allow the OpenXR no-pre-init loader when it is the only one the XR manager holds. Off by default: the plain OpenXR loader is preferred.").Value;
-            // a second copy of the game on a test machine (a third player: tools/thirdplayer.py) takes another port: -tldbridge N
             var cl = Environment.GetCommandLineArgs();
-            int ci = Array.IndexOf(cl, "-tldbridge");
-            if (ci >= 0 && ci + 1 < cl.Length && int.TryParse(cl[ci + 1], out int bp) && bp > 1024 && bp < 65536) BridgePort = bp;
-            // a player edition ignores the config's Bridge; only an explicit -tldbridge on the command line (the test tools) starts it
-            if (IsPlayerEdition && ci >= 0) BridgeEnabled = true;
-            ObjectTrail.On = BridgeEnabled;
-            if (BridgeEnabled) { Bridge = new DebugBridge(BridgePort); Bridge.Start(); }
 
             // The mod's keys: none the game uses. The game's own F1–F10, Home and End (dev mode: F8 a test ragdoll, F9
             // kills you, F10 skips radio tracks) and its default bindings (F4–F7: drop cam, 3D/360 screenshots, 360 camera)
@@ -249,17 +235,6 @@ namespace TLDRevamp
             Net.Entities.TelemetryAllOwnedPhysics = Config.Bind("Telemetry", "AllOwnedPhysics", false,
                 "Probe up to 4096 owned bodies per physics step; off limits anomaly probes to trace focus entities.").Value;
 
-            // Test tooling: -tldset Path=Value[,Path=Value...] sets runtime switches before the first frame (A/B a fix in a
-            // TLDBench run), like bridge `set`. Only where the bridge is on (test machines).
-            int si = Array.IndexOf(cl, "-tldset");
-            if (BridgeEnabled && si >= 0 && si + 1 < cl.Length)
-                foreach (var pair in cl[si + 1].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    int eq = pair.IndexOf('=');
-                    try { Log.LogInfo("-tldset " + pair + ": " + (eq > 0 ? Reflect.Set(pair.Substring(0, eq), pair.Substring(eq + 1)) : "no '='")); }
-                    catch (Exception e) { Log.LogWarning("-tldset " + pair + " failed: " + e.Message); }
-                }
-
             if (Config.Bind("Telemetry", "CoarseTimers", true, "Bounded coarse method groups in black boxes; detailed ScriptTimers remain opt-in.").Value) ScriptProfiler.CoarseStart();
             SessionLog.TimerColumnsChanged();
             // Telemetry script timers (docs/TELEMETRY.md): off unless this machine's config turns them on; bridge `timers` too.
@@ -285,7 +260,7 @@ namespace TLDRevamp
             SceneCounts.Growth = Diagnostics.SceneGrowth.Json;
             Application.quitting += () =>
             {
-                Log.LogInfo("Game quitting: stopping bridge and background work");
+                Log.LogInfo("Game quitting: stopping background work");
                 // the session ends now, not at Steam's timeout: the others saw "the host isn't responding" for 12-15 s, and a
                 // joiner's last player record (up to 30 s old) was what the host kept. No host save here: the game makes
                 // none on quit either (a scene-load stop)
@@ -296,12 +271,12 @@ namespace TLDRevamp
                 }
                 catch (Exception e) { Log.LogWarning("session stop on quit: " + e.Message); }
                 Fixes.AsyncTerrain.Enabled = false; // no new worker jobs during shutdown
-                Bridge?.Stop();
+                DevHooks.BridgeStopped?.Invoke();
                 SessionLog.Shutdown();
                 Net.Session.ClearPresence();
             };
 
-            Log.LogInfo($"TLD Revamp {Version} loaded. Unity {Application.unityVersion}, game build {GameBuild}. " + (BridgeEnabled ? "Bridge on 127.0.0.1:" + BridgePort : "bridge off"));
+            Log.LogInfo($"TLD Revamp {Version} loaded. Unity {Application.unityVersion}, game build {GameBuild}. ");
         }
 
         private void OnDisable() => Log.LogWarning("BepInEx manager object disabled:\n" + Environment.StackTrace);
@@ -324,7 +299,7 @@ namespace TLDRevamp
             try {
             ScriptProfiler.FrameEnd(); // closes the frame window before telemetry samples it
             p.Telemetry.Tick();
-            p.Bridge?.PumpMainThread();
+            DevHooks.BridgePump?.Invoke();
             Fixes.ItemSpawnSpread.Tick();
             Fixes.Sandstorms.Tick();
             Fixes.Rabbits.Tick();
@@ -342,7 +317,7 @@ namespace TLDRevamp
             try { Net.Mp.Tick(); } catch (Exception e) { Fault(3, "multiplayer", e); }
             try { Net.PlayerSave.Tick(); Net.Tpa.Tick(); Net.CarTuneSave.Tick(); } catch (Exception e) { Fault(4, "player save/tpa", e); }
             try { Net.Voice.Tick(); Net.Chat.Tick(); } catch (Exception e) { Fault(5, "voice/chat", e); }
-            try { Fixes.TinyRendererCull.Tick(); RebaseLab.Tick(); Fixes.RebaseParticles.Tick(); Net.DedicatedServer.Tick(); } catch (Exception e) { Fault(6, "labs/cull/server", e); }
+            try { Fixes.TinyRendererCull.Tick(); DevHooks.RebaseTick?.Invoke(); Fixes.RebaseParticles.Tick(); Net.DedicatedServer.Tick(); } catch (Exception e) { Fault(6, "labs/cull/server", e); }
             try { ModHost.Tick(); } catch (Exception e) { Fault(7, "mods", e); }
             try { WorldGen.NewGameLayout.Tick(); KeyBindings.Tick(); } catch (Exception e) { Fault(8, "menus/keys/debug", e); }
             try {
@@ -393,7 +368,7 @@ namespace TLDRevamp
         private void FixedUpdate()
         {
             try { Net.Entities.FixedTick(); } catch (Exception e) { Fault(12, "entities fixed", e); }
-            try { ModHost.FixedTick(); DebugBridge.FixedTick(); } catch (Exception e) { Fault(13, "mods/bridge fixed", e); }
+            try { ModHost.FixedTick(); GroundPlacement.FixedTick(); } catch (Exception e) { Fault(13, "mods/placement fixed", e); }
             try { Fixes.DrivingAssists.FixedTick(); Net.JoinLoading.FixedTick(); Fixes.LoadFreeze.FixedTick(); } catch (Exception e) { Fault(14, "assists/join/load fixed", e); }
         }
         private void LateUpdate() { Net.Entities.WornLate(); Net.Entities.LateSample(); }
@@ -404,7 +379,7 @@ namespace TLDRevamp
         {
             Net.JoinLoading.End("destroyed");
             Plugin.Log.LogWarning("Runner destroyed:\n" + Environment.StackTrace);
-            Plugin.Instance?.Bridge?.Stop();
+            DevHooks.BridgeStopped?.Invoke();
             ModHost.Shutdown();   // the world ends here: the Loader mods get their OnUnload
         }
     }

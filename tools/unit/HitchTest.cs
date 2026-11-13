@@ -23,6 +23,7 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        internal static System.Collections.Generic.IReadOnlyDictionary<uint, Ent> ObservedEntities => ByNet;
         internal sealed class Ent
         {
             internal uint NetId, Epoch = 1; internal int OwnerId, HitchAuthorityOwner = -1; internal bool Proxy, HitchWaiting, SentAtRest, HitchHasVelocity;
@@ -37,12 +38,12 @@ namespace TLDRevamp.Net
             internal bool Hitch, Car, Stored, Held, HasState; internal Vector3d Pos, Where; internal Quaternion Rot;
             internal byte[] LastAttach; internal HashSet<uint> AttachKids;
         }
-        private static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
+        internal static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
         private static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
         private static readonly Dictionary<HitchFakes.Car, float> DamageGraceUntil = new Dictionary<HitchFakes.Car, float>();
         private static bool InSession = true, PlayerActing = true, _applyingAttach, _applyingDetach, Near = true;
-        private static int MyId;
-        private static bool IsHost = true;
+        internal static int MyId;
+        internal static bool IsHost = true;
         private const byte Add = 22, Owner = 25, DetachSync = 42;
         private static readonly Dictionary<int, HashSet<uint>> Known = new Dictionary<int, HashSet<uint>>();
         private static HashSet<uint> KnownBy(int player)
@@ -61,10 +62,10 @@ namespace TLDRevamp.Net
         }
         private static readonly List<(int target, byte[] data)> Packets = new List<(int, byte[])>();
         private static readonly List<byte[]> Requests = new List<byte[]>();
-        private static Ent OwnEntity(tosaveitemscript it) { foreach (var e in ByNet.Values) if (e.Root == it) return e; return null; }
+        internal static Ent OwnEntity(tosaveitemscript it) { foreach (var e in ByNet.Values) if (e.Root == it) return e; return null; }
         private static Ent EditEntityOf(tosaveitemscript it) => OwnEntity(it);
-        private static bool Resolve(Ent e) => e.Root != null;
-        private static List<Ent> Placed() => new List<Ent>(ByNet.Values);   // Entities.Placed: every object here is placed
+        internal static bool Resolve(Ent e) => e.Root != null;
+        internal static List<Ent> Placed() => new List<Ent>(ByNet.Values);   // Entities.Placed: every object here is placed
         private static bool AtObject(int from, SEnt e) => Near;
         private static HitchFakes.Record EditItemRecord(SEnt e, int idx) => new HitchFakes.Record();
         private static bool Finite(Vector3d v) => double.IsFinite(v.x) && double.IsFinite(v.y) && double.IsFinite(v.z);
@@ -190,10 +191,10 @@ namespace TLDRevamp.Net
                 car.Proxy = false; car.OwnerId = car.HitchAuthorityOwner = MyId;
                 tr.HitchWaiting = false; tr.Proxy = false; tr.OwnerId = tr.HitchAuthorityOwner = MyId;
                 HitchRestore(tr);
-                var beforeHandback = TestHitchState(20);
+                var beforeHandback = EntityHitchTools.TestHitchState(20);
                 check(beforeHandback.Contains("\"joint\":true") && beforeHandback.Contains("\"carProxy\":false") && beforeHandback.Contains("\"trailerProxy\":false"), "joint and both roles share one bridge snapshot");
                 HitchBeforeOwner(car, old, 3); car.OwnerId = car.HitchAuthorityOwner = old; car.Proxy = true;
-                var afterHandback = TestHitchState(20);
+                var afterHandback = EntityHitchTools.TestHitchState(20);
                 check(tr.Root.attachable.J == null && afterHandback.Contains("\"joint\":false") && afterHandback.Contains("\"carProxy\":true"), "handback destroys the joint before proxy conversion");
                 check(beforeHandback.Contains("\"joint\":true") && car.Proxy, "old hitchstate plus new entities reproduces the script assertion despite synchronous joint removal");
 

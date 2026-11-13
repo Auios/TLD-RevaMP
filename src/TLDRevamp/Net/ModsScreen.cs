@@ -56,7 +56,7 @@ namespace TLDRevamp.Net
             if (!_checked)
             {
                 _checked = true;
-                if (!ModCatalog.CheckAtStart || Plugin.BridgeEnabled || DedicatedServer.Enabled || ModCatalog.Busy) return;
+                if (!ModCatalog.CheckAtStart || DevHooks.Testing || DedicatedServer.Enabled || ModCatalog.Busy) return;
                 ModCatalog.Refresh(true); _offer = ModCatalog.Busy;
                 return;
             }

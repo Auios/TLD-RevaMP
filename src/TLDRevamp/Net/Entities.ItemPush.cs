@@ -67,7 +67,7 @@ namespace TLDRevamp.Net
         /// 20 m/s isn't moving (review 2026-10-22, #22: driving past someone's roadside items, our cargo took everything
         /// within ~1.35 m of it, around the car's own approach rule). On the ground: its own velocity.
         public static bool RideRelative = true;   // A/B: false = its own velocity (before #22)
-        private static Vector3 RideVelocity(Ent e, Rigidbody rb)
+        internal static Vector3 RideVelocity(Ent e, Rigidbody rb)
         {
             if (!RideRelative) return rb.velocity;
             var under = SurfaceUnder(e, out var body);
@@ -93,7 +93,7 @@ namespace TLDRevamp.Net
         /// The body of a loose item simulated here that is moving (dropped, thrown, falling, knocked): not a car or a car's
         /// part, not in this player's hands, not a creature; null otherwise. Resting items claim nothing (two touching
         /// items at rest would otherwise take each other in turn).
-        private static Rigidbody MovingItemBody(Ent e)
+        internal static Rigidbody MovingItemBody(Ent e)
         {
             if (e == null || e.Proxy || e.Root == null || e.Root.car != null || !LooseItem(e) || e.Stored || e.Root.P == null || NyOf(e) != null || IsHeld(e.Root)) return null;
             var rb = e.Root.GetComponent<Rigidbody>();

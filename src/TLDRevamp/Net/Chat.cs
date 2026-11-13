@@ -20,6 +20,7 @@ namespace TLDRevamp.Net
         public static bool Typing { get; private set; }
         private static GameObject _root, _lineTpl, _bg, _talkRoot;
         private static TMP_InputField _input;
+        internal static TMP_InputField ObservedInput => _input;
         private static readonly List<Text> _lines = new List<Text>();
         private static readonly List<GameObject> _talkRows = new List<GameObject>();
         private static Sprite _mic;

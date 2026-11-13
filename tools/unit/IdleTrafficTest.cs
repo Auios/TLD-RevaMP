@@ -185,6 +185,7 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+
         public const byte State = 23, CompactState = 98, Claim = 24, Owner = 25;
         public partial class Ent
         {
@@ -230,7 +231,7 @@ namespace TLDRevamp.Net
         static double StateInterestM = 1000;
         static void ServerFwdAll(int from, NetReader r, bool reliable) { }
         static void Deliver(NetWriter w) { }
-        static bool Resolve(Ent e) => e.Root != null;
+        internal static bool Resolve(Ent e) => e.Root != null;
         static bool LimbsByBody(Ent e) => false;
         internal static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
         internal static void TestIdle()
@@ -473,7 +474,7 @@ namespace TLDRevamp.Net
             diagnostic.Root.transform.position = new Vector3(999, 0, 0);
             diagnostic.Root.ragdollPos = new TestLimbList { childs = new[] { diagnostic.Root.transform, visible } };
             ByNet[78] = diagnostic;
-            using (var status = System.Text.Json.JsonDocument.Parse(RagdollStatus(78)))
+            using (var status = System.Text.Json.JsonDocument.Parse(EntityRagdollTools.RagdollStatus(78)))
             {
                 var pose = status.RootElement.GetProperty("restPose");
                 IdleTrafficTest.Check(pose.GetArrayLength() == 1 && pose[0].GetArrayLength() == 7 && pose[0][0].GetDouble() == 1 && pose[0][4].GetDouble() != 0,

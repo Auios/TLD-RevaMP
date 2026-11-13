@@ -15,10 +15,10 @@ static class OpenXrBridgeTest
 
     private static int Main(string[] args)
     {
-        string bridge = Read("src/TLDRevamp/Fixes/OpenXrBridge.cs");
+        string bridge = (Read("src/TLDRevamp/Fixes/OpenXrBridge.cs") + Read("src/TLDRevamp.Dev/Fixes/OpenXrBridge.cs"));
         string lifecycle = Read("src/TLDRevamp/VR/VrLoaderLifecycle.cs");
         string policy = Read("src/TLDRevamp/VR/VrLoaderPolicy.cs");
-        string debug = Read("src/TLDRevamp/DebugBridge.cs");
+        string debug = Read("src/TLDRevamp.Dev/DebugBridge.cs");
         string plugin = Read("src/TLDRevamp/Plugin.cs");
         string contract = Read("src/TLDRevamp/Fixes/VrContractBridge.cs");
 
@@ -242,7 +242,7 @@ static class OpenXrBridgeTest
     private static void BridgeCommands(string debug, string bridge, string policy)
     {
         Check("the bridge has the openxr command", debug.Contains("case \"openxr\""));
-        Check("the command dispatches to the bridge", debug.Contains("Fixes.OpenXrBridge.Command("));
+        Check("the command dispatches to the bridge", debug.Contains("Fixes.OpenXrBridgeTools.Command("));
         // the read/mutation classification: reading the state needs no developer access, changing the session does
         Check("openxr alone is a read", debug.Contains("if (cmd == \"openxr\") return VR.VrBridgeCommandPolicy.IsQuery(arg);"));
         Check("the bridge asks the policy for the split", debug.Contains("VR.VrBridgeCommandPolicy.IsQuery"));

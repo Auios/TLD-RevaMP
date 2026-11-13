@@ -7,12 +7,13 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using UnityEngine;
+using static TLDRevamp.GroundPlacement;
 
 namespace TLDRevamp
 {
     /// Line-based TCP command server on 127.0.0.1 only. Each line is one command; the reply is one JSON line.
     /// Commands run on Unity's main thread (queued, executed in Update).
-    public partial class DebugBridge
+    public sealed class DebugBridge
     {
         private readonly int _port;
         private TcpListener _listener;
@@ -120,16 +121,14 @@ namespace TLDRevamp
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         internal static bool LooksLikeHttp(string line) => HttpLine.IsMatch(line);
 
-        public static double LastPumpMs, MaxPumpMs, TotalPumpMs;
-
         public void PumpMainThread()
         {
             long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
             PumpJobs();
             double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
-            LastPumpMs = ms;
-            TotalPumpMs += ms;
-            if (ms > MaxPumpMs) MaxPumpMs = ms;
+            BridgeTiming.LastPumpMs = ms;
+            BridgeTiming.TotalPumpMs += ms;
+            if (ms > BridgeTiming.MaxPumpMs) BridgeTiming.MaxPumpMs = ms;
         }
 
         private void PumpJobs()
@@ -142,6 +141,12 @@ namespace TLDRevamp
             }
         }
 
+        private static string TpStatus()
+        {
+            var state = GroundPlacement.Observe();
+            return "{\"waiting\":" + (state.Waiting ? "true" : "false") + ",\"on\":" + Json.Str(state.On) + ",\"placed\":" + state.Placed + ",\"waited\":" + state.Waited + "}";
+        }
+
         private static string Ground(float x, float z)
         {
             var h = GroundHit(x, z);
@@ -149,166 +154,6 @@ namespace TLDRevamp
             return "{\"hit\":true,\"y\":" + h.Value.point.y.ToString("F2") + ",\"collider\":" + Json.Str(h.Value.collider.name) +
                    ",\"type\":" + Json.Str(h.Value.collider.GetType().Name) + "}";
         }
-
-        /// The first STATIC collider under (x, z) that isn't the player (Unity coordinates); null if nothing is generated there.
-        internal static RaycastHit? GroundHit(float x, float z)
-        {
-            Transform playerRoot = mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.transform.root : null;
-            var hits = Physics.RaycastAll(new Vector3(x, 5000f, z), Vector3.down, 10000f, ~0, QueryTriggerInteraction.Ignore);
-            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-            foreach (var h in hits)
-            {
-                if (playerRoot != null && h.collider.transform.root == playerRoot) continue; // the player, held items
-                if (h.collider.attachedRigidbody != null) continue;                           // cars, loose items
-                return h;
-            }
-            return null;
-        }
-
-        // ---------------------------------------------------------------- tpground
-        // It used to take the TOPMOST static surface (roofs: 'teto'; something high by the mansion gate) and, where the
-        // ground wasn't generated yet, threw the player 120 m up to fall onto it (16 of 37 printed replies were 'hop';
-        // aimp runs 5/6 lost the laptop to that fall before the test began). Now: the lowest surface a player can stand
-        // on (room above it) at or above the terrain — a road over terrain, a floor over the ground under a house, never
-        // the roof; with a height given, the floor nearest below it. Ground not generated yet: the player is HELD at the
-        // spot (kinematic, no fall) and set down once the ground is there (FixedTick), up to 30 s.
-        private static double _tpGx, _tpGz; private static double? _tpGy;
-        private static float _tpUntil, _tpReadySince = -1; private static bool _tpWaiting;
-        private static string _tpOn = ""; private static long _tpPlaced, _tpWaited;
-
-        internal static RaycastHit? StandHit(float x, float z, float? belowY, bool vehicles = false) =>
-            Net.TpaPlacement.StandHit(x, z, belowY, vehicles);
-        /// The floor under (x, z) below belowY, with or without room for a player on it (is someone standing on something).
-        internal static RaycastHit? FloorHit(float x, float z, float belowY) => Net.TpaPlacement.StandHit(x, z, belowY, false, false);
-        private static bool Room(Vector3 p, Transform playerRoot) => Net.TpaPlacement.Room(p, playerRoot);
-
-        /// Production use too (a joiner placed next to the host, Mp): stand on the ground at a global (x, z), held until
-        /// it is generated there. TpBusy while held.
-        internal static void PlaceAt(double gx, double gz) { TpGround(gx, gz, null); }
-        /// Next to someone standing at global height `nearGy` (a building's floor, a roof, a bridge): the floor nearest
-        /// below that height, else the ground. The lowest surface with room was the wrong floor: beside the host in the
-        /// spawn house, its roof (no room on the kitchen floor at that spot), and under a raised floor the ground beneath
-        /// it (playtest 2026-10-18: "tpa sending him under the floor").
-        internal static void PlaceNear(double gx, double gz, double nearGy) { TpGround(gx, gz, null, nearGy); }
-        // Give the target's floor a short generation window before the ordinary placement fallback.
-        internal static void PlaceTpa(double gx, double gz, double bodyGy, bool retry = false)
-        {
-            TpGround(gx, gz, null, bodyGy + .5, true, retry);
-        }
-        private static bool _tpStrict;
-        private static float _tpReadyAt;
-        internal static bool TpaWorldReady(double gx, double gy, double gz)
-        {
-            var u = mainscript.UnityPosFromGlobal(new Vector3d(gx, gy, gz));
-            if (Time.realtimeSinceStartup < _tpReadyAt || u.sqrMagnitude >= 6250000f) return false;
-            foreach (var o in TpAround)
-            {
-                var hit = StandHit(u.x + o.x, u.z + o.y, null);
-                if (hit.HasValue && Net.TpaArrival.WorldFloor(new Net.TpaArrival.Candidate(hit.Value.point.y, true, hit.Value.collider.attachedRigidbody == null))) return true;
-            }
-            return false;
-        }
-        internal static bool TpBusy => _tpWaiting;
-        internal static void CancelJoinPlacement() { _tpWaiting = _tpHeld = false; _tpCalmUntil = 0; }
-        private static double? _tpNearGy;
-        /// The spot, then rings of 1, 2 and 3 m around it (8 directions each).
-        private static readonly Vector2[] TpAround = Ring();
-        private static Vector2[] Ring()
-        {
-            var l = new System.Collections.Generic.List<Vector2> { Vector2.zero };
-            foreach (float r in new[] { 1f, 2f, 3f })
-                for (int i = 0; i < 8; i++) l.Add(new Vector2(Mathf.Cos(i * Mathf.PI / 4f), Mathf.Sin(i * Mathf.PI / 4f)) * r);
-            return l.ToArray();
-        }
-
-        private static string TpGround(double gx, double gz, double? gy, double? nearGy = null, bool strict = false, bool retry = false)
-        {
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null) return "{\"error\":\"not in game\"}";
-            _tpGx = gx; _tpGz = gz; _tpGy = gy; _tpNearGy = nearGy;
-            _tpStrict = strict;
-            if (!retry) { _tpReadySince = -1; _tpReadyAt = Time.realtimeSinceStartup + .5f; }
-            _tpWaiting = false;
-            if ((!strict || retry) && TryPlace(pl)) return "{\"tpground\":true,\"on\":" + Json.Str(_tpOn) + "}";
-            // not generated yet: hold the player at the spot (the world streams in around it) — no hop, no fall
-            var u = mainscript.UnityPosFromGlobal(new Vector3d(gx, gy ?? nearGy ?? mainscript.GlobalFromUnityPos(pl.transform.position).y, gz));
-            pl.Teleport(u);
-            TpSettle(pl);
-            _tpWaiting = true; _tpUntil = Time.realtimeSinceStartup + 30f; _tpWaited++;
-            return "{\"tpground\":\"waiting\"}";
-        }
-
-        private static bool TryPlace(fpscontroller pl)
-        {
-            var u = mainscript.UnityPosFromGlobal(new Vector3d(_tpGx, _tpGy ?? 0.0, _tpGz));
-            if (_tpStrict)
-            {
-                bool ready = TpaWorldReady(_tpGx, _tpNearGy.Value - .5, _tpGz);
-                if (ready && _tpReadySince < 0) _tpReadySince = Time.realtimeSinceStartup;
-                float bodyY = mainscript.UnityPosFromGlobal(new Vector3d(_tpGx, _tpNearGy.Value - .5, _tpGz)).y;
-                // Prefer the target's floor across the full ring before accepting any lower floor.
-                var hits = new System.Collections.Generic.List<RaycastHit?>();
-                var floors = new System.Collections.Generic.List<Net.TpaArrival.Candidate>();
-                foreach (var o in TpAround)
-                {
-                    var hit = Net.TpaPlacement.StandHit(u.x + o.x, u.z + o.y, bodyY - .4f, true, false);
-                    hits.Add(hit); floors.Add(new Net.TpaArrival.Candidate(hit?.point.y ?? double.NaN, hit.HasValue && Room(hit.Value.point, pl.transform.root), hit.HasValue && hit.Value.collider.attachedRigidbody == null));
-                }
-                int chosen = Net.TpaArrival.ChooseFloor(floors, bodyY, ready, _tpReadySince < 0 ? 0 : Time.realtimeSinceStartup - _tpReadySince);
-                if (chosen >= 0)
-                {
-                    var hit = hits[chosen].Value;
-                    pl.godModeTillGrounded = true;
-                    pl.Teleport(new Vector3(hit.point.x, hit.point.y + 1.1f, hit.point.z));
-                    TpSettle(pl); _tpHeld = false;
-                    _tpOn = hit.collider.name; _tpPlaced++;
-                    return true;
-                }
-                if (chosen != -2) return false;
-                _tpStrict = false;
-            }
-            RaycastHit? h = null;
-            if (_tpNearGy.HasValue)
-            {
-                // the floor at their level: here, else the nearest spot around with room on it (inside a house the spot
-                // beside them can be a wall or a cupboard — the first try at the spawn house found no room on the kitchen
-                // floor there and put the asker on the roof); a floor lower down only if there's none at their level
-                // near: their body + 0.5 m; their feet are ~0.9 m under their body. The floor they stand on first (within
-                // half a metre of their feet — not the bed beside them), then anything up to a step above it.
-                float near = mainscript.UnityPosFromGlobal(new Vector3d(_tpGx, _tpNearGy.Value, _tpGz)).y;
-                foreach (var (below, lowest) in new[] { (near - 1.1f, near - 1.9f), (near, near - 2.5f) })
-                {
-                    foreach (var o in TpAround)
-                    {
-                        var hh = StandHit(u.x + o.x, u.z + o.y, below);
-                        if (hh != null && hh.Value.point.y >= lowest) { h = hh; u.x += o.x; u.z += o.y; break; }
-                    }
-                    if (h != null) break;
-                }
-                if (h == null)
-                    foreach (var o in TpAround)
-                    {
-                        var hh = StandHit(u.x + o.x, u.z + o.y, near);
-                        if (hh != null) { h = hh; u.x += o.x; u.z += o.y; break; }
-                    }
-            }
-            if (h == null)
-                foreach (var o in TpAround)
-                {
-                    var hh = StandHit(u.x + o.x, u.z + o.y, _tpGy.HasValue ? u.y : (float?)null);
-                    if (hh != null) { h = hh; u.x += o.x; u.z += o.y; break; }
-                }
-            if (h == null) return false;
-            pl.godModeTillGrounded = true;
-            pl.Teleport(new Vector3(u.x, h.Value.point.y + 1.1f, u.z));
-            TpSettle(pl);
-            _tpHeld = false;
-            _tpOn = h.Value.collider.name; _tpPlaced++;
-            return true;
-        }
-
-        private static string TpStatus() =>
-            "{\"waiting\":" + (_tpWaiting ? "true" : "false") + ",\"on\":" + Json.Str(_tpOn) + ",\"placed\":" + _tpPlaced + ",\"waited\":" + _tpWaited + "}";
 
         private static string TpaLandingCheck()
         {
@@ -351,67 +196,6 @@ namespace TLDRevamp
                 }
             }
             return "{\"missing\":\"no reachable loaded building floor with ceiling, room and adjacent wall within 300 m\"}";
-        }
-
-        private static bool _tpHeld;   // tpg … hold: the next tpground settles too
-        private static float _tpCalmUntil;
-
-        /// After a long test teleport: the floating-origin shift now (same frame), physics synced, the body still and the
-        /// fall-damage baseline reset for half a second, so the arrival starts clean (no fall from the old height's speed).
-        /// The 2–10 million m/s launches of farworld runs 6–8 were NOT this body: copies of items attached at the spawn
-        /// building were held at pre-shift coordinates (Fixes.FreeAttachPoints) and their kinematic bodies swept 201 km per
-        /// physics step, carrying the player along (tpprobe trace, v0.57.97).
-        internal static void TpSettle(fpscontroller pl)
-        {
-            if (pl.RB != null) pl.RB.position = pl.transform.position;
-            if (mainscript.s.player.transform.position.sqrMagnitude > 6250000f) mainscript.s.VisszaRakas();
-            if (pl.RB != null) pl.RB.position = pl.transform.position;
-            Physics.SyncTransforms();
-            StoreLeftBehind();
-            _tpCalmUntil = Time.realtimeSinceStartup + 0.5f;
-            TpCalm(pl);
-        }
-        public static long TpStores;
-
-        private static void StoreLeftBehind()
-        {
-            var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
-            if (map == null || map.genArounds == null || itemPlaceRemoveScript.s == null || savedatascript.s == null) return;
-            foreach (var ga in map.genArounds) if (ga != null && ga.t != null) ga.upos = ga.t.position;
-            itemPlaceRemoveScript.s.RemoveStuff();
-            TpStores++;
-        }
-
-        private static void TpCalm(fpscontroller pl)
-        {
-            if (pl == null) return;
-            if (pl.RB != null) { pl.RB.velocity = Vector3.zero; pl.RB.angularVelocity = Vector3.zero; }
-            pl.lastVelocity = 0f; pl.currentVelocity = 0f;
-        }
-
-        /// Plugin.FixedUpdate: keep the body calm for a moment after a settled teleport.
-        public static void FixedTick()
-        {
-            if (mainscript.s == null) return;
-            var pl = mainscript.s.player;
-            // held (tpg … hold) until tpground/tprelease — not only the first half second: waiting for the target's
-            // ground can take longer, and a 120 m fall with the game's fall damage killed the host there (farworld
-            // runs 11/16: its ragdoll became an item of the site under test)
-            if (_tpWaiting && pl != null)
-            {
-                bool placed = TryPlace(pl);
-                if (placed || Time.realtimeSinceStartup > _tpUntil) { _tpWaiting = false; Net.Tpa.TelemetryGroundFinished(placed); return; }
-                // held at the spot until the ground is there
-                var hold = mainscript.UnityPosFromGlobal(new Vector3d(_tpGx, _tpGy ?? _tpNearGy ?? mainscript.GlobalFromUnityPos(pl.transform.position).y, _tpGz));
-                if (!_tpGy.HasValue && !_tpNearGy.HasValue) hold.y = pl.transform.position.y;
-                pl.transform.position = hold; if (pl.RB != null) pl.RB.position = hold;
-                TpCalm(pl); pl.godModeTillGrounded = true;
-                return;
-            }
-            if (_tpHeld && pl != null) { TpCalm(pl); pl.godModeTillGrounded = true; return; }
-            if (_tpCalmUntil <= 0f) return;
-            if (Time.realtimeSinceStartup < _tpCalmUntil) { TpCalm(pl); return; }
-            _tpCalmUntil = 0f;
         }
 
         // The read-only commands: they change nothing, so a session that denies developer access still allows
@@ -525,9 +309,9 @@ namespace TLDRevamp
             // ONLY for the host: the exemption used to apply on every machine, so a joiner got a DIFFERENT
             // answer for `mp policy` ("not hosting") than for any other denied command (the policy error a
             // client uses to know the host denied it). The host check is now inside the exemption.
-            if (!Net.SessionSettingsPolicy.BridgeAllowed(Net.Mp.Server != null, Net.DeveloperAccess.Allowed, ReadOnlyCmd(cmd, arg), cmd, arg))
+            if (!TLDRevamp.Net.SessionSettingsPolicyTools.BridgeAllowed(Net.Mp.Server != null, Net.DeveloperAccess.Allowed, ReadOnlyCmd(cmd, arg), cmd, arg))
             {
-                Net.DeveloperAccess.DenyBridge();
+                TLDRevamp.Net.DeveloperAccessTools.DenyBridge();
                 return Net.SessionSettingsPolicy.PolicyDenied;
             }
             // what a dev command changed is noted on the anomaly watch's lines (Entities.Anomaly); queries are not.
@@ -544,8 +328,8 @@ namespace TLDRevamp
             if (TryRegistered(cmd, arg, out var contributedCommand)) return contributedCommand;
             switch (cmd)
             {
-                case "vr": return Fixes.VrContractBridge.Json();
-                case "vrnative": return VR.Native.VrNative.Command(arg);
+                case "vr": return TLDRevamp.Fixes.VrContractBridge.Json();
+                case "vrnative": return TLDRevamp.VR.Native.VrNativeTools.Command(arg);
                 // The XR session (issue #41). The tool tools/quest3vr.py sends exactly this command, so without
                 // the case the tool could never start a session, sample it or recenter: the bridge answered
                 // "unknown command" and the tool stopped at its first call. "openxr" on its own is a pure read
@@ -554,30 +338,30 @@ namespace TLDRevamp
                 // The XR session, through the bridge: `openxr` reads the state, `openxr start|retry|stop|recenter`
                 // acts on it. The start is explicit (nothing starts a session behind the player's back) and a
                 // failed start is retried only when it is asked for.
-                case "openxr": return Fixes.OpenXrBridge.Command(arg);
+                case "openxr": return TLDRevamp.Fixes.OpenXrBridgeTools.Command(arg);
                 // The detailed terrain ring (issue #37): how far it reaches, its tiles, what it raised.
-                case "detailedterrain": return Fixes.DetailedTerrain.Stats();
+                case "detailedterrain": return TLDRevamp.Fixes.DetailedTerrain.Stats();
                 case "ping": return "{\"ok\":true,\"version\":\"" + Plugin.Version + "\",\"build\":\"" + Plugin.BuildHash + "\",\"commit\":\"" + Plugin.BuildCommit + "\",\"dirty\":" + (Plugin.BuildDirty ? "true" : "false") + ",\"game\":\"" + Plugin.GameBuild + "\",\"port\":" + _boundPort + ",\"dataPath\":" + Json.Str(Application.dataPath) + ",\"patchFailures\":" + Plugin.PatchFailures + ",\"failedPatches\":" + Json.Str(string.Join(",", Plugin.FailedPatches)) + "}";
                 case "stats": return p.Telemetry.FrameStatsJson();
                 case "scene": return p.Telemetry.SceneStatsJson();
                 case "breakdown": return p.Telemetry.Breakdown.Json();
                 case "telemetry": return SessionLog.Stats();
-                case "timers": return ScriptProfiler.Bridge(arg);
-                case "il": return ScriptProfiler.Il(arg.Trim());
-                case "telemetrytest": return SessionLog.SelfTest(arg.Length > 0 ? int.Parse(arg) : 20000);
+                case "timers": return TLDRevamp.ScriptProfilerTools.Bridge(arg);
+                case "il": return TLDRevamp.ScriptProfilerTools.Il(arg.Trim());
+                case "telemetrytest": return TLDRevamp.SessionLogTools.SelfTest(arg.Length > 0 ? int.Parse(arg) : 20000);
                 case "scenecount": return SceneCounts.Scan(SessionLog.St);
                 case "mark": return Net.TelemetryMarks.Local(arg);
-                case "markpanel": return MarkPanel.Bridge(arg);
-                case "markrename": return MarkPanel.Bridge(arg, true);
-                case "bug": return BugReport.Bridge(arg);
+                case "markpanel": return TLDRevamp.MarkPanelTools.Bridge(arg);
+                case "markrename": return TLDRevamp.MarkPanelTools.Bridge(arg, true);
+                case "bug": return TLDRevamp.BugReportTools.Bridge(arg);
                 case "blackbox": return SessionLog.Blackbox();
-                case "trace": return Net.Entities.TelemetryTrace();
+                case "trace": return TLDRevamp.Net.Entities.TelemetryTrace();
                 case "netcat": return Net.NetMeter.CategoryJson();
                 case "rebaseprof": return arg == "stop" ? RebaseLab.Stop() : RebaseLab.Start();
-                case "pourtest": return RebaseLab.PourTest(arg);
-                case "loadsave": return TestSafety.LoadSave(arg);
+                case "pourtest": return TLDRevamp.RebaseLabTools.PourTest(arg);
+                case "loadsave": return TLDRevamp.TestSafetyTools.LoadSave(arg);
                 case "worldcheck": return Net.WorldCheck.Status();
-                case "mods": return string.IsNullOrWhiteSpace(arg) ? ModHost.Status() : arg.Trim() == "aliases" ? ModHost.AliasStatus() : Net.ModBrowser.Bridge(arg);
+                case "mods": return string.IsNullOrWhiteSpace(arg) ? ModHost.Status() : arg.Trim() == "aliases" ? TLDRevamp.ModHost.AliasStatus() : TLDRevamp.Net.ModBrowserTools.Bridge(arg);
                 case "poisaved":
                 {
                     // test: every building prefab's saveable objects (tosaveitemscript) — the lease's "taken" path turns those
@@ -605,7 +389,7 @@ namespace TLDRevamp
                 }
                 case "guardlab":
                     // test: Fixes.WornDestroyed / FluidTypeGuard (tools/guards.py)
-                    return arg.Trim() == "fluid" ? Fixes.FluidTypeGuard.Test() : arg.Trim() == "worn" ? Fixes.WornDestroyed.Test() : Fixes.WornDestroyed.Status();
+                    return arg.Trim() == "fluid" ? TLDRevamp.Fixes.FluidTypeGuardTools.Test() : arg.Trim() == "worn" ? TLDRevamp.Fixes.WornDestroyedTools.Test() : Fixes.WornDestroyed.Status();
                 case "prefabswith":
                 {
                     // test: item ids whose prefab carries a game script of that type (e.g. sprayscript)
@@ -616,7 +400,7 @@ namespace TLDRevamp
                         if (itemdatabase.s.items[k] != null && itemdatabase.s.items[k].GetComponentInChildren(ty, true) != null) rows.Add("[" + k + "," + Json.Str(itemdatabase.s.items[k].name) + "]");
                     return "{\"items\":[" + string.Join(",", rows) + "]}";
                 }
-                case "rabbits": return arg.Trim() == "spawn" ? Fixes.Rabbits.TestSpawn() : Fixes.Rabbits.Stats();
+                case "rabbits": return arg.Trim() == "spawn" ? TLDRevamp.Fixes.RabbitsTools.TestSpawn() : Fixes.Rabbits.Stats();
                 case "devspawn":
                 {
                     // the dev menu's own spawn (kaposztaleves.Spawn → mainscript.Spawn(g, color, worn, rtype, paint))
@@ -640,9 +424,9 @@ namespace TLDRevamp
                 case "itemsnap":
                 {
                     var ia = arg.Split(' ');
-                    if (ia[0] == "test") return Net.ItemSnapshot.Test(ia.Length > 1 ? int.Parse(ia[1]) : 10);
-                    if (ia[0] == "group") return Net.ItemSnapshot.TestGroup();
-                    if (ia[0] == "groupdiag") return Net.ItemSnapshot.GroupDiag(ia.Length > 1 ? float.Parse(ia[1], System.Globalization.CultureInfo.InvariantCulture) : 15f);
+                    if (ia[0] == "test") return TLDRevamp.Net.ItemSnapshotTools.Test(ia.Length > 1 ? int.Parse(ia[1]) : 10);
+                    if (ia[0] == "group") return TLDRevamp.Net.ItemSnapshotTools.TestGroup();
+                    if (ia[0] == "groupdiag") return TLDRevamp.Net.ItemSnapshotTools.GroupDiag(ia.Length > 1 ? float.Parse(ia[1], System.Globalization.CultureInfo.InvariantCulture) : 15f);
                     return "{\"error\":\"itemsnap test [n]\"}";
                 }
                 case "devaccess": { var da = Net.DeveloperAccess.Status(); return da.Substring(0, da.Length - 1) + ",\"patchFailures\":" + Plugin.PatchFailures + ",\"failedPatches\":" + Json.Str(string.Join(",", Plugin.FailedPatches)) + "}"; }   // Status() closes its object: the patch fields go inside it
@@ -658,88 +442,88 @@ namespace TLDRevamp
                         case "session": return Net.Session.Status();
                         case "hands": return Net.RemotePlayers.HandsJson();
                         case "loading":
-                            if (ma.Length > 1 && ma[1] == "preview") return Net.JoinLoading.PreviewFromBridge(ma);
-                            if (ma.Length > 1 && ma[1] == "toggle") return Net.JoinLoading.ToggleFromBridge(ma);
+                            if (ma.Length > 1 && ma[1] == "preview") return TLDRevamp.Net.JoinLoadingTools.PreviewFromBridge(ma);
+                            if (ma.Length > 1 && ma[1] == "toggle") return TLDRevamp.Net.JoinLoadingTools.ToggleFromBridge(ma);
                             return Net.JoinLoading.Probe(ma.Length > 1 ? ma[1] : "");
                         case "kick": return "{\"kicked\":" + (Net.Mp.Server != null && Net.Mp.Server.Kick(int.Parse(ma[1])) ? "true" : "false") + "}";
                         case "chat":
                             if (ma.Length > 1 && ma[1] == "say") return "{\"said\":" + (Net.Session.Say(arg.Substring(arg.IndexOf("say ", StringComparison.Ordinal) + 4)) ? "true" : "false") + "}";
                             if (ma.Length > 1 && ma[1] == "open") Net.Chat.Open();
                             if (ma.Length > 1 && ma[1] == "close") Net.Chat.Close();
-                            return Net.Chat.Status();
+                            return TLDRevamp.Net.Chat.Status();
                         case "voice":
-                            if (ma.Length > 1 && ma[1] == "tone") return Net.Voice.Tone(float.Parse(ma[2], mic), -1, ma.Length > 3 && ma[3] == "all");
-                            if (ma.Length > 1 && ma[1] == "feed") return Net.Voice.Tone(float.Parse(ma[3], mic), int.Parse(ma[2]));
-                            if (ma.Length > 1 && ma[1] == "probe") return Net.Voice.Probe();
+                            if (ma.Length > 1 && ma[1] == "tone") return TLDRevamp.Net.VoiceTools.Tone(float.Parse(ma[2], mic), -1, ma.Length > 3 && ma[3] == "all");
+                            if (ma.Length > 1 && ma[1] == "feed") return TLDRevamp.Net.VoiceTools.Tone(float.Parse(ma[3], mic), int.Parse(ma[2]));
+                            if (ma.Length > 1 && ma[1] == "probe") return TLDRevamp.Net.VoiceTools.Probe();
                             if (ma.Length > 2 && ma[1] == "everyone" && Net.Mp.Server != null) Net.Mp.Server.UpdateSessionSettings(x => x.VoiceEveryone = ma[2] == "on", false);   // the host's session setting
                             if (ma.Length > 2 && ma[1] == "key") Net.Voice.EveryoneKey = Math.Max(0, Math.Min(Net.Voice.EveryoneKeys.Length - 1, int.Parse(ma[2])));
                             if (ma.Length > 1 && ma[1] == "mode") Net.Voice.Setting = (Net.Voice.Mode)Enum.Parse(typeof(Net.Voice.Mode), ma[2], true);
                             if (ma.Length > 1 && ma[1] == "mute") { if (!Net.Voice.Muted.Remove(ulong.Parse(ma[2]))) Net.Voice.Muted.Add(ulong.Parse(ma[2])); }
                             return Net.Voice.Status();
-                        case "screen": return Net.MpScreen.Test(ma.Length > 1 ? arg.Substring(arg.IndexOf("screen", StringComparison.Ordinal) + 6).Trim() : "");
-                        case "botcar": return Net.Mp.CaptureBotCar();
-                        case "carset": return Net.Entities.CarSet(uint.Parse(ma[1]), ma[2], int.Parse(ma[3]));
-                        case "botattach": return Net.Mp.BotAttach(uint.Parse(ma[1]), ma[2]);
-                        case "botitem": return Net.Mp.AddItemBot(ma.Skip(1).ToArray());   // ox oy oz [lag] [held]: a bot's item in the nearest car
-                        case "acts": return Net.PlayerActs.Probe(ma.Length > 1 ? ma[1] : "");
-                        case "bots": return Net.Mp.AddBots(int.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], mic) : 30f, ma.Length > 3 ? float.Parse(ma[3], mic) : 5f);
-                        case "remotebots": return Net.Mp.AddRemoteBots(int.Parse(ma[1]), ulong.Parse(ma[2]), ma.Length > 3 ? float.Parse(ma[3], mic) : 30f, ma.Length > 4 ? float.Parse(ma[4], mic) : 5f, ma.Length > 5 ? float.Parse(ma[5], mic) : 0f);
-                        case "dropbots": return Net.Mp.DropBots(int.Parse(ma[1]));
+                        case "screen": return TLDRevamp.Net.MpScreenTools.Test(ma.Length > 1 ? arg.Substring(arg.IndexOf("screen", StringComparison.Ordinal) + 6).Trim() : "");
+                        case "botcar": return Net.LegacyBots.CaptureBotCar();
+                        case "carset": return TLDRevamp.Net.EntityCarSignalsTools.CarSet(uint.Parse(ma[1]), ma[2], int.Parse(ma[3]));
+                        case "botattach": return Net.LegacyBots.BotAttach(uint.Parse(ma[1]), ma[2]);
+                        case "botitem": return Net.LegacyBots.AddItemBot(ma.Skip(1).ToArray());   // ox oy oz [lag] [held]: a bot's item in the nearest car
+                        case "acts": return TLDRevamp.Net.PlayerActsTools.Probe(ma.Length > 1 ? ma[1] : "");
+                        case "bots": return Net.LegacyBots.AddBots(int.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], mic) : 30f, ma.Length > 3 ? float.Parse(ma[3], mic) : 5f);
+                        case "remotebots": return Net.LegacyBots.AddRemoteBots(int.Parse(ma[1]), ulong.Parse(ma[2]), ma.Length > 3 ? float.Parse(ma[3], mic) : 30f, ma.Length > 4 ? float.Parse(ma[4], mic) : 5f, ma.Length > 5 ? float.Parse(ma[5], mic) : 0f);
+                        case "dropbots": return Net.LegacyBots.DropBots(int.Parse(ma[1]));
                         case "status": return Net.Mp.Status();
                         case "save": return Net.Mp.SaveTail();
                         case "players": return Net.RemotePlayers.List();
-                        case "breakables": return Net.Entities.Breakables(float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture), ma.Length > 2 ? ma[2] : "");
-                        case "breaknear": return Net.Entities.BreakNear(ma[1], float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture));
-                        case "getouttry": return Net.Entities.GetOutTry(int.Parse(ma[1]));
+                        case "breakables": return TLDRevamp.Net.EntityAiTools.Breakables(float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture), ma.Length > 2 ? ma[2] : "");
+                        case "breaknear": return TLDRevamp.Net.EntityAiTools.BreakNear(ma[1], float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture));
+                        case "getouttry": return TLDRevamp.Net.EntitySeatTools.GetOutTry(int.Parse(ma[1]));
                         case "share": return Net.Entities.ShareCar(Net.Entities.NearestCar());
                         case "entities": return Net.Entities.Status(ma.Length > 1 && int.TryParse(ma[1], out int entityLimit) && entityLimit > 0 ? entityLimit : int.MaxValue);
-                        case "mods": return Net.ModObjects.StatusJson();
-                        case "plausibility": return Net.Plausibility.Stats();
+                        case "mods": return TLDRevamp.Net.ModObjects.StatusJson();
+                        case "plausibility": return TLDRevamp.Net.Plausibility.Stats();
                         case "ask": return Net.MpScreen.AskProbe(ma.Length > 1 ? ma[1] : "");
-                        case "modtransfer": return Net.ModTransfer.Stats();
-                        case "sprayhold": return Net.Entities.SprayHold(float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture));
-                        case "sprayfx": return Net.Entities.SprayFxState(uint.Parse(ma[1]));
-                        case "lookat": return Net.Entities.LookAt(uint.Parse(ma[1]));
-                        case "turn": return Net.Entities.TurnItem(uint.Parse(ma[1]));
-                        case "lamp": return Net.Entities.LampState(uint.Parse(ma[1]));
-                        case "cardoors": return Net.Entities.CarDoors(uint.Parse(ma[1]));
-                        case "busdoors": return Net.Entities.BusDoors(uint.Parse(ma[1]), ma.Length > 2 ? int.Parse(ma[2]) : -1, ma.Length > 3 ? int.Parse(ma[3]) : -1);
-                        case "doorglue": return Net.Entities.GlueToDoor(uint.Parse(ma[1]), uint.Parse(ma[2]), int.Parse(ma[3]), int.Parse(ma[4]));
-                        case "doorattachment": return Net.Entities.DoorAttachmentPose(uint.Parse(ma[1]));
-                        case "opendoor": return Net.Entities.OpenDoor(uint.Parse(ma[1]), int.Parse(ma[2]));
+                        case "modtransfer": return TLDRevamp.Net.ModTransfer.Stats();
+                        case "sprayhold": return TLDRevamp.Net.EntitySprayTools.SprayHold(float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture));
+                        case "sprayfx": return TLDRevamp.Net.Entities.SprayFxState(uint.Parse(ma[1]));
+                        case "lookat": return TLDRevamp.Net.EntitySprayTools.LookAt(uint.Parse(ma[1]));
+                        case "turn": return TLDRevamp.Net.EntitySprayTools.TurnItem(uint.Parse(ma[1]));
+                        case "lamp": return TLDRevamp.Net.Entities.LampState(uint.Parse(ma[1]));
+                        case "cardoors": return TLDRevamp.Net.Entities.CarDoors(uint.Parse(ma[1]));
+                        case "busdoors": return TLDRevamp.Net.EntityBusDoorsTools.BusDoors(uint.Parse(ma[1]), ma.Length > 2 ? int.Parse(ma[2]) : -1, ma.Length > 3 ? int.Parse(ma[3]) : -1);
+                        case "doorglue": return TLDRevamp.Net.EntityDoorAttachmentsTools.GlueToDoor(uint.Parse(ma[1]), uint.Parse(ma[2]), int.Parse(ma[3]), int.Parse(ma[4]));
+                        case "doorattachment": return TLDRevamp.Net.EntityDoorAttachmentsTools.DoorAttachmentPose(uint.Parse(ma[1]));
+                        case "opendoor": return TLDRevamp.Net.EntityCarDoorsTools.OpenDoor(uint.Parse(ma[1]), int.Parse(ma[2]));
                         case "headh": return Net.RemotePlayers.HeadHeights();
                         case "stimuli": return Net.RemotePlayers.Stimuli();
-                        case "rabbit": return Net.Entities.Rabbit(uint.Parse(ma[1]));
-                        case "rabbits": return Net.Entities.RabbitList();
-                        case "rabbitdo": return Net.Entities.RabbitDo(ma);
-                        case "body": return Net.Entities.BodyState(uint.Parse(ma[1]), ma);
-                        case "copymotion": return Net.Entities.CopyMotion(uint.Parse(ma[1]), ma.Length > 2 && ma[2] == "reset");
-                        case "stall": Net.MpClient.StallUntil = UnityEngine.Time.realtimeSinceStartup + float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture); return "{\"stall\":" + ma[1] + ",\"held\":" + Net.MpClient.StalledMessages + "}";
+                        case "rabbit": return TLDRevamp.Net.Entities.Rabbit(uint.Parse(ma[1]));
+                        case "rabbits": return TLDRevamp.Net.Entities.RabbitList();
+                        case "rabbitdo": return TLDRevamp.Net.EntityRabbitsTools.RabbitDo(ma);
+                        case "body": return TLDRevamp.Net.EntityRabbitsTools.BodyState(uint.Parse(ma[1]), ma);
+                        case "copymotion": return TLDRevamp.Net.EntityCarDoorsTools.CopyMotion(uint.Parse(ma[1]), ma.Length > 2 && ma[2] == "reset");
+                        case "stall": Net.ClientSimulation.StallUntil = UnityEngine.Time.realtimeSinceStartup + float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture); return "{\"stall\":" + ma[1] + ",\"held\":" + Net.ClientSimulation.StalledMessages + "}";
                         case "fault": Net.Mp.FaultPart = int.Parse(ma[1]); Net.Mp.FaultUntil = UnityEngine.Time.realtimeSinceStartup + float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture); return "{\"fault\":" + ma[1] + ",\"faults\":" + Net.Mp.TickFaults + "}";
-                        case "lag": Net.MpClient.LagS = float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture) / 1000f; return "{\"lagMs\":" + ma[1] + "}";
+                        case "lag": Net.ClientSimulation.LagS = float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture) / 1000f; return "{\"lagMs\":" + ma[1] + "}";
                         case "lookplayer": return Net.RemotePlayers.LookAtPlayer(int.Parse(ma[1]));
-                        case "bite": return Net.Entities.Bite();
-                        case "food": return Net.Entities.Food(uint.Parse(ma[1]));
-                        case "putincar": return Net.Entities.PutInCar(uint.Parse(ma[1]), uint.Parse(ma[2]), int.Parse(ma[3]));
-                        case "cargoinfo": return Net.Entities.CargoInfo(uint.Parse(ma[1]));
-                        case "putrel": { var ci = System.Globalization.CultureInfo.InvariantCulture; return Net.Entities.PutRel(uint.Parse(ma[1]), uint.Parse(ma[2]), float.Parse(ma[3], ci), float.Parse(ma[4], ci), float.Parse(ma[5], ci), ma.Length > 6 && ma[6] == "clear"); }
-                        case "relpos": return Net.Entities.RelPos(uint.Parse(ma[1]), ma.Skip(2).Select(uint.Parse).ToArray());
-                        case "standon": return Net.Entities.StandOn(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 0.15f, ma.Length > 3 && ma[3] == "rear");
-                        case "relplayers": return Net.Entities.RelPlayers(uint.Parse(ma[1]));
-                        case "footprobe": return Net.Entities.FootProbe();
-                        case "standseries": return Net.Entities.StandSeries(ma);
-                        case "outsidebodies": return Net.Entities.OutsideBodies(uint.Parse(ma[1]));
-                        case "tow": return Net.Entities.Tow(ma);
-                        case "crashlease": return Net.Entities.TestCrashLease(uint.Parse(ma[1]));
-                        case "holdcopy": return Net.Entities.TestHoldCopy(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 5f);
-                        case "lockdiag": return Net.Entities.LockDiag(uint.Parse(ma[1]));
-                        case "wear": return Net.Entities.WearNet(uint.Parse(ma[1]));
-                        case "takeoff": return Net.Entities.TakeOffNet(uint.Parse(ma[1]), ma.Length > 2 && ma[2] == "drop");
-                        case "worn": return Net.Entities.WornStatus();
-                        case "wearables": return Net.Entities.Wearables();
-                        case "wearnear": return Net.Entities.WearNear(ma.Length > 1 ? ma[1] : "");
-                        case "radio": return ma.Length > 2 && ma[1] == "advance" ? Net.Entities.RadioAdvance(int.Parse(ma[2])) : Net.Entities.RadioStatus();
-                        case "physlock": { var ci = System.Globalization.CultureInfo.InvariantCulture; return Net.Entities.PhysLockStatus(double.Parse(ma[1], ci), double.Parse(ma[2], ci), float.Parse(ma[3], ci)); }
+                        case "bite": return TLDRevamp.Net.EntityCarDoorsTools.Bite();
+                        case "food": return TLDRevamp.Net.Entities.Food(uint.Parse(ma[1]));
+                        case "putincar": return TLDRevamp.Net.EntityCarDoorsTools.PutInCar(uint.Parse(ma[1]), uint.Parse(ma[2]), int.Parse(ma[3]));
+                        case "cargoinfo": return TLDRevamp.Net.EntityCarDoorsTools.CargoInfo(uint.Parse(ma[1]));
+                        case "putrel": { var ci = System.Globalization.CultureInfo.InvariantCulture; return TLDRevamp.Net.EntityCarDoorsTools.PutRel(uint.Parse(ma[1]), uint.Parse(ma[2]), float.Parse(ma[3], ci), float.Parse(ma[4], ci), float.Parse(ma[5], ci), ma.Length > 6 && ma[6] == "clear"); }
+                        case "relpos": return TLDRevamp.Net.EntityCarDoorsTools.RelPos(uint.Parse(ma[1]), ma.Skip(2).Select(uint.Parse).ToArray());
+                        case "standon": return TLDRevamp.Net.EntityCarDoorsTools.StandOn(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 0.15f, ma.Length > 3 && ma[3] == "rear");
+                        case "relplayers": return TLDRevamp.Net.EntityCarDoorsTools.RelPlayers(uint.Parse(ma[1]));
+                        case "footprobe": return TLDRevamp.Net.EntityFootingTools.FootProbe();
+                        case "standseries": return TLDRevamp.Net.EntityFootingTools.StandSeries(ma);
+                        case "outsidebodies": return TLDRevamp.Net.EntityFootingTools.OutsideBodies(uint.Parse(ma[1]));
+                        case "tow": return TLDRevamp.Net.EntityCarDoorsTools.Tow(ma);
+                        case "crashlease": return TLDRevamp.Net.EntityCrashAuthorityTools.TestCrashLease(uint.Parse(ma[1]));
+                        case "holdcopy": return TLDRevamp.Net.EntityCrashAuthorityTools.TestHoldCopy(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 5f);
+                        case "lockdiag": return TLDRevamp.Net.EntityPhysLockTools.LockDiag(uint.Parse(ma[1]));
+                        case "wear": return TLDRevamp.Net.EntityWornTools.WearNet(uint.Parse(ma[1]));
+                        case "takeoff": return TLDRevamp.Net.EntityWornTools.TakeOffNet(uint.Parse(ma[1]), ma.Length > 2 && ma[2] == "drop");
+                        case "worn": return TLDRevamp.Net.Entities.WornStatus();
+                        case "wearables": return TLDRevamp.Net.Entities.Wearables();
+                        case "wearnear": return TLDRevamp.Net.EntityWornTools.WearNear(ma.Length > 1 ? ma[1] : "");
+                        case "radio": return ma.Length > 2 && ma[1] == "advance" ? TLDRevamp.Net.EntityRadioTools.RadioAdvance(int.Parse(ma[2])) : TLDRevamp.Net.Entities.RadioStatus();
+                        case "physlock": { var ci = System.Globalization.CultureInfo.InvariantCulture; return TLDRevamp.Net.EntityPhysLockTools.PhysLockStatus(double.Parse(ma[1], ci), double.Parse(ma[2], ci), float.Parse(ma[3], ci)); }
                         case "deathfling":
                         {
                             var ci = System.Globalization.CultureInfo.InvariantCulture;
@@ -760,79 +544,79 @@ namespace TLDRevamp
                                     if (!int.TryParse(raw, out id)) return "{\"error\":\"not an item id: " + Json.Str(raw) + "\"}";
                                     prefabs.Add(id);
                                 }
-                            return Net.Entities.DeathFling(vx, vy, vz, prefabs.ToArray());
+                            return TLDRevamp.Net.EntityDeathTools.DeathFling(vx, vy, vz, prefabs.ToArray());
                         }
                         case "deathstats": return Net.SessionRules.DeathStats();
                         // The game's own Death, called again for a death that already happened: the duplicate path.
-                        case "deathagain": return Net.Entities.DeathAgain();
-                        case "deathinfo": return Net.Entities.DeathInfo();
-                        case "corpses": return Net.Entities.CorpseList();
-                        case "outfit": return Net.Entities.OutfitTest(ma.Length > 1 && ma[1] == "random");
-                        case "ragdolls": return Net.Entities.RagdollPrefabs();
-                        case "grips": return Net.Entities.GripPrefabs();
-                        case "storms": return Net.Entities.StormTest(ma);
-                        case "sounds": return Net.Entities.PlayerSoundsTest(ma);
-                        case "tumble": return Net.Entities.TumbleTest(ma);
-                        case "grip": return ma.Length > 1 ? Net.Entities.GripTest(ma) : Net.Entities.GripStatus();
-                        case "ragdoll": return ma.Length > 2 ? Net.Entities.RagdollTest(uint.Parse(ma[1]), ma[2]) : Net.Entities.RagdollStatus(uint.Parse(ma[1]));
-                        case "carsig": return Net.Entities.CarSignals(uint.Parse(ma[1]));
-                        case "tune": return ma.Length > 1 ? Net.Entities.CarTuneDiag(uint.Parse(ma[1])) : Net.CarTuneSave.Stats();
-                        case "blood": return Net.Entities.BloodTest(uint.Parse(ma[1]), ma.Length > 2 ? ma[2] : "");
-                        case "key": return Net.Entities.KeyTest(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 0f);
-                        case "radiocar": return Net.Entities.RadioCar(uint.Parse(ma[1]));
-                        case "seatguard": return Net.Entities.SeatGuardStats();
-                        case "push": return Net.Entities.TestPush(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 3f);
-                        case "attach": return Net.Entities.AttachStats();
-                        case "partwatch": return Net.Entities.PartWatchCommand(ma);
-                        case "healthwatch": return Net.Entities.HealthWatchCommand(ma);
-                        case "keys": return KeyBindings.Command(ma);
+                        case "deathagain": return TLDRevamp.Net.EntityDeathTools.DeathAgain();
+                        case "deathinfo": return TLDRevamp.Net.Entities.DeathInfo();
+                        case "corpses": return TLDRevamp.Net.Entities.CorpseList();
+                        case "outfit": return TLDRevamp.Net.EntityCorpsesTools.OutfitTest(ma.Length > 1 && ma[1] == "random");
+                        case "ragdolls": return TLDRevamp.Net.Entities.RagdollPrefabs();
+                        case "grips": return TLDRevamp.Net.Entities.GripPrefabs();
+                        case "storms": return TLDRevamp.Net.EntityStormsTools.StormTest(ma);
+                        case "sounds": return TLDRevamp.Net.EntityPlayerSoundsTools.PlayerSoundsTest(ma);
+                        case "tumble": return TLDRevamp.Net.EntityTumbleweedsTools.TumbleTest(ma);
+                        case "grip": return ma.Length > 1 ? TLDRevamp.Net.EntityPushGripTools.GripTest(ma) : TLDRevamp.Net.Entities.GripStatus();
+                        case "ragdoll": return ma.Length > 2 ? TLDRevamp.Net.EntityRagdollTools.RagdollTest(uint.Parse(ma[1]), ma[2]) : TLDRevamp.Net.EntityRagdollTools.RagdollStatus(uint.Parse(ma[1]));
+                        case "carsig": return TLDRevamp.Net.Entities.CarSignals(uint.Parse(ma[1]));
+                        case "tune": return ma.Length > 1 ? TLDRevamp.Net.EntityCarTuneTools.CarTuneDiag(uint.Parse(ma[1])) : TLDRevamp.Net.CarTuneSave.Stats();
+                        case "blood": return TLDRevamp.Net.EntityBloodTools.BloodTest(uint.Parse(ma[1]), ma.Length > 2 ? ma[2] : "");
+                        case "key": return TLDRevamp.Net.EntityIgnitionKeyTools.KeyTest(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 0f);
+                        case "radiocar": return TLDRevamp.Net.EntityRadioTools.RadioCar(uint.Parse(ma[1]));
+                        case "seatguard": return TLDRevamp.Net.Entities.SeatGuardStats();
+                        case "push": return TLDRevamp.Net.EntityPushTools.TestPush(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 3f);
+                        case "attach": return TLDRevamp.Net.Entities.AttachStats();
+                        case "partwatch": return TLDRevamp.Net.EntityPartWatchTools.PartWatchCommand(ma);
+                        case "healthwatch": return TLDRevamp.Net.EntityHealthWatchTools.HealthWatchCommand(ma);
+                        case "keys": return TLDRevamp.KeyBindingsTools.Command(ma);
                         case "anomalies": return Net.Entities.AnomalyJson();
-                        case "copystore": return Net.Entities.TestCopyStore(uint.Parse(ma[1]), uint.Parse(ma[2]));
-                        case "displace": return Net.Entities.TestDisplace(uint.Parse(ma[1]), float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture));
-                        case "repairrows": { Net.Entities.TryRows(uint.Parse(ma[1]), out var rr); return rr; }
-                        case "censusnow": return Net.Entities.CensusNow(uint.Parse(ma[1]));
-                        case "places": return Net.Entities.PlacesJson();
-                        case "copyjoints": return Net.Entities.CopyJointsJson();
+                        case "copystore": return TLDRevamp.Net.EntityPhysLockTools.TestCopyStore(uint.Parse(ma[1]), uint.Parse(ma[2]));
+                        case "displace": return TLDRevamp.Net.EntityAnomalyTools.TestDisplace(uint.Parse(ma[1]), float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture));
+                        case "repairrows": { TLDRevamp.Net.EntityRepairTools.TryRows(uint.Parse(ma[1]), out var rr); return rr; }
+                        case "censusnow": return TLDRevamp.Net.EntityRepairTools.CensusNow(uint.Parse(ma[1]));
+                        case "places": return TLDRevamp.Net.Entities.PlacesJson();
+                        case "copyjoints": return TLDRevamp.Net.EntityCopyJointsTools.CopyJointsJson();
                         case "trail": return ObjectTrail.Rows(uint.Parse(ma[1], mic));
-                        case "nudgemember": return Net.Entities.TestNudgeMember(uint.Parse(ma[1]), int.Parse(ma[2]), float.Parse(ma[3], System.Globalization.CultureInfo.InvariantCulture));
-                        case "dropstates": Net.Entities.TestDropStates = uint.Parse(ma[1]); return "{\"dropping\":" + ma[1] + "}";
-                        case "copypartgone": return Net.Entities.TestCopyPartGone(uint.Parse(ma[1]), ma[2]);
+                        case "nudgemember": return TLDRevamp.Net.EntityPlaceCheckTools.TestNudgeMember(uint.Parse(ma[1]), int.Parse(ma[2]), float.Parse(ma[3], System.Globalization.CultureInfo.InvariantCulture));
+                        case "dropstates": TLDRevamp.Net.EntityPlaceCheckTools.TestDropStates = uint.Parse(ma[1]); return "{\"dropping\":" + ma[1] + "}";
+                        case "copypartgone": return TLDRevamp.Net.EntityAnomalyTools.TestCopyPartGone(uint.Parse(ma[1]), ma[2]);
                         case "shotfx": return Net.Entities.ShotFxStats();
                         case "blasts": return Net.Entities.ExplosionStats();
                         case "membergone": return Net.Entities.MemberGoneStats();
-                        case "sharequota": return Net.Entities.ShareQuotaStats();
+                        case "sharequota": return TLDRevamp.Net.Entities.ShareQuotaStats();
                         // `mp reports` stats; `mp report <note>`: what the report key does (asks / sends as a player would)
                         case "sharing":
-                        case "reports": return Net.Reports.Stats();
-                        case "report": { string rn = arg.Length > 6 ? arg.Substring(7) : ""; Net.Reports.LocalReport(rn.Length == 0 ? "bridge" : rn); return Net.Reports.Stats(); }
+                        case "reports": return TLDRevamp.Net.Reports.Stats();
+                        case "report": { string rn = arg.Length > 6 ? arg.Substring(7) : ""; Net.Reports.LocalReport(rn.Length == 0 ? "bridge" : rn); return TLDRevamp.Net.Reports.Stats(); }
                         case "aistats": return Net.Entities.AiStats();
-                        case "aisee": return Net.Entities.AiSee();
+                        case "aisee": return TLDRevamp.Net.EntityAiTools.AiSee();
                         case "rpose": return Net.RemotePlayers.PoseJson();
                         case "poiusables": return Net.Entities.PoiUsableStats();
                         case "liveusables":
                             return Net.Entities.LiveUsableStats();
-                        case "usables": return Net.Entities.Usables(uint.Parse(ma[1]));
-                        case "dragusable": return Net.Entities.DragUsable(uint.Parse(ma[1]), int.Parse(ma[2]), int.Parse(ma[3]), float.Parse(ma[4], mic), ma.Length > 5 ? float.Parse(ma[5], mic) : 60f);
-                        case "usableprobe": return ma.Length > 1 ? Net.Entities.ProbeUsable(uint.Parse(ma[1]), int.Parse(ma[2]), int.Parse(ma[3]), float.Parse(ma[4], mic)) : Net.Entities.UsableProbeJson();
-                        case "editcheck": return Net.Entities.EditCheckJson();
-                        case "interest": return Net.Entities.InterestJson();
-                        case "forgeedit": return Net.Entities.TestForgeEdit(uint.Parse(ma[1]), ma[2], ma.Length > 3 ? int.Parse(ma[3]) : 1);
-                        case "forgepoi": return Net.Entities.TestForgePoi(ma);
-                        case "poius": return Net.Entities.PoiList(ma.Length > 1 ? float.Parse(ma[1], mic) : 100f);
-                        case "poiu": return Net.Entities.PoiGet(ma);
-                        case "poidrag": return Net.Entities.PoiDrag(ma);
-                        case "poiprobe": return Net.Entities.PoiProbe(ma);
-                        case "poiuse": return Net.Entities.PoiUse(ma);
-                        case "decals": { var ci = System.Globalization.CultureInfo.InvariantCulture; return ma.Length >= 5 ? Net.Entities.Decals(0, double.Parse(ma[1], ci), double.Parse(ma[2], ci), double.Parse(ma[3], ci), float.Parse(ma[4], ci)) : Net.Entities.Decals(uint.Parse(ma[1]), 0, 0, 0, 0); }
-                        case "shootat": return Net.PlayerCombat.ShootAt(int.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : -1f);
-                        case "shootpoint": { var ci = System.Globalization.CultureInfo.InvariantCulture; return Net.PlayerCombat.ShootPoint(double.Parse(ma[1], ci), double.Parse(ma[2], ci), double.Parse(ma[3], ci), ma.Length > 4 ? ma[4] : ""); }
+                        case "usables": return TLDRevamp.Net.EntityLiveUsablesTools.Usables(uint.Parse(ma[1]));
+                        case "dragusable": return TLDRevamp.Net.EntityLiveUsablesTools.DragUsable(uint.Parse(ma[1]), int.Parse(ma[2]), int.Parse(ma[3]), float.Parse(ma[4], mic), ma.Length > 5 ? float.Parse(ma[5], mic) : 60f);
+                        case "usableprobe": return ma.Length > 1 ? TLDRevamp.Net.EntityLiveUsablesTools.ProbeUsable(uint.Parse(ma[1]), int.Parse(ma[2]), int.Parse(ma[3]), float.Parse(ma[4], mic)) : TLDRevamp.Net.EntityLiveUsablesTools.UsableProbeJson();
+                        case "editcheck": return TLDRevamp.Net.Entities.EditCheckJson();
+                        case "interest": return TLDRevamp.Net.Entities.InterestJson();
+                        case "forgeedit": return TLDRevamp.Net.EntityEditCheckTools.TestForgeEdit(uint.Parse(ma[1]), ma[2], ma.Length > 3 ? int.Parse(ma[3]) : 1);
+                        case "forgepoi": return TLDRevamp.Net.EntityEditCheckTools.TestForgePoi(ma);
+                        case "poius": return TLDRevamp.Net.Entities.PoiList(ma.Length > 1 ? float.Parse(ma[1], mic) : 100f);
+                        case "poiu": return TLDRevamp.Net.Entities.PoiGet(ma);
+                        case "poidrag": return TLDRevamp.Net.EntityPoiUsablesTools.PoiDrag(ma);
+                        case "poiprobe": return TLDRevamp.Net.EntityPoiUsablesTools.PoiProbe(ma);
+                        case "poiuse": return TLDRevamp.Net.EntityPoiUsablesTools.PoiUse(ma);
+                        case "decals": { var ci = System.Globalization.CultureInfo.InvariantCulture; return ma.Length >= 5 ? TLDRevamp.Net.EntityShotFxTools.Decals(0, double.Parse(ma[1], ci), double.Parse(ma[2], ci), double.Parse(ma[3], ci), float.Parse(ma[4], ci)) : TLDRevamp.Net.EntityShotFxTools.Decals(uint.Parse(ma[1]), 0, 0, 0, 0); }
+                        case "shootat": return TLDRevamp.Net.PlayerCombatTools.ShootAt(int.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : -1f);
+                        case "shootpoint": { var ci = System.Globalization.CultureInfo.InvariantCulture; return TLDRevamp.Net.PlayerCombatTools.ShootPoint(double.Parse(ma[1], ci), double.Parse(ma[2], ci), double.Parse(ma[3], ci), ma.Length > 4 ? ma[4] : ""); }
                         case "combat": return Net.PlayerCombat.Stats();
                         case "hitcheck": return Net.HitCheck.Stats();
-                        case "copycost": return Net.Entities.CopyCounts();
-                        case "trysave": return JoinerSaveBlock.Try(ma[1]);
+                        case "copycost": return TLDRevamp.Net.Entities.CopyCounts();
+                        case "trysave": return TLDRevamp.JoinerSaveTools.Try(ma[1]);
                         case "say": return "{\"said\":" + (Net.Session.Say(arg.Substring(4)) ? "true" : "false") + "}";
-                        case "tpa": return Net.Tpa.Stats();
-                        case "gamemode": return Net.GameMode.Stats();
+                        case "tpa": return TLDRevamp.Net.Tpa.Stats();
+                        case "gamemode": return TLDRevamp.Net.GameMode.Stats();
                         case "friendhost": { var fh = Net.Session.FriendHosts(ulong.Parse(ma[1])); return fh == null ? "{\"hosting\":false}" : "{\"hosting\":true,\"version\":" + Json.Str(fh.Version) + ",\"mode\":" + Json.Str(fh.HasMode ? Net.GameMode.Describe(fh.Mode) : "") + "}"; }
                         case "playersave": if (ma.Length > 1 && ma[1] == "record") Net.PlayerSave.SendRecord(); return Net.PlayerSave.Stats();
                         // The host changes its own session's developer policy (the test's own host action: it needs
@@ -849,9 +633,9 @@ namespace TLDRevamp
                             }
                             return Net.DeveloperAccess.Status();
                         }
-                        case "forgehit": { var cif = System.Globalization.CultureInfo.InvariantCulture; return Net.PlayerCombat.Forge(int.Parse(ma[1]), byte.Parse(ma[2]), new Vector3d(double.Parse(ma[3], cif), double.Parse(ma[4], cif), double.Parse(ma[5], cif)), new UnityEngine.Vector3(float.Parse(ma[6], cif), float.Parse(ma[7], cif), float.Parse(ma[8], cif)), ma.Length > 10 ? uint.Parse(ma[9]) : 0u, ma.Length > 10 ? int.Parse(ma[10]) : 0); }
-                        case "physical": return Net.Entities.PhysicalStatus();
-                        case "crashauth": return Net.Entities.CrashAuthorityStatus();
+                        case "forgehit": { var cif = System.Globalization.CultureInfo.InvariantCulture; return TLDRevamp.Net.PlayerCombatTools.Forge(int.Parse(ma[1]), byte.Parse(ma[2]), new Vector3d(double.Parse(ma[3], cif), double.Parse(ma[4], cif), double.Parse(ma[5], cif)), new UnityEngine.Vector3(float.Parse(ma[6], cif), float.Parse(ma[7], cif), float.Parse(ma[8], cif)), ma.Length > 10 ? uint.Parse(ma[9]) : 0u, ma.Length > 10 ? int.Parse(ma[10]) : 0); }
+                        case "physical": return TLDRevamp.Net.Entities.PhysicalStatus();
+                        case "crashauth": return TLDRevamp.Net.Entities.CrashAuthorityStatus();
                         case "stop": return Net.Mp.Stop();
                         default: if (TryRegistered("mp " + ma[0], arg, out var contributed)) return contributed; return "{\"error\":\"mp host [port] | join <ip:port> | bots <n> [radius] [speed] | status | stop\"}";
                     }
@@ -861,16 +645,16 @@ namespace TLDRevamp
                     var na = arg.Split(' ');
                     switch (na[0])
                     {
-                        case "pops": return Net.SteamCompat.Pops();
+                        case "pops": return TLDRevamp.Net.SteamCompatTools.Pops();
                         case "route": return Net.Mp.Route();
                         case "stats": return Net.Mp.NetStats();
                         case "meter":
                             if (na.Length > 1 && na[1] == "reset") { Net.NetMeter.Reset(); return "{\"reset\":true}"; }
-                            if (na.Length > 1 && (na[1] == "show" || na[1] == "hide")) { Net.NetMeter.Show = na[1] == "show"; return "{\"show\":" + (Net.NetMeter.Show ? "true" : "false") + "}"; }
-                            if (na.Length > 1 && na[1] == "panel") return "{\"text\":" + Json.Str(Net.NetMeter.PanelText(12)) + "}";
+                            if (na.Length > 1 && (na[1] == "show" || na[1] == "hide")) { TLDRevamp.Net.NetMeterTools.Show = na[1] == "show"; return "{\"show\":" + (TLDRevamp.Net.NetMeterTools.Show ? "true" : "false") + "}"; }
+                            if (na.Length > 1 && na[1] == "panel") return "{\"text\":" + Json.Str(Net.NetMeterTools.PanelText(12)) + "}";
                             return Net.NetMeter.Json();
-                        case "debugview": return DebugView.Command(na.Length > 1 ? na[1] : "state");
-                        case "log": return Net.NetMeter.Log(na.Length > 1 ? int.Parse(na[1]) : 50);
+                        case "debugview": return DebugViewTools.Command(na.Length > 1 ? na[1] : "state");
+                        case "log": return TLDRevamp.Net.NetMeterTools.Log(na.Length > 1 ? int.Parse(na[1]) : 50);
                         case "me": return "{\"steamId\":" + Json.Str(Steamworks.SteamUser.GetSteamID().m_SteamID.ToString()) + ",\"online\":" + (Steamworks.SteamUser.BLoggedOn() ? "true" : "false") + "}";
                         default: if (TryRegistered("net " + na[0], arg, out var contributed)) return contributed; return "{\"error\":\"net pair <count> <size> [loopback] | status | stats | meter [reset|show|hide|panel] | items [show|hide|labels] | log [n] | stop\"}";
                     }
@@ -884,14 +668,14 @@ namespace TLDRevamp
                     return "{\"handbrake\":" + (on ? "true" : "false") + "}";
                 }
                 case "shot": return CaptureLocalShot(arg);
-                case "handlayers": return Fixes.HandLayersAfterVr.Json();
+                case "handlayers": return TLDRevamp.Fixes.HandLayersAfterVr.Json();
                 case "seatwhy": { var sw2 = arg.Split(' '); return Net.Entities.SeatWhy(uint.Parse(sw2[0]), int.Parse(sw2[1])); }
-                case "leasetable": return Net.Entities.LeaseTable();
-                case "picknearest": return Net.Entities.PickupNearest(arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 3f);
-                case "pickupcar": return Net.Entities.PickupCar(uint.Parse(arg, System.Globalization.CultureInfo.InvariantCulture));
+                case "leasetable": return TLDRevamp.Net.Entities.LeaseTable();
+                case "picknearest": return TLDRevamp.Net.EntityLifecycleTools.PickupNearest(arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 3f);
+                case "pickupcar": return TLDRevamp.Net.EntityLifecycleTools.PickupCar(uint.Parse(arg, System.Globalization.CultureInfo.InvariantCulture));
                 case "deleteshare": return Net.Entities.DeleteShared(uint.Parse(arg, System.Globalization.CultureInfo.InvariantCulture));
-                case "leasearm": Net.Entities.LeaseArm(arg); return "{\"armed\":" + Json.Str(arg) + "}";
-                case "errors": return Diagnostics.ErrorLog.Json(arg == "reset", arg == "raw");
+                case "leasearm": TLDRevamp.Net.EntityLeasesTools.LeaseArm(arg); return "{\"armed\":" + Json.Str(arg) + "}";
+                case "errors": return TLDRevamp.Diagnostics.ErrorLogTools.Json(arg == "reset", arg == "raw");
                 case "carprefabs":
                 {
                     // every vehicle the game can spawn (an item whose prefab has a carscript): id, name, slot count,
@@ -922,7 +706,7 @@ namespace TLDRevamp
                 case "tpalanding": return TpaLandingCheck();
                 case "tpaindoor": return TpaIndoor();
                 case "tprelease":
-                    _tpHeld = false; _tpCalmUntil = 0f;
+                    Release();
                     return "{\"released\":true}";
                 case "tpground":
                 {
@@ -957,7 +741,7 @@ namespace TLDRevamp
                     // off, a fall-damage death). `tpg gx gz hold`: settled (TpSettle) now and again at `tpground`.
                     pl.Teleport(new Vector3(uv.x, pl.transform.position.y + 120, uv.z));
                     pl.godModeTillGrounded = true;
-                    if (gp.Length > 2 && gp[2] == "hold") { _tpHeld = true; TpSettle(pl); }
+                    if (gp.Length > 2 && gp[2] == "hold") { Hold(pl); }
                     return "{\"tpg\":true,\"ux\":" + uv.x.ToString("F1", ci) + ",\"uz\":" + uv.z.ToString("F1", ci) + "}";
                 }
                 // the terrain mode (issue #32): what is selected, what the running world uses, where it came from
@@ -966,13 +750,13 @@ namespace TLDRevamp
                 // `terrain host <mode>`       - take a host's mode (what Welcome does)
                 case "terrain":
                 {
-                    if (arg.Length == 0) return WorldGen.TerrainChoice.Stats(WorldGen.TerrainHooks.CurrentMap, WorldGen.Old2023.OldWorld.Stats());
+                    if (arg.Length == 0) return TLDRevamp.WorldGen.TerrainChoice.Stats(WorldGen.TerrainHooks.CurrentMap, TLDRevamp.WorldGen.Old2023.OldWorld.Stats());
                     var tparts = arg.Split(' ');
                     // `terrain roads` - every road generator of the map (and any other one in the scene) and, for a main
                     // road only generator, whether its main road runs unbroken through the chunks the game keeps
-                    if (tparts[0] == "roads") return WorldGen.MainRoadOnlyRoads.Report(WorldGen.TerrainHooks.CurrentMap);
+                    if (tparts[0] == "roads") return TLDRevamp.WorldGen.MainRoadOnlyRoads.Report(WorldGen.TerrainHooks.CurrentMap);
                     // `terrain oldcode` - where the 2023 game files were found and whether the old code is loaded
-                    if (tparts[0] == "oldcode") return WorldGen.Old2023.OldBuild.Stats();
+                    if (tparts[0] == "oldcode") return TLDRevamp.WorldGen.Old2023.OldBuild.Stats();
                     // `terrain oldroad <z>` - the old 2023 road's point at that z (old terrain only)
                     if (tparts[0] == "oldroad" && tparts.Length > 1)
                     {
@@ -994,7 +778,7 @@ namespace TLDRevamp
                             return "{\"error\":" + Json.Str(WorldGen.Old2023.OldBuildFiles.NewGameHint) + "}";
                         WorldGen.TerrainHooks.Select(m);
                         WorldGen.TerrainNewGameUi.Refresh();
-                        return WorldGen.TerrainChoice.Stats(WorldGen.TerrainHooks.CurrentMap, WorldGen.Old2023.OldWorld.Stats());
+                        return TLDRevamp.WorldGen.TerrainChoice.Stats(WorldGen.TerrainHooks.CurrentMap, TLDRevamp.WorldGen.Old2023.OldWorld.Stats());
                     }
                     if (tparts[0] == "host" && tparts.Length > 1)
                     {
@@ -1002,27 +786,27 @@ namespace TLDRevamp
                         if (!WorldGen.TerrainModes.TryParse(tparts[1], out m) || !WorldGen.TerrainModes.IsSelectable(m))
                             return "{\"error\":\"unknown or disabled mode: " + tparts[1] + "\"}";
                         WorldGen.TerrainHooks.TakeHost(m);
-                        return WorldGen.TerrainChoice.Stats(WorldGen.TerrainHooks.CurrentMap, WorldGen.Old2023.OldWorld.Stats());
+                        return TLDRevamp.WorldGen.TerrainChoice.Stats(WorldGen.TerrainHooks.CurrentMap, TLDRevamp.WorldGen.Old2023.OldWorld.Stats());
                     }
                     return "{\"error\":\"usage: terrain [roads|oldcode|oldroad <z>|select <mode>|host <mode>]\"}";
                 }
                 case "genbacklog":
                     if (menuhandler.s == null || menuhandler.s.currentMainMap == null || menuhandler.s.currentMainMap.poiGens == null)
                         return "{\"error\":\"no POI generators\"}";
-                    SessionLog.SampleGen(); return Fixes.PoiBacklog.Stats;
-                case "noisecheck": return Fixes.FastNoise.Check(arg.Length > 0 ? int.Parse(arg) : 1000000);
-                case "randcheck": return Fixes.FastRandom.Check(arg.Length > 0 ? int.Parse(arg) : 1000000);
+                    SessionLog.SampleGen(); return TLDRevamp.Fixes.PoiBacklog.Stats;
+                case "noisecheck": return TLDRevamp.Fixes.FastNoiseTools.Check(arg.Length > 0 ? int.Parse(arg) : 1000000);
+                case "randcheck": return TLDRevamp.Fixes.FastRandomTools.Check(arg.Length > 0 ? int.Parse(arg) : 1000000);
                 case "reset": p.Telemetry.Reset(); return "{\"ok\":true}";
                 case "report": return "{\"dir\":" + Json.Str(p.Feedback.Capture(arg)) + "}";
                 case "screenshot": return CaptureLocalShot("");
-                case "poigens": return Fixes.PoiItemsStore.Gens();
-                case "poistore": return Fixes.PoiItemsStore.Stats;
-                case "unfreezeground": return Fixes.UnfreezeOnGround.Stats;
-                case "loadfreeze": return Fixes.LoadFreeze.Stats;
-                case "fallrescue": return arg == "test" ? Fixes.FallRescue.Test() : Fixes.FallRescue.Stats;
-                case "stillfrozen": return Fixes.LoadFreeze.StillFrozen(string.IsNullOrEmpty(arg) ? 150f : float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture));
-                case "terrainkeep": return Fixes.TerrainRestartKeep.Stats();
-                case "streamrace": return Fixes.StreamRace.Probe(arg);
+                case "poigens": return TLDRevamp.Fixes.PoiItemsStore.Gens();
+                case "poistore": return TLDRevamp.Fixes.PoiItemsStore.Stats;
+                case "unfreezeground": return TLDRevamp.Fixes.UnfreezeOnGround.Stats;
+                case "loadfreeze": return TLDRevamp.Fixes.LoadFreeze.Stats;
+                case "fallrescue": return arg == "test" ? TLDRevamp.Fixes.FallRescueTools.Test() : TLDRevamp.Fixes.FallRescueTools.Stats;
+                case "stillfrozen": return TLDRevamp.Fixes.LoadFreezeTools.StillFrozen(string.IsNullOrEmpty(arg) ? 150f : float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture));
+                case "terrainkeep": return TLDRevamp.Fixes.TerrainRestartKeep.Stats();
+                case "streamrace": return TLDRevamp.Fixes.StreamRaceTools.Probe(arg);
                 case "attachpoints":
                 {
                     // attached-without-parenting items (attachablescript.Update puts them on `point` every frame): where the
@@ -1191,11 +975,11 @@ namespace TLDRevamp
                 case "switches": return Switches.Status(arg.Trim());   // every runtime switch with its value now (Switches.cs)
                 case "get":
                     if (SecretPath(arg)) return "{\"value\":\"<set>\"}";
-                    return "{\"value\":" + Reflect.Get(arg) + "}";
+                    return "{\"value\":" + BridgeReflect.Get(arg) + "}";
                 case "set":
                     var kv = arg.Split(new[] { ' ' }, 2);
                     if (SecretPath(kv[0])) return "{\"value\":\"<set>\"}";
-                    return "{\"value\":" + Reflect.Set(kv[0], kv[1]) + "}";
+                    return "{\"value\":" + BridgeReflect.Set(kv[0], kv[1]) + "}";
                 case "serverstrip": return Net.DedicatedServer.Strip();
                 case "admin":
                     // the server's admin commands (Net/Admin.cs), as its console file or an admin's chat runs them
@@ -1221,13 +1005,13 @@ namespace TLDRevamp
                     if (arg.StartsWith("stop")) return PlayerLoopProfiler.Stop(arg.Length > 5 ? int.Parse(arg.Substring(5)) : 40);
                     return "{\"error\":\"loopprof start|stop [n]\"}";
                 case "profile":
-                    if (arg == "start") return ScriptProfiler.Start(null);
-                    if (arg.StartsWith("start ")) return ScriptProfiler.Start(arg.Substring(6).Split(' '));
-                    if (arg.StartsWith("stop")) return ScriptProfiler.Stop(arg.Length > 5 ? int.Parse(arg.Substring(5)) : 25);
+                    if (arg == "start") return TLDRevamp.ScriptProfilerTools.Start(null);
+                    if (arg.StartsWith("start ")) return TLDRevamp.ScriptProfilerTools.Start(arg.Substring(6).Split(' '));
+                    if (arg.StartsWith("stop")) return TLDRevamp.ScriptProfilerTools.Stop(arg.Length > 5 ? int.Parse(arg.Substring(5)) : 25);
                     return "{\"error\":\"ground x z profile start [Type.Method ...]|stop [n]\"}";
                 case "call":
                     var ca = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                    return "{\"value\":" + Reflect.Call(ca[0], ca.Skip(1).ToArray()) + "}";
+                    return "{\"value\":" + BridgeReflect.Call(ca[0], ca.Skip(1).ToArray()) + "}";
                 case "bg":
                     // Keep simulating/rendering when the window is unfocused (needed for unattended benchmarks)
                     if (arg.Length > 0) Application.runInBackground = arg == "on";

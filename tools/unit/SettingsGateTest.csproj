@@ -9,5 +9,6 @@
     <Compile Include="SettingsGateTest.cs" />
     <Compile Include="../../src/TLDRevamp/Net/SessionSettingsData.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Net/SessionSettingsData.cs" />
   </ItemGroup>
 </Project>

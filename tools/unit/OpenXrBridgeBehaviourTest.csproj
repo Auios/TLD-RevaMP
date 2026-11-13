@@ -9,5 +9,6 @@
     <Compile Include="../../src/TLDRevamp/Fixes/OpenXrBridge.cs" />
     <Compile Include="../../src/TLDRevamp/VR/VrLoaderPolicy.cs" />
     <Compile Include="../../src/TLDRevamp/VR/VrLoaderLifecycle.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Fixes/OpenXrBridge.cs" />
   </ItemGroup>
 </Project>

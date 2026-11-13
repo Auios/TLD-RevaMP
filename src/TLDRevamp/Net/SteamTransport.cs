@@ -183,7 +183,6 @@ namespace TLDRevamp.Net
         }
 
         public static bool QueueRefusedSends = true;   // A/B: false = before (a refused message was gone, with only SendErrors counting it)
-        public static int TestRefuseSends;             // test: Steam "refuses" the next N sends
         public const long OutboxMaxBytes = 64 << 20;
         internal readonly SendOutbox<HSteamNetConnection> Outbox = new SendOutbox<HSteamNetConnection>(OutboxMaxBytes);
         private long _sendErrorsLogged;
@@ -202,7 +201,7 @@ namespace TLDRevamp.Net
 
         private EResult SendNative(HSteamNetConnection c, int len, int flags)
         {
-            if (TestRefuseSends > 0) { TestRefuseSends--; return EResult.k_EResultLimitExceeded; }
+            if ((DevHooks.RefuseSend?.Invoke() ?? false)) { return EResult.k_EResultLimitExceeded; }
             return SteamNetworkingSockets.SendMessageToConnection(c, _sendBuf, (uint)len, flags, out _);
         }
 

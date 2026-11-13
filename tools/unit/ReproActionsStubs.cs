@@ -202,3 +202,15 @@ namespace TLDRevamp.Net
         private static Dictionary<int, Remote> All = new Dictionary<int, Remote>();
     }
 }
+
+namespace TLDRevamp
+{
+    static class DevPlugin { internal static bool BridgeEnabled { get => Plugin.BridgeEnabled; set => Plugin.BridgeEnabled = value; } }
+    static class TestSafetyTools { internal static bool BlockAutoSave; }
+}
+namespace TLDRevamp.Net
+{
+    static class EntityIgnitionKeyTools { internal static void EndKeyTest(bool expire = false) => Entities.EndKeyTest(expire); internal static string KeyTest(uint net, int seconds) => Entities.KeyTest(net, seconds); }
+}
+
+namespace TLDRevamp.Net { static class EntityProxyTools { internal static bool TestAsPlayer { get => Entities.TestAsPlayer; set => Entities.TestAsPlayer = value; } } }

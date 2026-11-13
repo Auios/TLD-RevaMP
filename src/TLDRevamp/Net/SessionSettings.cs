@@ -289,12 +289,6 @@ namespace TLDRevamp.Net
         }
         internal static void ForceOffForTest() { _runtimeForcedOff = true; ForceOffUiAndFeatures(); }
 
-        internal static bool DenyBridge()
-        {
-            DeniedBridgeCommands++;
-            return false;
-        }
-
         internal static string Status()
         {
             var policy = Policy;

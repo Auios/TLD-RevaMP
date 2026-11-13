@@ -42,7 +42,7 @@ namespace TLDRevamp.Net
             SessionLog.Event(done ? "lease-done-refused" : "lease-refused", 0, from: from, result: why);
         }
 
-        private static string LeaseRefusalsJson()
+        internal static string LeaseRefusalsJson()
         {
             var rows = new List<string>();
             foreach (var kv in LeaseRefusedWhy)

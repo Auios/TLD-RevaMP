@@ -19,8 +19,14 @@ static class P {
       int dot = p.LastIndexOf('.');
       string type = p.Substring(0, dot), field = p.Substring(dot + 1), cls = type.Substring(type.LastIndexOf('.') + 1);
       // Dev registers the original member paths through Reflect.RegisterMovedMembers.
-      string owners = cls == "Entities" ? "Entities|EntityDebug|EntityMountLab|EntityReproPlayback|EntityItemCheck|EntityItemWatch|EntityContactCensus|EntityFakeInput|EntityTrack"
-        : cls == "ReplayRecorder" ? "ReplayRecorder|ReplayTruthCapture" : Regex.Escape(cls);
+      var ownerNames = new HashSet<string> { cls };
+      string plugin = (File.ReadAllText(Path.Combine(root, "src/TLDRevamp.Dev/DevPlugin.cs")) + File.ReadAllText(Path.Combine(root, "src/TLDRevamp.Dev/DevMembers.cs")));
+      foreach (Match registration in Regex.Matches(plugin, @"RegisterMovedMembers\(typeof\(([^)]+)\),([^;]+)")) {
+        string original = registration.Groups[1].Value.Split('.').Last();
+        if (original != cls) continue;
+        foreach (Match owner in Regex.Matches(registration.Groups[2].Value, @"typeof\(([^)]+)\)")) ownerNames.Add(owner.Groups[1].Value.Split('.').Last());
+      }
+      string owners = string.Join("|", ownerNames.Select(Regex.Escape));
       var classRe = new Regex(@"\b(class|struct)\s+(?:" + owners + @")\b");
       var fieldRe = new Regex(@"\bstatic\b[^;{(]*\b" + Regex.Escape(field) + @"\b\s*(=|;|,|\{)");
       if (!files.Any(t => classRe.IsMatch(t) && fieldRe.IsMatch(t))) missing.Add(p);

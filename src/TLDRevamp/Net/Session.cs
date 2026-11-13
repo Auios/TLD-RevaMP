@@ -38,7 +38,6 @@ namespace TLDRevamp.Net
         /// TestSameAccount (off; only the debug bridge sets it, never saved): another machine's bots share that machine's
         /// account, so a test host lets an account in more than once, the extra ones without a player save.
         public static long IdentityRefused, IdentityUnsaved;
-        public static bool TestSameAccount;
         private static bool _unsavedLogged;
         private bool Identify(HSteamNetConnection c, Peer p, ulong claimed, string name, out ulong steamId, out bool saved)
         {
@@ -55,7 +54,7 @@ namespace TLDRevamp.Net
             bool again = false;
             if (why == null && auth != 0 && !local)
                 foreach (var o in _peers.Values)
-                    if (o != p && o.SteamId == auth) { again = true; if (!TestSameAccount) why = "Your Steam account is already in this game."; break; }
+                    if (o != p && o.SteamId == auth) { again = true; if (!(DevHooks.SameAccount?.Invoke() ?? false)) why = "Your Steam account is already in this game."; break; }
             if (why != null)
             {
                 IdentityRefused++;

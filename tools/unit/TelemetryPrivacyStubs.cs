@@ -165,7 +165,7 @@ namespace TLDRevamp
     }
     class Logger { internal void LogWarning(string s) { } internal void LogInfo(string s) { } }
     class Overlay { internal void Toast(string s) { } }
-    static class DebugBridge { internal static double TotalPumpMs, MaxPumpMs; internal static string Execute(string command) => TelemetryPrivacyTest.Reply; }
+    static class BridgeTiming { internal static double TotalPumpMs, MaxPumpMs; }
     static class RevampSettings
     {
         internal sealed class Entry { internal string Key; internal Func<int> Get; }
@@ -223,6 +223,7 @@ namespace TLDRevamp.Net
     }
     static class Mp
     {
+        internal static string Status() => TelemetryPrivacyTest.Reply;
         internal static Server Server = new Server(); internal static Client Client;
         internal static int Seed() => 1;
         internal static string NetStats() => TelemetryPrivacyTest.Reply;
@@ -269,6 +270,11 @@ namespace TLDRevamp.Net
 #endif
     static class Entities
     {
+        internal static string Status(int limit) => TelemetryPrivacyTest.Reply;
+        internal static string PoiUsableStats() => TelemetryPrivacyTest.Reply;
+        internal static string MemberGoneStats() => TelemetryPrivacyTest.Reply;
+        internal static string ExplosionStats() => TelemetryPrivacyTest.Reply;
+        internal static string ShotFxStats() => TelemetryPrivacyTest.Reply;
         internal static int MyId => 1;
         internal static bool TelemetryAllOwnedPhysics;
         internal static long TelemetryPhysicsSkipped, StatesIn, StatesSent, StatesStale, Spawned, OwnerChanges, Handoffs;
@@ -303,3 +309,5 @@ namespace TLDRevamp.Net
         }
     }
 }
+
+namespace TLDRevamp { static class DevHooks { internal static System.Action TrailReset; internal static System.Action<TelemetryEvent> TrailEvent; } }

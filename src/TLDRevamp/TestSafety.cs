@@ -11,7 +11,6 @@ namespace TLDRevamp
     [HarmonyPatch(typeof(newSaveScreenScript), nameof(newSaveScreenScript.AutoSave))]
     public static class TestSafety
     {
-        public static bool BlockAutoSave = false;
         /// Multiplayer's own block (the client plays in the host's world; the host owns the save). Separate from the
         /// test flag: leaving a session cleared the shared flag, and a test world left running after `mp stop` then
         /// autosaved into the laptop's slots after the test had restored them (2026-10-01, found from the slot times).
@@ -33,24 +32,10 @@ namespace TLDRevamp
             };
         }
 
-        /// Load a named save through the game's own save screen (bridge `loadsave <name>`). Autosave is blocked first so
-        /// a test session can never write into the player's autosave slots.
-        public static string LoadSave(string name)
-        {
-            var path = pathscript.SaveDataName(name);
-            if (!System.IO.File.Exists(path)) return "{\"error\":" + Json.Str("no save named " + name) + "}";
-            var screen = savedatascript.s != null ? savedatascript.s.saveScreen : null;
-            if (screen == null) screen = UnityEngine.Object.FindObjectOfType<newSaveScreenScript>(true);
-            if (screen == null) return "{\"error\":\"save screen not found\"}";
-            BlockAutoSave = true;
-            screen.Load(path);
-            return "{\"loading\":" + Json.Str(path) + "}";
-        }
-
         [HarmonyPrefix]
         private static bool Prefix()
         {
-            if (!BlockAutoSave && !InHostWorld && !LeavingHostWorld) return true;
+            if (!(DevHooks.SaveVeto?.Invoke() ?? false) && !InHostWorld && !LeavingHostWorld) return true;
             Blocked++;
             return false;
         }
@@ -76,32 +61,6 @@ namespace TLDRevamp
         /// Every other way into a save file.
         [HarmonyPrefix, HarmonyPatch(typeof(newSaveScreenScript), nameof(newSaveScreenScript.Save))]
         private static bool SaveFile() => Allow();
-
-        /// Test (bridge `mp trysave <name>`): the Save menu's button with this name typed in. Did a file appear? One that
-        /// did (the block off) is deleted again, and the game's "last save" goes back to what it was.
-        public static string Try(string name)
-        {
-            var sc = savedatascript.s != null ? savedatascript.s.saveScreen : null;
-            if (sc == null) sc = UnityEngine.Object.FindObjectOfType<newSaveScreenScript>(true);
-            if (sc == null || sc.TextSaveNameInput == null) return "{\"error\":\"save screen not found\"}";
-            var path = pathscript.SaveDataName(name);
-            if (System.IO.File.Exists(path)) return "{\"error\":" + Json.Str("a save named " + name + " exists") + "}";
-            string lastPath = UnityEngine.PlayerPrefs.GetString("LastSavePath"), lastName = UnityEngine.PlayerPrefs.GetString("LastSaveName"),
-                   lastVer = UnityEngine.PlayerPrefs.GetString("LastSaveVersion");
-            sc.TextSaveNameInput.GetType().GetProperty("text").SetValue(sc.TextSaveNameInput, name);
-            long b0 = Blocked;
-            string err = "";
-            try { sc.SaveAndRefresh(); } catch (System.Exception e) { err = e.GetType().Name + ": " + e.Message; }
-            bool written = System.IO.File.Exists(path);
-            if (written)
-            {
-                pathscript.Delete(path); pathscript.Delete(pathscript.SavePropertiesName(name)); pathscript.Delete(pathscript.SaveThumbnailName(name));
-                UnityEngine.PlayerPrefs.SetString("LastSavePath", lastPath); UnityEngine.PlayerPrefs.SetString("LastSaveName", lastName);
-                UnityEngine.PlayerPrefs.SetString("LastSaveVersion", lastVer); UnityEngine.PlayerPrefs.Save();
-            }
-            return "{\"written\":" + (written ? "true" : "false") + ",\"blocked\":" + (Blocked - b0) + ",\"inHostWorld\":" + (InHostWorld ? "true" : "false") +
-                   ",\"fault\":" + Json.Str(err) + "}";
-        }
 
         private static bool Allow()
         {

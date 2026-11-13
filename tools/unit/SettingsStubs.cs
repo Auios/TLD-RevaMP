@@ -82,7 +82,7 @@ namespace TLDRevamp.Net
     static class Voice { internal enum Mode { Push, Open, Off } internal static Mode Setting; internal static float Volume;
         internal static readonly string[] EveryoneKeyNames = { "None", "O" }, EveryoneKeys = EveryoneKeyNames; internal static int EveryoneKey; }
     static class Tpa { internal static int[] Choices = { -1, 0, 60, 300, 900 }; internal static bool Enabled; internal static int CooldownS; }
-    static class NetMeter { internal static bool Show; }
+    static class NetMeterTools { internal static bool Show; }
     static class ItemTraffic { internal static bool Show; internal static void SetVisible(bool value) { Show = value; } }
     static class Reports { internal static bool Share, AskPlayers; }
     static class WorldCheck { internal static void SetScenery(bool on) { } internal static void SetObjGen(bool on) { } }

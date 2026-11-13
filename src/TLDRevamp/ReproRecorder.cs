@@ -123,7 +123,6 @@ namespace TLDRevamp
         /// The recording so far, copied, while it keeps going. Null when nothing is recording.
         internal static ReproData Snapshot() => _data?.Copy();
         internal static ReproData TailSnapshot() => _tail?.Snapshot();
-        public static int TestFullAt;   // test: full at this many rows
         private static ReproTail _tail;
         private static void Cost(long begin) { long elapsed = Stopwatch.GetTimestamp() - begin; _ticks += elapsed; _calls++; _max = Math.Max(_max, elapsed); }
         internal static void Add(ReproRow row)
@@ -135,7 +134,7 @@ namespace TLDRevamp
             if (Bind(row.Net, row.T, row.St) && Bind(row.Other, row.T, row.St)) _data.Add(row);
             else _data.Skip();
             long elapsed = Stopwatch.GetTimestamp() - begin; _appendTicks += elapsed; _appendCalls++; _appendMax = Math.Max(_appendMax, elapsed);
-            if (_data.Count >= (TestFullAt > 0 ? TestFullAt : ReproData.Capacity))
+            if (_data.Count >= ((DevHooks.ReproCapacity?.Invoke() ?? 0) > 0 ? (DevHooks.ReproCapacity?.Invoke() ?? 0) : ReproData.Capacity))
             {
                 // A report keeps the beginning, which replays, and the latest rows; an automatic recording stays on screen as full.
                 if (_auto) { _full = true; _tail = new ReproTail(); Plugin.Instance.Overlay.Toast("The action recorder is full; it keeps the first part of this session and the latest minutes", 6f); }

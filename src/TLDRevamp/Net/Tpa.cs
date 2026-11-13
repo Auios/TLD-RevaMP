@@ -7,8 +7,8 @@ namespace TLDRevamp.Net
     /// Teleport requests (TPA): a player far down the road asks to come to another one. In chat:
     ///   /tpa <name>   ask to come to that player (they have 60 s to answer)
     ///   /y  /n        accept or refuse the last request
-    /// On accept the asker is placed on the ground next to them. Driving their own car, the car comes along â€” with what
-    /// lies loose in it and anyone sitting in it â€” through the game's own teleport (fpscontroller.TeleportWithParent:
+    /// On accept the asker is placed on the ground next to them. Driving their own car, the car comes along — with what
+    /// lies loose in it and anyone sitting in it — through the game's own teleport (fpscontroller.TeleportWithParent:
     /// the root a seated player is in moves), held still until the ground there is generated, then set down on it.
     /// The host chooses on its own card in the multiplayer screen: off, or on with a cooldown per asker (the host is
     /// never limited). Server side: MpServer.TpaCommand; this side: Tpa.Go.
@@ -19,7 +19,7 @@ namespace TLDRevamp.Net
         public static readonly int[] Choices = { -1, 0, 60, 300, 900 };   // -1 = off; also used by Settings → Revamp
         public const float AnswerS = 60f;
         public const float AskGapS = 15f;   // between two requests of one player (asked, not accepted: CooldownS is that)
-        public const byte GoMsg = 69;   // server â†’ client: f64 gx, f64 gy, f64 gz, f32 yaw â€” go there (accepted)
+        public const byte GoMsg = 69;   // server → client: f64 gx, f64 gy, f64 gz, f32 yaw — go there (accepted)
         public static long Asked, Accepted, Refused, Gone, CarsMoved, CarsSetDown, CarsGaveUp;
         public static string Last = "";
         internal static string CommandKind(string text)
@@ -85,7 +85,7 @@ namespace TLDRevamp.Net
             if (!placed) SessionLog.Event("tpa-failure", from: Entities.MyId, result: "no ground after 30 s");
         }
 
-        /// Accepted: there we go â€” with our car if we sit in it. gy: the height of the player we go to.
+        /// Accepted: there we go — with our car if we sit in it. gy: the height of the player we go to.
         internal static void Go(double gx, double gy, double gz, float yaw)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
@@ -107,8 +107,8 @@ namespace TLDRevamp.Net
             // on the floor they stand on (gy: their body's position, at or over their feet), not the lowest surface with
             // room at the spot: in the spawn house that was its roof (tpatest: asker 3.6 m over the host), under a raised
             // floor the ground beneath it
-            DebugBridge.PlaceTpa(gx, gz, gy);
-            _arrivalWaitingGround = DebugBridge.TpBusy;
+            GroundPlacement.PlaceTpa(gx, gz, gy);
+            _arrivalWaitingGround = GroundPlacement.TpBusy;
             _arrivalGroundReady = !_arrivalWaitingGround;
             Last = "placed on foot";
         }
@@ -155,7 +155,7 @@ namespace TLDRevamp.Net
             var to = mainscript.UnityPosFromGlobal(new Vector3d(gx, gy + 4.0, gz));
             var delta = to - car.transform.position;
             Shift(m, pl, delta);
-            DebugBridge.TpSettle(pl);
+            GroundPlacement.TpSettle(pl);
             _moving = m;
             CarsMoved++;
             Last = $"car moved with {m.Roots.Count - 1} more things, waiting for the ground";
@@ -192,12 +192,12 @@ namespace TLDRevamp.Net
         public static void Tick()
         {
             Mp.Server?.TpaTelemetryTick();
-            if (WaitingWorld && (DebugBridge.TpaWorldReady(_arrivalTarget.x, _arrivalTarget.y, _arrivalTarget.z) || Time.realtimeSinceStartupAsDouble >= _worldUntil))
+            if (WaitingWorld && (GroundPlacement.TpaWorldReady(_arrivalTarget.x, _arrivalTarget.y, _arrivalTarget.z) || Time.realtimeSinceStartupAsDouble >= _worldUntil))
                 WaitingWorld = false;
             Entities.DrainTpaInbox();
             if (_arrivalPending && _moving == null && (mainscript.s == null || mainscript.s.player == null))
             { SessionLog.Event("tpa-failure", result: "player lost before arrival"); _arrivalPending = _arrivalWaitingGround = false; }
-            if (_arrivalPending && _arrivalWaitingGround && !DebugBridge.TpBusy) TelemetryGroundFinished(false);
+            if (_arrivalPending && _arrivalWaitingGround && !GroundPlacement.TpBusy) TelemetryGroundFinished(false);
             if (_arrivalPending && !_arrivalWaitingGround && _moving == null && Time.realtimeSinceStartupAsDouble >= _arrivalAt)
             {
                 var p = mainscript.s != null ? mainscript.s.player : null;
@@ -209,8 +209,8 @@ namespace TLDRevamp.Net
                         TpaPlacement.HigherFloor(_arrivalTarget, p.transform.position);
                     if (!p.Bsitting && TpaArrival.Retry(_arrivalGroundReady, offset.x, offset.y, offset.z, Time.realtimeSinceStartupAsDouble - _arrivalStarted, _worldUntil - Time.realtimeSinceStartupAsDouble, higher))
                     {
-                        DebugBridge.PlaceTpa(_arrivalTarget.x, _arrivalTarget.z, _arrivalTarget.y, true);
-                        _arrivalWaitingGround = DebugBridge.TpBusy;
+                        GroundPlacement.PlaceTpa(_arrivalTarget.x, _arrivalTarget.z, _arrivalTarget.y, true);
+                        _arrivalWaitingGround = GroundPlacement.TpBusy;
                         _arrivalAt = Time.realtimeSinceStartupAsDouble + .5;
                     }
                     else if (!p.Bsitting && offset.y < -.4 && !TpaArrival.Arrived(_arrivalGroundReady, offset.x, offset.y, offset.z) && Time.realtimeSinceStartupAsDouble < _worldUntil)
@@ -278,7 +278,7 @@ namespace TLDRevamp.Net
                     var offset = new Vector3(Mathf.Cos(angle) * radius, 0, Mathf.Sin(angle) * radius);
                     foreach (float? below in new float?[] { nearY + .5f, null })
                     {
-                        var floor = DebugBridge.StandHit(c.x + offset.x, c.z + offset.z, below);
+                        var floor = GroundPlacement.StandHit(c.x + offset.x, c.z + offset.z, below);
                         if (!floor.HasValue || !TpaArrival.CarLanding(floor.Value.point.y, bottomY, out double shift)) continue;
                         var move = offset + Vector3.up * (float)shift;
                         var centre = centreAt + move;

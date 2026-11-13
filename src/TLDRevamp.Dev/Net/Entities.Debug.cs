@@ -8,6 +8,7 @@ namespace TLDRevamp.Net
 {
     internal static class EntityDebug
     {
+        private static readonly NetWriter W = new NetWriter();
         /// Every owner change the server makes, with why (bridge `mp ownerlog [net]`): the last 200.
         private static readonly System.Collections.Generic.List<string> _ownerLog = new System.Collections.Generic.List<string>();
         internal static System.Func<uint, string> HoldForTest;
@@ -258,7 +259,7 @@ namespace TLDRevamp.Net
                 }
             if (target == null) return "{\"error\":\"no free slot for it\"}";
             if (pl.pickedUp == pe.Root.P) pl.Drop();
-            if (ForceHeld == pe.Root) ForceHeld = null;   // let go in the same frame it's bolted on (the attach key)
+            if (TLDRevamp.Net.EntityCargoTools.ForceHeld == pe.Root) TLDRevamp.Net.EntityCargoTools.ForceHeld = null;   // let go in the same frame it's bolted on (the attach key)
             target.Craft(at);
             return "{\"part\":" + Json.Str(pe.Root.name) + ",\"slot\":" + Json.Str(where) + ",\"attached\":" + (at.attached ? "true" : "false")
                    + ",\"partWasProxy\":" + (pe.Proxy ? "true" : "false") + ",\"carProxy\":" + (car.Proxy ? "true" : "false") + "}";
@@ -711,9 +712,9 @@ namespace TLDRevamp.Net
 
         public static string SetForceHeld(uint net)
         {
-            if (net == 0) { ForceHeld = null; return "{\"forceHeld\":null}"; }
+            if (net == 0) { TLDRevamp.Net.EntityCargoTools.ForceHeld = null; return "{\"forceHeld\":null}"; }
             if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such item here\"}";
-            ForceHeld = e.Root;
+            TLDRevamp.Net.EntityCargoTools.ForceHeld = e.Root;
             return "{\"forceHeld\":" + Json.Str(e.Root.name) + ",\"proxy\":" + (e.Proxy ? "true" : "false") + "}";
         }
 
@@ -762,10 +763,10 @@ namespace TLDRevamp.Net
                 if (d < bd) { bd = d; best = at; }
             }
             if (best == null) return "{\"error\":\"no bolted " + part + " here\"}";
-            bool was = TestAsPlayer;
-            TestAsPlayer = true;   // a player's own unbolt: on a copy it goes out as a request, the game's own doing does not
+            bool was = TLDRevamp.Net.EntityProxyTools.TestAsPlayer;
+            TLDRevamp.Net.EntityProxyTools.TestAsPlayer = true;   // a player's own unbolt: on a copy it goes out as a request, the game's own doing does not
             bool ok;
-            try { ok = best.slot.UnCraft(); } finally { TestAsPlayer = was; }
+            try { ok = best.slot.UnCraft(); } finally { TLDRevamp.Net.EntityProxyTools.TestAsPlayer = was; }
             return "{\"uncraft\":" + (ok ? "true" : "false") + ",\"d\":" + bd.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ",\"attached\":" + (best.attached ? "true" : "false") + "}";
         }
 
@@ -1050,7 +1051,7 @@ namespace TLDRevamp.Net
                     var was = FlatDist(pl.transform.position, st.transform.position);
                     pl.Teleport(st.transform.position + away * 2.2f + Vector3.up * 0.5f);
                     return "{\"stepped\":true,\"seat\":" + i + ",\"flatBefore\":" + was.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) +
-                           ",\"seatUp\":" + (st.transform.position.y - (DebugBridge.StandHit(st.transform.position.x, st.transform.position.z, null)?.point.y ?? st.transform.position.y)).ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "}";
+                           ",\"seatUp\":" + (st.transform.position.y - (GroundPlacement.StandHit(st.transform.position.x, st.transform.position.z, null)?.point.y ?? st.transform.position.y)).ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "}";
                 }
                 pl.GetIn(st);
                 return "{\"seat\":" + i + "}";
@@ -1189,7 +1190,7 @@ namespace TLDRevamp.Net
                     var was = FlatDist(pl.transform.position, st.transform.position);
                     pl.Teleport(st.transform.position + away * 2.2f + Vector3.up * 0.5f);
                     return "{\"stepped\":true,\"seat\":" + i + ",\"flatBefore\":" + was.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) +
-                           ",\"seatUp\":" + (st.transform.position.y - (DebugBridge.StandHit(st.transform.position.x, st.transform.position.z, null)?.point.y ?? st.transform.position.y)).ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "}";
+                           ",\"seatUp\":" + (st.transform.position.y - (GroundPlacement.StandHit(st.transform.position.x, st.transform.position.z, null)?.point.y ?? st.transform.position.y)).ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "}";
                 }
                 pl.GetIn(st);
                 return "{\"seat\":" + i + "}";

@@ -19,10 +19,28 @@ namespace TLDRevamp
 
         public FeedbackReporter(Telemetry t) => _t = t;
 
-        /// Bridge commands whose replies go into stats.json (each on its own: one failing doesn't spoil the rest).
+        /// Numeric providers gathered separately so one failure does not spoil the report.
         /// How many entities `mp entities` lists in a report: every one of a big world was a 2 MB table and a freeze.
         private const int EntityRows = 300;
         private static readonly string[] StatCmds = { "stats", "mp status", "net stats", "mp entities", "mp aistats", "mp combat", "mp shotfx", "mp blasts", "mp membergone", "mp poiusables" };
+
+        private string ReportSection(string section)
+        {
+            switch (section)
+            {
+                case "stats": return _t.FrameStatsJson();
+                case "mp status": return Net.Mp.Status();
+                case "net stats": return Net.Mp.NetStats();
+                case "mp entities": return Net.Entities.Status(EntityRows);
+                case "mp aistats": return Net.Entities.AiStats();
+                case "mp combat": return Net.PlayerCombat.Stats();
+                case "mp shotfx": return Net.Entities.ShotFxStats();
+                case "mp blasts": return Net.Entities.ExplosionStats();
+                case "mp membergone": return Net.Entities.MemberGoneStats();
+                case "mp poiusables": return Net.Entities.PoiUsableStats();
+                default: throw new ArgumentException(section);
+            }
+        }
 
         /// bug: also a local bundle (TLDRevamp-bug-*.zip) with the recorded actions, the world save and REPORT.md. The shared
         /// report zip stays what the privacy whitelist allows.
@@ -44,7 +62,7 @@ namespace TLDRevamp
             sb.Append("{\"note\":").Append(TelemetryPrivacy.Str(TelemetryPrivacy.Clean(note))).Append(",\"mod\":").Append(TelemetryPrivacy.Str(Plugin.Version)).Append(",\"build\":").Append(TelemetryPrivacy.Str(Plugin.BuildHash)).Append(",\"commit\":").Append(TelemetryPrivacy.Str(Plugin.CommitLabel)).Append(",\"game\":").Append(TelemetryPrivacy.Str(Plugin.GameBuild))
               .Append(",\"time\":").Append(TelemetryPrivacy.DateStr()).Append(",\"system\":").Append(SystemJson())
               .Append(",\"frame\":").Append(Safe(() => TelemetryPrivacy.Bridge("stats", _t.FrameStatsJson()))).Append(",\"scene\":").Append(Safe(() => TelemetryPrivacy.Numbers(_t.SceneStatsJson(), "focused rigidbodies rigidbodiesAwake renderers monobehaviours scanMs sampleSt playerPos")));
-            foreach (var c in StatCmds) sb.Append(",").Append(TelemetryPrivacy.Str(c)).Append(":").Append(Safe(() => TelemetryPrivacy.Bridge(c, DebugBridge.Execute(c == "mp entities" ? "mp entities " + EntityRows : c))));
+            foreach (var c in StatCmds) sb.Append(",").Append(TelemetryPrivacy.Str(c)).Append(":").Append(Safe(() => TelemetryPrivacy.Bridge(c, ReportSection(c))));
             long snapshotStart = System.Diagnostics.Stopwatch.GetTimestamp();
             var breakdown = _t.Breakdown.ReportSnapshot();
             var errors = Diagnostics.ErrorLog.ReportSnapshot();

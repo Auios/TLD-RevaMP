@@ -48,20 +48,7 @@ namespace TLDRevamp.Net
             if (gone != null) foreach (var e in gone) { e.Spraying = false; _spraying.Remove(e); }
         }
 
-        // ---- test tooling (tools/spraytest.py)
-        private static float _holdUntil;
-        /// The local player holds the left mouse button for `secs` with the can in hand: the game's own call per frame
-        /// (fpscontroller: input.lmb → pP.spray.Fire(Th)).
-        public static string SprayHold(float secs)
-        {
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            var sp = HeldSpray(pl);
-            if (sp == null) return "{\"error\":\"no spray can in hand\"}";
-            _holdUntil = Time.time + secs;
-            return "{\"holding\":" + secs.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"paint\":" + (sp.hasPaint ? "true" : "false") + "}";
-        }
-
-        private static sprayscript HeldSpray(fpscontroller pl)
+        internal static sprayscript HeldSpray(fpscontroller pl)
         {
             if (pl == null) return null;
             var p = pl.pickedUp;
@@ -70,41 +57,8 @@ namespace TLDRevamp.Net
             return null;
         }
 
-        private static void SprayHoldTick()
-        {
-            if (_holdUntil <= 0f) return;
-            if (Time.time > _holdUntil) { _holdUntil = 0f; return; }
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            var sp = HeldSpray(pl);
-            if (sp != null) sp.Fire(pl.Th);
-        }
+        private static void SprayHoldTick() => DevHooks.SprayTick?.Invoke();
 
-        /// Test: the local player looks at shared object <net> (body yaw + head pitch, as FillLab aims) — for screenshots.
-        public static string LookAt(uint net)
-        {
-            var p = mainscript.s != null ? mainscript.s.player : null;
-            if (p == null || !ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no player / entity\"}";
-            var d = e.Root.transform.position - p.mainCam.transform.position;
-            var flat = new Vector3(d.x, 0f, d.z);
-            if (flat.sqrMagnitude > 1e-4f) p.BodyRot.rotation = Quaternion.LookRotation(flat);
-            p.FyRot = -Mathf.Atan2(d.y, flat.magnitude) * Mathf.Rad2Deg;
-            if (!mainscript.IsVR()) p.Th.localEulerAngles = new Vector3(p.FyRot, 0f, 0f);
-            return "{\"dist\":" + d.magnitude.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "}";
-        }
-
-        /// Test: turn an item's switch the game's way (`mp turn <net>`: its headlight's usable, else its first turnable
-        /// usable — usablescript.Turn, the sync point a player's click goes through) and `mp lamp <net>`: its light
-        /// state here (the switch, headlightscript states, Lights shining).
-        public static string TurnItem(uint net)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
-            var hl = e.Root.GetComponentInChildren<headlightscript>(true);
-            var u = hl != null && hl.usableSet != null ? hl.usableSet : null;
-            if (u == null) foreach (var x in e.Root.GetComponentsInChildren<usablescript>(true)) if (x.turnable) { u = x; break; }
-            if (u == null) return "{\"error\":\"no switch\"}";
-            u.Turn();
-            return LampState(net);
-        }
 
         public static string LampState(uint net)
         {

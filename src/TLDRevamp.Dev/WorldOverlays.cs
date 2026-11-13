@@ -281,13 +281,13 @@ namespace TLDRevamp
                 if (Net.ItemTraffic.RateOf(e.NetId, out var t)) sb.Append("net ↓ ").Append(Bytes(t.DownBps)).Append(" ↑ ").Append(Bytes(t.UpBps));
                 else sb.Append("net idle");
             }
-            string cols = DebugV2.Line("tabs", "cols") || DebugV2.TabText.HasValue ? Entities.OverlayColliders(e, e.NetId == _focus) : "";
+            string cols = DebugV2.Line("tabs", "cols") || DebugV2.TabText.HasValue ? TLDRevamp.Net.EntityPartWatchTools.OverlayColliders(e, e.NetId == _focus) : "";
             if (DebugV2.Line("tabs", "cols")) { Next(); sb.Append(cols); }
             // a fitted part you can't reach is a problem too; and a tab with a problem says so in its first characters, so
             // it shows whatever colours the player picked (their colour is for healthy tabs only, see Paint)
             if (cols.Contains("unreachable") && r.Colour == Green) r.Colour = Yellow;
             // a problem the background watch reported on it and that is still there (Entities.HealthWatch): always shown
-            string watch = Entities.HealthWatchLine(e.NetId);
+            string watch = TLDRevamp.Net.Entities.HealthWatchLine(e.NetId);
             if (watch != null) { Next(); sb.Append(watch); r.Colour = Red; }
             if (r.Colour == Red) sb.Insert(0, "✗ "); else if (r.Colour == Yellow) sb.Insert(0, "! ");
             return sb.ToString();

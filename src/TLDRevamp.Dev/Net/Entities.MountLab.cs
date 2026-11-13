@@ -47,7 +47,7 @@ namespace TLDRevamp.Net
                 if (can && d < bd) { bd = d; best = s; }
             }
             if (best == null) return "{\"error\":\"no slot within reach takes it\"}";
-            bool was = TestAsPlayer; TestAsPlayer = true;
+            bool was = TLDRevamp.Net.EntityProxyTools.TestAsPlayer; TLDRevamp.Net.EntityProxyTools.TestAsPlayer = true;
             try
             {
                 pl.Drop();
@@ -55,7 +55,7 @@ namespace TLDRevamp.Net
                 else { at.tempDisableColliderAttachPoint = true; at.Attach(best); at.tempDisableColliderAttachPoint = false; }
             }
             catch (System.Exception ex) { return "{\"error\":" + Json.Str("mount threw: " + ex.GetType().Name + " " + ex.Message) + "}"; }
-            finally { TestAsPlayer = was; }
+            finally { TLDRevamp.Net.EntityProxyTools.TestAsPlayer = was; }
             return "{\"slot\":" + Json.Str(best.name) + ",\"dist\":" + bd.ToString("F2", CultureInfo.InvariantCulture) + ",\"onlyToSlot\":" +
                 (at.onlyToSlot ? "true" : "false") + ",\"attachedNow\":" + (at.attached ? "true" : "false") + "}";
         }
@@ -424,7 +424,7 @@ namespace TLDRevamp.Net
                 if (a.Length > 2) car.handbrake = float.Parse(a[2], ic);
                 return "{\"whlocked\":" + (car.whlocked ? "true" : "false") + ",\"handbrake\":" + car.handbrake.ToString("F2", ic) + "}";
             }
-            if (a[0] == "drawbar" && a.Length > 1) return DrawbarTest(a);   // Entities.PushGrip
+            if (a[0] == "drawbar" && a.Length > 1) return TLDRevamp.Net.EntityPushGripTools.DrawbarTest(a);   // Entities.PushGrip
             if (a[0] == "grip" && a.Length > 1)
             {
                 // what a trailer's drawbar is made of (cartrailer.py, the trailer bug): `mount grip <trailer>`
@@ -442,8 +442,8 @@ namespace TLDRevamp.Net
             }
             if (a[0] == "hitchevents") return SessionLog.EventsJson();
             if (a[0] == "hitchhealth" && a.Length > 1) return HitchHealth(uint.Parse(a[1], ic));
-            if (a[0] == "hitchstate" && a.Length > 1) return TestHitchState(uint.Parse(a[1], ic));
-            if (a[0] == "unhitch" && a.Length > 2) return TestHitch(uint.Parse(a[1], ic), uint.Parse(a[2], ic), false);
+            if (a[0] == "hitchstate" && a.Length > 1) return TLDRevamp.Net.EntityHitchTools.TestHitchState(uint.Parse(a[1], ic));
+            if (a[0] == "unhitch" && a.Length > 2) return TLDRevamp.Net.EntityHitchTools.TestHitch(uint.Parse(a[1], ic), uint.Parse(a[2], ic), false);
             if (a[0] == "playermount") return PlayerMount(a.Length > 1 ? float.Parse(a[1], ic) : 3f);
             if (a[0] == "pickgrip" && a.Length > 1)
             {
@@ -502,7 +502,7 @@ namespace TLDRevamp.Net
             {
                 // hitch a trailer to a car (cartrailer.py): the trailer's grip (its own attachable, attachgripscript) onto the
                 // car's slot that takes it - as a player carrying the drawbar to the tow ball. `mount hitch <car> <trailer>`
-                if (InSession) return TestHitch(uint.Parse(a[1], ic), uint.Parse(a[2], ic), true);
+                if (InSession) return TLDRevamp.Net.EntityHitchTools.TestHitch(uint.Parse(a[1], ic), uint.Parse(a[2], ic), true);
                 var car = MountRootOf(uint.Parse(a[1], ic)); var tr = MountRootOf(uint.Parse(a[2], ic));
                 if (car == null || tr == null) return "{\"error\":\"no such objects\"}";
                 var grip = tr.attachable;
@@ -694,15 +694,15 @@ namespace TLDRevamp.Net
                 // over it, the body calmed. It took the first hit of a ray from only 5 m up and stood the pivot 0.3 m over it:
                 // on a slope the ray started inside the terrain and the capsule sank into it — the host fell through the world
                 // for seconds and landed at 28.6 m/s, read as a car copy killing them (buglist2m 7a, 3 full runs of 4)
-                var hit = DebugBridge.StandHit(at.x, at.z, null);
+                var hit = GroundPlacement.StandHit(at.x, at.z, null);
                 // `d` counts from the car's middle: 1.2 m is still under a car01's hood, where a player has no room since
                 // teleports check for it (2a13d34) — on, in quarter metres, to the first spot with room
-                for (int k = 1; hit == null && k <= 16; k++) { at += f * 0.25f; hit = DebugBridge.StandHit(at.x, at.z, null); }
+                for (int k = 1; hit == null && k <= 16; k++) { at += f * 0.25f; hit = GroundPlacement.StandHit(at.x, at.z, null); }
                 if (hit == null) return "{\"error\":\"no ground there\"}";
                 pl.godModeTillGrounded = true;
                 pl.Teleport(new Vector3(at.x, hit.Value.point.y + 1.1f, at.z));
                 pl.transform.rotation = Quaternion.LookRotation(-f);
-                DebugBridge.TpSettle(pl);
+                GroundPlacement.TpSettle(pl);
                 var g = mainscript.GlobalFromUnityPos(car.transform.position);
                 return "{\"at\":" + Json.Str(at.ToString("F1")) + ",\"carGx\":" + g.x.ToString("F2", ic) + ",\"carGz\":" + g.z.ToString("F2", ic) + "}";
             }
@@ -865,7 +865,7 @@ namespace TLDRevamp.Net
                 if (!ObservedEntities.TryGetValue(uint.Parse(a[1], ic), out var ce) || !Resolve(ce) || ce.Root == null || ce.Root.car == null) return "{\"error\":\"no car\"}";
                 if (ce.Proxy) return "{\"error\":\"that car is another machine's copy\"}";
                 var to = mainscript.UnityPosFromGlobal(new Vector3d(double.Parse(a[2], ic), 0, double.Parse(a[3], ic)));
-                var gh = DebugBridge.GroundHit(to.x, to.z);
+                var gh = GroundPlacement.GroundHit(to.x, to.z);
                 if (gh == null) return "{\"error\":\"no ground there\"}";
                 var cb = CarLocalBounds(ce.Root.car);
                 var rot = Quaternion.Euler(0f, float.Parse(a[4], ic), 0f);
@@ -892,7 +892,7 @@ namespace TLDRevamp.Net
                     if (rh.collider.transform.root == car.transform.root && rh.point.y > bestY) { bestY = rh.point.y; top = rh.point; }
                 pl.godModeTillGrounded = true;
                 pl.Teleport(top + Vector3.up * 1.1f);   // the pivot over the roof like tpground (0.4: the capsule was in the roof)
-                DebugBridge.TpSettle(pl);
+                GroundPlacement.TpSettle(pl);
                 var g = mainscript.GlobalFromUnityPos(car.transform.position);
                 return "{\"onTop\":" + Json.Str(top.ToString("F1")) + ",\"carGx\":" + g.x.ToString("F2", ic) + ",\"carGz\":" + g.z.ToString("F2", ic) + "}";
             }

@@ -772,7 +772,7 @@ static class CinematicIsolationTest
     static void BridgeClassificationMatchesThePolicy()
     {
         // The debug bridge's own classification must call the pure policy, so the two cannot drift apart.
-        var bridge = Read("src/TLDRevamp/DebugBridge.cs") + Read("src/TLDRevamp.Dev/DevCommands.cs");
+        var bridge = Read("src/TLDRevamp.Dev/DebugBridge.cs") + Read("src/TLDRevamp.Dev/DevCommands.cs");
         Check(bridge.Contains("Cinematic.CinematicCommandPolicy.IsReadOnly(arg)"),
             "the bridge classifies the camera commands with the pure policy");
 
@@ -857,7 +857,7 @@ static class CinematicIsolationTest
             Check(allowedTypes.Contains(type), "the camera's bridge surface may only use its own types and plain .NET types; found " + type);
 
         // The registered developer command must route to the camera's surface and nowhere else.
-        var bridge = Read("src/TLDRevamp/DebugBridge.cs") + Read("src/TLDRevamp.Dev/DevCommands.cs");
+        var bridge = Read("src/TLDRevamp.Dev/DebugBridge.cs") + Read("src/TLDRevamp.Dev/DevCommands.cs");
         var dispatch = Regex.Match(bridge, @"case ""cinema"":\s*return\s+([^;]+);");
         Check(dispatch.Success, "the bridge dispatches the cinema command");
         if (dispatch.Success)

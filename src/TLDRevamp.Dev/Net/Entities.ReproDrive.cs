@@ -1,3 +1,4 @@
+using System.Linq;
 using static TLDRevamp.Net.Entities;
 using UnityEngine;
 
@@ -6,9 +7,9 @@ namespace TLDRevamp.Net
     internal static partial class EntityReproPlayback
     {
         internal static string ReproNotOwner() => DevHooks.Playing ? "{\"ok\":true,\"skipped\":true}" : "{\"error\":\"requires local owner\"}";
-        private static carscript _reproDrive;
-        private static ReproRow _reproDriveInput;
-        private static float _reproDriveUntil;
+        internal static carscript _reproDrive;
+        internal static ReproRow _reproDriveInput;
+        internal static float _reproDriveUntil;
         internal static void ReproDriveEnd() { if (_reproDrive != null) _reproDrive.ResetInput(); _reproDrive = null; ResetDriveSample(); }
         internal static string ReproDriveAction(ReproRow r)
         {

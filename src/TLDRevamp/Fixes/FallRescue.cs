@@ -15,6 +15,7 @@ namespace TLDRevamp.Fixes
     /// Runtime switch (bridge `set`): TLDRevamp.Fixes.FallRescue.Enabled (A/B: false = they keep falling, as before)
     public static class FallRescue
     {
+        internal static int ObservedGroundMask => _groundMask;
         public static bool Enabled = true;
         public static float UnderM = 5f, FallingMs = 5f, EveryS = 1f, AboveM = 0.5f;
         public static long Rescued, Checked;
@@ -66,29 +67,5 @@ namespace TLDRevamp.Fixes
             Plugin.Log.LogWarning($"fell through the world: {Last}, put back on the surface at {mainscript.GlobalFromUnityPos(to)}");
             if (Net.Entities.InSession) { var e = Net.Entities.PlacedOf(it); SessionLog.Event("fall-rescued", e != null ? e.NetId : 0, result: Last); }
         }
-
-        /// Bridge `fallrescue test` (tests): the nearest loose item to the player, not frozen, put 30 m under the ground where it
-        /// is, falling at 20 m/s.
-        public static string Test()
-        {
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || savedatascript.s == null) return "{\"error\":\"no world\"}";
-            tosaveitemscript best = null; float bd = float.MaxValue;
-            foreach (var it in savedatascript.s.items.Values)
-            {
-                if (it == null || it.RB == null || it.RB.isKinematic || it.transform.parent != null || it.car != null || (it.P != null && it.P.physlock != null)) continue;
-                float d = (it.transform.position - pl.transform.position).sqrMagnitude;
-                if (d < bd) { bd = d; best = it; }
-            }
-            if (best == null) return "{\"error\":\"no loose item near\"}";
-            _test = best;
-            var p = best.transform.position + Vector3.down * 30f;
-            best.RB.position = p; best.transform.position = p; best.RB.velocity = Vector3.down * 20f;
-            return "{\"dropped\":" + Json.Str(best.name) + ",\"y\":" + Json.Num(p.y) + "}";
-        }
-
-        private static tosaveitemscript _test;
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"rescued\":" + Rescued + ",\"checked\":" + Checked + ",\"last\":" + Json.Str(Last) +
-                                      ",\"testUnder\":" + (_test != null && _groundMask > 0 && Physics.Raycast(_test.transform.position + Vector3.up * 1000f, Vector3.down, out var g, 2000f, _groundMask, QueryTriggerInteraction.Ignore) ? Json.Num(g.point.y - _test.transform.position.y) : "null") + "}";
     }
 }

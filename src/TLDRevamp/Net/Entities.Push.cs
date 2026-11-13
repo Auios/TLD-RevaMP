@@ -48,7 +48,7 @@ namespace TLDRevamp.Net
         /// Per frame from Tick: what was pushed since the last send goes to the owners.
         private static void PushTick(float dt)
         {
-            TestPushTick();
+            DevHooks.PushTick?.Invoke();
             if (PushOut.Count == 0) return;
             _pushSendAcc += dt;
             if (_pushSendAcc < 0.05f) return;
@@ -109,32 +109,6 @@ namespace TLDRevamp.Net
             else if (p.onlyProjected) dir = Vector3.ProjectOnPlane(dir, Vector3.up);
             rb.AddForceAtPosition(dir * pdt * p.modifier, p.transform.TransformPoint(lpos));
             PushesApplied++;
-        }
-
-        // ---- test hook (bridge): this player pushes the nearest pushable of an object for a while, through the game's
-        // own Push, every frame — what holding the push key on it does
-        private static uint _testPushNet; private static float _testPushUntil;
-        public static string TestPush(uint net, float secs)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such object\"}";
-            _testPushNet = net; _testPushUntil = Time.time + secs;
-            return "{\"pushing\":" + net + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"pushables\":" + e.Root.GetComponentsInChildren<pushablescript>(true).Length + "}";
-        }
-
-        private static void TestPushTick()
-        {
-            if (_testPushNet == 0) return;
-            if (Time.time > _testPushUntil || !ByNet.TryGetValue(_testPushNet, out var e) || e.Root == null) { _testPushNet = 0; return; }
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null) return;
-            var p = e.Root.GetComponentInChildren<pushablescript>();
-            if (p == null) return;
-            var from = pl.transform.position;
-            var col = p.GetComponentInChildren<Collider>();
-            var at = col != null ? col.ClosestPoint(from) : p.transform.position;
-            var d = at - from; d.y = 0f;
-            if (d.sqrMagnitude < 1e-4f) return;
-            p.Push(d.normalized, at, true);
         }
     }
 }

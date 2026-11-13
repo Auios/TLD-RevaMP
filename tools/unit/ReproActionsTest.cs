@@ -31,8 +31,8 @@ static class ReproActionsTest
         {
             BepInEx.Bootstrap.Chainloader.PluginInfos.Clear(); BepInEx.Bootstrap.Chainloader.PluginInfos.Add(guid, null);
             Check(!ReproPlayback.Command("arm").Contains("error") && ReproPlayback.Active, "windowed copy arms with " + guid);
-            Check(TestSafety.BlockAutoSave && Application.runInBackground, "armed safety flags");
-            ReproPlayback.Command("end"); Check(!TestSafety.BlockAutoSave && !Application.runInBackground, "flags restored");
+            Check(TestSafetyTools.BlockAutoSave && Application.runInBackground, "armed safety flags");
+            ReproPlayback.Command("end"); Check(!TestSafetyTools.BlockAutoSave && !Application.runInBackground, "flags restored");
         }
         DedicatedServer.Enabled = true; Check(ReproPlayback.Command("arm").Contains("error"), "dedicated server refused"); DedicatedServer.Enabled = false;
         Plugin.BridgeEnabled = false; Check(ReproPlayback.Command("arm").Contains("error"), "bridge required"); Plugin.BridgeEnabled = true;
@@ -40,6 +40,7 @@ static class ReproActionsTest
         BepInEx.Bootstrap.Chainloader.PluginInfos.Clear(); Check(ReproPlayback.Command("arm").Contains("error"), "isolation required");
         BepInEx.Bootstrap.Chainloader.PluginInfos.Add("someone.tld.copyisolation", null);
         DevHooks.ReproDriving = EntityReproPlayback.ApplyDriveInput;
+        DevHooks.PreventDrop = (player, destroyed) => DevHooks.Playing && !destroyed && player.pickedUp != null && EntityCargoTools.ForceHeld == player.pickedUp.tosave;
         ReproPlayback.Command("arm"); ReproRecorder.Toggle(); Check(Plugin.Instance.Overlay.Last.Contains("end playback"), "hotkey refusal toast");
         string limited = ReproPlayback.Command("act 22 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
         Check(limited.Contains("skipped") && !limited.Contains("error"), "rate-limited replay mark counted as skip");

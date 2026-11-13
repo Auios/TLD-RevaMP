@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    /// Player bots (test only: none exist unless the bridge's `mp pbot add` makes one). The load-test bots (Mp.AddBots,
+    /// Player bots (test only: none exist unless the bridge's `mp pbot add` makes one). The load-test bots (LegacyBots.AddBots,
     /// item bots) share their own objects and circle; they never touch anyone else's. A player bot is a stand-in for a
     /// THIRD PLAYER in ownership tests (tools/lobby3.py): it walks, takes the wheel of an existing car, drives it, gets
     /// out, picks an item up, holds it, drops it or puts it into a car, grabs at the same moment as someone else, leaves,

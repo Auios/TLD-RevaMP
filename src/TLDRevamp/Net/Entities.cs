@@ -357,7 +357,7 @@ namespace TLDRevamp.Net
             return outer;
         }
 
-        private static void ToServer(NetWriter w, bool reliable)
+        internal static void ToServer(NetWriter w, bool reliable)
         {
             if (w.Len >= 5 && (w.Buf[0] == Claim || w.Buf[0] == RemoveItem))
             {
@@ -446,7 +446,7 @@ namespace TLDRevamp.Net
             ShotgunTick(dt);
             PushTick(dt);
             RadioTick(dt);
-            KeyTick(); KeyTestTick();
+            KeyTick(); DevHooks.KeyTestTick?.Invoke();
             HitchTick(); EditBackTick();
             PhysLockTick(dt);
             PushGripTick();
@@ -957,6 +957,7 @@ namespace TLDRevamp.Net
         /// Leases whose holder confirmed the spawn finished (LeaseDone): safe to keep if the holder leaves, because
         /// everything it spawned was already shared. Undone leases are freed: their buildings can be spawned again.
         private static readonly HashSet<string> _leasesDone = new HashSet<string>();
+        internal static System.Collections.Generic.IReadOnlyCollection<string> ObservedLeasesDone => _leasesDone;
 
         public static float SilentTakeoverS = 1.5f;   // Mp.Server.SilentTick; 0 = off (A/B: before v0.65.24)
         public static long SilentTakeovers;
@@ -1131,7 +1132,7 @@ namespace TLDRevamp.Net
                         if (!r.Bad && e != null && type == State) KeepLateKey(r, msgAt, e, epoch);
                         StatesStale++; return;
                     }
-                    if (net == TestDropStates) { StatesStale++; return; }
+                    if ((DevHooks.DropState?.Invoke(net) ?? false)) { StatesStale++; return; }
                     if (type == CompactState)
                     {
                         if (e.CompactEpoch != epoch) { e.CompactStamp = 0; e.CompactEpoch = epoch; }

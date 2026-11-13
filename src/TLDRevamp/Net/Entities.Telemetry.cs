@@ -33,7 +33,7 @@ namespace TLDRevamp.Net
             for (int i = at; i > 0; i--) TelemetryRecent[i] = TelemetryRecent[i - 1];
             TelemetryRecent[0] = net;
         }
-        private static uint TelemetryNet(Component c)
+        internal static uint TelemetryNet(Component c)
         {
             if (c == null) return 0;
             var it = c as tosaveitemscript ?? c.GetComponentInParent<tosaveitemscript>();

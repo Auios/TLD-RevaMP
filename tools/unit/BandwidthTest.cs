@@ -60,8 +60,8 @@ namespace TLDRevamp.Net
         static readonly NetWriter WS = new NetWriter();
         static int delivered;
         static void SkippedByInterest(int player) { }
-        class Ent { public TestRoot Root = new TestRoot(); public Transform[] TestLimbs; public bool IsLimp; }
-        class TestRoot { public object car; public Transform transform = new Transform(); }
+        internal class Ent { public TestRoot Root = new TestRoot(); public Transform[] TestLimbs; public bool IsLimp; }
+        internal class TestRoot { public object car; public Transform transform = new Transform(); }
         static Transform[] Limbs(Ent e) => e.TestLimbs;
         static bool Limp(Ent e) => e.IsLimp;
         class SEnt { public uint NetId; public Vector3d Where; }

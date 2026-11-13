@@ -33,7 +33,7 @@ namespace TLDRevamp.Net
         private static readonly List<KeyValuePair<int, Vector3d>> _peerPos = new List<KeyValuePair<int, Vector3d>>();
         private static float _interestAcc;
 
-        private static HashSet<uint> KnownBy(int playerId)
+        internal static HashSet<uint> KnownBy(int playerId)
         {
             if (!Known.TryGetValue(playerId, out var k)) Known[playerId] = k = new HashSet<uint>();
             return k;

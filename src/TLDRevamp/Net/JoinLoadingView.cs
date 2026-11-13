@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using static TLDRevamp.Net.JoinLoadingSkin;
 
@@ -38,12 +38,12 @@ namespace TLDRevamp.Net
             _bodyWidth = width;
             _columnWidth = _twoColumns ? (_bodyWidth - 40 * s) * .58f : _bodyWidth;
             float rightWidth = _twoColumns ? _bodyWidth - _columnWidth - 40 * s : _bodyWidth;
-            _viewPreview = JoinLoadingPreview.Active;
-            _viewStage = _viewPreview ? JoinLoadingPreview.Stage : State.Stage;
+            _viewPreview = PreviewActive;
+            _viewStage = _viewPreview ? Preview.Stage : State.Stage;
             _viewReady = _viewPreview ? _viewStage == 6 : State.Ready;
-            _viewQuestion = _viewPreview ? JoinLoadingPreview.Question : MpScreen.PendingQuestion != null;
-            _viewStuck = _viewPreview ? JoinLoadingPreview.Stuck : State.Stuck(now);
-            string host = _viewPreview ? JoinLoadingPreview.Host : _host;
+            _viewQuestion = _viewPreview ? Preview.Question : MpScreen.PendingQuestion != null;
+            _viewStuck = _viewPreview ? Preview.Stuck : State.Stuck(now);
+            string host = _viewPreview ? Preview.Host : _host;
             Host.text = $"Host: {host} · {(_viewPreview ? "direct" : _route)} · {(_viewPreview ? "34 ms" : _ping >= 0 ? $"{_ping:N0} ms" : "ping unknown")}";
             bool smallHeader = width < 450 * s;
             Host.text = OverlayStyle.Truncate(Host.text, Math.Max(1, width - (smallHeader ? 0 : 178 * s)), JoinLoadingSkin.Host);
@@ -61,7 +61,7 @@ namespace TLDRevamp.Net
             _stagesHeight = 0;
             for (int i = 0; i < 7; i++)
             {
-                if (_viewPreview) StageDetails[i].text = JoinLoadingPreview.Details[i];
+                if (_viewPreview) StageDetails[i].text = Preview.Details[i];
                 Stages[i].text = JoinLoadingState.Names[i];
                 StageY[i] = _stagesHeight;
                 StageNameHeight[i] = Height(Stages[i], _columnWidth - 130 * s, StepBold);
@@ -72,9 +72,9 @@ namespace TLDRevamp.Net
                 Timers[i].text = i <= _viewStage ? $"{ms / 1000:F1} s" : "";
             }
             bool manifest = _viewPreview || _manifest;
-            int received = _viewPreview ? JoinLoadingPreview.Received : Metrics.Received;
-            int applied = _viewPreview ? JoinLoadingPreview.Applied : State.Count;
-            int expected = _viewPreview ? JoinLoadingPreview.Expected : Expected.Count;
+            int received = _viewPreview ? Preview.Received : Metrics.Received;
+            int applied = _viewPreview ? Preview.Applied : State.Count;
+            int expected = _viewPreview ? Preview.Expected : Expected.Count;
             Counters.text = manifest ? $"{applied:N0} / {expected:N0}" : "0"; Objects.text = manifest ? "objects" : "objects · waiting for the list";
             _counterWidth = JoinLoadingSkin.Counter.CalcSize(Counters).x;
             // Long waiting text moves below the counter rather than disappearing in a narrow column.
@@ -86,14 +86,14 @@ namespace TLDRevamp.Net
             KindCounts[1].text = (_viewPreview ? 132 : Metrics.ItemsParts).ToString("N0");
             KindCounts[2].text = (_viewPreview ? 14 : Metrics.Other).ToString("N0");
             _feedRows = _viewPreview ? 6 : Math.Max(1, Metrics.ShownCount);
-            for (int i = 0; i < 6; i++) Feed[i].text = OverlayStyle.Truncate(_viewPreview ? JoinLoadingPreview.Names[i] : i < Metrics.ShownCount ? Metrics.Names[i] : i == 0 ? "Waiting for shared objects" : "", rightWidth, Body);
+            for (int i = 0; i < 6; i++) Feed[i].text = OverlayStyle.Truncate(_viewPreview ? Preview.Names[i] : i < Metrics.ShownCount ? Metrics.Names[i] : i == 0 ? "Waiting for shared objects" : "", rightWidth, Body);
             _viewReceivedExpanded = Disclosure.ReceivedExpanded;
             _receivedHeight = _receivedToggleY + 28 * s + (_viewReceivedExpanded ? (146 + _feedRows * 24) * s : 0);
-            QuestionText.text = _viewQuestion ? (_viewPreview ? JoinLoadingPreview.QuestionText : MpScreen.PendingQuestion) : "";
+            QuestionText.text = _viewQuestion ? (_viewPreview ? Preview.QuestionText : MpScreen.PendingQuestion) : "";
             _questionHeight = _viewQuestion ? Height(QuestionText, rightWidth, Body) : 0;
             float rightHeight = _viewQuestion ? _questionHeight + 12 * s + JoinPresentation.ButtonsHeight(rightWidth, s, 2) : _receivedHeight;
             _bodyHeight = _twoColumns ? Math.Max(_stagesHeight, rightHeight) : _stagesHeight + 24 * s + rightHeight;
-            DetailText.text = JoinPresentation.FooterStatus(_viewPreview ? JoinLoadingPreview.Details[_viewStage] : Reason(),
+            DetailText.text = JoinPresentation.FooterStatus(_viewPreview ? Preview.Details[_viewStage] : Reason(),
                 Stages[_viewStage].text, StageDetails[_viewStage].text);
             Footer.text = _viewPreview ? "2.41 MB received · 312 KB/s" : $"{JoinPresentation.Bytes(Metrics.BytesReceived)} received · {JoinPresentation.Bytes((long)Metrics.Rate)}/s";
             _detailHeight = DetailText.text.Length == 0 ? 0 : 28 * s; _transferHeight = 24 * s;

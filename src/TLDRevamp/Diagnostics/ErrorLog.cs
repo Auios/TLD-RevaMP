@@ -8,6 +8,25 @@ namespace TLDRevamp.Diagnostics
     /// `errors [reset]`). BepInEx logs are overwritten at each launch; a two-machine run restarts both games.
     public static class ErrorLog
     {
+        internal readonly struct Observation
+        {
+            internal readonly long Errors, Exceptions;
+            internal readonly string[] Keys, Stacks;
+            internal readonly int[] Counts;
+            internal Observation(long errors, long exceptions, string[] keys, string[] stacks, int[] counts)
+            { Errors = errors; Exceptions = exceptions; Keys = keys; Stacks = stacks; Counts = counts; }
+        }
+        internal static Observation Observe(bool reset)
+        {
+            lock (Lock)
+            {
+                var keys = Order.ToArray(); var stacks = new string[keys.Length]; var counts = new int[keys.Length];
+                for (int i = 0; i < keys.Length; i++) { counts[i] = Kinds[keys[i]]; stacks[i] = Stacks[keys[i]]; }
+                var result = new Observation(Errors, Exceptions, keys, stacks, counts);
+                if (reset) { Kinds.Clear(); Order.Clear(); Stacks.Clear(); Errors = Exceptions = 0; }
+                return result;
+            }
+        }
         private static readonly object Lock = new object();
         private static readonly Dictionary<string, int> Kinds = new Dictionary<string, int>();
         private static readonly List<string> Order = new List<string>();
@@ -55,19 +74,6 @@ namespace TLDRevamp.Diagnostics
                 var all = All.Snapshot();
                 return () => "{\"warnings\":" + warnings + ",\"errors\":" + errors + ",\"exceptions\":" + exceptions +
                     ",\"droppedKinds\":" + all.Dropped + ",\"kinds\":" + all.Json(redact: TelemetryPrivacy.Clean) + "}";
-            }
-        }
-
-        /// `raw`: the texts as logged, for a test on this machine (bridge `errors raw`). They can hold private data: never in a report.
-        public static string Json(bool reset, bool raw = false)
-        {
-            lock (Lock)
-            {
-                var rows = new List<string>();
-                foreach (var k in Order) rows.Add("{\"n\":" + Kinds[k] + ",\"what\":" + (raw ? TLDRevamp.Json.Str(k) + ",\"stack\":" + TLDRevamp.Json.Str(Stacks[k]) : TelemetryPrivacy.Str(TelemetryPrivacy.FreeText(k))) + "}");
-                string s = "{\"errors\":" + Errors + ",\"exceptions\":" + Exceptions + ",\"kinds\":[" + string.Join(",", rows) + "]}";
-                if (reset) { Kinds.Clear(); Order.Clear(); Stacks.Clear(); Errors = Exceptions = 0; }
-                return s;
             }
         }
     }

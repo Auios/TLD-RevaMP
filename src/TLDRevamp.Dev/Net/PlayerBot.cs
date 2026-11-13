@@ -8,7 +8,7 @@ namespace TLDRevamp.Net
     /// Player bots on the bridge (what they do and why: PlayerBotCore). Made in the host's game they connect over
     /// loopback; made in a joiner's game they connect to the same host the way the joiner did (Steam P2P or IP), so
     /// their messages cross the network like a real third player's. A joiner's bots share the joiner's Steam account:
-    /// the host needs `set TLDRevamp.Net.MpServer.TestSameAccount True` to let them in.
+    /// the host needs `set TLDRevamp.Net.SessionTools.TestSameAccount True` to let them in.
     ///   mp pbot add [name]                 a bot at this player's feet
     ///   mp pbot list                       every bot: its player id, pose, seat, hands, what it owns, its counters
     ///   mp pbot <n> goto <gx> <gz>         walk there
@@ -123,8 +123,8 @@ namespace TLDRevamp.Net
             catch (Exception e) { return "connect: " + e.Message; }
             Core.Reset();
             if (Joins > 0) Core.Pos = Mp.LocalGlobal();   // back where the player who makes it stands
-            Client = new MpClient(t, new BotMotion(Core.Pos, 0f, 0f, 0f)) { Player = this, HostSteamId = Mp.Client != null ? Mp.Client.HostSteamId : 0 };
-            Mp.Bots.Add(Client);
+            Client = new MpClient(t, this) { HostSteamId = Mp.Client != null ? Mp.Client.HostSteamId : 0 };
+            LegacyBots.Bots.Add(Client);
             Joins++;
             return null;
         }
@@ -154,7 +154,7 @@ namespace TLDRevamp.Net
 
         private void Drop()
         {
-            Mp.Bots.Remove(Client);
+            LegacyBots.Bots.Remove(Client);
             Client.Dispose(); Client = null;
         }
 

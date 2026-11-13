@@ -50,11 +50,11 @@ static class SettingsLaneAuditTest
         root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
 
         string settings = Read("src/TLDRevamp/Net/SessionSettings.cs");
-        string data = Read("src/TLDRevamp/Net/SessionSettingsData.cs");
+        string data = (Read("src/TLDRevamp/Net/SessionSettingsData.cs") + Read("src/TLDRevamp.Dev/Net/SessionSettingsData.cs"));
         string mp = Read("src/TLDRevamp/Net/Mp.cs");
         string admin = Read("src/TLDRevamp/Net/Admin.cs");
         string dedicated = Read("src/TLDRevamp/Net/DedicatedServer.cs");
-        string bridge = Read("src/TLDRevamp/DebugBridge.cs");
+        string bridge = Read("src/TLDRevamp.Dev/DebugBridge.cs");
         string screen = Read("src/TLDRevamp/Net/MpScreen.cs");
         string session = Read("src/TLDRevamp/Net/Session.cs");
 
@@ -77,7 +77,7 @@ static class SettingsLaneAuditTest
             // refuses unless this machine is the host. The bridge calls the rule; it does not decide.
             bool hostOnlyExemption = data.Contains("public static bool IsHostControlCommand(bool hosting, string cmd, string arg)")
                                   && data.Contains("if (!hosting) return false;")
-                                  && bridge.Contains("SessionSettingsPolicy.BridgeAllowed(");
+                                  && bridge.Contains("SessionSettingsPolicyTools.BridgeAllowed(");
             Check("1.5 the policy-command exemption is restricted to the host", hostOnlyExemption,
                 "the exemption lets a joiner through the policy gate to a different error");
             // the policy must not be persisted

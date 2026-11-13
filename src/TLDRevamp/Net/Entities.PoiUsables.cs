@@ -71,8 +71,48 @@ namespace TLDRevamp.Net
         }
 
         // ---------------------------------------------------------------- debug (bridge: mp poius / poiuse / poiu)
-        private static string D(double v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
-        private static string F(float v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+        internal static string D(double v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+        internal static string F(float v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+        internal static usablescript PoiFocusUsable()
+        {
+            if (!InSession || _telemetryLook == null) return null;
+            var u = _telemetryLook.GetComponentInParent<usablescript>();
+            return u != null && u.setidPoi ? u : null;
+        }
+        // ObjectPanels calls this only at its half-second text refresh, never from GUI repaint.
+        internal static string PoiFocusDescription(double now)
+        {
+            var u = PoiFocusUsable(); if (u == null) return null;
+            var k = PoiLiveKey(u); _poiObserved.TryGetValue(k.Poi, out var s);
+            string name = TelemetryPrivacy.ObjectName(u.gameObject.name);
+            return name + " / building part\nPoiKey: generator " + k.Poi.Gen + " / position " + D(k.Poi.X) + ", " + D(k.Poi.Y) + ", " + D(k.Poi.Z) +
+                " / usable " + k.Poi.U + "\nxRot " + F(u.xRot) + " / yRot " + F(u.yRot) + " / slide " + F(u.slideValue) + " / turn " + u.currentTurnState +
+                "\nlast change " + (s != null ? F((float)now - s.ChangedAt) + " s ago" : "unknown") +
+                "\nlive send " + (s != null ? s.Sent.Hz((float)now) : 0) + " Hz / receive " + (s != null ? s.Received.Hz((float)now) : 0) +
+                " Hz / interpolating " + (_remoteUsables.ContainsKey(k) ? "yes" : "no");
+        }
+
+        /// The building's own snapshot loaded on respawn (poiGenScript: FStart, then save.Load): the session's newer state wins.
+        [HarmonyPatch(typeof(save_poi), nameof(save_poi.Load), new[] { typeof(poiScript) })]
+        private static class PoiSnapshotLoaded
+        {
+            [HarmonyPostfix]
+            private static void Postfix(poiScript _poi) => ApplyKnown(_poi);
+        }
+
+        private static void PoiUsablesReset() { ServerPoiUsables.Clear(); KnownPoiUsables.Clear(); _poiObserved.Clear(); _poiServerOrder.Clear(); }
+
+        public static string PoiUsableStats() => "{\"sent\":" + PoiUsablesSent + ",\"applied\":" + PoiUsablesApplied + ",\"onSpawn\":" + PoiUsablesOnSpawn +
+                                                 ",\"unplaced\":" + PoiUsablesUnplaced + ",\"known\":" + KnownPoiUsables.Count + ",\"serverKnown\":" + ServerPoiUsables.Count + ",\"removeDist\":[" + RemoveDists() + "]}";
+
+        private static string RemoveDists()
+        {
+            var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
+            var r = new List<string>();
+            if (map != null && map.poiGens != null) foreach (var gn in map.poiGens) r.Add(gn == null ? "null" : F(gn.removeDistance));
+            return string.Join(",", r);
+        }
 
         private static string PoiRow(poiScript p, int i, usablescript u, float dist)
         {
@@ -83,7 +123,7 @@ namespace TLDRevamp.Net
                    ",\"at\":[" + F((float)g.x) + "," + F((float)g.y) + "," + F((float)g.z) + "]," + PoiStateJson(u) + "}";
         }
 
-        private static string PoiStateJson(usablescript u) => "\"x\":" + F(u.xRot) + ",\"y\":" + F(u.yRot) + ",\"slide\":" + F(u.slideValue) +
+        internal static string PoiStateJson(usablescript u) => "\"x\":" + F(u.xRot) + ",\"y\":" + F(u.yRot) + ",\"slide\":" + F(u.slideValue) +
                                                                ",\"turn\":" + u.currentTurnState + ",\"minX\":" + F(u.minX) + ",\"maxX\":" + F(u.maxX) +
                                                                ",\"minY\":" + F(u.minY) + ",\"maxY\":" + F(u.maxY);
 
@@ -106,7 +146,7 @@ namespace TLDRevamp.Net
             return "{\"usables\":[" + string.Join(",", rows) + "]}";
         }
 
-        private static usablescript PoiArg(string[] a, int at)
+        internal static usablescript PoiArg(string[] a, int at)
         {
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             var k = new PoiKey { Gen = int.Parse(a[at]), X = double.Parse(a[at + 1], ci), Y = double.Parse(a[at + 2], ci), Z = double.Parse(a[at + 3], ci), U = int.Parse(a[at + 4]) };
@@ -124,67 +164,6 @@ namespace TLDRevamp.Net
                 ",\"sendHz\":" + (s != null ? s.Sent.Hz(now) : 0) + ",\"receiveHz\":" + (s != null ? s.Received.Hz(now) : 0) +
                 ",\"received\":" + (s != null ? s.ReceivedTotal : 0) + ",\"interpolating\":" + (_remoteUsables.ContainsKey(k) ? "true" : "false") +
                 ",\"changeAge\":" + (s != null ? UN(now - s.ChangedAt) : "null") + "}";
-        }
-
-        public static string PoiDrag(string[] a) => StartUsableDrag(PoiArg(a, 1), float.Parse(a[6], System.Globalization.CultureInfo.InvariantCulture),
-            a.Length > 7 ? float.Parse(a[7], System.Globalization.CultureInfo.InvariantCulture) : 60f);
-        public static string PoiProbe(string[] a) => a.Length > 1 ? StartUsableProbe(PoiArg(a, 1), float.Parse(a[6], System.Globalization.CultureInfo.InvariantCulture)) : UsableProbeJson();
-
-        internal static usablescript PoiFocusUsable()
-        {
-            if (!InSession || _telemetryLook == null) return null;
-            var u = _telemetryLook.GetComponentInParent<usablescript>();
-            return u != null && u.setidPoi ? u : null;
-        }
-        // ObjectPanels calls this only at its half-second text refresh, never from GUI repaint.
-        internal static string PoiFocusDescription(double now)
-        {
-            var u = PoiFocusUsable(); if (u == null) return null;
-            var k = PoiLiveKey(u); _poiObserved.TryGetValue(k.Poi, out var s);
-            string name = TelemetryPrivacy.ObjectName(u.gameObject.name);
-            return name + " / building part\nPoiKey: generator " + k.Poi.Gen + " / position " + D(k.Poi.X) + ", " + D(k.Poi.Y) + ", " + D(k.Poi.Z) +
-                " / usable " + k.Poi.U + "\nxRot " + F(u.xRot) + " / yRot " + F(u.yRot) + " / slide " + F(u.slideValue) + " / turn " + u.currentTurnState +
-                "\nlast change " + (s != null ? F((float)now - s.ChangedAt) + " s ago" : "unknown") +
-                "\nlive send " + (s != null ? s.Sent.Hz((float)now) : 0) + " Hz / receive " + (s != null ? s.Received.Hz((float)now) : 0) +
-                " Hz / interpolating " + (_remoteUsables.ContainsKey(k) ? "yes" : "no");
-        }
-
-        /// Operate it as a player does (the game's own input calls, synced like a player's): `mp poiuse gen x y z u
-        /// rot dx dy | slide v | turn`.
-        public static string PoiUse(string[] a)
-        {
-            var u = PoiArg(a, 1);
-            if (u == null) return "{\"error\":\"not spawned here\"}";
-            var ci = System.Globalization.CultureInfo.InvariantCulture;
-            switch (a[6])
-            {
-                case "rot": u.Rot(float.Parse(a[7], ci), float.Parse(a[8], ci), true); break;
-                case "slide": { float v = float.Parse(a[7], ci); u.Slide(v, v, v, true); break; }
-                case "turn": u.Turn(); break;
-                default: return "{\"error\":\"rot dx dy | slide v | turn\"}";
-            }
-            return "{" + PoiStateJson(u) + "}";
-        }
-
-        /// The building's own snapshot loaded on respawn (poiGenScript: FStart, then save.Load): the session's newer state wins.
-        [HarmonyPatch(typeof(save_poi), nameof(save_poi.Load), new[] { typeof(poiScript) })]
-        private static class PoiSnapshotLoaded
-        {
-            [HarmonyPostfix]
-            private static void Postfix(poiScript _poi) => ApplyKnown(_poi);
-        }
-
-        private static void PoiUsablesReset() { ServerPoiUsables.Clear(); KnownPoiUsables.Clear(); _poiObserved.Clear(); _poiServerOrder.Clear(); }
-
-        public static string PoiUsableStats() => "{\"sent\":" + PoiUsablesSent + ",\"applied\":" + PoiUsablesApplied + ",\"onSpawn\":" + PoiUsablesOnSpawn +
-                                                 ",\"unplaced\":" + PoiUsablesUnplaced + ",\"known\":" + KnownPoiUsables.Count + ",\"serverKnown\":" + ServerPoiUsables.Count + ",\"removeDist\":[" + RemoveDists() + "]}";
-
-        private static string RemoveDists()
-        {
-            var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
-            var r = new List<string>();
-            if (map != null && map.poiGens != null) foreach (var gn in map.poiGens) r.Add(gn == null ? "null" : F(gn.removeDistance));
-            return string.Join(",", r);
         }
     }
 }

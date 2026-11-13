@@ -1,4 +1,4 @@
-﻿namespace UnityEngine
+namespace UnityEngine
 {
     public class Transform { public Vector3 position = new Vector3 { y = 1.1f }; }
     public struct Vector4 { public float x,y,z,w; public Vector4(float x,float y,float z,float w) { this.x=x; this.y=y; this.z=z; this.w=w; } }

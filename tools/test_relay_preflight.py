@@ -318,7 +318,7 @@ class PreflightChecks(unittest.TestCase):
 
     def test_the_bridge_reports_the_port_it_listens_on(self):
         """the bridge's ping answer carries the port it listens on: that is the independent observation"""
-        src = (TOOLS.parent / "src" / "TLDRevamp" / "DebugBridge.cs").read_text()
+        src = (TOOLS.parent / "src" / "TLDRevamp.Dev" / "DebugBridge.cs").read_text()
         self.assertIn('\\"port\\":', src)
         self.assertIn("_boundPort", src)
 

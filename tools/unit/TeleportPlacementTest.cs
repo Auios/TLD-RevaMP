@@ -73,21 +73,21 @@ static class TeleportPlacementTest
         Physics.Capsule = (p, buf) => 0;
         Physics.Hits = p => new[] { Hit(terrain, -2.1f) };
         foot.transform.position = new Vector3(0, -1, 0);
-        Time.realtimeSinceStartup = 0; TLDRevamp.DebugBridge.Placements = 0; Tpa.Go(0, 0, 0, 0);
+        Time.realtimeSinceStartup = 0; TLDRevamp.GroundPlacement.Placements = 0; Tpa.Go(0, 0, 0, 0);
         for (int i = 1; i <= 60; i++) { Time.realtimeSinceStartup = i * .5f; Tpa.Tick(); }
-        Check(TLDRevamp.DebugBridge.Placements == 1, "actual TPA tick never reapplies valid seated-target fallback for 30 seconds");
+        Check(TLDRevamp.GroundPlacement.Placements == 1, "actual TPA tick never reapplies valid seated-target fallback for 30 seconds");
         Tpa.ResetTelemetry();
         Physics.Hits = p => new[] { Hit(terrain, -7.1f) };
         foot.transform.position = new Vector3(0, -6, 0);
-        Time.realtimeSinceStartup = 0; TLDRevamp.DebugBridge.Placements = 0; Tpa.Go(0, 0, 0, 0);
+        Time.realtimeSinceStartup = 0; TLDRevamp.GroundPlacement.Placements = 0; Tpa.Go(0, 0, 0, 0);
         Time.realtimeSinceStartup = 10; Tpa.Tick();
-        Check(TLDRevamp.DebugBridge.Placements == 1, "unchanged low fallback is observed without another teleport");
+        Check(TLDRevamp.GroundPlacement.Placements == 1, "unchanged low fallback is observed without another teleport");
         Physics.Hits = p => new[] { Hit(terrain, -1) };
         Time.realtimeSinceStartup = 11; Tpa.Tick();
-        Check(TLDRevamp.DebugBridge.Placements == 2, "new higher support triggers actual TPA placement after strict window");
+        Check(TLDRevamp.GroundPlacement.Placements == 2, "new higher support triggers actual TPA placement after strict window");
         foot.transform.position = new Vector3(0, .1f, 0);
         Time.realtimeSinceStartup = 12; Tpa.Tick();
-        Check(TLDRevamp.DebugBridge.Placements == 2, "improved landing is not applied repeatedly");
+        Check(TLDRevamp.GroundPlacement.Placements == 2, "improved landing is not applied repeatedly");
         Physics.Hits = p => new[] { Hit(terrain, p.x == 0 && p.z == 0 ? -1.6f : -.4f) };
         Check(!TpaPlacement.HigherFloor(default, new Vector3(0, -.5f, 0)), "retry probes the floor placement would choose, not a higher unselected ring");
         Tpa.ResetTelemetry(); TLDRevamp.SessionLog.Arrivals = TLDRevamp.SessionLog.Failures = 0;
@@ -323,7 +323,7 @@ namespace HarmonyLib
 }
 namespace TLDRevamp
 {
-    public static class DebugBridge
+    public static class GroundPlacement
     {
         public static bool TpBusy => false;
         public static int Placements;

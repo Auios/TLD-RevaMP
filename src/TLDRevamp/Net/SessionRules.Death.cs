@@ -378,7 +378,7 @@ namespace TLDRevamp.Net
         {
             try
             {
-                var hit = DebugBridge.GroundHit(p.x, p.z);
+                var hit = GroundPlacement.GroundHit(p.x, p.z);
                 if (hit != null) return hit.Value.point.y;
             }
             catch { }

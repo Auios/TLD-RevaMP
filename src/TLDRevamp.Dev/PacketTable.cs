@@ -15,7 +15,7 @@ namespace TLDRevamp
         {
             width = Math.Max(0, width - 2 * OverlayStyle.Padding);
             // The bridge keeps its existing text format. Only the in-game table uses cells.
-            var rows = session ? Net.NetMeter.PanelRows(12) : new[] { new[] { "Not in a multiplayer game" } };
+            var rows = session ? TLDRevamp.Net.NetMeterTools.PanelRows(12) : new[] { new[] { "Not in a multiplayer game" } };
             _summary.text = OverlayStyle.Truncate(rows[0][0], width, OverlayStyle.Small);
             _summaryHeight = DebugV2.Line("packets", "summary") ? OverlayStyle.Height(_summary, width, OverlayStyle.Small) : 0;
             _row = OverlayStyle.Small.lineHeight;

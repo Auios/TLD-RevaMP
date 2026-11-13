@@ -143,8 +143,6 @@ namespace TLDRevamp.Net
                    ",\"spawns\":" + LeaseSpawns + ",\"done\":" + LeasesDone + ",\"freed\":" + LeasesFreed + ",\"leaseRefusedWhy\":" + LeaseRefusalsJson() + "}";
         }
 
-        public static void LeaseArm(string key) => LeaseAsked.Add(key);
-
         /// The lease table outlives the server: without it, a client arriving at a building that a PREVIOUS server
         /// session populated would be granted a fresh lease and spawn the contents again — the save would grow one
         /// duplicate set per visited building per restart. Saved next to the world save (`.tlds.leases`), loaded when

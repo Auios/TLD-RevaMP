@@ -86,8 +86,7 @@ namespace TLDRevamp.Net
         /// wrench, the E-press dismount, picking up an attached item. Everything else that detaches is the game's own
         /// doing on this machine.
         private static bool _playerActing; private static int _playerActingFrame = -1;
-        internal static bool PlayerActing => TestAsPlayer || (_playerActing && _playerActingFrame == Time.frameCount);
-        public static bool TestAsPlayer;   // test (bridge): a bridge command counts as the local player's own action
+        internal static bool PlayerActing => (DevHooks.ActingAsPlayer?.Invoke() ?? false) || (_playerActing && _playerActingFrame == Time.frameCount);
 
         /// A part this player dismounted on another player's car: in single player the dismount puts it in the player's
         /// hand (fpscontroller: UnCraft, then Pickup). Here the owner takes it off one network delay later; when it comes

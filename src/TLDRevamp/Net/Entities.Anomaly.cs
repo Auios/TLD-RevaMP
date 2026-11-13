@@ -20,7 +20,7 @@ namespace TLDRevamp.Net
         public static long Anomalies, CensusAsks, CensusDiffers, StoreOutsSeen, StoreOutsAfterJump, CensusAsked, CensusRepliesIn;
         public static float JumpM = 50f, AfterJumpS = 20f;
         private static float _jumpAt = -1000f; private static Vector3d _lastGen; private static bool _hasGen;
-        public static string LastDevCmd = ""; public static float LastDevAt = -1000f;   // DebugBridge.Execute
+        public static string LastDevCmd = ""; public static float LastDevAt = -1000f;   // Last developer command
         private static int _anomLogged;
         private static readonly List<string> _anomLines = new List<string>();
         public static string AnomalyJson()
@@ -29,35 +29,9 @@ namespace TLDRevamp.Net
             return "{\"count\":" + Anomalies + ",\"censusAsks\":" + CensusAsks + ",\"censusAsked\":" + CensusAsked + ",\"censusRepliesIn\":" + CensusRepliesIn + ",\"censusDiffers\":" + CensusDiffers +
                    ",\"repairsAsked\":" + RepairsAsked + ",\"repairsHealed\":" + RepairsHealed + ",\"repairsFailed\":" + RepairsFailed + ",\"repairsRun\":" + RepairsRun + ",\"storeOutsSeen\":" + StoreOutsSeen + ",\"storeOutsAfterJump\":" + StoreOutsAfterJump + ",\"lines\":[" + string.Join(",", rows) + "]}";
         }
-
-        // ---- test hooks (bridge): a glitch made on purpose, to see the watch catch it
-        /// `mp displace <net> <m>`: our copy put m metres off, and the game's removal pass at once (a displaced copy)
-        public static string TestDisplace(uint net, float m)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !e.Proxy || !Resolve(e) || e.Root == null || itemPlaceRemoveScript.s == null) return "{\"error\":\"no copy of it placed here\"}";
-            e.Root.transform.root.position += new Vector3(m, 0f, 0f);
-            double d = NearestPlayerM(mainscript.GlobalFromUnityPos(e.Root.transform.position));
-            itemPlaceRemoveScript.s.RemoveStuff();
-            return "{\"displaced\":" + net + ",\"fromPlayer\":" + d.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + ",\"ipReady\":" + (e.Ip != null && e.Ip.Ready ? "true" : "false") + "}";
-        }
-        /// `mp copypartgone <net> <name>`: a part of our copy gone here only (no message), then its census asked
-        public static string TestCopyPartGone(uint net, string name)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !e.Proxy || !Resolve(e) || e.Root == null) return "{\"error\":\"no copy of it placed here\"}";
-            foreach (var it in e.Root.transform.root.GetComponentsInChildren<tosaveitemscript>(true))
-            {
-                if (it == null || it == e.Root || !it.name.Contains(name)) continue;
-                string n = it.name;
-                SuppressDestroyEcho = true;
-                try { Object.DestroyImmediate(it.gameObject); } finally { SuppressDestroyEcho = false; }
-                _censusDue[net] = new CensusDue { At = Time.realtimeSinceStartup, Attempt = 1 };
-                return "{\"gone\":" + Json.Str(n) + "}";
-            }
-            return "{\"error\":\"no such part on it\"}";
-        }
         private static readonly Dictionary<uint, float> _displacedAt = new Dictionary<uint, float>();
         private static readonly Dictionary<uint, List<float>> _storeOuts = new Dictionary<uint, List<float>>();
-        private struct CensusDue { public float At; public byte Attempt; }
+        internal struct CensusDue { public float At; public byte Attempt; }
         private static readonly Dictionary<uint, CensusDue> _censusDue = new Dictionary<uint, CensusDue>();
 
         internal static void AnomalyLine(string what) => Anomaly(what);
@@ -73,7 +47,7 @@ namespace TLDRevamp.Net
             Plugin.Log.LogWarning("[anomaly] " + line);
         }
 
-        private static double NearestPlayerM(Vector3d g)
+        internal static double NearestPlayerM(Vector3d g)
         {
             double best = double.MaxValue;
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;

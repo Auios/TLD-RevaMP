@@ -16,8 +16,9 @@ namespace TLDRevamp
     /// The values are the BepInEx config's (tldrevamp.core.cfg, [Keys]), saved as soon as they change.
     internal static class KeyBindings
     {
-        private sealed class Bind { public string Name, Help; public ConfigEntry<KeyboardShortcut> Entry; }
+        internal sealed class Bind { public string Name, Help; public ConfigEntry<KeyboardShortcut> Entry; }
         private static readonly List<Bind> All = new List<Bind>();
+        internal static System.Collections.Generic.IReadOnlyList<TLDRevamp.KeyBindings.Bind> ObservedAll => All;
         /// Every bound key by its name in the Keys section (PlayerEdition unbinds the developer ones).
         internal static Dictionary<string, ConfigEntry<KeyboardShortcut>> ByName()
         {
@@ -28,6 +29,7 @@ namespace TLDRevamp
         /// Every key's entry, in the Keys section's order (Plugin.KeyDown's chord check).
         internal static IEnumerable<ConfigEntry<KeyboardShortcut>> Entries() { foreach (var b in All) yield return b.Entry; }
         private static Bind _capturing;
+        internal static Bind ObservedCapturing => _capturing;
         private static KeyCode _modifierAlone = KeyCode.None;
         private static int _swallowFrame = -1;
         internal static bool Capturing => _capturing != null;
@@ -74,7 +76,7 @@ namespace TLDRevamp
             }
         }
 
-        private static string Show(Bind b)
+        internal static string Show(Bind b)
         {
             if (_capturing == b) return "Press a key…";
             var k = b.Entry.Value;
@@ -136,24 +138,6 @@ namespace TLDRevamp
                 return list;
             }
             private static bool Down() => Plugin.KeyDevMenu == null ? Input.GetKeyDown(KeyCode.F1) : Plugin.KeyDown(Plugin.KeyDevMenu);
-        }
-
-        /// `mp keys`: every key and whether the F1 check was found. `mp keys set <name> <KeyCode|none>`: rebind one (as the
-        /// settings row does; saved at once) — the settings restart check uses it.
-        internal static string Command(string[] a)
-        {
-            if (a.Length >= 4 && a[1] == "set")
-            {
-                string name = string.Join(" ", a, 2, a.Length - 3);
-                var bind = All.Find(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
-                if (bind == null) return "{\"error\":\"no key named " + name.Replace("\"", "") + "\"}";
-                if (!Enum.TryParse(a[a.Length - 1], true, out KeyCode k)) return "{\"error\":\"not a key code\"}";
-                bind.Entry.Value = new KeyboardShortcut(k);
-                RevampMenu.RefreshOpen();
-            }
-            var sb = new System.Text.StringBuilder("{\"capturing\":").Append(_capturing != null ? Json.Str(_capturing.Name) : "null").Append(",\"devMenuPatched\":").Append(DevMenuKey.Patched ? "true" : "false").Append(",\"devModeKeys\":").Append(DevModeKeys.Status()).Append(",\"devMenuList\":").Append(Json.Str(DevModeKeys.ListShown ?? "")).Append(",\"keys\":[");
-            for (int i = 0; i < All.Count; i++) { if (i > 0) sb.Append(','); sb.Append("{\"name\":").Append(Json.Str(All[i].Name)).Append(",\"key\":").Append(Json.Str(Show(All[i]))).Append('}'); }
-            return sb.Append("]}").ToString();
         }
     }
 }

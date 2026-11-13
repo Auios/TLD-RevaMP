@@ -165,7 +165,7 @@ namespace TLDRevamp
             {
                 int h = _hitches % HitchCap;
                 _hT[h] = UnityEngine.Time.realtimeSinceStartup; _hFrame[h] = UnityEngine.Time.frameCount;
-                _hWall[h] = wall; _hLoop[h] = total; _hGc[h] = gc - _lastGc; _hBridge[h] = DebugBridge.LastPumpMs;
+                _hWall[h] = wall; _hLoop[h] = total; _hGc[h] = gc - _lastGc; _hBridge[h] = BridgeTiming.LastPumpMs;
                 for (int k = 0; k < 3; k++)
                 {
                     int best = -1;
@@ -179,7 +179,7 @@ namespace TLDRevamp
                 _hitches++;
             }
             _lastEnd = now; _lastGc = gc;
-            DebugBridge.LastPumpMs = 0;   // so a hitch frame's value is that frame's own bridge work
+            BridgeTiming.LastPumpMs = 0;   // so a hitch frame's value is that frame's own bridge work
             Array.Clear(_stamps, 0, _stamps.Length);
         }
 

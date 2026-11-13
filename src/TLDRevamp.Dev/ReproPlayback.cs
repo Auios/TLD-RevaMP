@@ -12,21 +12,21 @@ namespace TLDRevamp
         {
             var a = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (a.Length == 0 || a[0] == "status") return "{\"playback\":" + (Active ? "true" : "false") + ",\"isolated\":" + (Isolated ? "true" : "false") +
-                ",\"dedicated\":" + (Net.DedicatedServer.Enabled ? "true" : "false") + ",\"bridge\":" + (Plugin.BridgeEnabled ? "true" : "false") +
+                ",\"dedicated\":" + (Net.DedicatedServer.Enabled ? "true" : "false") + ",\"bridge\":" + (DevPlugin.BridgeEnabled ? "true" : "false") +
                 ",\"localPlayer\":" + (mainscript.s != null && mainscript.s.player != null ? "true" : "false") + ",\"protocol\":" + Net.Protocol.Version + ",\"session\":" + Json.Str(SessionLog.Sid) + ",\"recorder\":" + ReproRecorder.State() + "}";
             if (a[0] == "start" || a[0] == "on") return ReproRecorder.Start();
             if (a[0] == "stop" || a[0] == "off") return ReproRecorder.Stop();
             if (a[0] == "arm")
             {
                 ReproRecorder.DiscardAutomatic();
-                if (ReproRecorder.Recording || !Isolated || Net.DedicatedServer.Enabled || !Plugin.BridgeEnabled || !Net.Entities.InSession || mainscript.s == null || mainscript.s.player == null)
+                if (ReproRecorder.Recording || !Isolated || Net.DedicatedServer.Enabled || !DevPlugin.BridgeEnabled || !Net.Entities.InSession || mainscript.s == null || mainscript.s.player == null)
                     return "{\"error\":\"playback needs an isolated player copy with bridge enabled in a multiplayer world; stop recording first\"}";
-                if (!Active) { _oldSave = TestSafety.BlockAutoSave; _oldBackground = Application.runInBackground; }
-                TestSafety.BlockAutoSave = true; Application.runInBackground = true; Active = true; return Command("status");
+                if (!Active) { _oldSave = TLDRevamp.TestSafetyTools.BlockAutoSave; _oldBackground = Application.runInBackground; }
+                TLDRevamp.TestSafetyTools.BlockAutoSave = true; Application.runInBackground = true; Active = true; return Command("status");
             }
             if (a[0] == "end")
             {
-                if (Active) { TestSafety.BlockAutoSave = _oldSave; Application.runInBackground = _oldBackground; Net.EntityReproPlayback.ReproReleaseHeld(); }
+                if (Active) { TLDRevamp.TestSafetyTools.BlockAutoSave = _oldSave; Application.runInBackground = _oldBackground; Net.EntityReproPlayback.ReproReleaseHeld(); }
                 Active = false; return Command("status");
             }
             if (!Active) return "{\"error\":\"repro arm first\"}";
@@ -44,9 +44,9 @@ namespace TLDRevamp
                 if (r.Kind == ReproKind.Command) return ReplayCommand((int)r.A);
                 if (r.Kind == ReproKind.Mark) return ReplayMark();
                 if (r.Kind == ReproKind.Network) return NetworkConditions.Apply(new NetworkSimulation { Latency = (int)r.X, Jitter = (int)r.Y, Loss = (float)r.A, Duplication = (float)r.B, Reorder = (float)r.C, SendOnly = r.D == 1 });
-                bool was = Net.Entities.TestAsPlayer;
-                try { Net.Entities.TestAsPlayer = true; return Net.EntityReproPlayback.ReproAct(r); }
-                finally { Net.Entities.TestAsPlayer = was; }
+                bool was = TLDRevamp.Net.EntityProxyTools.TestAsPlayer;
+                try { TLDRevamp.Net.EntityProxyTools.TestAsPlayer = true; return Net.EntityReproPlayback.ReproAct(r); }
+                finally { TLDRevamp.Net.EntityProxyTools.TestAsPlayer = was; }
             }
             return "{\"error\":\"repro [start|stop|status|arm|end|resolve prefab x y z|check net|peer|act row]\"}";
         }

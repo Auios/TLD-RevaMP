@@ -27,6 +27,7 @@ namespace TLDRevamp.Net
     /// Mods must match at join (MpServer Hello, ModCheck): the same mod ids, versions and DLL hashes.
     public sealed class ModObjects : MpApi.IBackend
     {
+        internal static System.Collections.Generic.IEnumerable<(string Id, string File)> ObservedMods { get { foreach (var mod in MpApi.Mods) yield return (mod.Id, mod.File); } }
         // client → server, server → client (one id per direction where the layout is the same)
         public const byte ModShare = 70;      // c→s: u32 tag, str key, u8 ver, pos, rot, bytes record
         public const byte ModAssigned = 71;   // s→c: u32 tag, u32 id, u32 epoch

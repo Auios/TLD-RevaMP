@@ -15,5 +15,8 @@
     <Compile Include="../../src/TLDRevamp/Net/JoinLoadingState.cs" />
     <Compile Include="../../src/TLDRevamp/Net/JoinLoadingMetrics.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Net/JoinLoadingPreview.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/JoinLoadingPresentation.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Net/JoinLoadingFixture.cs" />
   </ItemGroup>
 </Project>

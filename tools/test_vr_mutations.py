@@ -21,7 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 BRIDGE = ROOT / "src" / "TLDRevamp" / "Fixes" / "OpenXrBridge.cs"
 LIFECYCLE = ROOT / "src" / "TLDRevamp" / "VR" / "VrLoaderLifecycle.cs"
 POLICY = ROOT / "src" / "TLDRevamp" / "VR" / "VrLoaderPolicy.cs"
-DEBUG = ROOT / "src" / "TLDRevamp" / "DebugBridge.cs"
+DEBUG = ROOT / "src" / "TLDRevamp.Dev" / "DebugBridge.cs"
 
 BEHAVIOUR_PROJECT = "tools/unit/OpenXrBridgeBehaviourTest.csproj"
 SOURCE_PROJECT = "tools/unit/OpenXrBridgeTest.csproj"
@@ -50,7 +50,7 @@ class VrMutationTest(unittest.TestCase):
         for rel in ("src/TLDRevamp/Fixes/OpenXrBridge.cs",
                     "src/TLDRevamp/VR/VrLoaderLifecycle.cs",
                     "src/TLDRevamp/VR/VrLoaderPolicy.cs",
-                    "src/TLDRevamp/DebugBridge.cs"):
+                    "src/TLDRevamp.Dev/DebugBridge.cs"):
             target = tmp / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(ROOT / rel, target)

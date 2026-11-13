@@ -22,7 +22,7 @@ namespace TLDRevamp.Net
             }
             return count == 1 ? "{\"net\":" + net + "}" : "{\"error\":\"repro target missing or ambiguous; supply an explicit net map\",\"matches\":" + count + "}";
         }
-        internal static void ReproReleaseHeld() { ForceHeld = null; EndKeyTest(); ReproDriveEnd(); }
+        internal static void ReproReleaseHeld() { TLDRevamp.Net.EntityCargoTools.ForceHeld = null; TLDRevamp.Net.EntityIgnitionKeyTools.EndKeyTest(); ReproDriveEnd(); }
         internal static string ReproAct(ReproRow r)
         {
             var p = mainscript.s != null ? mainscript.s.player : null;
@@ -43,7 +43,7 @@ namespace TLDRevamp.Net
                     p.GetOut(p.transform.position + p.transform.right); return "{\"ok\":true}";
                 case ReproKind.Pickup:
                     if (it == null || it.P == null) return "{\"error\":\"pickup target absent\"}";
-                    p.Pickup(it.P, it.transform.position); ForceHeld = it; return "{\"ok\":true}";
+                    p.Pickup(it.P, it.transform.position); TLDRevamp.Net.EntityCargoTools.ForceHeld = it; return "{\"ok\":true}";
                 case ReproKind.Drop: case ReproKind.Throw:
                     if (it == null || p.pickedUp != it.P) return "{\"error\":\"expected held item absent\"}";
                     if (r.Kind == ReproKind.Throw)
@@ -53,17 +53,17 @@ namespace TLDRevamp.Net
                         p.Th.rotation = Quaternion.LookRotation(dir); p.throwForce = (float)r.A;
                     }
                     else p.throwForce = 0;
-                    ForceHeld = null; p.Drop(); return "{\"ok\":true}";
+                    TLDRevamp.Net.EntityCargoTools.ForceHeld = null; p.Drop(); return "{\"ok\":true}";
                 case ReproKind.InventorySwitch: case ReproKind.InventorySwap: case ReproKind.InventoryStore: case ReproKind.InventoryUnstore:
                     if (p.inventory == null || r.Slot < 0 || r.Slot >= p.inventory.Count) return "{\"error\":\"inventory slot absent\"}";
-                    ForceHeld = null;
+                    TLDRevamp.Net.EntityCargoTools.ForceHeld = null;
                     if (r.Kind == ReproKind.InventorySwitch) p.InvSwitchTo(r.Slot);
                     else if (r.Kind == ReproKind.InventorySwap) p.InvSwapTo(r.Slot);
                     else if (r.Kind == ReproKind.InventoryStore) p.InvStore(r.Slot); else p.InvUnStore(r.Slot);
-                    if (p.pickedUp != null) ForceHeld = p.pickedUp.tosave;
+                    if (p.pickedUp != null) TLDRevamp.Net.EntityCargoTools.ForceHeld = p.pickedUp.tosave;
                     return "{\"ok\":true}";
-                case ReproKind.RightGrip: ForceHeld = null; p.RightHandGrip(); return "{\"ok\":true}";
-                case ReproKind.RightRelease: p.RightHandRelease(true); if (p.pickedUp != null) ForceHeld = p.pickedUp.tosave; return "{\"ok\":true}";
+                case ReproKind.RightGrip: TLDRevamp.Net.EntityCargoTools.ForceHeld = null; p.RightHandGrip(); return "{\"ok\":true}";
+                case ReproKind.RightRelease: p.RightHandRelease(true); if (p.pickedUp != null) TLDRevamp.Net.EntityCargoTools.ForceHeld = p.pickedUp.tosave; return "{\"ok\":true}";
                 case ReproKind.Usable: case ReproKind.PoiUsable:
                     usablescript u = null;
                     if (r.Kind == ReproKind.Usable && it != null)
@@ -75,8 +75,8 @@ namespace TLDRevamp.Net
                     if (u == null) return "{\"error\":\"usable absent\"}";
                     u.Refresh((float)r.X, (float)r.Y, (float)r.Z, (int)r.A); u.tunedFloat = (float)r.B; u.SyncMulti(true); return "{\"ok\":true}";
                 case ReproKind.Ignition:
-                    if (r.A == 0) { EndKeyTest(true); return "{\"ok\":true}"; }
-                    return KeyTest(r.Net, 3600);
+                    if (r.A == 0) { TLDRevamp.Net.EntityIgnitionKeyTools.EndKeyTest(true); return "{\"ok\":true}"; }
+                    return TLDRevamp.Net.EntityIgnitionKeyTools.KeyTest(r.Net, 3600);
                 case ReproKind.EntityPose:
                     if (!ObservedEntities.TryGetValue(r.Net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"entity pose target absent\"}";
                     if (e.Proxy || e.OwnerId != MyId) return ReproNotOwner();
@@ -117,11 +117,11 @@ namespace TLDRevamp.Net
             if (part == null || part.attachable == null) return "{\"error\":\"attach target absent\"}";
             if (r.B == 1 && parent == null) return "{\"error\":\"attach parent absent\"}";
             var p = mainscript.s != null ? mainscript.s.player : null;
-            if (p != null && p.pickedUp == part.P) { ForceHeld = null; p.Drop(); }
+            if (p != null && p.pickedUp == part.P) { TLDRevamp.Net.EntityCargoTools.ForceHeld = null; p.Drop(); }
             if (r.A == 2 && parent != null)
             {
                 if (r.Slot < 0 || r.Slot >= parent.partslotscripts.Count) return "{\"error\":\"attach slot absent\"}";
-                ForceHeld = null; parent.partslotscripts[r.Slot].Craft(part.attachable); return "{\"ok\":true}";
+                TLDRevamp.Net.EntityCargoTools.ForceHeld = null; parent.partslotscripts[r.Slot].Craft(part.attachable); return "{\"ok\":true}";
             }
             var point = mainscript.UnityPosFromGlobal(new Vector3d(r.X, r.Y, r.Z));
             Collider col = parent != null ? parent.GetColliderFromIndex(r.Slot) : null;
@@ -132,7 +132,7 @@ namespace TLDRevamp.Net
             }
             if (col == null) return "{\"error\":\"attach collider absent\"}";
             if (parent != null) point = parent.transform.TransformPoint(new Vector3((float)r.C, (float)r.D, (float)r.E));
-            ForceHeld = null; part.attachable.Attach(part.attachable.NewPoint(col.transform, point, Quaternion.identity), col); return "{\"ok\":true}";
+            TLDRevamp.Net.EntityCargoTools.ForceHeld = null; part.attachable.Attach(part.attachable.NewPoint(col.transform, point, Quaternion.identity), col); return "{\"ok\":true}";
         }
         internal static string ReproCheck(uint net)
         {

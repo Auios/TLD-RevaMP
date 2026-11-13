@@ -135,7 +135,7 @@ namespace TLDRevamp.Net
     static class Mp { internal static Client Client; }
     class Client { internal int MyId; }
     static class Entities { internal static int MyId; }
-    static class NetMeter
+    static class NetMeterTools
     {
         internal static string[][] PanelRows(int rows) => new[] { new[] { "Up 8.9 KB/s · Down 5.5 KB/s · 1.25 ms/s" },
             new[] { "Type", "Up/s", "KB/s", "Down/s", "KB/s", "ms/s" }, new[] { "ObjectCompareAnswer", "2.0", "0.00", "1999.0", "3.39", "0.05" } };

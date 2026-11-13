@@ -15,8 +15,6 @@ namespace TLDRevamp.Net
         public const byte ShotgunIn = 39;
         public static int ServerObjects => Server.Count;   // the admin console's status
         public static long ShotgunSent, ShotgunApplied;
-        public static float TestSteer;   // test hook (bridge `set`): the passenger's steering input
-        public static bool TestLights;   // test hook: one press of the light switch
 
         // bits of the message (held = state this frame, edges = pressed since the last send)
         private const ushort BHorn = 1, BIgnition = 2;
@@ -42,8 +40,8 @@ namespace TLDRevamp.Net
                 {
                     var c = __instance;
                     _shotCar = c;
-                    _shotSteer = TestSteer != 0f ? TestSteer : c.isteer; _shotHandbrake = c.ihandbrake;
-                    if (TestLights) { c.iLightsBDown = true; TestLights = false; }   // bridge test hooks: what a player's hands would do
+                    _shotSteer = (DevHooks.PassengerSteer?.Invoke(c.isteer) ?? c.isteer); _shotHandbrake = c.ihandbrake;
+                    if ((DevHooks.PassengerLights?.Invoke() ?? false)) { c.iLightsBDown = true; }   // bridge test hooks: what a player's hands would do
                     _shotHeld = (ushort)((c.ihorn ? BHorn : 0) | (c.iignition ? BIgnition : 0));
                     _shotEdges |= (ushort)((c.iLightsBDown ? ELights : 0) | (c.ihandbrakeBDown ? EHandbrake : 0) | (c.iignitionDown ? EIgnition : 0)
                         | (c.igrDown ? EGearR : 0) | (c.ignDown ? EGearN : 0) | (c.ig1Down ? EG1 : 0) | (c.ig2Down ? EG2 : 0) | (c.ig3Down ? EG3 : 0)

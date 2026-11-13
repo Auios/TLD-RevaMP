@@ -28,7 +28,6 @@ namespace TLDRevamp.Net
         /// or who couldn't spawn an item, lost it for good (docs/MESSAGES.md). Now the host keeps what it handed back until the
         /// joiner's record names it as restored.
         public static bool RestoreConfirmed = true;
-        public static string TestRestoreDrop = "";   // test: "all" = this joiner ignores a Restore, a number = it can't spawn that many of the items
         public static long RestoreKept, RestoreConfirmedItems;
         public static long RecordsSent, RecordsIn, RecordsRefused, Pocketed, Restored, ItemsRestored, ItemsDropped, FilesWritten, SaveFiltered, WornRestored;
         public static string Last = "";
@@ -66,7 +65,7 @@ namespace TLDRevamp.Net
             // joiner's checks on purpose: the heal must not depend on being a client.
             SessionRules.DeathSyncWithGame();
             var c = Mp.Client;
-            if (!Enabled || c == null || c.Bot != null || !c.Ready) return;
+            if (!Enabled || c == null || c.Player != null || !c.Ready) return;
             var b = Budget();
             // The budget decides; the sending path commits what it really sent. A record that could not be sent
             // (no player yet, the game not ready) must not use up the budget and must not be counted.
@@ -103,7 +102,7 @@ namespace TLDRevamp.Net
         /// know the player is alive.
         internal static void SendAliveRecord()
         {
-            if (Mp.Client == null || Mp.Client.Bot != null) return;
+            if (Mp.Client == null || Mp.Client.Player != null) return;
             SendRecord();
         }
 
@@ -173,7 +172,7 @@ namespace TLDRevamp.Net
         internal static void ClientLeaving()
         {
             var c = Mp.Client;
-            if (!Enabled || c == null || c.Bot != null || !c.Ready) return;
+            if (!Enabled || c == null || c.Player != null || !c.Ready) return;
             if (_pending != null) ClientReady();   // the player wasn't there yet
             // A dead player leaves: the record that goes out is the death one (at the anchor), not a fresh one.
             if (SessionRules.HasDeathAnchor) { SendDeathRecord(); return; }
@@ -187,8 +186,8 @@ namespace TLDRevamp.Net
 
         internal static void ClientRestoreIn(NetReader r)
         {
-            if (!Enabled || Mp.Client == null || Mp.Client.Bot != null) return;
-            if (TestRestoreDrop == "all") { Last = "restore: ignored (test)"; return; }
+            if (!Enabled || Mp.Client == null || Mp.Client.Player != null) return;
+            if ((DevHooks.RestoreDrop?.Invoke() ?? "") == "all") { Last = "restore: ignored (test)"; return; }
             var copy = new NetReader(); copy.Load(r.Remaining); Buffer.BlockCopy(r.Buf, r.Pos, copy.Buf, 0, r.Remaining);
             _pending = copy;
             if (Mp.Client.Ready) ClientReady();
@@ -233,7 +232,7 @@ namespace TLDRevamp.Net
                 if (r.Bad) wornOld.Clear();
             }
             var shareAfterWear = new List<tosaveitemscript>();
-            int.TryParse(TestRestoreDrop, out int testDrop);
+            int.TryParse((DevHooks.RestoreDrop?.Invoke() ?? ""), out int testDrop);
             foreach (var (oldId, bytes) in bodies)
             {
                 try

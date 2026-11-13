@@ -29,7 +29,7 @@ static class BridgeCommandTest
     static int Main(string[] args)
     {
         string root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
-        string bridge = File.ReadAllText(Path.Combine(root, "src", "TLDRevamp", "DebugBridge.cs")) + File.ReadAllText(Path.Combine(root, "src", "TLDRevamp.Dev", "DevCommands.cs"));
+        string bridge = File.ReadAllText(Path.Combine(root, "src", "TLDRevamp.Dev", "DebugBridge.cs")) + File.ReadAllText(Path.Combine(root, "src", "TLDRevamp.Dev", "DevCommands.cs"));
 
         // the case labels of the bridge's command switch
         var cases = new HashSet<string>(

@@ -26,6 +26,8 @@ namespace TLDRevamp.Net
         public static string HealthWatchLast = "";
 
         private static readonly List<uint> _hwCycle = new List<uint>(), _hwFar = new List<uint>();
+        internal static System.Collections.Generic.IReadOnlyList<uint> ObservedHwFar => _hwFar;
+        internal static System.Collections.Generic.IReadOnlyList<uint> ObservedHwCycle => _hwCycle;
         private static int _hwCursor, _hwFarCursor;
         private static float _hwAt = -99f, _autoMarkAt = -999f;
         private static readonly HealthWatchRules.Persist _hwSeen = new HealthWatchRules.Persist(), _hwOwnerSeen = new HealthWatchRules.Persist();
@@ -33,10 +35,10 @@ namespace TLDRevamp.Net
         private static readonly HashSet<string> _hwNow = new HashSet<string>(StringComparer.Ordinal), _hwOwnerNow = new HashSet<string>(StringComparer.Ordinal);
         private static readonly HashSet<int> _hwPlayers = new HashSet<int>();
         private static readonly Dictionary<uint, string> _hwActive = new Dictionary<uint, string>();
+        internal static System.Collections.Generic.IReadOnlyDictionary<uint, string> ObservedHwActive => _hwActive;
         private static readonly Dictionary<uint, int> _repairFails = new Dictionary<uint, int>();
         private static readonly HashSet<uint> _hwAbove = new HashSet<uint>();   // seen above the ground this session
         private static int _groundMask = -1;
-        private static (attachablescript part, partslotscript slot) _brokenSlot;   // `break slot`, for fix
 
         private static void HealthWatchTick()
         {
@@ -225,7 +227,7 @@ namespace TLDRevamp.Net
         }
 
         /// The ground's surface over a point (NaN: no ground there, or not loaded).
-        private static double GroundOver(Vector3 p)
+        internal static double GroundOver(Vector3 p)
         {
             if (_groundMask < 0) _groundMask = LayerMask.GetMask(GroundLayers.Split(','));
             if (_groundMask == 0) return double.NaN;
@@ -237,56 +239,6 @@ namespace TLDRevamp.Net
             foreach (var h in Physics.RaycastAll(p + Vector3.up * 0.5f, Vector3.down, 300f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
                 if (h.collider != null && !h.collider.transform.IsChildOf(e.Root.transform)) return true;
             return false;
-        }
-
-        /// `mp healthwatch`: the watch's state. `mp healthwatch ground`: the ground under the player (which layer).
-        /// `mp healthwatch break <net> collisions|heldlayer|pickup|fling|sink|fix`: break an object here on purpose, to test.
-        public static string HealthWatchCommand(string[] a)
-        {
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (a.Length >= 2 && a[1] == "ground")
-            {
-                if (pl == null) return "{\"error\":\"no player\"}";
-                var p = pl.transform.position;
-                var hits = Physics.RaycastAll(p + Vector3.up * 3f, Vector3.down, 50f, ~0, QueryTriggerInteraction.Ignore);
-                Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
-                var hs = new List<string>();
-                foreach (var h in hits) hs.Add("{\"name\":" + Json.Str(h.collider.name) + ",\"root\":" + Json.Str(h.collider.transform.root.name) + ",\"layer\":" + Json.Str(LayerMask.LayerToName(h.collider.gameObject.layer)) + ",\"m\":" + Json.Num(h.distance) + "}");
-                return "{\"hits\":[" + string.Join(",", hs) + "],\"groundOver\":" + Json.Num((float)GroundOver(p)) + ",\"playerY\":" + Json.Num(p.y) + "}";
-            }
-            if (a.Length >= 4 && a[1] == "break")
-            {
-                if (!ByNet.TryGetValue(uint.Parse(a[2], CultureInfo.InvariantCulture), out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
-                var rb = e.Root.GetComponent<Rigidbody>(); string mode = a[3];
-                switch (mode)
-                {
-                    case "collisions": if (rb != null) rb.detectCollisions = false; break;
-                    case "heldlayer": foreach (var c in e.Root.GetComponentsInChildren<Collider>(true)) c.gameObject.layer = mainscript.pickedUpLayer; break;
-                    case "pickup": foreach (var c in e.Root.GetComponentsInChildren<Collider>(true)) c.gameObject.layer = LayerMask.NameToLayer("UI"); break;
-                    case "fling": if (rb != null && !rb.isKinematic) rb.velocity = Vector3.up * 400f; break;
-                    case "sink": if (rb != null) rb.isKinematic = true; e.Root.transform.position += Vector3.down * 30f; break;
-                    case "slot":
-                    {
-                        // the first fitted part made to name another slot of the root (fix puts it back)
-                        partslotscript from = null, to = null;
-                        foreach (var ps in e.Root.partslotscripts) { if (ps == null) continue; if (from == null && ps.hasPart()) from = ps; else if (to == null && ps != from) to = ps; }
-                        if (from == null || to == null) return "{\"error\":\"no fitted part and another slot\"}";
-                        _brokenSlot = (from.part(), from); from.part().slot = to; break;
-                    }
-                    case "fix":
-                        if (rb != null) rb.detectCollisions = true;
-                        if (e.Root.P != null) e.Root.P.resetLayer();
-                        if (_brokenSlot.part != null) { _brokenSlot.part.slot = _brokenSlot.slot; _brokenSlot = default; }
-                        break;
-                    default: return "{\"error\":\"collisions|heldlayer|pickup|fling|sink|slot|fix\"}";
-                }
-                return "{\"broken\":" + Json.Str(e.Root.name) + ",\"mode\":" + Json.Str(mode) + "}";
-            }
-            if (a.Length >= 2 && a[1] == "reset") { _hwSeen.Clear(); _hwOwnerSeen.Clear(); _hwActive.Clear(); _autoMarkAt = -999f; return "{\"reset\":true}"; }
-            var rows = new List<string>();
-            foreach (var kv in _hwActive) rows.Add("{\"net\":" + kv.Key + ",\"line\":" + Json.Str(kv.Value) + "}");
-            return "{\"enabled\":" + (HealthWatch ? "true" : "false") + ",\"near\":" + _hwCycle.Count + ",\"far\":" + _hwFar.Count + ",\"flags\":" + HealthWatchFlags + ",\"marks\":" + AutoMarksSaved
-                   + ",\"items\":" + (DevHooks.ItemFlags?.Invoke() ?? 0) + ",\"last\":" + Json.Str(HealthWatchLast) + ",\"itemLast\":" + Json.Str(DevHooks.ItemLast?.Invoke() ?? "") + ",\"active\":[" + string.Join(",", rows) + "]}";
         }
     }
 }

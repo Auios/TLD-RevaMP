@@ -17,6 +17,7 @@ namespace TLDRevamp.Net
         public static long PlayerSoundsSent, PlayerSoundsPlayed, ModelStepsMuted;
         public static long[] SoundsSentBy = new long[4], SoundsPlayedBy = new long[4];
         private static string _lastSound = "null";
+        internal static string ObservedLastSound => _lastSound;
 
         private enum Snd : byte { Step, Burp, Fart, Shit }
 
@@ -134,44 +135,6 @@ namespace TLDRevamp.Net
             SendPlayerSound(kind, src.transform.position, (int)e, clip, src.volume, src.pitch, src.priority);
         }
 
-        // ---- diagnostics / test hooks (bridge `mp sounds`, `mp sounds burp|fart|shit|step`, `mp sounds walk secs`: the
-        // player walks straight ahead, the forward key held)
-        private static float _walkUntil;
 
-        [HarmonyPatch(typeof(inputscript), "Update")]
-        private static class WalkTest
-        {
-            [HarmonyPostfix]
-            private static void Postfix(inputscript __instance) { if (Time.time < _walkUntil) __instance.forward = 1f; }
-        }
-
-        public static string PlayerSoundsTest(string[] a)
-        {
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            string did = "null";
-            if (a.Length > 1 && pl != null)
-            {
-                switch (a[1])
-                {
-                    case "burp": pl.Burp(); break;
-                    case "fart": pl.Fart(); break;
-                    case "shit": pl.Shit(); break;
-                    case "step": pl.stepScript.Step(1f); break;
-                    case "walk": _walkUntil = Time.time + float.Parse(a[2], System.Globalization.CultureInfo.InvariantCulture); break;
-                    default: return "{\"error\":\"burp|fart|shit|step|walk secs\"}";
-                }
-                did = Json.Str(a[1]);
-            }
-            int models = 0, modelSteps = 0, modelStepEvents = 0;
-            foreach (var mp in Object.FindObjectsOfType<mpplayerscript>())
-            {
-                models++;
-                modelSteps += mp.GetComponentsInChildren<stepSoundScript>(true).Length;
-                modelStepEvents += mp.GetComponentsInChildren<animStepEventScript>(true).Length;
-            }
-            return "{\"did\":" + did + ",\"sent\":" + PlayerSoundsSent + ",\"played\":" + PlayerSoundsPlayed + ",\"sentBy\":[" + string.Join(",", SoundsSentBy) +
-                   "],\"playedBy\":[" + string.Join(",", SoundsPlayedBy) + "],\"modelStepsMuted\":" + ModelStepsMuted + ",\"models\":" + models +
-                   ",\"modelStepScripts\":" + modelSteps + ",\"modelStepEvents\":" + modelStepEvents + ",\"playerMadeShared\":" + PlayerMadeShared + ",\"last\":" + _lastSound + "}";
-        }
     }
 }

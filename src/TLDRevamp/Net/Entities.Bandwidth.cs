@@ -28,7 +28,7 @@ namespace TLDRevamp.Net
         }
 
         // Rabbit death leaves its unused root coasting; detached limbs can already be lying still.
-        private static Transform RagdollFrame(Ent e)
+        internal static Transform RagdollFrame(Ent e)
         {
             if (!WasteFixes || e.Root.car != null) return e.Root.transform;
             var limbs = Limbs(e);

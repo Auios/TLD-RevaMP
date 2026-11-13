@@ -23,6 +23,7 @@ namespace TLDRevamp.VR.Native
     /// VrPointer) and which controller button is which.
     internal static class VrHands
     {
+        private static VrHandInput Simulated(int hand) => DevHooks.VrHand?.Invoke(hand) ?? default;
         internal const int Left = VrControlMap.Left, Right = VrControlMap.Right, None = VrControlMap.None;
 
         private static readonly VrHandButtons[] _buttons = { new VrHandButtons(), new VrHandButtons() };
@@ -77,7 +78,7 @@ namespace TLDRevamp.VR.Native
         /// The tracked pose of the controller (the transform the game's own menu laser starts from).
         internal static HandPose Pose(int h)
         {
-            if (VrSim.On && VrSim.Hand[h]) return new HandPose { Valid = true, Pos = VrSim.Pos[h], Rot = VrSim.Rot[h] };
+            if (Simulated(h).Active) return new HandPose { Valid = true, Pos = Simulated(h).Position, Rot = Simulated(h).Rotation };
             var c = Controller(h);
             if (c == null || c.real == null || !c.real.gameObject.activeInHierarchy) return default;
             return new HandPose { Valid = true, Pos = c.real.position, Rot = c.real.rotation };
@@ -87,7 +88,7 @@ namespace TLDRevamp.VR.Native
         internal static Vector3 Palm(int h, HandPose pose, out float radius)
         {
             radius = 0.09f;
-            if (!(VrSim.On && VrSim.Hand[h]))
+            if (!(Simulated(h).Active))
             {
                 var ih = Interact(h);
                 if (ih != null && ih.col != null)
@@ -103,9 +104,9 @@ namespace TLDRevamp.VR.Native
 
         private static void ReadButtons(int h)
         {
-            if (VrSim.On && VrSim.Hand[h])
+            if (Simulated(h).Active)
             {
-                _buttons[h].Feed(VrSim.Trigger[h], VrSim.Grip[h], VrSim.Primary[h]);
+                _buttons[h].Feed(Simulated(h).Trigger, Simulated(h).Grip, Simulated(h).Primary);
                 return;
             }
             var c = Controller(h);
@@ -310,7 +311,7 @@ namespace TLDRevamp.VR.Native
 
         private static readonly Collider[] _overlap = new Collider[256];
 
-        private static bool CanTake(fpscontroller pl, pickupable p)
+        internal static bool CanTake(fpscontroller pl, pickupable p)
         {
             if (p == null || p.tosave == null) return false;
             if (p.tosave.attachable != null && p.tosave.attachable.slot != null) return false;   // mounted: A/X detaches it
@@ -379,7 +380,7 @@ namespace TLDRevamp.VR.Native
             catch { return c.bounds.ClosestPoint(to); }
         }
 
-        private static Vector3 Center(pickupable p)
+        internal static Vector3 Center(pickupable p)
         {
             var cols = p.GetComponentsInChildren<Collider>();
             if (cols == null || cols.Length == 0) return p.transform.position;
@@ -500,33 +501,6 @@ namespace TLDRevamp.VR.Native
                 }
                 if (c.laserT.gameObject.activeSelf != show) c.laserT.gameObject.SetActive(show);
             }
-        }
-
-        /// The items around the player a hand could take, for tests: name, where, and whether the game would let go of it.
-        internal static string ItemsJson(float radius)
-        {
-            var pl = VrNative.Player;
-            if (pl == null) return "{\"error\":\"no player\"}";
-            var b = new StringBuilder(1024);
-            b.Append("{\"player\":").Append(VrNative.V(pl.transform.position));
-            if (pl.Cam != null) b.Append(",\"head\":").Append(VrNative.V(pl.Cam.transform.position)).Append(",\"look\":").Append(VrNative.V(pl.Cam.transform.forward));
-            b.Append(",\"items\":[");
-            var hits = Physics.OverlapSphere(pl.transform.position, radius, pl.pickupLayer, QueryTriggerInteraction.Ignore);   // a test's query: every collider, however many
-            var seen = new System.Collections.Generic.HashSet<int>();
-            bool first = true;
-            for (int i = 0; i < hits.Length; i++)
-            {
-                var p = hits[i] != null ? hits[i].GetComponentInParent<pickupable>() : null;
-                if (p == null || !seen.Add(p.GetInstanceID())) continue;
-                if (!first) b.Append(',');
-                first = false;
-                b.Append("{\"name\":").Append(Json.Str(p.name)).Append(",\"pos\":").Append(VrNative.V(p.transform.position))
-                 .Append(",\"center\":").Append(VrNative.V(Center(p))).Append(",\"take\":").Append(CanTake(pl, p) ? "true" : "false")
-                 .Append(",\"mass\":").Append(p.RB != null ? VrNative.F(p.RB.mass) : "null")
-                 .Append(",\"loose\":").Append(Loose(p) ? "true" : "false").Append('}');
-            }
-            b.Append("]}");
-            return b.ToString();
         }
 
         internal static void Fault(string where, Exception e)

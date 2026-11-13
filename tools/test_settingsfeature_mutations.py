@@ -47,7 +47,7 @@ MUTATIONS = [
  {
   "id": "M13b-bridge-gate-spelled-out-again",
   "desc": "the bridge decides the exemption itself again, where it can drift from the rule",
-  "file": "src/TLDRevamp/DebugBridge.cs",
+  "file": "src/TLDRevamp.Dev/DebugBridge.cs",
   "old": """            if (!Net.SessionSettingsPolicy.BridgeAllowed(Net.Mp.Server != null, Net.DeveloperAccess.Allowed, ReadOnlyCmd(cmd, arg), cmd, arg))
             {
                 Net.DeveloperAccess.DenyBridge();

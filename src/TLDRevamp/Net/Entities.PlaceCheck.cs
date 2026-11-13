@@ -13,7 +13,6 @@ namespace TLDRevamp.Net
         public static bool CensusPlaces = true;   // A/B: false = the census only compares parts and state (before)
         public static float RepairPlaceM = 0.5f, RepairPlaceSpeed = 1f;
         public static long PlacesAsked, PlacesApart, PlacesResent, PlacesTold, PlacesHealed, PlacesFailed;
-        public static uint TestDropStates;   // test: this copy doesn't hear this object's states (a lost final state)
         private const byte PlaceTold = 200;   // CensusReply's attempt byte: not rows but what the owner found
         private static readonly Dictionary<uint, float> _placeRunAt = new Dictionary<uint, float>();
         private struct PlaceWait { public float Until; public int Told; }
@@ -161,16 +160,6 @@ namespace TLDRevamp.Net
                 at.transform.SetPositionAndRotation(f.position + f.rotation * new Vector3(v[0], v[1], v[2]), f.rotation * new Quaternion(v[3], v[4], v[5], v[6]));
                 GluedPlacesApplied++;
             }
-        }
-
-        /// `mp nudgemember <net> <member> <m>`: test, a glued member of this copy moved here only.
-        public static string TestNudgeMember(uint net, int i, float m)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !e.Proxy || !Resolve(e) || e.Root == null || i <= 0 || i >= e.Items.Count || e.Items[i] == null) return "{\"error\":\"no such member of a copy here\"}";
-            var at = e.Items[i].attachable;
-            if (at == null || !at.attached || at.slot != null) return "{\"error\":\"not glued\"}";
-            at.transform.position += e.Root.transform.up * m;
-            return "{\"moved\":" + Json.Str(e.Items[i].name) + "}";
         }
 
         /// `mp places`: the counters and what a census ask added.

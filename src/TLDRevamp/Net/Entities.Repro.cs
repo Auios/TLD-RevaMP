@@ -46,7 +46,7 @@ namespace TLDRevamp.Net
         {
             private static bool Prefix(fpscontroller __instance, bool isDestroyed)
             {
-                if (DevHooks.Playing && !isDestroyed && __instance.pickedUp != null && ForceHeld == __instance.pickedUp.tosave) return false;
+                if ((DevHooks.PreventDrop?.Invoke(__instance, isDestroyed) ?? false)) return false;
                 if (!ReproLocal(__instance) || isDestroyed || __instance.pickedUp == null || _reproInventoryDepth > 0) return true;
                 var r = ReproItem(__instance.throwForce > __instance.minThrowForce ? ReproKind.Throw : ReproKind.Drop, __instance.pickedUp.tosave);
                 r.A = Mathf.Clamp01(__instance.throwForce); var dir = __instance.Th.forward; r.X = dir.x; r.Y = dir.y; r.Z = dir.z; ReproRecorder.Add(r); return true;
@@ -216,5 +216,13 @@ namespace TLDRevamp.Net
                 var e = EditEntityOf(__instance.tosave); if (e != null && !e.Proxy && e.OwnerId == MyId) ReproRecorder.Add(ReproItem(ReproKind.PhysUnlock, __instance.tosave));
             }
         }
+    }
+}
+
+namespace TLDRevamp
+{
+    internal static partial class DevHooks
+    {
+        internal static System.Func<fpscontroller, bool, bool> PreventDrop;
     }
 }

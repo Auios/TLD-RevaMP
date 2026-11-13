@@ -95,10 +95,10 @@ static class VrBoundaryTest
             Check("the OpenXR bridge still has " + needed, openxr.Contains(needed));
 
         // ---- the diagnostics command is read-only
-        var dbg = Read("src/TLDRevamp/DebugBridge.cs");
+        var dbg = Read("src/TLDRevamp.Dev/DebugBridge.cs");
         Check("the vr command is in the debug bridge", dbg.Contains("case \"vr\":"));
         Check("the vr command is read-only", Regex.IsMatch(dbg, "_readCmds[^;]*\"vr\""));
-        Check("the vr command is the contracts' state", dbg.Contains("Fixes.VrContractBridge.Json()"));
+        Check("the vr command is the contracts' state", dbg.Contains("TLDRevamp.Fixes.VrContractBridge.Json()"));
 
         // ---- the protocol is not changed by the VR work: the VR files add no message id and no version bump
         var protocol = Read("src/TLDRevamp/Net/Protocol.cs");

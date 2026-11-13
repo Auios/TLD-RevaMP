@@ -114,30 +114,5 @@ namespace TLDRevamp.Net
             else h.Until = Mathf.Min(h.Until, now);   // let go after a start: no longer than now
             KeyHoldsApplied++;
         }
-
-        /// Test (bridge `mp key <net> <seconds>`): the local player holds car <net>'s ignition key for that long, as
-        /// fpscontroller does while the use button is down on it (`mp key <net>`: the car's ignition and engine here).
-        private static float _keyTestUntil; private static carscript _keyTestCar;
-        public static string KeyTest(uint net, float secs)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null || e.Root.car == null) return "{\"error\":\"no such car here\"}";
-            var c = e.Root.car;
-            if (secs > 0f) { _keyTestCar = c; _keyTestUntil = Time.time + secs; }
-            var eng = c.Engine;
-            return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"ignition\":" + (c.ignition ? "true" : "false") + ",\"running\":" + (eng != null && eng.running ? "true" : "false") +
-                   ",\"key\":" + (c.ignitionUsable != null ? "true" : "false") + ",\"sent\":" + KeyHoldsSent + ",\"applied\":" + KeyHoldsApplied + ",\"refused\":" + KeyHoldsRefused + "}";
-        }
-
-        internal static void EndKeyTest(bool expire = false)
-        {
-            if (expire) _keyTestUntil = Time.time - 1;
-            _keyTestCar = null;
-        }
-        private static void KeyTestTick()
-        {
-            if (_keyTestCar == null) return;
-            if (Time.time > _keyTestUntil || _keyTestCar.ignitionUsable == null) { _keyTestCar = null; return; }
-            _keyTestCar.ignitionUsable.lastHoldTime = Time.time;
-        }
     }
 }

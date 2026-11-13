@@ -22,12 +22,12 @@ namespace TLDRevamp
             float now = Time.realtimeSinceStartup;
             if (_width != width || _revision != OverlayStyle.Revision || _screenWidth != Screen.width)
             { _width = width; _revision = OverlayStyle.Revision; _screenWidth = Screen.width; _nextPackets = 0; }
-            if (Net.NetMeter.Show && now >= _nextPackets)
+            if (TLDRevamp.Net.NetMeterTools.Show && now >= _nextPackets)
             { _nextPackets = now + .5f; Packets.Rebuild(width, Net.Mp.Client != null || Net.Mp.Server != null); }
             Notice.Measure(Net.ItemTraffic.Show ? "RevaMP · Item traffic" : "RevaMP · Debug view: Everything", "Not in a multiplayer game");
             NetworkConditions.Measure(); WorldOverlays.MeasureMore(); ObjectPanels.ReserveLayout(width);
             bool notice = DebugView.Active && !Net.Entities.InSession && (WorldOverlays.Ownership || WorldOverlays.Ghost || WorldOverlays.Links || Net.ItemTraffic.Show);
-            request.Packets = Net.NetMeter.Show && !DebugV2.Hidden ? Packets.Height : 0;
+            request.Packets = TLDRevamp.Net.NetMeterTools.Show && !DebugV2.Hidden ? Packets.Height : 0;
             request.Card = ObjectPanels.CardHeight; request.Compare = ObjectPanels.CompareHeight;
             request.Network = NetworkConditions.BarHeight; request.NetworkWidth = NetworkConditions.BarWidth;
             request.More = WorldOverlays.MoreHeight; request.MoreWidth = WorldOverlays.MoreWidth;

@@ -27,13 +27,11 @@ namespace TLDRevamp.Net
         /// The world's data files, hashed once per change (a few hundred MB: on a worker thread at start, cached by
         /// name, size and time in BepInEx/cache).
         private static Task<string> _data;
-        /// Tests (bridge `set`): this machine claims these game data instead of its own, to see a join refused.
-        public static string TestGameData;
         public static string GameData
         {
             get
             {
-                if (!string.IsNullOrEmpty(TestGameData)) return TestGameData;
+                if (!string.IsNullOrEmpty(DevHooks.GameData?.Invoke())) return DevHooks.GameData?.Invoke();
                 if (_data == null) Start();
                 try { return _data.Wait(30000) ? _data.Result : "unknown"; }
                 catch { return "unknown"; }

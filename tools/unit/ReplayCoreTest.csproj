@@ -3,5 +3,6 @@
   <ItemGroup>
     <Compile Include="ReplayCoreTest.cs" />
     <Compile Include="../../src/TLDRevamp/Replay/ReplayCore.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Replay/ReplayCommandPolicy.cs" />
   </ItemGroup>
 </Project>

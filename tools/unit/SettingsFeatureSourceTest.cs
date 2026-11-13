@@ -64,11 +64,11 @@ static class SettingsFeatureSourceTest
 
         string admin = Read("src/TLDRevamp/Net/Admin.cs");
         string dedicated = Read("src/TLDRevamp/Net/DedicatedServer.cs");
-        string bridge = Read("src/TLDRevamp/DebugBridge.cs");
+        string bridge = Read("src/TLDRevamp.Dev/DebugBridge.cs");
         string mp = Read("src/TLDRevamp/Net/Mp.cs");
         string screen = Read("src/TLDRevamp/Net/MpScreen.cs");
         string settings = Read("src/TLDRevamp/Net/SessionSettings.cs");
-        string data = Read("src/TLDRevamp/Net/SessionSettingsData.cs");
+        string data = (Read("src/TLDRevamp/Net/SessionSettingsData.cs") + Read("src/TLDRevamp.Dev/Net/SessionSettingsData.cs"));
 
         P0_Sinks(admin, data);
         P1_OnePasswordPath(dedicated, settings);
@@ -162,7 +162,7 @@ static class SettingsFeatureSourceTest
     {
         // The gate is ONE rule, in the pure core, so it can be tested as a property. A gate spelled out in
         // the bridge can only be checked by reading it, and it can drift from the rule it claims to follow.
-        Check("S-P1.10 the gate is one rule", bridge.Contains("SessionSettingsPolicy.BridgeAllowed("),
+        Check("S-P1.10 the gate is one rule", bridge.Contains("SessionSettingsPolicyTools.BridgeAllowed("),
             "the gate is spelled out in the bridge, so it cannot be tested on its own");
         // the refusal must be the ONE answer: the bridge must not spell out its own error string, or it can
         // drift from the rule that the rest of the code (and the client) reads.
@@ -183,7 +183,7 @@ static class SettingsFeatureSourceTest
 
         // the bridge calls the rule with the host's own state
         Check("S-P1.15 the bridge tells the rule whether it is hosting",
-            bridge.Contains("Net.SessionSettingsPolicy.BridgeAllowed(Net.Mp.Server != null,"),
+            bridge.Contains("Net.SessionSettingsPolicyTools.BridgeAllowed(Net.Mp.Server != null,"),
             "the bridge does not say whether it is hosting");
     }
 

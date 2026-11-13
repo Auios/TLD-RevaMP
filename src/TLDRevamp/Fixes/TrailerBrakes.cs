@@ -27,7 +27,6 @@ namespace TLDRevamp.Fixes
         public static float LeverShare = 1f;
         public static long Braking;
         public static string Last = "";   // the last braking trailer: masses, k, torque (tests)
-        public static bool TestAlone;   // tests: the run-key brake held (bridge `set`)
 
         private sealed class State { public bool Set; public bool Alone; }
         private static readonly ConditionalWeakTable<utanfutoscript, State> States = new ConditionalWeakTable<utanfutoscript, State>();
@@ -83,7 +82,7 @@ namespace TLDRevamp.Fixes
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || !pl.Bsitting || pl.seat == null || !pl.seat.driverSeat0 || pl.seat.transform.root != car.transform.root) return false;
             var inp = inputscript.i;
-            return TestAlone || (inp != null && inp.run && !inp.lean);
+            return (DevHooks.TrailerBrake?.Invoke() ?? false) || (inp != null && inp.run && !inp.lean);
         }
 
         /// The trailer's brake lights while the run key brakes it alone.

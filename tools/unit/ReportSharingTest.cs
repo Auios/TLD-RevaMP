@@ -206,14 +206,14 @@ static class ReportSharingTest
         Start(false, true, Path.Combine(root, "uploader"));
         Mp.Client.Blocked = true;
         Reports.MarkCompletion(ReportTransfer.MomentName("0123456789abcdef", 100.125, "wheelbug"), "wheelbug", 100.125)(path);
-        Pump(() => Reports.Stats().Contains("\"queued\":1"));
+        Pump(() => TLDRevamp.Net.Reports.Stats().Contains("\"queued\":1"));
         for (int i = 0; i < 10; i++) Reports.Tick();
         Check("busy reliable queue retains offset", Reports.FilesSent == 0 && Mp.Client.Packets.Count == 0);
         Mp.Client.Blocked = false; Pump(() => Reports.FilesSent == 1);
         Check("local client mark uploads after queue clears", Mp.Client.Packets.Count == 1 && Mp.Client.Packets[0][0] == Reports.ReportChunk && Reports.BytesSent == payload.Length);
         var oldCompletion = Reports.MarkCompletion(ReportTransfer.MomentName("0123456789abcdef", 100.125, "wheelbug"), "wheelbug", 100.125);
         Reports.Share = false; Reports.Share = true; oldCompletion(path); Reports.Tick();
-        Check("off/on does not resurrect old capture", Reports.FilesSent == 1 && Reports.Stats().Contains("\"queued\":0"));
+        Check("off/on does not resurrect old capture", Reports.FilesSent == 1 && TLDRevamp.Net.Reports.Stats().Contains("\"queued\":0"));
 
         Start(true, true, Path.Combine(root, "host-on")); Consent(1, true);
         Reports.MarkCompletion(ReportTransfer.MomentName("0123456789abcdef", 100.125, "wheelbug"), "wheelbug", 100.125)(path);
@@ -283,12 +283,12 @@ static class ReportSharingTest
         Start(true, true, Path.Combine(root, "validation-refusal")); Consent(1, true);
         Reports.ServerChunk(1, 1234, "Ylva Testperson", Reader(Chunk(unsafePayload)));
         Pump(() => Reports.Refusals == 1);
-        Check("receiver exposes validation refusal without private literal", Reports.FilesReceived == 0 && Reports.Stats().Contains("\"validate mark: unapproved JSON string\":1") && !Reports.LastDrop.Contains("Ylva"));
+        Check("receiver exposes validation refusal without private literal", Reports.FilesReceived == 0 && TLDRevamp.Net.Reports.Stats().Contains("\"validate mark: unapproved JSON string\":1") && !Reports.LastDrop.Contains("Ylva"));
         File.WriteAllText(path, unsafeBox, new UTF8Encoding(false));
         Start(false, true, Path.Combine(root, "preparation-refusal"));
         Reports.MarkCompletion(ReportTransfer.MomentName("0123456789abcdef", 100.125, ""), "", 100.125)(path);
         Pump(() => Reports.Refusals == 1);
-        Check("sender exposes preparation refusal before sending", Reports.FilesSent == 0 && Reports.Stats().Contains("\"prepare mark: unapproved JSON string\":1"));
+        Check("sender exposes preparation refusal before sending", Reports.FilesSent == 0 && TLDRevamp.Net.Reports.Stats().Contains("\"prepare mark: unapproved JSON string\":1"));
 
         string futureBox = Box.Substring(0, Box.Length - 1) + ",\"futureCounter\":17,\"futureTree\":{\"samples\":[true,null,3]},\"futureText\":\"Ylva Testperson\",\"unsafe key\":1}";
         byte[] futurePayload = ReportTransfer.Compress(Encoding.UTF8.GetBytes(futureBox));
@@ -299,7 +299,7 @@ static class ReportSharingTest
         Check("receiver scrubs and relays additive schema", Reports.FilesReceived == 1 && Reports.FilesRelayed == 1 && Reports.Refusals == 0);
         string saved = File.ReadAllText(Reports.LastReceived);
         Check("receiver saved numeric fields and removed private string/key", saved.Contains("\"futureCounter\":17") && saved.Contains("[removed]") && !saved.Contains("Ylva") && !saved.Contains("unsafe key"));
-        Check("receiver exposes per-file and total scrub counts", Reports.FieldsScrubbed == 1 && Reports.KeysDropped == 1 && Reports.LastFieldsScrubbed == 1 && Reports.LastKeysDropped == 1 && Reports.Stats().Contains("\"scrubbedFiles\":1"));
+        Check("receiver exposes per-file and total scrub counts", Reports.FieldsScrubbed == 1 && Reports.KeysDropped == 1 && Reports.LastFieldsScrubbed == 1 && Reports.LastKeysDropped == 1 && TLDRevamp.Net.Reports.Stats().Contains("\"scrubbedFiles\":1"));
         Check("one notice includes safe key path only", Plugin.Log.Lines.Count == 1 && Plugin.Log.Lines[0].Contains("$.futureText") && !Plugin.Log.Lines[0].Contains("Ylva"));
         relayed = Mp.Server.Packets[0].Bytes;
         Reports.ServerChunk(1, 1234, "Ylva Testperson", Reader(Chunk(futurePayload, 2)));

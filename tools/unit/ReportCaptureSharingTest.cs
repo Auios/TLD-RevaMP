@@ -78,7 +78,7 @@ static class ReportCaptureSharingTest
             SessionLog.Frame(16, telemetry.Breakdown); Plugin.Instance.Feedback.Tick(); Reports.Tick();
         });
         Check(label + " completed capture sends", Reports.FilesSent == 1 && Reports.Refusals == 0);
-        if (Reports.FilesSent != 1) { Console.WriteLine(Reports.Stats()); return; }
+        if (Reports.FilesSent != 1) { Console.WriteLine(TLDRevamp.Net.Reports.Stats()); return; }
         Check(label + " per-file scrub counts", Reports.LastFieldsScrubbed == (scrub ? 1 : 0) && (!mark || Reports.LastKeysDropped == (scrub ? 1 : 0)) && Reports.FieldsScrubbed == (scrub ? 1 : 0));
         string tick = (string)typeof(SessionLog).GetMethod("TickLine", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { SessionLog.St });
         using (var line = JsonDocument.Parse(tick))
@@ -97,7 +97,7 @@ static class ReportCaptureSharingTest
         }
         Pump(() => Reports.FilesReceived == 1 || Reports.Refusals > 0, Reports.Tick);
         Check(label + " receiver saves", Reports.FilesReceived == 1 && Reports.Refusals == 0);
-        if (Reports.FilesReceived != 1) { Console.WriteLine(Reports.Stats()); return; }
+        if (Reports.FilesReceived != 1) { Console.WriteLine(TLDRevamp.Net.Reports.Stats()); return; }
         Check(label + " indexed filename", Path.GetFileName(Reports.LastReceived).Contains("-from-p" + (host ? 0 : 1) + "-") &&
             (!mark || Path.GetFileName(Reports.LastReceived).StartsWith(ReportTransfer.MomentBase(sid, moment))));
         byte[] json;
@@ -122,7 +122,7 @@ static class ReportCaptureSharingTest
         Check(label + " completed format 3 and cleaned note", doc.RootElement.GetProperty("head").GetProperty("complete").GetBoolean() &&
             doc.RootElement.GetProperty("head").GetProperty("format").GetInt32() == 3 &&
             doc.RootElement.GetProperty("head").GetProperty("note").GetString() == "held [removed]");
-        Check(label + " diagnostic counters", Reports.Stats().Contains("\"received\":1") && Reports.Stats().Contains("\"refusals\":0"));
+        Check(label + " diagnostic counters", TLDRevamp.Net.Reports.Stats().Contains("\"received\":1") && TLDRevamp.Net.Reports.Stats().Contains("\"refusals\":0"));
     }
     static int Main(string[] args)
     {

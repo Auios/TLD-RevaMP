@@ -16,7 +16,6 @@ namespace TLDRevamp.Net
     {
         public static MpServer Server;
         public static MpClient Client;
-        public static readonly List<MpClient> Bots = new List<MpClient>();
 
         public static string Host(ushort port, string password = "")
         {
@@ -161,112 +160,11 @@ namespace TLDRevamp.Net
 
         public const int P2PPort = 0;
 
-        /// radius < 0: spread the bots over distance tiers (|radius|·{0.01, 0.1, 1}: e.g. −200000 → 2 km, 20 km, 200 km).
-        /// Load test: bots that drive — each shares a copy of BotCarRecord (bridge `mp botcar`: the car nearest the player)
-        /// and sends that car's state at the players' rate, wheels and engine included (torques too when BotTorques: as
-        /// a car within 40 m of another player's). To the host and every client they cost what a driving player costs.
-        public static byte[] BotCarRecord;
-        public static bool BotCars, BotTorques = true;
-        /// Test: bots send the host player's own pose (limbs, hum, pee) as theirs — what the host does shows on every bot's model.
-        public static bool BotPoses;
-        /// Test (Entities.Cargo): a bot that owns a loose item and keeps it at Offset in the car nearest the host's
-        /// player, Lag seconds late (a remote owner's view of it), Held = in its hands.
-        public static byte[] BotItemRecord; public static tosaveitemscript BotItemCar; public static Vector3 BotItemOffset;
-        public static float BotItemLag = 0.2f; public static bool BotItemHeld;
-        /// Test: every item bot bolts its item onto `slot` of `carNet` (the AttachSync a remote player's attach key sends).
-        public static string BotAttach(uint carNet, string slot)
-        {
-            if (DevHooks.SlotRef == null || !DevHooks.SlotRef(carNet, slot, out int parentIdx, out int index, out var lpos, out var gpos)) return "{\"error\":\"no such slot\"}";
-            int n = 0;
-            foreach (var b in Bots) if (b.SendItemAttach(carNet, parentIdx, index, lpos, gpos)) n++;
-            return "{\"sent\":" + n + ",\"parentIdx\":" + parentIdx + ",\"index\":" + index + "}";
-        }
-
-        public static string AddItemBot(string[] a)
-        {
-            if (Server == null) return "{\"error\":\"host first\"}";
-            var ic = System.Globalization.CultureInfo.InvariantCulture;
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null) return "{\"error\":\"no player\"}";
-            tosaveitemscript item = null; float best = 15f;
-            if (a.Length > 5) item = Entities.RootOfNet(uint.Parse(a[5], ic));   // a given shared item
-            if (item == null) foreach (var it in savedatascript.s.items.Values)
-            {
-                if (it == null || it.car != null || it.transform.parent != null || it.P == null || (it.attachable != null && it.attachable.attached)) continue;
-                float d = (it.transform.position - pl.transform.position).magnitude;
-                if (d < best) { best = d; item = it; }
-            }
-            if (item == null) return "{\"error\":\"no loose item within 15 m\"}";
-            BotItemCar = Entities.NearestCar();
-            if (BotItemCar == null) return "{\"error\":\"no car near\"}";
-            BotItemRecord = Entities.CaptureRecord(item);
-            BotItemOffset = new Vector3(float.Parse(a[0], ic), float.Parse(a[1], ic), float.Parse(a[2], ic));
-            if (a.Length > 3) BotItemLag = float.Parse(a[3], ic);
-            if (a.Length > 4) BotItemHeld = a[4] == "1" || a[4] == "True" || a[4] == "true";
-            var home = LocalGlobal();
-            Bots.Add(new MpClient(SteamTransport.ConnectIP("127.0.0.1:" + Server.Port), new BotMotion(home, 4f, 0f, 0f)) { ItemRecord = BotItemRecord });
-            return "{\"item\":" + Json.Str(item.name) + ",\"car\":" + Json.Str(BotItemCar.name) + ",\"bytes\":" + BotItemRecord.Length + "}";
-        }
-        public static int BotDriverSeat;
-        public static string CaptureBotCar()
-        {
-            var root = Entities.NearestCar();
-            if (root == null) return "{\"error\":\"no car near\"}";
-            BotCarRecord = Entities.CaptureRecord(root);
-            var seats = root.GetComponentsInChildren<seatscript>(true);
-            BotDriverSeat = System.Array.FindIndex(seats, x => x.driverSeat0);
-            return "{\"car\":" + Json.Str(root.name) + ",\"bytes\":" + BotCarRecord.Length + ",\"driverSeat\":" + BotDriverSeat + "}";
-        }
-
-        public static string AddBots(int n, float radius, float speed)
-        {
-            if (Server == null) return "{\"error\":\"host first\"}";
-            if (BotCars && BotCarRecord == null) return "{\"error\":\"mp botcar first\"}";
-            var home = LocalGlobal();
-            for (int i = 0; i < n; i++)
-            {
-                float a = (Bots.Count + i) * Mathf.PI * 2f / Mathf.Max(1, Bots.Count + n);
-                float r = radius >= 0 ? radius : -radius * (i % 3 == 0 ? 0.01f : i % 3 == 1 ? 0.1f : 1f);
-                Bots.Add(new MpClient(SteamTransport.ConnectIP("127.0.0.1:" + Server.Port), new BotMotion(home, r, a, speed / Mathf.Max(1f, r))) { CarRecord = BotCars ? BotCarRecord : null });
-            }
-            return Status();
-        }
-
-        /// Bots on ANOTHER machine (§9a: the host's own loopback bots cost it nothing on the network): this game connects
-        /// n bot players to a host over Steam (relay included), each circling its own spot. spreadKm > 0: the spots are
-        /// spread around this player up to that far (players far apart). Runs in a joiner's game or one in no session.
-        public static string AddRemoteBots(int n, ulong hostSteamId, float radius, float speed, float spreadKm)
-        {
-            if (Server != null) return "{\"error\":\"not on the host: mp bots\"}";
-            var home = LocalGlobal();
-            var rnd = new System.Random(Bots.Count * 7919 + n);
-            for (int i = 0; i < n; i++)
-            {
-                var c = home;
-                if (spreadKm > 0f)
-                {
-                    double ang = rnd.NextDouble() * Math.PI * 2, d = Math.Sqrt(rnd.NextDouble()) * spreadKm * 1000.0;
-                    c = new Vector3d(home.x + Math.Cos(ang) * d, home.y, home.z + Math.Sin(ang) * d);
-                }
-                float a = (Bots.Count + i) * Mathf.PI * 2f / Mathf.Max(1, Bots.Count + n);
-                Bots.Add(new MpClient(SteamTransport.ConnectP2P(hostSteamId, P2PPort), new BotMotion(c, radius, a, speed / Mathf.Max(1f, radius))) { HostSteamId = hostSteamId });
-            }
-            return Status();
-        }
-
-        /// Bots leave (joins and leaves during a long session): the last n.
-        public static string DropBots(int n)
-        {
-            for (int i = 0; i < n && Bots.Count > 0; i++) { var b = Bots[Bots.Count - 1]; Bots.RemoveAt(Bots.Count - 1); b.Dispose(); }
-            return Status();
-        }
-
         public static string Stop(bool fromSceneLoad = false)
         {
             JoinLoading.End(Session.EndReason ?? "stopped");
             bool wasHost = Server != null;
-            foreach (var b in Bots) b.Dispose();
-            Bots.Clear(); DevHooks.SessionStopped?.Invoke();
+            DevHooks.SessionStopped?.Invoke();
             if (Client != null) { TestSafety.InHostWorld = false; GameMode.RestoreOwn(); }   // leaving the host's world: the player's own saving rules and game mode again (a test's block stays)
             if (Client != null) { try { if (!fromSceneLoad) PlayerSave.ClientLeaving(); Client.Leave(); } catch (Exception e) { Plugin.Log.LogWarning("player save on leave: " + e.Message); } }
             if (Server != null) { try { var ps = new List<Session.Player>(); Server.Players(ps); PlayerSave.ServerStopping(ps); } catch (Exception e) { Plugin.Log.LogWarning("player save on stop: " + e.Message); } }
@@ -294,7 +192,7 @@ namespace TLDRevamp.Net
             // edits — all of it lives in the host's world). Vanilla has no final save on quit, so it would lose
             // everything since the last autosave. Skipped for scene loads (vanilla loses that tail too, and saving
             // mid-transition risks writing half-reset state).
-            if (wasHost && !fromSceneLoad && !TestSafety.BlockAutoSave) SaveTail(sessionEnd: true);
+            if (wasHost && !fromSceneLoad && !(DevHooks.SaveVeto?.Invoke() ?? false)) SaveTail(sessionEnd: true);
             TelemetryHooks.DrainSaves(); SessionLog.EndWorld(fromSceneLoad); SessionLog.Sid = null;
             ModObjects.ResetClock(); TelemetryMarks.Reset();
             return "{\"stopped\":true}";
@@ -306,9 +204,6 @@ namespace TLDRevamp.Net
         public static float LastSaveMs; public static int LastSaveItems;
         // togglable diagnostics: `set TLDRevamp.Net.Mp.RemoteTrace True` (bridge) — logs remote-player lifecycle
         public static bool RemoteTrace;
-        /// Test only (savetail.py): treat the player's Autosave setting as off — the real setting is never touched (the
-        /// game writes settings.tldc when its menu closes: a test's "off" once reached the player's real settings).
-        public static bool TestAutosaveOff;
         public static long SaveTailSkipped;
         internal static bool AutoSaving;
 
@@ -319,7 +214,7 @@ namespace TLDRevamp.Net
             {
                 // ending a session is an autosave: only if the player has autosave on (it overwrote autosave1 for players
                 // who had turned it off); `mp save` is an explicit save
-                bool autosaveOn = !TestAutosaveOff && (settingsscript.s == null || settingsscript.s.S == null || settingsscript.s.S.BAutoSave);
+                bool autosaveOn = !(DevHooks.AutosaveOff?.Invoke() ?? false) && (settingsscript.s == null || settingsscript.s.S == null || settingsscript.s.S.BAutoSave);
                 if (sessionEnd && !autosaveOn) { SaveTailSkipped++; Plugin.Log.LogInfo("session end: no save (the player's autosave is off)"); return "{\"saved\":false,\"why\":\"autosave off\"}"; }
                 var scr = savedatascript.s != null ? savedatascript.s.saveScreen : null;
                 if (scr == null) scr = UnityEngine.Object.FindObjectOfType<newSaveScreenScript>(true);
@@ -419,7 +314,7 @@ namespace TLDRevamp.Net
             Guard(0, "server", () => Server?.Tick());
             Guard(1, "client", () => Client?.Tick());
             Guard(2, "session", Session.Tick);
-            Guard(3, "bots", () => { for (int i = 0; i < Bots.Count; i++) Bots[i].Tick(); DevHooks.BotsTick?.Invoke(); });
+            Guard(3, "bots", () => { DevHooks.BotsTick?.Invoke(); });
             Guard(4, "players", RemotePlayers.Tick);
             Guard(5, "entities", Entities.Tick);
             Guard(7, "mods", () => { Server?.UploadTick(); ModObjects.Tick(); });
@@ -462,18 +357,8 @@ namespace TLDRevamp.Net
             var parts = new List<string>();
             if (Server != null) parts.Add("\"server\":" + Server.StatusJson());
             if (Client != null) parts.Add("\"client\":" + Client.StatusJson());
-            if (Bots.Count > 0)
-            {
-                int ready = 0; long inB = 0, outB = 0; int pingSum = 0, pingN = 0, pingMax = 0;
-                foreach (var b in Bots)
-                {
-                    if (b.MyId > 0) ready++;
-                    inB += b.T.BytesIn; outB += b.T.BytesOut;
-                    if (b.T.Connections.Count > 0) { int pg = b.T.Status(b.T.Connections[0]).Ping; if (pg >= 0) { pingSum += pg; pingN++; if (pg > pingMax) pingMax = pg; } }
-                }
-                parts.Add("\"bots\":{\"count\":" + Bots.Count + ",\"ready\":" + ready + ",\"bytesIn\":" + inB + ",\"bytesOut\":" + outB +
-                          ",\"pingAvg\":" + (pingN > 0 ? pingSum / pingN : -1) + ",\"pingMax\":" + pingMax + ",\"lag\":" + Json.Str(DevHooks.LagInfo?.Invoke() ?? "off") + "}");
-            }
+            string bots = DevHooks.BotStatus?.Invoke();
+            if (bots != null) parts.Add(bots);
             parts.Add("\"remotePlayers\":" + RemotePlayers.Count);
             return "{" + string.Join(",", parts) + "}";
         }
@@ -491,21 +376,6 @@ namespace TLDRevamp.Net
         internal static int MapType() => gamemodesettingsscript.s != null && gamemodesettingsscript.s.S != null ? (int)gamemodesettingsscript.s.S.map.map.tip : 0; // standard/image/custom map type (custom map names not compared yet)
 
         internal static ulong MySteamId() => SteamTransport.SteamReady ? SteamUser.GetSteamID().m_SteamID : 0;
-    }
-
-    /// A bot's movement: a circle around a centre (global coordinates), like MpLab's fake players.
-    public sealed class BotMotion
-    {
-        private readonly Vector3d _center;
-        private readonly float _radius, _omega;
-        private float _angle;
-        public BotMotion(Vector3d center, float radius, float angle, float omega) { _center = center; _radius = radius; _angle = angle; _omega = omega; }
-        public Vector3d Step(float dt, out float yaw)
-        {
-            _angle += _omega * dt;
-            yaw = -_angle * Mathf.Rad2Deg;
-            return new Vector3d(_center.x + Math.Cos(_angle) * _radius, _center.y, _center.z + Math.Sin(_angle) * _radius);
-        }
     }
 
     public sealed partial class MpServer : IDisposable
@@ -1035,7 +905,7 @@ namespace TLDRevamp.Net
         /// the state a copy ends on. Copies interpolate over the spacing they actually receive (PoseInterpolator).
         public static double CarNearM = 150, CarMidM = 400, CarFarM = 2000;
         public static float CarMidInterval = 0.1f, CarFarInterval = 0.25f;
-        /// Beyond CarFarM: a state every 5 s (plus rest states and driver changes). Nothing at all (≤ v0.57.94) left
+        /// Beyond CarFarM: a state every 5 s (plus rest states and driver changes). Nothing at all (â‰¤ v0.57.94) left
         /// every far player's stored copy where the car was when it last came near them: arriving there showed a parked
         /// ghost of a car that was 50 km away, and their save kept it there. ~60 bytes per car per 5 s per player.
         public static float CarBeyondInterval = 5f;
@@ -1103,7 +973,6 @@ namespace TLDRevamp.Net
     {
         internal static Action<byte, NetReader> DiagnosticMessage;
         public readonly SteamTransport T;
-        public readonly BotMotion Bot;   // null = the local player
         internal interface IClientController
         {
             string Name { get; }
@@ -1116,6 +985,7 @@ namespace TLDRevamp.Net
             void Receive(byte type, NetReader reader);
             void Tick(int myId);
         }
+        internal Action ControllerStateSent;
         internal IClientController Player;       // a player bot (PlayerBotCore): its own moves, seat and claims instead of Bot's circle
         internal string JoinAddress;     // joined by IP: where (a player bot made in this game joins the same way)
         public int MyId = -1;
@@ -1143,17 +1013,9 @@ namespace TLDRevamp.Net
         private bool _helloSent;
         private float _sendAcc;
         private ushort _seq;
-        private Vector3d _botPos;
-        private float _botYaw;
         private int _outfitHash;
         private float _outfitCheck;
         public long PosesIn;
-        // load-test bots that drive (Mp.BotCars): the shared car and its state stream
-        public byte[] ItemRecord; private bool _itemShared; private uint _itemNet, _itemEpoch; private ushort _itemSeq;
-        private readonly List<KeyValuePair<double, Vector3d>> _itemHistP = new List<KeyValuePair<double, Vector3d>>();
-        private readonly List<Quaternion> _itemHistQ = new List<Quaternion>();
-        public byte[] CarRecord; private bool _carShared; private uint _carNet, _carEpoch; private ushort _carSeq; private Vector3d _carPrev; private double _carPrevT; private bool _carHasPrev;
-        private Vector3d _gA, _gB; private bool _gSeg;   // ground under the bot's path: a sample behind, one 3 m ahead
         private bool _readySent;
         private float _loadStarted = -1f, _worldSeenAt = -1f;
         private int _spotState; private float _spotAt;   // 0 ask, 1 asked, 2 placing, 3 done (Ready may go)
@@ -1164,25 +1026,25 @@ namespace TLDRevamp.Net
         internal bool SpotPlaced => _spotState == 3;
         internal bool WorldLoaded => _loadStarted >= 0 && !Mp.HostWorldLoad && DataFromMenuScript.s != null && !DataFromMenuScript.s.mainmenu && !DataFromMenuScript.s.load && mainscript.s != null && mainscript.s.player != null && mainscript.s.player.loadedmove && menuhandler.s != null && menuhandler.s.currentMainMap != null && menuhandler.s.currentMainMap.firstRun && Mp.Seed() == ServerSeed;
 
-        public MpClient(SteamTransport transport, BotMotion bot)
+        internal MpClient(SteamTransport transport, IClientController controller)
         {
-            Bot = bot;
+            Player = controller;
             T = transport;
             _conn = T.Connections[0];
-            T.Connected = _ => { if (Bot == null) SessionLog.JoinStage("connect"); SendHello(); };
+            T.Connected = _ => { if (Player == null) SessionLog.JoinStage("connect"); SendHello(); };
             T.Message = OnTransport;
             T.Disconnected = _ => { Lost = true; if (RejectReason == null) RejectReason = JoinChecks.LostReason(T.LastEndUnreached, T.LastEnd); };
         }
 
         /// Tests (tools/oct17.py): the Hello claims this Steam ID instead of this machine's own (a forged identity).
-        public static ulong TestClaimSteamId;
+
 
         private void SendHello()
         {
             if (_helloSent) return;
             _helloSent = true;
-            _w.Reset(); _w.U8(Protocol.Hello); _w.U16(Protocol.Version); _w.Str(Plugin.Version); _w.U64(TestClaimSteamId != 0 ? TestClaimSteamId : Mp.MySteamId());
-            _w.Str(Player != null ? Player.Name : Bot != null ? "bot" : Session.MyName());
+            _w.Reset(); _w.U8(Protocol.Hello); _w.U16(Protocol.Version); _w.Str(Plugin.Version); _w.U64((DevHooks.ClaimSteamId?.Invoke() ?? 0) is ulong claimed && claimed != 0 ? claimed : Mp.MySteamId());
+            _w.Str(Player != null ? Player.Name : Session.MyName());
             // The password goes on the wire cleaned, whatever route it took to get here: the host's side is
             // cleaned when it is stored, so a raw value here would never match and the joiner would be told
             // the password is wrong for typing exactly what the host set.
@@ -1202,62 +1064,18 @@ namespace TLDRevamp.Net
         public static float HostSilentNoticeS = 5f;
         private void SilenceCheck()
         {
-            if (Bot != null || !Ready || _heardAt <= 0f || _silentShown || HostSilentNoticeS <= 0f) return;
+            if (Player != null || !Ready || _heardAt <= 0f || _silentShown || HostSilentNoticeS <= 0f) return;
             if (Time.realtimeSinceStartup - _heardAt < HostSilentNoticeS) return;
             _silentShown = true;
             Session.Show(1, "", "The host isn't responding...");
         }
 
-        /// Test (`mp stall <s>`): what a Wi-Fi stall looks like from here — every message from the host held for that long,
-        /// then handled all at once, in order (the stall in twocars A, 2026-10-08: ~1 s without states on the laptop).
-        public static float StallUntil;
-        public static long StalledMessages;
-        private readonly Queue<byte[]> _stalled = new Queue<byte[]>();
-        private readonly NetReader _replay = new NetReader();
-        /// Test (`mp lag <ms>`): a lasting extra delay on every message from the host (a new, longer route), in order;
-        /// 0 ends it (what is queued still comes when due).
-        public static float LagS;
-        public static long LaggedMessages;
-        private readonly Queue<KeyValuePair<float, byte[]>> _lagged = new Queue<KeyValuePair<float, byte[]>>();
-        private void OnTransport(HSteamNetConnection c, NetReader r)
+        private void OnTransport(HSteamNetConnection connection, NetReader reader)
         {
-            if (Time.realtimeSinceStartup < StallUntil)
-            {
-                var b = new byte[r.Remaining]; Array.Copy(r.Buf, r.Pos, b, 0, b.Length);
-                _stalled.Enqueue(b); StalledMessages++;
-                return;
-            }
-            ReplayStalled(c);
-            if (LagS > 0f || _lagged.Count > 0)
-            {
-                var b = new byte[r.Remaining]; Array.Copy(r.Buf, r.Pos, b, 0, b.Length);
-                _lagged.Enqueue(new KeyValuePair<float, byte[]>(Time.realtimeSinceStartup + LagS, b)); LaggedMessages++;
-                return;
-            }
-            OnMessage(c, r);
+            if (DevHooks.ClientMessage?.Invoke(this, reader) ?? false) return;
+            OnMessage(connection, reader);
         }
-
-        private void ReleaseLagged(HSteamNetConnection c)
-        {
-            float now = Time.realtimeSinceStartup;
-            while (_lagged.Count > 0 && _lagged.Peek().Key <= now)
-            {
-                var b = _lagged.Dequeue().Value;
-                _replay.Load(b.Length); Array.Copy(b, 0, _replay.Buf, 0, b.Length);
-                try { OnMessage(c, _replay); } catch (Exception e) { Plugin.Log.LogError("net message handler (lagged): " + e); }
-            }
-        }
-
-        private void ReplayStalled(HSteamNetConnection c)
-        {
-            while (_stalled.Count > 0)
-            {
-                var b = _stalled.Dequeue();
-                _replay.Load(b.Length); Array.Copy(b, 0, _replay.Buf, 0, b.Length);
-                try { OnMessage(c, _replay); } catch (Exception e) { Plugin.Log.LogError("net message handler (replayed): " + e); }
-            }
-        }
-
+        internal void DeliverObservedMessage(NetReader reader) => OnMessage(_conn, reader);
         private readonly NetReader _sub = new NetReader();
         public static long BatchSubErrors;
         private void OnMessage(HSteamNetConnection c, NetReader r)
@@ -1324,8 +1142,8 @@ namespace TLDRevamp.Net
                     SessionSettingsSnapshot.BindToHost(hostSettings.SessionToken);
                     DeveloperAccess.ApplyClientSnapshot(hostSettings, true);
                     if (hasTerrain) WorldGen.TerrainHooks.TakeHost(hostTerrain);
-                    if (Bot == null) WorldCheck.SessionBegins(host: false);   // before the host's world loads here
-                    if (Bot == null)
+                    if (Player == null) WorldCheck.SessionBegins(host: false);   // before the host's world loads here
+                    if (Player == null)
                     {
                         SessionLog.Sid = telemetrySid;
                         SessionLog.SessionDate = telemetryDate;
@@ -1333,7 +1151,7 @@ namespace TLDRevamp.Net
                         SessionLog.JoinStage("worldData");
                     }
                     _outfitCheck = 99f;
-                    if (Bot != null) { _readySent = true; W2.Reset(); W2.U8(Protocol.Ready); T.Send(_conn, W2, SteamTransport.SendReliable); break; }
+                    if (Player != null) { _readySent = true; W2.Reset(); W2.U8(Protocol.Ready); T.Send(_conn, W2, SteamTransport.SendReliable); break; }
                     if (map != Mp.MapType()) { RejectReason = "the host plays map type " + map + ", you " + Mp.MapType() + " — change it in the game mode settings"; break; }
                     // load the host's world: a fresh game with its seed and start car (the connection survives the scene
                     // load); the host owns the save, so this world never autosaves
@@ -1348,10 +1166,10 @@ namespace TLDRevamp.Net
                     if (DataFromMenuScript.s.mainmenu) menuhandler.s.PressedStart(); else menuhandler.s.PressedRestart();
                     break;
                 }
-                case Protocol.JoinLoading: if (Bot == null) JoinLoading.Manifest(r); break;
+                case Protocol.JoinLoading: if (Player == null) JoinLoading.Manifest(r); break;
                 case Protocol.SessionSettings:
                 {
-                    if (SessionSettingsSnapshot.TryRead(r, out var updated) && r.Remaining == 0 && Bot == null &&
+                    if (SessionSettingsSnapshot.TryRead(r, out var updated) && r.Remaining == 0 && Player == null &&
                         SessionSettingsSnapshot.AcceptFromBoundHost(updated))
                     {
                         DeveloperAccess.ApplyClientSnapshot(updated, false);
@@ -1367,7 +1185,7 @@ namespace TLDRevamp.Net
                     bool has = r.U8() == 1; double gx = has ? r.F64() : 0, gz = has ? r.F64() : 0;
                     if (r.Bad || _spotState != 1) break;
                     if (!has) { _spotState = 3; JoinSpotLast = "start"; break; }
-                    DebugBridge.PlaceAt(gx, gz); JoinPlaced++;
+                    GroundPlacement.PlaceAt(gx, gz); JoinPlaced++;
                     JoinSpotLast = gx.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "," + gz.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
                     _spotState = 2; _spotAt = Time.realtimeSinceStartup;
                     break;
@@ -1376,54 +1194,37 @@ namespace TLDRevamp.Net
                     RejectReason = r.Str(); RejectCode = r.Remaining > 0 ? r.U8() : Protocol.RejectOther;
                     if (ModBrowser.HasDisabled()) RejectReason += " You have disabled mods installed: enable the required mods in the mod browser and restart before joining again.";
                     break;
-                case Protocol.Chat: if (Bot == null) Session.ChatIn(r); break;
+                case Protocol.Chat: if (Player == null) Session.ChatIn(r); break;
                 case PlayerSave.Restore: PlayerSave.ClientRestoreIn(r); break;
-                case Tpa.GoMsg: if (Bot == null) Tpa.GoIn(r); break;
-                case Reports.SharedChunk: if (Bot == null) Reports.ClientChunk(r); break;
-                case Reports.ReportAsk: if (Bot == null) Reports.ClientAsk(r); break;
-                case TelemetryMarks.Message: if (Bot == null) TelemetryMarks.Client(r); break;
-                case Reports.MarkRename: if (Bot == null) Reports.ClientRename(r); break;
+                case Tpa.GoMsg: if (Player == null) Tpa.GoIn(r); break;
+                case Reports.SharedChunk: if (Player == null) Reports.ClientChunk(r); break;
+                case Reports.ReportAsk: if (Player == null) Reports.ClientAsk(r); break;
+                case TelemetryMarks.Message: if (Player == null) TelemetryMarks.Client(r); break;
+                case Reports.MarkRename: if (Player == null) Reports.ClientRename(r); break;
                 // The developer plugin supplies these diagnostic replies; normal clients need no handler.
                 case 106:
                 case 108:
-                case 109: if (Bot == null) DiagnosticMessage?.Invoke(type, r); break;
-                case Protocol.Roster: if (Bot == null) Session.RosterIn(r); break;
-                case Protocol.Voice: if (Bot == null) Voice.In(r); break;
-                case Protocol.PlayerJoined: { int id = (int)r.VarU32(); ulong sid = r.U64(); string name = Session.CleanName(r.Str()); if (id == 0) HostName = name; if (Bot == null) RemotePlayers.Joined(id, name, sid); break; }
+                case 109: if (Player == null) DiagnosticMessage?.Invoke(type, r); break;
+                case Protocol.Roster: if (Player == null) Session.RosterIn(r); break;
+                case Protocol.Voice: if (Player == null) Voice.In(r); break;
+                case Protocol.PlayerJoined: { int id = (int)r.VarU32(); ulong sid = r.U64(); string name = Session.CleanName(r.Str()); if (id == 0) HostName = name; if (Player == null) RemotePlayers.Joined(id, name, sid); break; }
                 case Protocol.OtherPose:
                 {
                     int id = (int)r.VarU32(); var pose = PlayerLook.ReadPose(r);
                     if (pose == null) return;
                     PosesIn++;
-                    if (Bot == null) RemotePlayers.Pose(id, pose);
-                    break;
-                }
-                case Entities.DetachReq when Bot != null:
-                {
-                    // test: a bot owns its car — a removal request is answered as the owner's game does (the part off, PartOff)
-                    uint net = r.U32(); int idx = (int)r.VarU32();
-                    if (r.Bad || net != _carNet || _carNet == 0) return;
-                    _w.Reset(); _w.U8(Entities.PartOff); _w.U32(_carNet); _w.U32(_carEpoch); _w.VarU32((uint)idx);
-                    var gp = _carPrev; _w.F64(gp.x); _w.F64(gp.y + 1.0); _w.F64(gp.z); _w.F32(0); _w.F32(0); _w.F32(0); _w.F32(1);
-                    T.Send(_conn, _w, SteamTransport.SendReliable);
-                    break;
-                }
-                case Entities.Assigned when Bot != null:
-                {
-                    uint local = r.U32(), net = r.U32(), ep = r.U32();
-                    if (local == 0xB1700000u + (uint)MyId) { _itemNet = net; _itemEpoch = ep; }   // our item's network id
-                    else { _carNet = net; _carEpoch = ep; }                                         // our car's
+                    if (Player == null) RemotePlayers.Pose(id, pose);
                     break;
                 }
                 case Entities.HandoverState:
                 case Entities.WorldClock: case Entities.RadioSync: case Entities.PhysLockSync: case Entities.StormSync: case Entities.Assigned: case Entities.Add: case Entities.RemoveItem: case Entities.SleepSync: case Entities.ContactImpulse: case Entities.DetachReq: case Entities.State: case Entities.CompactState: case Entities.Owner: case Entities.PartDetached: case Entities.LeaseGrant: case Entities.LeaseTaken: case Entities.LeaseFreed: case Entities.Resync: case Entities.Edit: case Entities.ShotgunIn: case Entities.PushIn: case Entities.AttachSync: case Entities.HitchRequest: case Entities.HitchCommand: case Entities.HitchFreeze: case Entities.HitchFrozen: case Entities.HitchResult: case Entities.AttachReq: case Entities.CensusRepair: case Entities.CensusAsk: case Entities.CensusReply: case Entities.DetachSync: case PlayerCombat.PlayerDamage: case Entities.ShotFx: case Entities.ExplodeReq: case Entities.ExplosionFx: case Entities.PlayerSound: case Entities.BreakHit: case Entities.BreakFx: case Entities.CarTune: case Entities.WorldBreak: case Entities.AiState: case Entities.AiSound: case Entities.PoiUsable:
                 case Protocol.LiveUsable: case Entities.RabbitState: case Entities.RabbitFx: case Entities.Worn: case Entities.MemberGone: case Entities.IgnitionKey:
-                    if (Bot == null) Entities.ClientReceive(type, r);
+                    if (Player == null) Entities.ClientReceive(type, r);
                     break;
                 case Protocol.OtherOutfit:
                 {
                     int id = (int)r.VarU32();
-                    if (PlayerLook.ReadOutfit(r, out int sel, out var en, out var col) && Bot == null) RemotePlayers.Outfit(id, sel, en, col);
+                    if (PlayerLook.ReadOutfit(r, out int sel, out var en, out var col) && Player == null) RemotePlayers.Outfit(id, sel, en, col);
                     break;
                 }
                 case ModTransfer.ModOffer: ModOfferIn(r); break;
@@ -1431,142 +1232,27 @@ namespace TLDRevamp.Net
                 case ModObjects.ModAssigned: case ModObjects.ModAdd: case ModObjects.ModRecord: case ModObjects.ModEdit: case ModObjects.ModOwner:
                 case ModObjects.ModRemove: case ModObjects.ModPose: case ModObjects.ModEvent: case ModObjects.ModClock:
                 case ModObjects.ModState: case ModObjects.ModStore: case ModObjects.ModSetting:
-                    if (Bot == null) ModObjects.ClientReceive(type, r);
+                    if (Player == null) ModObjects.ClientReceive(type, r);
                     break;
-                case Protocol.PlayerLeft: { int id = (int)r.VarU32(); if (Bot == null) RemotePlayers.Left(id); break; }
+                case Protocol.PlayerLeft: { int id = (int)r.VarU32(); if (Player == null) RemotePlayers.Left(id); break; }
                 case Protocol.OtherState:
                 {
                     int id = (int)r.VarU32(); ushort seq = r.U16(); double stamp = Protocol.ReadStamp(r); var pos = Protocol.ReadPos(r); float yaw = Protocol.ReadYaw(r);
                     Protocol.ReadSeat(r, out uint seatNet, out int seatIdx, out var foot);
                     if (r.Bad) return;
                     StatesIn++;
-                    if (Bot == null) SessionLog.JoinStage("firstState");
-                    if (Bot == null) RemotePlayers.State(id, seq, pos, yaw, seatNet, seatIdx, stamp, foot);
+                    if (Player == null) SessionLog.JoinStage("firstState");
+                    if (Player == null) RemotePlayers.State(id, seq, pos, yaw, seatNet, seatIdx, stamp, foot);
                     break;
                 }
             }
         }
 
-        /// A driving bot: share the car once, then its state with every player tick (the same message a real owner sends).
-        private Vector3d OnGround(Vector3d g, Vector3d travel)
-        {
-            var dir = new Vector3d(travel.x, 0, travel.z);
-            double len = Math.Sqrt(dir.x * dir.x + dir.z * dir.z);
-            if (len < 1e-4) return _gSeg ? new Vector3d(g.x, _gA.y, g.z) : g;
-            dir = new Vector3d(dir.x / len, 0, dir.z / len);
-            double t = 0;
-            if (_gSeg)
-            {
-                double ax = _gB.x - _gA.x, az = _gB.z - _gA.z;
-                t = ((g.x - _gA.x) * ax + (g.z - _gA.z) * az) / Math.Max(1e-6, ax * ax + az * az);
-            }
-            if (!_gSeg || t >= 1.0 || t < -0.5)
-            {
-                if (!_gSeg || t < -0.5 || t > 2.0) { if (!GroundAt(g, out _gA)) return g; }   // start / lost the segment
-                else _gA = _gB;
-                if (!GroundAt(new Vector3d(g.x + dir.x * 3.0, 0, g.z + dir.z * 3.0), out _gB)) { _gB = _gA; _gB.x += dir.x * 3.0; _gB.z += dir.z * 3.0; }
-                _gSeg = true;
-                double ax = _gB.x - _gA.x, az = _gB.z - _gA.z;
-                t = ((g.x - _gA.x) * ax + (g.z - _gA.z) * az) / Math.Max(1e-6, ax * ax + az * az);
-            }
-            if (t < 0) t = 0; else if (t > 1) t = 1;
-            return new Vector3d(g.x, _gA.y + (_gB.y - _gA.y) * t, g.z);
-        }
-
-        private static bool GroundAt(Vector3d g, out Vector3d onGround)
-        {
-            var u = mainscript.UnityPosFromGlobal(g);
-            var hit = DebugBridge.GroundHit(u.x, u.z);
-            onGround = hit != null ? new Vector3d(g.x, mainscript.GlobalFromUnityPos(hit.Value.point).y, g.z) : g;
-            return hit != null;
-        }
-
-        /// The item bot: share the item once, then states keeping it at Mp.BotItemOffset in Mp.BotItemCar as the car was
-        /// Mp.BotItemLag seconds ago.
-        private void BotItemTick()
-        {
-            if (ItemRecord == null) return;
-            if (!_itemShared)
-            {
-                _itemShared = true;
-                _w.Reset(); _w.U8(Entities.Share); _w.U32(0xB1700000u + (uint)MyId); _w.VarU32((uint)ItemRecord.Length); _w.Bytes(ItemRecord, 0, ItemRecord.Length);
-                T.Send(_conn, _w, SteamTransport.SendReliable);
-                return;
-            }
-            var car = Mp.BotItemCar;
-            if (_itemNet == 0 || car == null) return;
-            double now = Time.unscaledTimeAsDouble;
-            _itemHistP.Add(new KeyValuePair<double, Vector3d>(now, mainscript.GlobalFromUnityPos(car.transform.TransformPoint(Mp.BotItemOffset))));
-            _itemHistQ.Add(car.transform.rotation);
-            int k = 0;
-            while (k < _itemHistP.Count - 1 && _itemHistP[k + 1].Key <= now - Mp.BotItemLag) k++;
-            if (k > 0) { _itemHistP.RemoveRange(0, k); _itemHistQ.RemoveRange(0, k); }
-            var g = _itemHistP[0].Value; var q = _itemHistQ[0];
-            _w.Reset();
-            Entities.WriteStateHead(_w, _itemNet, _itemEpoch, ++_itemSeq, now - Mp.BotItemLag, g, q, Vector3.zero, false, false, Mp.BotItemHeld);
-            _w.U8(0);   // no wheels
-            _w.U8(0);   // engine: none
-            _w.U8(0);   // no car signals
-            _w.U8(0);   // no limbs
-            T.Send(_conn, _w, SteamTransport.SendUnreliable);
-        }
-
-        internal bool SendItemAttach(uint carNet, int parentIdx, int index, Vector3d lpos, Vector3d gpos)
-        {
-            if (ItemRecord == null || _itemNet == 0) return false;
-            _w.Reset(); _w.U8(Entities.AttachSync); _w.U32(_itemNet); _w.U8(1); _w.U8(2); _w.VarU32((uint)(index + 1));
-            _w.U32(carNet); _w.VarU32((uint)parentIdx); _w.VarU32(0);
-            _w.F64(0); _w.F64(0); _w.F64(0);
-            _w.F64(lpos.x); _w.F64(lpos.y); _w.F64(lpos.z);
-            _w.F64(gpos.x); _w.F64(gpos.y); _w.F64(gpos.z);
-            _w.U8(0);   // no pose: the item stays where the bot left it
-            T.Send(_conn, _w, SteamTransport.SendReliable);
-            ItemRecord = null;   // bolted on: no more states from the bot (the car's owner simulates it now)
-            return true;
-        }
-
-        private void BotCarTick(Vector3d g)
-        {
-            if (CarRecord == null) return;
-            if (!_carShared)
-            {
-                _carShared = true;
-                _w.Reset(); _w.U8(Entities.Share); _w.U32(0xB0700000u + (uint)MyId); _w.VarU32((uint)CarRecord.Length); _w.Bytes(CarRecord, 0, CarRecord.Length);
-                T.Send(_conn, _w, SteamTransport.SendReliable);
-                return;
-            }
-            if (_carNet == 0) return;
-            // on the ground, as a player's car is: a circle at the host player's height ran through hills — near the
-            // host's own cars such a copy turns physical (Entities.Physical) and was fought out of the terrain until a
-            // 16.9 s frame hung the host (loadtest --radius 30, v0.57.78). Height between two ground samples on the path
-            // (behind / 3 m ahead): continuous, one ray per 3 m of travel.
-            if (_carHasPrev) g = OnGround(g, g - _carPrev);
-            else if (GroundAt(g, out var g0)) g = g0;
-            // the real time since the last state: sends fall on frame boundaries (40/60 ms apart at a 20 ms host frame),
-            // a fixed 1/20 s gave the copies velocities up to ±20 % off their positions
-            double tNow = Time.unscaledTimeAsDouble;
-            float dt = _carHasPrev ? Mathf.Max(1e-3f, (float)(tNow - _carPrevT)) : 1f / Protocol.StateHz;
-            Vector3 v = _carHasPrev ? (Vector3)(g - _carPrev) / dt : Vector3.zero;
-            _carPrev = g; _carPrevT = tNow; _carHasPrev = true;
-            var rot = v.sqrMagnitude > 0.01f ? Quaternion.LookRotation(v) : Quaternion.identity;   // pitched with the slope
-            _w.Reset();
-            Entities.WriteStateHead(_w, _carNet, _carEpoch, ++_carSeq, tNow /* the frame start: the bot's position is integrated to it */, new Vector3d(g.x, g.y + 0.6, g.z), rot, v, true);
-            _w.U8((byte)(4 | (Mp.BotTorques ? 0x80 : 0)));                   // 4 wheels (+ torques), the owner's layout
-            short rpm = (short)Mathf.Clamp(v.magnitude / 0.33f * 60f / (2f * Mathf.PI), 0f, 32767f);
-            for (int i = 0; i < 4; i++) { _w.U8(0); _w.U8(0); _w.U16((ushort)rpm); }
-            if (Mp.BotTorques) for (int i = 0; i < 4; i++) { _w.U8(0); _w.U8(8); }
-            _w.U8(1 | 2); _w.U16(2200);                                      // engine running at 2200 rpm
-            _w.U8(0);                                                        // no car signals (Entities.CarSignals)
-            _w.U8(0);                                                        // no limbs (Entities.Ragdoll)
-            T.Send(_conn, _w, SteamTransport.SendUnreliable);
-        }
-
         public void Tick()
         {
             if (Player != null && Player.Silent) return;   // a crashed player bot: nothing read, nothing sent
-            if (_stalled.Count > 0 && Time.realtimeSinceStartup >= StallUntil) ReplayStalled(_conn);
-            if (_lagged.Count > 0) ReleaseLagged(_conn);
-            T.MaxPollMs = Bot == null && Fixes.StreamReceiveBudget.Enabled ? Fixes.StreamReceiveBudget.BudgetMs : 0;
+            DevHooks.ClientTick?.Invoke(this);
+            T.MaxPollMs = Player == null && Fixes.StreamReceiveBudget.Enabled ? Fixes.StreamReceiveBudget.BudgetMs : 0;
             T.Poll();
             if (MyId <= 0) return;
             SilenceCheck();
@@ -1595,7 +1281,7 @@ namespace TLDRevamp.Net
                 float nowS = Time.realtimeSinceStartup;
                 if (_spotState == 0) { W2.Reset(); W2.U8(Protocol.SpotReq); T.Send(_conn, W2, SteamTransport.SendReliable); _spotState = 1; _spotAt = nowS; return; }
                 if (_spotState == 1) { if (JoinLoading.Visible || nowS - _spotAt < 6f) return; _spotState = 3; JoinSpotLast = "no answer"; }
-                if (_spotState == 2) { if (DebugBridge.TpBusy && (JoinLoading.Visible || nowS - _spotAt < 30f)) return; _spotState = 3; }
+                if (_spotState == 2) { if (GroundPlacement.TpBusy && (JoinLoading.Visible || nowS - _spotAt < 30f)) return; _spotState = 3; }
                 if (JoinLoading.Visible && !JoinLoading.GeometryReady) return;
                 W2.Reset(); W2.U8(Protocol.Ready);
                 W2.U8((byte)(JoinLoading.Visible ? 1 : 0));
@@ -1606,28 +1292,19 @@ namespace TLDRevamp.Net
                 return;
             }
             _sendAcc += Time.unscaledDeltaTime;
-            if (Player != null) { Player.Tick(MyId); _botPos = Player.Position; _botYaw = Player.Yaw; }
-            else if (Bot != null) _botPos = Bot.Step(Time.unscaledDeltaTime, out _botYaw);
+            Player?.Tick(MyId);
             if (_sendAcc < 1f / Protocol.StateHz) return;
             _sendAcc -= 1f / Protocol.StateHz;
             if (_sendAcc > 1f / Protocol.StateHz) _sendAcc = 0;
-            var g = Bot != null ? _botPos : Mp.LocalGlobal();
-            float yaw = Bot != null ? _botYaw : Mp.LocalYaw();
+            var g = Player != null ? Player.Position : Mp.LocalGlobal();
+            float yaw = Player != null ? Player.Yaw : Mp.LocalYaw();
             _w.Reset(); _w.U8(Protocol.State); _w.U16(++_seq); Protocol.WriteStamp(_w, Time.realtimeSinceStartupAsDouble); Protocol.WritePos(_w, g); Protocol.WriteYaw(_w, yaw);
             uint sNet = 0; int sIdx = 0; var foot = default(Protocol.Footing);
-            if (Bot == null) { Entities.LocalSeat(out sNet, out sIdx); Entities.LocalFooting(out foot); }
+            if (Player == null) { Entities.LocalSeat(out sNet, out sIdx); Entities.LocalFooting(out foot); }
             else if (Player != null) { sNet = Player.SeatNet; sIdx = Player.SeatIndex; }
-            else if (_carNet != 0 && Mp.BotDriverSeat >= 0) { sNet = _carNet; sIdx = Mp.BotDriverSeat; }
             Protocol.WriteSeat(_w, sNet, sIdx, foot);
             T.Send(_conn, _w, SteamTransport.SendUnreliable);
-            if (Player != null) return;   // its cars and items: PlayerBot.Tick
-            if (Bot != null)
-            {
-                BotCarTick(g);
-                BotItemTick();
-                if (Mp.BotPoses) { _w.Reset(); _w.U8(Protocol.Pose); if (PlayerLook.WriteLocalPose(_w)) T.Send(_conn, _w, SteamTransport.SendUnreliable); }
-                return;
-            }
+            if (Player != null) { ControllerStateSent?.Invoke(); return; }
             _w.Reset(); _w.U8(Protocol.Pose);
             if (PlayerLook.WriteLocalPose(_w)) T.Send(_conn, _w, SteamTransport.SendUnreliable);
             _outfitCheck += 1f / Protocol.StateHz;
@@ -2143,7 +1820,7 @@ namespace TLDRevamp.Net
         internal static uint SeatNetOf(int id) => All.TryGetValue(id, out var rp) ? rp.SeatNet : 0;
         internal static int SeatIdxOf(int id) => All.TryGetValue(id, out var rp) ? rp.SeatIdx : -1;
 
-        /// Every remote player's body as a feet→head segment (THead follows their pose: crouching, prone, seated).
+        /// Every remote player's body as a feetâ†’head segment (THead follows their pose: crouching, prone, seated).
         /// Other players standing or walking (not seated in a car — the car is what an autopilot sees then).
         internal static List<Vector3> OnFootPositions()
         {

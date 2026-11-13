@@ -62,7 +62,7 @@ namespace TLDRevamp.Fixes
                 AddCamera(cameras, "far", mainscript.s.player.farCamera);
                 AddCamera(cameras, "sky", mainscript.s.player.skyCamera);
             }
-            sb.Append(",\"detailed\":").Append(DetailedTerrain.Stats());
+            sb.Append(",\"detailed\":").Append(TLDRevamp.Fixes.DetailedTerrain.Stats());
             sb.Append(",\"cameras\":[").Append(string.Join(",", cameras)).Append(']');
 
             // The road generators: how far the game itself places road pieces, and the terrain
@@ -139,7 +139,7 @@ namespace TLDRevamp.Fixes
         }
 
         /// This fix's own counters: what it drew, what it cost and how often it ran.
-        internal static string Stats() => TerrainHorizon.Stats();
+        internal static string Stats() => TLDRevamp.Fixes.TerrainHorizon.Stats();
 
         private static void Terrains(StringBuilder sb, List<terrainGenScript> list, double gx, double gz)
         {

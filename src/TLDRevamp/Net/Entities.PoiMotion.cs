@@ -13,13 +13,13 @@ namespace TLDRevamp.Net
             public override bool Equals(object o) => o is PoiKey k && Equals(k);
             public override int GetHashCode() => Gen * 397 ^ U * 7919 ^ X.GetHashCode() ^ Y.GetHashCode() * 31 ^ Z.GetHashCode() * 17;
         }
-        private struct PoiState { public float XRot, YRot, Slide, Tuned; public int Turn; }
+        internal struct PoiState { public float XRot, YRot, Slide, Tuned; public int Turn; }
         private static readonly Dictionary<PoiKey, byte[]> ServerPoiUsables = new Dictionary<PoiKey, byte[]>();
         private static readonly Dictionary<PoiKey, PoiState> KnownPoiUsables = new Dictionary<PoiKey, PoiState>();
         private static readonly Dictionary<PoiKey, double> _poiServerOrder = new Dictionary<PoiKey, double>();
 
         // Fixed storage per observed address. No queues or per-frame allocations for diagnostic rates.
-        private sealed class UsableRate
+        internal sealed class UsableRate
         {
             private readonly float[] _times = new float[256];
             private int _next, _count;
@@ -31,22 +31,23 @@ namespace TLDRevamp.Net
                 return n;
             }
         }
-        private sealed class PoiObservation
+        internal sealed class PoiObservation
         {
             public float ChangedAt;
             public long ReceivedTotal;
             public readonly UsableRate Sent = new UsableRate(), Received = new UsableRate();
         }
         private static readonly Dictionary<PoiKey, PoiObservation> _poiObserved = new Dictionary<PoiKey, PoiObservation>();
+        internal static System.Collections.Generic.IReadOnlyDictionary<TLDRevamp.Net.Entities.PoiKey, TLDRevamp.Net.Entities.PoiObservation> ObservedPoiObserved => _poiObserved;
         private static PoiObservation PoiObserved(PoiKey k)
         {
             if (!_poiObserved.TryGetValue(k, out var s)) _poiObserved[k] = s = new PoiObservation();
             return s;
         }
-        private static UsableKey PoiLiveKey(usablescript u) => new UsableKey { Building = true,
+        internal static UsableKey PoiLiveKey(usablescript u) => new UsableKey { Building = true,
             Poi = new PoiKey { Gen = u.poigenid, X = u.poiid.x, Y = u.poiid.y, Z = u.poiid.z, U = u.usableid } };
 
-        private static void WritePoi(NetWriter w, PoiKey k, PoiState st)
+        internal static void WritePoi(NetWriter w, PoiKey k, PoiState st)
         {
             w.VarU32((uint)k.Gen); w.F64(k.X); w.F64(k.Y); w.F64(k.Z); w.VarU32((uint)k.U);
             w.F32(st.XRot); w.F32(st.YRot); w.F32(st.Slide); w.VarI32(st.Turn); w.F32(st.Tuned);

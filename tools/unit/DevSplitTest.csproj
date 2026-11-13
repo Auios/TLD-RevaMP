@@ -4,5 +4,6 @@
     <Compile Include="DevSplitTest.cs" />
     <Compile Include="DevSplitReflectionStubs.cs" />
     <Compile Include="../../src/TLDRevamp/Reflect.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/BridgeReflect.cs" />
   </ItemGroup>
 </Project>

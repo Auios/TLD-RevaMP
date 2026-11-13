@@ -48,6 +48,7 @@
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
     <Compile Include="HandStateTest.cs" />
     <Compile Include="../../src/TLDRevamp/Net/HandItemPose.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Net/Entities.Ragdoll.cs" />
   </ItemGroup>
   <Target Name="ExtractLockProxy" BeforeTargets="CoreCompile">
     <PropertyGroup>

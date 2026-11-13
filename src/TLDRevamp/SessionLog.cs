@@ -50,8 +50,9 @@ namespace TLDRevamp
         private static float _max;
         private static readonly int[] LastGc = new int[3], IntervalGc = new int[3];
         // Black-box values per frame: FrameBreakdown phases, then FrameBreakdown.ExtraNames, then the script timer columns.
-        private static int BaseWidth => FrameBreakdown.Names.Length + FrameBreakdown.ExtraNames.Length + ScriptProfiler.CoarseNames.Length;
+        internal static int BaseWidth => FrameBreakdown.Names.Length + FrameBreakdown.ExtraNames.Length + ScriptProfiler.CoarseNames.Length;
         private static FrameRing Ring = new FrameRing(32768, BaseWidth);
+        internal static FrameRing ObservedRing => Ring;
         private static float[] _cols = new float[BaseWidth];
         private static string[] _tail = FrameBreakdown.ExtraNames.Concat(ScriptProfiler.CoarseNames).ToArray();
         private static bool _resize;
@@ -149,7 +150,7 @@ namespace TLDRevamp
                 !(_loadKind != null && !_worldEntered) && DataFromMenuScript.s != null && !DataFromMenuScript.s.mainmenu && mainscript.s != null && mainscript.s.started && menuhandler.s != null ? (object)menuhandler.s.currentMainMap : null;
             if (!ReferenceEquals(ctx, _context))
             {
-                Close(); FinishCaptures(now, true); Ring.Clear(); Events.Clear(); ObjectTrail.Clear(); History.Clear(); Net.Entities.ResetTelemetry(); Net.NetMeter.ResetTelemetry(); LiveSamples.Clear(); _context = ctx; _disabled = false;
+                Close(); FinishCaptures(now, true); Ring.Clear(); Events.Clear(); DevHooks.TrailReset?.Invoke(); History.Clear(); Net.Entities.ResetTelemetry(); Net.NetMeter.ResetTelemetry(); LiveSamples.Clear(); _context = ctx; _disabled = false;
                 _sent = _received = 0;
                 _costTicks = _costFrames = _costBytes = _costMax = 0;
                 _longHitchesDropped = 0;
@@ -413,9 +414,9 @@ namespace TLDRevamp
             }
             // addFromFar remains populated after placement: it is not a pending queue.
         }
-        private static int GenTotal => _terrain < 0 && _roads < 0 && _scenery < 0 && _buildings < 0 ? -1 : Math.Max(0, _terrain) + Math.Max(0, _roads) + Math.Max(0, _scenery) + Math.Max(0, _buildings);
+        internal static int GenTotal => _terrain < 0 && _roads < 0 && _scenery < 0 && _buildings < 0 ? -1 : Math.Max(0, _terrain) + Math.Max(0, _roads) + Math.Max(0, _scenery) + Math.Max(0, _buildings);
         private static string GenJson() => "{\"terrain\":" + _terrain + ",\"roads\":" + _roads + ",\"buildings\":" + _buildings + ",\"buildingsDeferred\":" + _buildingsDeferred + ",\"scenery\":" + _scenery + ",\"items\":" + _items + ",\"sampleAgeS\":" + Json.Num(Time.realtimeSinceStartupAsDouble - _genAt) + "}";
-        private static float Speed(out bool driving)
+        internal static float Speed(out bool driving)
         {
             var p = mainscript.s != null ? mainscript.s.player : null;
             driving = p != null && p.Bsitting && p.seat != null && p.seat.driverSeat0;
@@ -537,45 +538,6 @@ namespace TLDRevamp
             }
             catch (Exception e) { Fail("bridge black box", e); return "{\"error\":\"capture failed\"}"; }
         }
-        /// Bridge `telemetrytest [n]`: the per-frame sampling path (FrameBreakdown.Tick, the column copy and the black-box
-        /// ring) run n times on scratch objects. Time per frame from Stopwatch; allocations from heap growth over the
-        /// whole loop (best of three, so worker threads' allocations don't count), since this runtime has no per-thread counter.
-        internal static string SelfTest(int n)
-        {
-            var bd = new FrameBreakdown();
-            var ring = new FrameRing(32768, Ring.Width); var cols = new float[Ring.Width];
-            var trace = new MotionTrace(); var peers = new PeerTrafficTable(); var types = new TrafficCount[256];
-            var focus = new uint[MotionTrace.FocusLimit]; for (int i = 0; i < focus.Length; i++) focus[i] = (uint)i + 1; trace.SetFocus(focus, 0, 100);
-            double bestMs = double.MaxValue; long bestBytes = long.MaxValue;
-            for (int run = 0; run < 3; run++)
-            {
-                long heap = GC.GetTotalMemory(false), t0 = Stopwatch.GetTimestamp();
-                for (int i = 0; i < n; i++)
-                {
-                    bd.Tick(5f);
-                    var row = new TelemetryFrame { St = i, Local = i * 0.001, Ms = 5f, Speed = Speed(out _), Flags = TelemetryHooks.Previous.Flags, Gen = GenTotal };
-                    row.ObserveGc(bd.GcMs);
-                    int a = bd.LastMs.Length, x = bd.Extra.Length;
-                    Array.Copy(bd.LastMs, 0, cols, 0, a); Array.Copy(bd.Extra, 0, cols, a, x);
-                    Array.Copy(ScriptProfiler.Coarse.Last, 0, cols, a + x, ScriptProfiler.CoarseNames.Length);
-                    for (int c = BaseWidth; c < cols.Length; c++) cols[c] = c - BaseWidth < ScriptProfiler.ColumnCount ? ScriptProfiler.Column(c - BaseWidth) : 0;
-                    ring.Add(row, cols, 40);
-                    for (int k = 0; k < focus.Length; k++)
-                    {
-                        trace.Add(new MotionRow { Net = (uint)k + 1, Local = i / 60.0, St = i / 60.0 + 100, Kind = 2 });
-                        if (i % 3 == 0) { trace.Add(new MotionRow { Net = (uint)k + 1, Local = i / 60.0, Kind = 0 }); trace.Add(new MotionRow { Net = (uint)k + 1, Local = i / 60.0, Kind = 1 }); }
-                    }
-                    Array.Clear(types, 0, types.Length);
-                    for (int k = 0; k < 128; k++) { types[k & 31].Received++; types[k & 31].InBytes += 60; peers.Add((uint)(k & 7), false, 60); }
-                }
-                double ms = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency;
-                long grew = GC.GetTotalMemory(false) - heap;
-                bestMs = Math.Min(bestMs, ms); bestBytes = Math.Min(bestBytes, Math.Max(0, grew));
-            }
-            bd.Dispose();
-            return "{\"frames\":" + n + ",\"msPerFrame\":" + Json.Num(bestMs / n, "F6") + ",\"heapGrowthBytes\":" + bestBytes +
-                ",\"bytesPerFrame\":" + Json.Num((double)bestBytes / n, "F3") + ",\"columns\":" + Ring.Width + ",\"live\":" + Stats() + "}";
-        }
         internal static Func<string> FixesSnapshot() => _fixes?.ReportSnapshot() ?? (() => "{}");
         internal static string Fixes(bool delta = false) => _fixes?.Read(delta) ?? "{}";
         internal static void BeginLoad(string kind)
@@ -635,7 +597,7 @@ namespace TLDRevamp
             Close(); _context = null;
             // Deferred MP teardown must not erase the menu action that started the next world.
             if (!sceneStop || _worldEntered || _loadKind == "join") { _loadKind = null; _worldEntered = false; }
-            FinishCaptures(Time.realtimeSinceStartupAsDouble, true); Ring.Clear(); Events.Clear(); ObjectTrail.Clear(); History.Clear(); Net.Entities.ResetTelemetry(); Net.NetMeter.ResetTelemetry(); LiveSamples.Clear();
+            FinishCaptures(Time.realtimeSinceStartupAsDouble, true); Ring.Clear(); Events.Clear(); DevHooks.TrailReset?.Invoke(); History.Clear(); Net.Entities.ResetTelemetry(); Net.NetMeter.ResetTelemetry(); LiveSamples.Clear();
         }
         internal static void Shutdown()
         {
@@ -659,7 +621,7 @@ namespace TLDRevamp
                 if (!LiveSamples.Take(net, item, slot, kind.GetHashCode(), now)) { Events.Sampled++; for (int i = 0; i < Captures.Count; i++) if (now <= Captures[i].Local + 5) Captures[i].Events.Sampled++; return; }
             }
             var e = new TelemetryEvent { St = St, Local = now, Kind = kind, Net = net, Other = other, Item = item, Slot = slot, From = from, To = to, Result = result, Epoch = epoch, Count = count, Value = value, Dx = dx, Dy = dy, Dz = dz };
-            Events.Add(e); ObjectTrail.Add(e);
+            Events.Add(e); DevHooks.TrailEvent?.Invoke(e);
             for (int i = 0; i < Captures.Count; i++) if (now <= Captures[i].Local + 5) Captures[i].Events.Add(e);
         }
         public static void Flush() { try { _w?.Flush(); } catch (Exception e) { Fail("flush", e); } }

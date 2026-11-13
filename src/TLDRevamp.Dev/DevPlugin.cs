@@ -10,30 +10,44 @@ namespace TLDRevamp
     [BepInDependency("tldrevamp.core")]
     public sealed class DevPlugin : BaseUnityPlugin
     {
+        internal static bool BridgeEnabled;
+        public static int BridgePort = 27050;
+        private DebugBridge _bridge;
         internal static int PatchFailures;
         internal static readonly System.Collections.Generic.List<string> FailedPatches = new System.Collections.Generic.List<string>();
         private static void ApplyStartupSwitches()
         {
             var args = Environment.GetCommandLineArgs();
             int at = Array.IndexOf(args, "-tldset");
-            if (!Plugin.BridgeEnabled || at < 0 || at + 1 >= args.Length) return;
+            if (!BridgeEnabled || at < 0 || at + 1 >= args.Length) return;
             foreach (var pair in args[at + 1].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 int eq = pair.IndexOf('=');
-                if (eq <= 0) continue;
-                string member = Reflect.MemberPath(pair.Substring(0, eq)), owner = member;
-                Type type = null;
-                while (type == null && owner.LastIndexOf('.') > 0)
-                { owner = owner.Substring(0, owner.LastIndexOf('.')); type = Reflect.FindType(owner); }
-                if (type?.Assembly != typeof(DevPlugin).Assembly) continue;
-                try { Plugin.Log.LogInfo("-tldset " + pair + ": " + Reflect.Set(member, pair.Substring(eq + 1))); }
-                catch (Exception e) { Plugin.Log.LogWarning("-tldset " + pair + " failed: " + e.Message); }
+                try { Log.LogInfo("-tldset " + pair + ": " + (eq > 0 ? BridgeReflect.Set(pair.Substring(0, eq), pair.Substring(eq + 1)) : "no '='")); }
+                catch (Exception e) { Log.LogWarning("-tldset " + pair + " failed: " + e.Message); }
             }
+
         }
 
         private void Awake()
         {
             var Config = Plugin.Instance.Config;
+            BridgePort = Config.Bind("Debug", "BridgePort", 27050, "Developer command port on the loopback interface.").Value;
+            BridgeEnabled = Config.Bind("Debug", "Bridge", false,
+                "Developer test tooling: a command port on 127.0.0.1:27050 for automated tests. Leave it off.").Value && !IsPlayerEdition;
+            // a second copy of the game on a test machine (a third player: tools/thirdplayer.py) takes another port: -tldbridge N
+            var cl = Environment.GetCommandLineArgs();
+            int ci = Array.IndexOf(cl, "-tldbridge");
+            if (ci >= 0 && ci + 1 < cl.Length && int.TryParse(cl[ci + 1], out int bp) && bp > 1024 && bp < 65536) BridgePort = bp;
+            // a player edition ignores the config's Bridge; only an explicit -tldbridge on the command line (the test tools) starts it
+            if (IsPlayerEdition && ci >= 0) BridgeEnabled = true;
+            ObjectTrail.On = BridgeEnabled;
+            if (BridgeEnabled) { _bridge = new DebugBridge(BridgePort); _bridge.Start(); }
+
+            DevHooks.BridgePump = () => _bridge?.PumpMainThread();
+            DevHooks.BridgeStopped = () => _bridge?.Stop();
+            DevHooks.TestToolsActive = () => BridgeEnabled;
+
             ShowWipMark = Config.Bind("Branding", "ShowWipMark", true,
                 "Draw the TLD RevaMP <version> · WIP mark in the bottom-right corner. It is also configurable under Settings → Revamp → Branding.");
             Plugin.Instance.Overlay.ShowWip = ShowWipMark.Value;
@@ -59,10 +73,7 @@ namespace TLDRevamp
 
             KeyBindings.Contribute(("Item health", KeyItemHealth), ("Debug layout (V2)", KeyDebugLayout), ("Item traffic", KeyItemTraffic), ("Debug view (Legacy)", KeyDebugView), ("Ownership labels (Legacy)", KeyOwnership), ("Owner ghost (Legacy)", KeyOwnerGhost), ("Links (Legacy)", KeyLinks), ("Object comparison", KeyCompare), ("Object events", KeyEvents));
             Net.EntityDebug.HoldForTest = Net.FillLab.HoldNet;
-            Reflect.RegisterMovedMembers(typeof(Net.Entities), typeof(Net.EntityDebug), typeof(Net.EntityMountLab), typeof(Net.EntityReproPlayback), typeof(Net.EntityItemCheck), typeof(Net.EntityItemWatch), typeof(Net.EntityContactCensus), typeof(Net.EntityFakeInput), typeof(Net.EntityTrack));
-            Reflect.RegisterMovedMembers(typeof(Net.RemotePlayers), typeof(Net.RemoteReproPlayback));
-            Reflect.RegisterMovedMembers(typeof(Replay.ReplayRecorder), typeof(Replay.ReplayTruthCapture));
-            Reflect.RegisterMovedMembers(typeof(Replay.ReplayViewer), typeof(Replay.ReplayTruthVerify));
+            DevMembers.Install();
             DevHooks.OwnerDecision += Net.EntityDebug.OwnerLog;
             DevHooks.ReproDriving += Net.EntityReproPlayback.ApplyDriveInput;
             DevHooks.CopyJump += Net.EntityDebug.LogJump;
@@ -74,6 +85,49 @@ namespace TLDRevamp
             DevHooks.ItemLast = () => Net.EntityItemWatch.ItemWatchLast;
             DevHooks.SlotRef = Net.EntityMountLab.SlotRef;
             Replay.ReplayTruthCapture.Install();
+            DevHooks.EntityLateSample = Net.EntityCarDoorsTools.LateSample;
+            DevHooks.StandSeriesStep = () => Net.EntityFootingTools.Step();
+            DevHooks.KeyTestTick = Net.EntityIgnitionKeyTools.KeyTestTick;
+            DevHooks.SprayTick = Net.EntitySprayTools.SprayHoldTick;
+            DevHooks.PushTick = Net.EntityPushTools.TestPushTick;
+            DevHooks.TowTick = Net.EntityCarDoorsTools.TowTick;
+            DevHooks.UsableDragTick = Net.EntityLiveUsablesTools.DragUsableTick;
+            DevHooks.UsableProbeTick = Net.EntityLiveUsablesTools.UsableProbeTick;
+            DevHooks.UsableReset = Net.EntityLiveUsablesTools.Reset;
+            DevHooks.UsableHeld = Net.EntityLiveUsablesTools.Held;
+            DevHooks.HeldItem = item => Net.EntityCargoTools.ForceHeld != null && Net.EntityCargoTools.ForceHeld == item;
+            DevHooks.PreventDrop = (player, destroyed) => DevHooks.Playing && !destroyed && player.pickedUp != null && Net.EntityCargoTools.ForceHeld == player.pickedUp.tosave;
+            DevHooks.DropState = net => net == Net.EntityPlaceCheckTools.TestDropStates;
+            DevHooks.ActingAsPlayer = () => Net.EntityProxyTools.TestAsPlayer;
+            DevHooks.SameAccount = () => Net.SessionTools.TestSameAccount;
+            DevHooks.RestoreDrop = () => Net.PlayerSaveTools.TestRestoreDrop;
+            DevHooks.ReproCapacity = () => ReproRecorderTools.TestFullAt;
+            DevHooks.GameData = () => Net.WorldCheckTools.TestGameData;
+            DevHooks.RefuseSend = Net.SteamTransportTools.Refuse;
+            DevHooks.PassengerSteer = steer => Net.EntityShotgunTools.TestSteer != 0f ? Net.EntityShotgunTools.TestSteer : steer;
+            DevHooks.PassengerLights = Net.EntityShotgunTools.TakeLights;
+            DevHooks.VoiceToneTick = Net.VoiceTools.ToneTick;
+            DevHooks.VoiceToneStopped = Net.VoiceTools.StopTone;
+            DevHooks.VoiceProbeStatus = Net.VoiceTools.ProbeStatus;
+            DevHooks.BotStatus = Net.LegacyBots.BotStatus;
+            DevHooks.ClaimSteamId = () => Net.ClientSimulation.TestClaimSteamId;
+            DevHooks.ClientMessage = Net.ClientSimulation.Message;
+            DevHooks.ClientTick = Net.ClientSimulation.Tick;
+            DevHooks.SessionStopped += Net.LegacyBots.Reset;
+            DevHooks.BotsTick += Net.LegacyBots.Tick;
+            DevHooks.TrailReset = ObjectTrail.Clear;
+            DevHooks.TrailEvent = ObjectTrail.Add;
+            DevHooks.SaveVeto = () => TestSafetyTools.BlockAutoSave;
+            DevHooks.AutosaveOff = () => Net.MpTools.TestAutosaveOff;
+            ScriptProfilerTools.Install();
+            DevHooks.VrSimulation = () => VR.Native.VrSim.On;
+            DevHooks.VrSimulationTick = VR.Native.VrSim.Tick;
+            DevHooks.VrHand = hand => new VR.Native.VrHandInput(VR.Native.VrSim.On && VR.Native.VrSim.Hand[hand], VR.Native.VrSim.Pos[hand], VR.Native.VrSim.Rot[hand], VR.Native.VrSim.Trigger[hand], VR.Native.VrSim.Grip[hand], VR.Native.VrSim.Primary[hand]);
+            DevHooks.TrailerBrake = () => Fixes.TrailerBrakesTools.TestAlone;
+            Net.JoinLoadingPreview.Install();
+            DevHooks.RebaseTick = RebaseLab.Tick;
+            DevHooks.MessageNoted = Net.NetMeterTools.Note;
+            DevHooks.MessageHistoryReset = Net.NetMeterTools.ResetHistory;
             DevCommands.Install(); DevOverlay.Install();
             DevHooks.InputCapture = () => DebugV2.Editing;
             DevHooks.Playback = () => ReproPlayback.Active;
@@ -97,6 +151,7 @@ namespace TLDRevamp
                     "For mod authors: read every TLD Loader mod in BepInEx/TLDLoaderMods and write what it would need for multiplayer (a report and a code skeleton) to BepInEx/TLDRevampModScan.").Value)
                 try { LoaderScan.ScanAll(); } catch (Exception e) { Log.LogWarning("modscan: " + e.Message); }
 
+            Log.LogInfo(BridgeEnabled ? "Bridge on 127.0.0.1:" + BridgePort : "bridge off");
             ApplyStartupSwitches();
             var harmony = new Harmony("tldrevamp.dev");
             var patchTypes = Array.FindAll(typeof(DevPlugin).Assembly.GetTypes(), type => type.GetCustomAttributes(typeof(HarmonyPatch), false).Length != 0);

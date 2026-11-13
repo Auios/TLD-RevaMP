@@ -22,7 +22,7 @@ namespace TLDRevamp.Net
         private static float _repairSweepAt;
         private static int _repairCursor;
         private static readonly List<uint> _repairCycle = new List<uint>();
-        private struct RepairWait { public float Until, Backoff; public string Diff; public bool Verifying; }
+        internal struct RepairWait { public float Until, Backoff; public string Diff; public bool Verifying; }
         private static readonly Dictionary<uint, RepairWait> _repairWait = new Dictionary<uint, RepairWait>();
         private static readonly Dictionary<uint, float> _repairRunAt = new Dictionary<uint, float>();
         private static readonly List<uint> _repairDone = new List<uint>();
@@ -41,23 +41,6 @@ namespace TLDRevamp.Net
         {
             if (e.EditHoldUntil != null) foreach (var hold in e.EditHoldUntil.Values) if (now < hold) return true;
             return false;
-        }
-
-        /// `mp censusnow <net>`: this copy's check now, not when its turn comes.
-        public static string CensusNow(uint net)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !e.Proxy || !Resolve(e) || e.Root == null) return "{\"error\":\"no copy of it placed here\"}";
-            _repairWait.Remove(net);
-            _censusDue[net] = new CensusDue { At = Time.realtimeSinceStartup, Attempt = 1 };
-            return "{\"rows\":" + RepairRows(e).Count + "}";
-        }
-
-        /// `mp repairrows <net>`: the rows this machine would hash, to compare two machines.
-        public static void TryRows(uint net, out string json)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) { json = "{\"error\":\"no such object here\"}"; return; }
-            var rows = new List<string>(); foreach (var row in RepairRows(e)) rows.Add(Json.Str(row));
-            json = "{\"rows\":[" + string.Join(",", rows) + "],\"msMax\":" + Json.Num((float)RepairRowsMsMax) + ",\"asked\":" + RepairsAsked + ",\"healed\":" + RepairsHealed + ",\"failed\":" + RepairsFailed + ",\"run\":" + RepairsRun + "}";
         }
 
         private static void RepairLine(string what)

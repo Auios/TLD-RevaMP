@@ -23,11 +23,13 @@ namespace TLDRevamp.Net
         public static long CopyJointsFreed, CopyJointsLocked;
 
         private static readonly Dictionary<ConfigurableJoint, Ent> _freedJoints = new Dictionary<ConfigurableJoint, Ent>();
+        internal static System.Collections.Generic.IReadOnlyDictionary<UnityEngine.ConfigurableJoint, TLDRevamp.Net.Entities.Ent> ObservedFreedJoints => _freedJoints;
         private static readonly List<Ent> _jointed = new List<Ent>();
+        internal static System.Collections.Generic.IReadOnlyList<TLDRevamp.Net.Entities.Ent> ObservedJointed => _jointed;
         private static readonly List<ConfigurableJoint> _jointsDone = new List<ConfigurableJoint>();
 
         /// Every 0.5 s (FixedTick): which shared objects hang on a joint of their own.
-        private static void RefreshJointed()
+        internal static void RefreshJointed()
         {
             _jointed.Clear();
             foreach (var e in Placed())
@@ -74,26 +76,6 @@ namespace TLDRevamp.Net
             if (free) { _freedJoints[j] = e; CopyJointsFreed++; }
             else CopyJointsLocked++;
             Plugin.Log.LogInfo($"copy joint {(free ? "free" : "locked")}: {e.Root?.name} net {e.NetId} (owner {e.OwnerId}) on {(j.connectedBody != null ? j.connectedBody.name : "-")}");
-        }
-
-        /// Diagnostics (bridge `mp copyjoints`): every jointed shared object here and its joint's state.
-        public static string CopyJointsJson()
-        {
-            RefreshJointed();
-            var rows = new List<string>();
-            foreach (var e in _jointed)
-            {
-                var j = e.Root.attachable.J as ConfigurableJoint;
-                var own = j != null ? j.GetComponent<Rigidbody>() : null;
-                rows.Add("{\"net\":" + e.NetId + ",\"name\":" + Json.Str(e.Root.name) + ",\"owner\":" + e.OwnerId + ",\"proxy\":" + (e.Proxy ? "true" : "false") +
-                         ",\"on\":" + Json.Str(j != null && j.connectedBody != null ? j.connectedBody.name : "") +
-                         ",\"onNet\":" + (j != null && j.connectedBody != null ? TelemetryNet(j.connectedBody) : 0) +
-                         ",\"kinematic\":" + (own != null && own.isKinematic ? "true" : "false") +
-                         ",\"onKinematic\":" + (j != null && j.connectedBody != null && j.connectedBody.isKinematic ? "true" : "false") +
-                         ",\"free\":" + (j != null && j.xMotion == ConfigurableJointMotion.Free ? "true" : "false") + "}");
-            }
-            return "{\"enabled\":" + (CopyJointsFree ? "true" : "false") + ",\"freed\":" + CopyJointsFreed + ",\"locked\":" + CopyJointsLocked +
-                   ",\"freeNow\":" + _freedJoints.Count + ",\"jointed\":[" + string.Join(",", rows) + "]}";
         }
     }
 }

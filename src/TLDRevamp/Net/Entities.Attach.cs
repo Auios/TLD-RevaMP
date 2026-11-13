@@ -182,7 +182,7 @@ namespace TLDRevamp.Net
         public static long AttachPosesSent, AttachPosesApplied, AttachPosesBad;
         public static float AttachPoseOffLast, AttachPoseOffMax, AttachPoseAngLast;   // copy vs. the attacher's pose when it arrived (m, °)
 
-        private static Transform AttachFrame(attachablescript at) => at.point == null ? null : at.point.parent != null ? at.point.parent : at.point;
+        internal static Transform AttachFrame(attachablescript at) => at.point == null ? null : at.point.parent != null ? at.point.parent : at.point;
         public static long SlotPosesSkipped;
 
         private static void WriteAttachPose(NetWriter w, attachablescript at)

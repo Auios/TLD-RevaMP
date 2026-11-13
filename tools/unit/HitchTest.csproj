@@ -7,5 +7,6 @@
     <Compile Include="../../src/TLDRevamp/Net/Entities.RotCodec.cs" />
     <Compile Include="../../src/TLDRevamp/Net/HitchAuthority.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Net/Entities.Hitch.cs" />
   </ItemGroup>
 </Project>

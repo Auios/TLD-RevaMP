@@ -65,18 +65,6 @@ namespace TLDRevamp
             _status = "Saving mark (includes the next 5 seconds)..."; _note = ""; return result;
         }
         private static bool CanEdit(MarkFiles.Entry mark) => mark.Origin == (Net.Mp.Client != null ? Net.Mp.Client.MyId : 0);
-        internal static string Bridge(string arg, bool raw = false)
-        {
-            if (!raw && arg.StartsWith("save ", StringComparison.Ordinal)) return Submit(null, arg.Substring(5));
-            var parts = arg.Split(new[] { ' ' }, 5);
-            if (parts.Length != 5 || parts[0] != "rename" || !double.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double st) ||
-                !int.TryParse(parts[3], out int origin)) return "{\"error\":\"use save <note> or rename <sid> <st> <origin> <note>\"}";
-            string key = MarkFiles.Identity(parts[1], st, origin);
-            var mark = MarkFiles.Snapshot.FirstOrDefault(e => e.Key == key);
-            if (mark == null || mark.Sid != SessionLog.Sid) return "{\"error\":\"unknown session mark\"}";
-            if (!raw) return Submit(mark, parts[4]);
-            Net.Reports.RenameMark(mark.Sid, mark.St, mark.Origin, parts[4]); return "{\"ok\":true}";
-        }
         private static float _promptHeight, _inputY, _buttonsY, _statusY, _statusHeight, _listY, _rowLabel;
         private static string _lastStatus;
         internal static float Measure()

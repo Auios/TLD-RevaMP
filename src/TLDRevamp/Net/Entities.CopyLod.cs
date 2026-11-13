@@ -16,7 +16,7 @@ namespace TLDRevamp.Net
         public static long CopyLodOff, CopyLodOn;
         private static float _copyLodAt;
 
-        private sealed class LodState
+        internal sealed class LodState
         {
             public bool Off;
             public readonly List<KeyValuePair<Renderer, ShadowCastingMode>> Renderers = new List<KeyValuePair<Renderer, ShadowCastingMode>>();

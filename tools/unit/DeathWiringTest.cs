@@ -142,7 +142,7 @@ namespace TLDRevamp
     /// The bridge's ground probe, stubbed: this test has no physics, so the seated anchor keeps the height it was
     /// given. The production code's use of the probe is what the seated-anchor test checks (the horizontal point
     /// comes from the vehicle, not from the seat).
-    static class DebugBridge
+    static class GroundPlacement
     {
         /// The height the stub's ground probe answers with. NaN = no ground (the world is not generated there).
         public static float GroundY = float.NaN;
@@ -350,7 +350,7 @@ static class DeathWiringTest
             DeathFakes.Dev.s = new DeathFakes.Dev();
             // the seat is a metre and a half above the ground (the vehicle's floor)
             plSeat.transform.position = new UnityEngine.Vector3(60, 1.5f, 70);
-            TLDRevamp.DebugBridge.GroundY = 0f;
+            TLDRevamp.GroundPlacement.GroundY = 0f;
             var pSeat = new object[] { plSeat, false };
             prefix.Invoke(null, pSeat);
             Check((bool)pSeat[1], "the seated death is accepted");
@@ -362,7 +362,7 @@ static class DeathWiringTest
             double az = Convert.ToDouble(Member(deathSeat, "AnchorZ"));
             Check(Math.Abs(ax - 60.0) < 0.001 && Math.Abs(az - 70.0) < 0.001,
                 "the seated anchor is under the vehicle");
-            TLDRevamp.DebugBridge.GroundY = float.NaN;
+            TLDRevamp.GroundPlacement.GroundY = float.NaN;
         }
         {
             // No ground yet (the world is streamed): the anchor keeps the seat's own height rather than a wrong one.
@@ -371,7 +371,7 @@ static class DeathWiringTest
             DeathFakes.Main.s = new DeathFakes.Main { player = plSeat2 };
             DeathFakes.Dev.s = new DeathFakes.Dev();
             plSeat2.transform.position = new UnityEngine.Vector3(80, 1.5f, 90);
-            TLDRevamp.DebugBridge.GroundY = float.NaN;
+            TLDRevamp.GroundPlacement.GroundY = float.NaN;
             var pSeat2 = new object[] { plSeat2, false };
             prefix.Invoke(null, pSeat2);
             Check((bool)pSeat2[1], "the seated death is accepted");

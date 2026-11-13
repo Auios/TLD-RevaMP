@@ -18,5 +18,6 @@
     <Compile Include="../../src/TLDRevamp/Net/Entities.ReproDrive.cs" />
     <Compile Include="../../src/TLDRevamp.Dev/Net/Entities.ReproDrive.cs" />
     <Compile Include="../../src/TLDRevamp/DevHooks.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/Net/Entities.Cargo.cs" />
   </ItemGroup>
 </Project>

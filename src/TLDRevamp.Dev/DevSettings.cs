@@ -52,7 +52,7 @@ namespace TLDRevamp
             Toggle("netPackets", "Network packets", 0,
                 "In a multiplayer game: a panel in the top right corner with what your game sends and receives each second, " +
                 "by kind of message (how many, how many kilobytes, and how many milliseconds your game spends on them).",
-                () => Net.NetMeter.Show ? 1 : 0, v => Net.NetMeter.Show = v == 1);
+                () => TLDRevamp.Net.NetMeterTools.Show ? 1 : 0, v => TLDRevamp.Net.NetMeterTools.Show = v == 1);
             Toggle("itemTraffic", "Item traffic", 0,
                 "In a multiplayer game: download and upload arrows over shared cars, items and mod objects, with how many " +
                 "bytes this machine receives and sends each second (also Insert).",

@@ -15,7 +15,6 @@ namespace TLDRevamp.Net
     /// last `net meter reset`: totals, per second and per frame) and `net log [n]` (the last messages, one by one).
     public static class NetMeter
     {
-        public static bool Show;
         private static readonly TrafficInterval Telemetry = new TrafficInterval();
         private static readonly PeerTrafficTable TelemetryPeers = new PeerTrafficTable();
         private static double _telemetrySince;
@@ -102,17 +101,12 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<uint, long[]> Peers = new Dictionary<uint, long[]>();   // connection → out msgs, out bytes, in msgs, in bytes
         private static double _since; private static int _sinceFrame;   // since the last reset (0: the game's start)
 
-        private struct Rec { public float T; public bool Out; public byte Type; public int Bytes; public uint Peer; }
-        private static readonly Rec[] Ring = new Rec[512];
-        private static int _ringAt; private static long _ringN;
-
         public static long Now() => Stopwatch.GetTimestamp();
         private static double Ms(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
 
         private static void Note(bool isOut, byte type, int bytes, uint peer)
         {
-            Ring[_ringAt] = new Rec { T = Time.realtimeSinceStartup, Out = isOut, Type = type, Bytes = bytes, Peer = peer };
-            _ringAt = (_ringAt + 1) % Ring.Length; _ringN++;
+            DevHooks.MessageNoted?.Invoke(isOut, type, bytes, peer);
             if (!Peers.TryGetValue(peer, out var p)) Peers[peer] = p = new long[4];
             if (isOut) { p[0]++; p[1] += bytes; } else { p[2]++; p[3] += bytes; }
         }
@@ -157,7 +151,7 @@ namespace TLDRevamp.Net
             Array.Clear(InMsgs, 0, 256); Array.Clear(InBytes, 0, 256); Array.Clear(InTicks, 0, 256);
             DevHooks.TrafficReset?.Invoke();
             Peers.Clear(); _since = Time.realtimeSinceStartupAsDouble; _sinceFrame = Time.frameCount;
-            _ringAt = 0; _ringN = 0; _rateAt = 0;
+            DevHooks.MessageHistoryReset?.Invoke(); _rateAt = 0;
         }
 
         // ---------------------------------------------------------------- names (every message type constant of the mod)
@@ -186,8 +180,13 @@ namespace TLDRevamp.Net
         // ---------------------------------------------------------------- rates for the panel (over the last ≥1 s)
         private static readonly long[] _pOutB = new long[256], _pInB = new long[256], _pOutM = new long[256], _pInM = new long[256], _pTicks = new long[256];
         private static readonly float[] _rOutB = new float[256], _rInB = new float[256], _rOutM = new float[256], _rInM = new float[256], _rMs = new float[256];
+        internal static System.Collections.Generic.IReadOnlyList<float> ObservedRMs => _rMs;
+        internal static System.Collections.Generic.IReadOnlyList<float> ObservedRInM => _rInM;
+        internal static System.Collections.Generic.IReadOnlyList<float> ObservedROutM => _rOutM;
+        internal static System.Collections.Generic.IReadOnlyList<float> ObservedRInB => _rInB;
+        internal static System.Collections.Generic.IReadOnlyList<float> ObservedROutB => _rOutB;
         private static float _rateAt; private static int _rateFrame; private static float _rFrames;
-        private static void Rates()
+        internal static void Rates()
         {
             float now = Time.realtimeSinceStartup;
             if (_rateAt > 0 && now - _rateAt < 1f) return;
@@ -208,72 +207,7 @@ namespace TLDRevamp.Net
             _rateAt = now; _rateFrame = Time.frameCount;
         }
 
-        private static readonly List<int> _order = new List<int>();
-        internal static string[][] PanelRows(int rows)
-        {
-            Rates(); _order.Clear();
-            float outT = 0, inT = 0, msT = 0;
-            for (int i = 0; i < 256; i++)
-            {
-                outT += _rOutB[i]; inT += _rInB[i]; msT += _rMs[i];
-                if (_rOutB[i] + _rInB[i] > 0 || _rMs[i] > .001f) _order.Add(i);
-            }
-            _order.Sort((a, b) => (_rOutB[b] + _rInB[b]).CompareTo(_rOutB[a] + _rInB[a]));
-            int count = Math.Min(rows, _order.Count);
-            var result = new string[2 + Math.Max(1, count)][];
-            result[0] = new[] { $"Up {outT / 1024f:F1} KB/s · Down {inT / 1024f:F1} KB/s · {msT:F2} ms/s" };
-            result[1] = new[] { "Type", "Up/s", "KB/s", "Down/s", "KB/s", "ms/s" };
-            for (int k = 0; k < count; k++)
-            {
-                int i = _order[k];
-                result[k + 2] = new[] { Name((byte)i), _rOutM[i].ToString("F1"), (_rOutB[i] / 1024f).ToString("F2"),
-                    _rInM[i].ToString("F1"), (_rInB[i] / 1024f).ToString("F2"), _rMs[i].ToString("F2") };
-            }
-            if (count == 0) result[2] = new[] { "(nothing in the last second)" };
-            return result;
-        }
-        /// The panel: the busiest message types of the last second.
-        public static string PanelText(int rows, bool compact = false)
-        {
-            Rates();
-            _order.Clear();
-            float outT = 0, inT = 0, msT = 0;
-            for (int i = 0; i < 256; i++)
-            {
-                outT += _rOutB[i]; inT += _rInB[i]; msT += _rMs[i];
-                if (_rOutB[i] + _rInB[i] > 0 || _rMs[i] > 0.001f) _order.Add(i);
-            }
-            _order.Sort((a, b) => (_rOutB[b] + _rInB[b]).CompareTo(_rOutB[a] + _rInB[a]));
-            float fps = Mathf.Max(1f, _rFrames);
-            var sb = new System.Text.StringBuilder();
-            if (compact)
-            {
-                sb.Append($"Up {outT / 1024f:F1} KB/s · Down {inT / 1024f:F1} KB/s · {msT:F2} ms/s\n");
-                sb.Append("Type              Up/s   KB/s  Down/s   KB/s   ms/s\n");
-            }
-            else
-            {
-                sb.Append($"<b>Network packets</b>  up {outT / 1024f:F1} KB/s ({outT / fps:F0} B/frame)  down {inT / 1024f:F1} KB/s ({inT / fps:F0} B/frame)  {msT:F2} ms/s\n");
-                sb.Append("<b>type               up msg/s  up KB/s  down msg/s  down KB/s  ms/s</b>\n");
-            }
-            for (int k = 0; k < _order.Count && k < rows; k++)
-            {
-                int i = _order[k];
-                string nm = Name((byte)i);
-                if (compact)
-                {
-                    if (nm.Length > 16) nm = nm.Substring(0, 15) + "…";
-                    sb.Append(nm.PadRight(17)).Append(_rOutM[i].ToString("F1").PadLeft(5)).Append((_rOutB[i] / 1024f).ToString("F2").PadLeft(7))
-                        .Append(_rInM[i].ToString("F1").PadLeft(8)).Append((_rInB[i] / 1024f).ToString("F2").PadLeft(7)).Append(_rMs[i].ToString("F2").PadLeft(7)).Append('\n');
-                    continue;
-                }
-                if (nm.Length > 18) nm = nm.Substring(0, 18);
-                sb.Append(nm.PadRight(19)).Append(_rOutM[i].ToString("F1").PadLeft(9)).Append((_rOutB[i] / 1024f).ToString("F2").PadLeft(9))
-                  .Append(_rInM[i].ToString("F1").PadLeft(12)).Append((_rInB[i] / 1024f).ToString("F2").PadLeft(11)).Append(_rMs[i].ToString("F2").PadLeft(7)).Append('\n');
-            }
-            if (_order.Count == 0) sb.Append("(nothing in the last second)\n");
-            return sb.ToString();
-        }
+        internal static float ObservedRateFrames => _rFrames;
 
         // ---------------------------------------------------------------- bridge
         /// `net meter`: since the last reset — per type and per player: messages, bytes, ms; per second and per frame.
@@ -300,20 +234,6 @@ namespace TLDRevamp.Net
                    ",\"ms\":" + Ms(tk).ToString("F3", ic) + ",\"outBytesPerFrame\":" + (ob / (double)frames).ToString("F2", ic) + ",\"inBytesPerFrame\":" + (ib / (double)frames).ToString("F2", ic) +
                    ",\"outBytesPerSec\":" + (ob / secs).ToString("F0", ic) + ",\"inBytesPerSec\":" + (ib / secs).ToString("F0", ic) +
                    ",\"types\":[" + string.Join(",", rows) + "],\"peers\":[" + string.Join(",", peers) + "]}";
-        }
-
-        /// `net log [n]`: the last n messages (newest last), each with when, which way, type, bytes and connection.
-        public static string Log(int n)
-        {
-            var ic = System.Globalization.CultureInfo.InvariantCulture;
-            n = (int)Math.Min(Math.Min(n, Ring.Length), _ringN);
-            var rows = new List<string>();
-            for (int k = n; k >= 1; k--)
-            {
-                var r = Ring[(_ringAt - k + Ring.Length) % Ring.Length];
-                rows.Add("{\"t\":" + r.T.ToString("F3", ic) + ",\"dir\":\"" + (r.Out ? "out" : "in") + "\",\"type\":" + TLDRevamp.Json.Str(Name(r.Type)) + ",\"bytes\":" + r.Bytes + ",\"conn\":" + r.Peer + "}");
-            }
-            return "{\"messages\":[" + string.Join(",", rows) + "]}";
         }
     }
 }

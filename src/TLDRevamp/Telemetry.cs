@@ -140,8 +140,8 @@ namespace TLDRevamp
             Array.Clear(_hist, 0, Buckets);
             Frames = 0;
             Breakdown.Reset();
-            DebugBridge.TotalPumpMs = 0;
-            DebugBridge.MaxPumpMs = 0;
+            BridgeTiming.TotalPumpMs = 0;
+            BridgeTiming.MaxPumpMs = 0;
             _gcBaseline = GC.CollectionCount(0);
         }
 
@@ -222,8 +222,8 @@ namespace TLDRevamp
             ",\"hitches50ms\":" + Hitches +
             ",\"gc0\":" + GcCollections +
             ",\"managedMB\":" + ManagedMB +
-            ",\"bridgeMsTotal\":" + DebugBridge.TotalPumpMs.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) +
-            ",\"bridgeMaxMs\":" + DebugBridge.MaxPumpMs.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
+            ",\"bridgeMsTotal\":" + BridgeTiming.TotalPumpMs.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) +
+            ",\"bridgeMaxMs\":" + BridgeTiming.MaxPumpMs.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
             ",\"time\":" + Time.realtimeSinceStartup.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "}";
     }
 

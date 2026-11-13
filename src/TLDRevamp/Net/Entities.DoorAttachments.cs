@@ -109,35 +109,5 @@ namespace TLDRevamp.Net
             }
             foreach (uint net in _restoredDoorAttaches) _storedDoorAttaches.Remove(net);
         }
-
-        public static string GlueToDoor(uint itemNet, uint carNet, int item, int usable)
-        {
-            if (!ByNet.TryGetValue(itemNet, out var e) || !Resolve(e) || e.Proxy || e.Root == null || e.Root.attachable == null || e.Root.attachable.attached)
-                return "{\"error\":\"an owned loose attachable is required\"}";
-            if (!UsableArgs(carNet, item, usable, out _, out var u)) return "{\"error\":\"no usable\"}";
-            var frame = u.TDoor != null ? u.TDoor : u.RT1;
-            if (frame == null) return "{\"error\":\"no moving door frame\"}";
-            var col = frame.GetComponentInChildren<Collider>();
-            if (col == null) return "{\"error\":\"no door collider\"}";
-            var at = e.Root.attachable;
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl != null && pl.pickedUp == e.Root.P) pl.Drop();
-            var position = col.bounds.center;
-            e.Root.transform.SetPositionAndRotation(position, frame.rotation);
-            at.Attach(at.NewPoint(col.transform, position, Quaternion.identity), col);
-            return DoorAttachmentPose(itemNet);
-        }
-
-        public static string DoorAttachmentPose(uint net)
-        {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"entity is not loaded\"}";
-            var at = e.Root.attachable;
-            if (at == null || !at.attached || at.point == null) return "{\"attached\":false}";
-            var f = AttachFrame(at); var t = at.transform; var iq = Quaternion.Inverse(f.rotation);
-            var q = iq * t.rotation; var g = mainscript.GlobalFromUnityPos(t.position);
-            return "{\"attached\":true,\"parented\":" + (RidesParent(e) ? "true" : "false") + ",\"frame\":" + Json.Str(f.name) +
-                ",\"local\":" + V3f(iq * (t.position - f.position)) + ",\"rotation\":[" + UN(q.x) + "," + UN(q.y) + "," + UN(q.z) + "," + UN(q.w) +
-                "],\"pos\":[" + UN(g.x) + "," + UN(g.y) + "," + UN(g.z) + "]}";
-        }
     }
 }

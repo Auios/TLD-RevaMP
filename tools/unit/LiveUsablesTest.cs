@@ -309,3 +309,5 @@ namespace HarmonyLib
     [AttributeUsage(AttributeTargets.Method)] class HarmonyPrefix : Attribute { }
     static class AccessTools { internal static System.Reflection.MethodBase Method(Type type, string name, Type[] args) => type.GetMethod(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic); }
 }
+
+namespace TLDRevamp { static class DevHooks { internal static System.Func<usablescript, bool> UsableHeld; internal static System.Action UsableDragTick, UsableProbeTick, UsableReset; } }

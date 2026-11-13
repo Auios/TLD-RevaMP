@@ -112,20 +112,20 @@ namespace TLDRevamp
             DebugView.Ghost = DebugView.GhostAll = Get("ghosts").shown;
             DebugView.Links = Get("links").shown;
             if (!ReferenceEquals(Plugin.Instance, null) && Plugin.Instance.Overlay != null) Plugin.Instance.Overlay.Visible = Get("perf").shown;
-            Net.NetMeter.Show = Get("packets").shown;
+            TLDRevamp.Net.NetMeterTools.Show = Get("packets").shown;
             Net.ItemTraffic.Show = false;   // in the tabs now
         }
         private static void Snapshot()
         {
             _mode = DebugView.Mode; _own = DebugView.Ownership; _ghost = DebugView.Ghost; _ghostAll = DebugView.GhostAll; _links = DebugView.Links;
             _perf = !ReferenceEquals(Plugin.Instance, null) && Plugin.Instance.Overlay != null && Plugin.Instance.Overlay.Visible;
-            _packets = Net.NetMeter.Show; _traffic = Net.ItemTraffic.Show;
+            _packets = TLDRevamp.Net.NetMeterTools.Show; _traffic = Net.ItemTraffic.Show;
         }
         private static void Restore()
         {
             DebugView.Mode = _mode; DebugView.Ownership = _own; DebugView.Ghost = _ghost; DebugView.GhostAll = _ghostAll; DebugView.Links = _links;
             if (!ReferenceEquals(Plugin.Instance, null) && Plugin.Instance.Overlay != null) Plugin.Instance.Overlay.Visible = _perf;
-            Net.NetMeter.Show = _packets; Net.ItemTraffic.Show = _traffic;
+            TLDRevamp.Net.NetMeterTools.Show = _packets; Net.ItemTraffic.Show = _traffic;
         }
         /// RevampSettings.Save: the Legacy switches as they were before V2, so the file never keeps V2's.
         internal static void BeforeSave() { if (_applied) Restore(); }
@@ -222,7 +222,7 @@ namespace TLDRevamp
         {
             var e = Net.Entities.InSession ? Net.EntityOverlays.OverlayLook() : null;
             if (e == null || e.Root == null) return cols ? "" : "aimed  nothing shared";
-            if (cols) return Net.Entities.OverlayColliders(e, true);
+            if (cols) return TLDRevamp.Net.EntityPartWatchTools.OverlayColliders(e, true);
             return "aimed  " + Net.ItemTraffic.ObjectName(e.Root.name) + " · " + WorldOverlayLogic.Owner(e.OwnerId, Net.Entities.MyId) + (e.Proxy ? " · copy" : " · simulated here");
         }
 

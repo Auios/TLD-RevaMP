@@ -4,6 +4,34 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        internal static bool ObservedServerHasTune(uint net) => Server.TryGetValue(net, out var se) && se.Tune != null;
+        internal readonly struct TumbleServerObservation
+        {
+            internal readonly uint NetId;
+            internal readonly int OwnerId;
+            internal readonly Vector3d Where;
+            internal readonly bool HasState;
+            internal readonly byte[] Record;
+            internal TumbleServerObservation(uint net, int owner, Vector3d where, bool state, byte[] record)
+            { NetId = net; OwnerId = owner; Where = where; HasState = state; Record = record; }
+        }
+        internal static bool ObserveTumbleServer(uint net, out TumbleServerObservation observation)
+        {
+            if (!Server.TryGetValue(net, out var se)) { observation = default; return false; }
+            observation = new TumbleServerObservation(se.NetId, se.OwnerId, se.Where, se.HasState, se.Record != null ? (byte[])se.Record.Clone() : null);
+            return true;
+        }
+        internal static void ScheduleCensus(uint net, bool restartRepair = false)
+        {
+            if (restartRepair) _repairWait.Remove(net);
+            _censusDue[net] = new CensusDue { At = Time.realtimeSinceStartup, Attempt = 1 };
+        }
+        internal static ushort NextUsableSequence(UsableKey key)
+        { _liveOut.TryGetValue(key, out ushort seq); _liveOut[key] = ++seq; return seq; }
+        internal static void RememberLeaseRequest(string key) => LeaseAsked.Add(key);
+        internal static void ResetHealthObservations() { _hwSeen.Clear(); _hwOwnerSeen.Clear(); _hwActive.Clear(); _autoMarkAt = -999f; }
+        internal static void HoldCrashUntil(uint net, float until) => _testHeld[net] = until;
+        internal static void SetRabbitCharge(movecreaturescript move, RabCharge charge) => RabCharges[move] = charge;
         internal static bool ApplyingState { get => _applyingState; set => _applyingState = value; }
         internal static void ObserveBreaks(uint net, out int count, out Transform done)
         {

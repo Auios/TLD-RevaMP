@@ -57,3 +57,5 @@ namespace TLDRevamp.Net
         static void CopyTanksOnOwnerChange(Ent e, bool proxy) { }
     }
 }
+
+namespace TLDRevamp { static class DevHooks { internal static System.Func<tosaveitemscript, bool> HeldItem; } }

@@ -20,8 +20,8 @@ namespace TLDRevamp.Net
     public static class ModTransfer
     {
         public const byte ModOffer = 81;   // s→c: varint n, n × (str id, str name, str version, str sha256, u32 size)
-        public const byte ModFetch = 82;   // c→s: str id
-        public const byte ModChunk = 83;   // s→c: str id, u32 offset, u32 total, bytes
+        public const byte ModFetch = 82;   // câ†’s: str id
+        public const byte ModChunk = 83;   // sâ†’c: str id, u32 offset, u32 total, bytes
 
         /// The host sends mods to joiners (false: joiners with other mods are refused with what to install).
         public static bool HostSends = true;
@@ -36,7 +36,7 @@ namespace TLDRevamp.Net
             ",\"sent\":" + Sent + ",\"installed\":" + Installed + ",\"refusedUnapproved\":" + RefusedUnapproved + ",\"refusedHash\":" + RefusedHash +
             ",\"installDir\":" + Json.Str(InstallDir) + "}";
 
-        /// sha256 (lower-case hex) → "id version" of every approved mod file.
+        /// sha256 (lower-case hex) â†’ "id version" of every approved mod file.
         public static Dictionary<string, string> Approved()
         {
             var d = new Dictionary<string, string>();
@@ -180,7 +180,7 @@ namespace TLDRevamp.Net
 
         private void ModOfferIn(NetReader r)
         {
-            if (Bot != null) return;
+            if (Player != null) return;
             var list = new List<ModTransfer.Offer>();
             uint n = r.VarU32();
             for (uint i = 0; i < n && i < 64 && !r.Bad; i++)

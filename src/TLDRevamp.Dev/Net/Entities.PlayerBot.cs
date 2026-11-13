@@ -26,7 +26,7 @@ namespace TLDRevamp.Net
             public bool Ground(double gx, double gz, out double gy)
             {
                 var u = mainscript.UnityPosFromGlobal(new Vector3d(gx, 0, gz));
-                var hit = DebugBridge.GroundHit(u.x, u.z);
+                var hit = GroundPlacement.GroundHit(u.x, u.z);
                 gy = hit != null ? mainscript.GlobalFromUnityPos(hit.Value.point).y : 0;
                 return hit != null;
             }

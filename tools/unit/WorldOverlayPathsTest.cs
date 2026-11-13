@@ -401,3 +401,9 @@ namespace TLDRevamp.Net
 {
     internal static class EntityPanels { internal static uint PanelFocus(bool held) => Entities.PanelFocus(held); }
 }
+
+namespace TLDRevamp.Net
+{
+    static class EntityPartWatchTools { internal static string OverlayColliders(Entities.Ent entity, bool aimed = false) => Entities.OverlayColliders(entity, aimed); }
+    static class EntityHealthWatchTools { internal static string HealthWatchLine(uint net) => Entities.HealthWatchLine(net); }
+}

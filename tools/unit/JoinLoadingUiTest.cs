@@ -116,7 +116,7 @@ static class JoinLoadingUiTest
         using (var p = Probe()) Check(p.RootElement.GetProperty("expandedSteps").GetArrayLength() == 0 && !p.RootElement.GetProperty("receivedExpanded").GetBoolean(), "probe defaults collapsed");
         string before = DiagnosticProbe();
         Check(!JoinLoading.ToggleStep(-1) && !JoinLoading.ToggleStep(7) && !JoinLoading.ToggleStep(6), "invalid and empty real steps cannot expand");
-        Check(JoinLoading.ToggleFromBridge(new[] { "loading", "toggle", "received" }).Contains("error"), "toggle bridge requires test bridge");
+        Check(JoinLoadingTools.ToggleFromBridge(new[] { "loading", "toggle", "received" }).Contains("error"), "toggle bridge requires test bridge");
         Check(JoinLoading.ToggleStep(4), "toggle API expands current step");
         GUI.Clear(); JoinLoading.Draw();
         float stepHeight = CardHeight();
@@ -138,8 +138,8 @@ static class JoinLoadingUiTest
         Check(Event.current.Used, "loading consumes unused mouse events before game UI can receive them");
         Event.current.type = EventType.Repaint; Event.current.isMouse = false;
         Plugin.BridgeEnabled = true;
-        Check(!JoinLoading.ToggleFromBridge(new[] { "loading", "toggle", "step", "3" }).Contains("error") && !JoinLoading.ToggleFromBridge(new[] { "loading", "toggle", "step", "2" }).Contains("error"), "bridge toggles individual real join steps");
-        Check(JoinLoading.ToggleFromBridge(new[] { "loading", "toggle", "step", "oops" }).Contains("error"), "invalid bridge index is inert");
+        Check(!JoinLoadingTools.ToggleFromBridge(new[] { "loading", "toggle", "step", "3" }).Contains("error") && !JoinLoadingTools.ToggleFromBridge(new[] { "loading", "toggle", "step", "2" }).Contains("error"), "bridge toggles individual real join steps");
+        Check(JoinLoadingTools.ToggleFromBridge(new[] { "loading", "toggle", "step", "oops" }).Contains("error"), "invalid bridge index is inert");
         GUI.Clear(); JoinLoading.Draw();
         Check(GUI.Labels.Any(x => x.Text.Contains("Terrain 3 / 3")) && GUI.Labels.Any(x => x.Text.StartsWith("Scene loaded · ")), "expanded real steps draw full diagnostics");
         Plugin.BridgeEnabled = false;
@@ -150,17 +150,17 @@ static class JoinLoadingUiTest
         var before = DiagnosticProbe(); float volume = AudioListener.volume; bool paused = AudioListener.pause;
         bool held = mainscript.s.player.RB.isKinematic;
         var events = UnityEngine.EventSystems.EventSystem.current = new UnityEngine.EventSystems.EventSystem { enabled = true };
-        Check(JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "3" }).Contains("error") && !JoinLoading.Showing, "preview unavailable without test bridge");
+        Check(JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "3" }).Contains("error") && !JoinLoading.Showing, "preview unavailable without test bridge");
         JoinLoading.Probe("preview"); Check(!JoinLoading.Showing, "normal loading probe never starts preview");
         Plugin.BridgeEnabled = true;
         foreach (var bad in new[] { new[] { "loading", "preview", "-1" }, new[] { "loading", "preview", "7" }, new[] { "loading", "preview", "3", "other" }, new[] { "loading", "preview" }, new[] { "loading", "preview", "4", "expanded", "expanded" }, new[] { "loading", "preview", "4", "question", "stuck" } })
-            Check(JoinLoading.PreviewFromBridge(bad).Contains("error") && !JoinLoading.Showing, "invalid preview arguments are inert");
+            Check(JoinLoadingTools.PreviewFromBridge(bad).Contains("error") && !JoinLoading.Showing, "invalid preview arguments are inert");
         for (int stage = 0; stage <= 6; stage++) foreach (string mode in new[] { "", "question", "stuck" }) foreach (bool expanded in new[] { false, true })
         {
             var args = new List<string> { "loading", "preview", stage.ToString() };
             if (mode != "") args.Add(mode);
             if (expanded) args.Add("expanded");
-            Check(JoinLoading.PreviewFromBridge(args.ToArray()).Contains("true") && JoinLoading.Showing && !JoinLoading.Visible, "bridge opens presentation without a join");
+            Check(JoinLoadingTools.PreviewFromBridge(args.ToArray()).Contains("true") && JoinLoading.Showing && !JoinLoading.Visible, "bridge opens presentation without a join");
             GUI.Clear(); JoinLoading.Tick(); JoinLoading.FixedTick(); JoinLoading.Draw();
             Check(GUI.Labels.Any(x => x.Text.Contains("SAMPLE PREVIEW")) && GUI.Labels.Any(x => x.Text.Contains("Host: Sample host")) && GUI.Labels.Any(x => x.Text == "00:07"), "sample clearly labelled with host and fixed clock");
             Check((mode == "question") == GUI.Buttons.Any(x => x.Text == "Download mods") && (mode == "stuck") == GUI.Buttons.Any(x => x.Text == "Continue anyway"), "preview exposes requested question/stuck actions");
@@ -174,13 +174,13 @@ static class JoinLoadingUiTest
             using (var p = Probe()) Check(p.RootElement.GetProperty("expandedSteps").GetArrayLength() == (expanded ? 7 : 0) && p.RootElement.GetProperty("receivedExpanded").GetBoolean() == expanded, "preview expansion is observable in probe");
             Check(DiagnosticProbe() == before && AudioListener.volume == volume && AudioListener.pause == paused && events.enabled && held == mainscript.s.player.RB.isKinematic, "preview never changes live diagnostics, audio, input or placement");
         }
-        JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "4" });
-        Check(!JoinLoading.ToggleFromBridge(new[] { "loading", "toggle", "step", "5" }).Contains("error") && !JoinLoading.ToggleFromBridge(new[] { "loading", "toggle", "received" }).Contains("error"), "bridge toggles pending preview step and received block");
+        JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "4" });
+        Check(!JoinLoadingTools.ToggleFromBridge(new[] { "loading", "toggle", "step", "5" }).Contains("error") && !JoinLoadingTools.ToggleFromBridge(new[] { "loading", "toggle", "received" }).Contains("error"), "bridge toggles pending preview step and received block");
         GUI.Clear(); JoinLoading.Draw();
         Check(GUI.Labels.Any(x => x.Text == JoinLoadingPreview.Details[5]) && GUI.Labels.Any(x => x.Text == "LATEST"), "preview bridge uses same immediate toggle path as clicks");
         foreach (bool expanded in new[] { false, true })
         {
-            JoinLoading.PreviewFromBridge(expanded ? new[] { "loading", "preview", "4", "expanded" } : new[] { "loading", "preview", "4" });
+            JoinLoadingTools.PreviewFromBridge(expanded ? new[] { "loading", "preview", "4", "expanded" } : new[] { "loading", "preview", "4" });
             GUI.Clear(); JoinLoading.Draw(); GUI.Clear(); JoinLoading.Draw(); GUI.Clear();
             int measures = GUIStyle.Measures;
             long allocated = GC.GetAllocatedBytesForCurrentThread();
@@ -188,28 +188,28 @@ static class JoinLoadingUiTest
             Check(GC.GetAllocatedBytesForCurrentThread() == allocated && GUIStyle.Measures == measures, "collapsed and fully expanded preview allocate nothing between refreshes");
         }
         ScrollDisclosures();
-        JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "off" });
+        JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "off" });
         Check(!JoinLoading.Showing && DiagnosticProbe() == before, "preview off restores presentation only");
-        JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "4", "expanded" });
+        JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "4", "expanded" });
         JoinLoading.Begin();
-        Check(JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "3" }).Contains("error") && !JoinLoadingPreview.Active, "preview cannot replace a real join");
+        Check(JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "3" }).Contains("error") && !JoinLoadingPreview.Active, "preview cannot replace a real join");
         using (var p = Probe()) Check(p.RootElement.GetProperty("expandedSteps").GetArrayLength() == 0 && !p.RootElement.GetProperty("receivedExpanded").GetBoolean(), "Begin clears expansion inherited from preview");
         JoinLoading.End("cancelled");
     }
     static void ScrollDisclosures()
     {
         Screen.height = 600;
-        JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "4" }); GUI.Clear(); JoinLoading.Draw();
+        JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "4" }); GUI.Clear(); JoinLoading.Draw();
         Check(GUI.Scrolls.Count == 0, "collapsed card fits at the constrained screen height");
         var received = GUI.Labels.Single(x => x.Text == "Received");
         var step = GUI.Labels.Single(x => x.Text == JoinLoadingState.Names[0]);
-        JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "4", "expanded" }); GUI.Clear(); JoinLoading.Draw();
+        JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "4", "expanded" }); GUI.Clear(); JoinLoading.Draw();
         Check(GUI.Scrolls.Count == 1 && GUI.Scrolls[0].Body > GUI.Scrolls[0].View, "expanded card falls back to one whole-card scroll view");
         var expandedReceived = GUI.Labels.Single(x => x.Text == "Received");
         var expandedStep = GUI.Labels.Single(x => x.Text == JoinLoadingState.Names[0]);
         Check(expandedReceived.Rect.x == received.Rect.x && expandedReceived.Rect.width == received.Rect.width && expandedStep.Rect.width == step.Rect.width,
             "scrollbar gutter never shifts or resizes the columns");
-        JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "4" }); GUI.Clear(); JoinLoading.Draw();
+        JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "4" }); GUI.Clear(); JoinLoading.Draw();
         Check(GUI.Scrolls.Count == 0, "collapsing removes the scroll fallback");
         Screen.height = 1080;
     }
@@ -252,16 +252,16 @@ static class JoinLoadingUiTest
             if (field.FieldType == typeof(GUIStyle) || field.FieldType == typeof(Sprite) || field.FieldType == typeof(Font)) field.SetValue(null, null);
             if (field.Name == "_height") field.SetValue(null, -1);
         }
-        JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "4", "question" });
+        JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "4", "question" });
         int slices = GUI.SliceDraws; GUI.Clear(); JoinLoading.Draw();
         Check(GUI.SliceDraws == slices && JoinLoadingSkin.Body.font.name == "Arial", "missing menu assets use flat bordered rectangles and legacy Arial");
         Check(GUI.Textures.Any(x => x.Texture == Texture2D.whiteTexture && x.Tint.r == 210/255f && x.Tint.g == 205/255f) && GUI.Textures.Any(x => x.Texture == Texture2D.whiteTexture && x.Tint.r == 231/255f && x.Tint.g == 220/255f), "paper and plaques keep the game's tints");
         Check(GUI.Buttons.Count(x => x.Text.Length > 0) == 3 && GUI.Labels.Any(x => x.Text == "Joining"), "fallback retains title and all question actions");
         foreach (var label in GUI.Labels) Check(label.Rect.x == Math.Round(label.Rect.x) && label.Rect.y == Math.Round(label.Rect.y) && label.Rect.width == Math.Round(label.Rect.width) && label.Rect.height == Math.Round(label.Rect.height), "text rectangles pixel snapped");
-        JoinLoading.PreviewFromBridge(new[] { "loading", "preview", "off" });
-        string bridge = System.IO.File.ReadAllText("src/TLDRevamp/DebugBridge.cs");
+        JoinLoadingTools.PreviewFromBridge(new[] { "loading", "preview", "off" });
+        string bridge = System.IO.File.ReadAllText("src/TLDRevamp.Dev/DebugBridge.cs");
         string plugin = System.IO.File.ReadAllText("src/TLDRevamp/Plugin.cs");
-        Check(bridge.Contains("ma[1] == \"preview\") return Net.JoinLoading.PreviewFromBridge(ma)") && bridge.Contains("ma[1] == \"toggle\") return Net.JoinLoading.ToggleFromBridge(ma)") && plugin.Contains("if (Net.JoinLoading.Showing) { Net.JoinLoading.Draw(); return; }"), "bridge routes preview/toggles and runner suppresses other overlays while showing");
+        Check(bridge.Contains("ma[1] == \"preview\") return TLDRevamp.Net.JoinLoadingTools.PreviewFromBridge(ma)") && bridge.Contains("ma[1] == \"toggle\") return TLDRevamp.Net.JoinLoadingTools.ToggleFromBridge(ma)") && plugin.Contains("if (Net.JoinLoading.Showing) { Net.JoinLoading.Draw(); return; }"), "bridge routes preview/toggles and runner suppresses other overlays while showing");
     }
 }
 
@@ -340,7 +340,7 @@ namespace TLDRevamp
     static class TelemetryPrivacy { public const string Removed = "[removed]"; }
     static class Plugin { public static bool BridgeEnabled; public static LogSink Log = new LogSink(); }
     class LogSink { public void LogError(string text) { throw new Exception(text); } public void LogWarning(string text) { throw new Exception(text); } }
-    static class DebugBridge
+    static class GroundPlacement
     {
         public static bool TpBusy;
         public struct Hit { public Vector3 point; public Collider collider; }
@@ -363,3 +363,5 @@ namespace TLDRevamp.Net
     static class SteamCompat { public static string Route(int conn) => "{\"ok\":true,\"relayed\":true}"; }
     static class Entities { public static bool TpaInboxEmpty = true; public static int Applied; public static int JoinApplied(HashSet<uint> ids) => Applied; }
 }
+
+namespace TLDRevamp { static class DevHooks { internal static System.Func<Net.IJoinLoadingPreview> JoinPreview; internal static System.Action JoinPreviewEnd; internal static bool Testing => Plugin.BridgeEnabled; } }

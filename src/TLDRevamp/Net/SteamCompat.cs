@@ -62,17 +62,6 @@ namespace TLDRevamp.Net
             GetQuickConnectionStatusNative(CSteamSockets(), c.m_HSteamNetConnection, ref st);
             return st;
         }
-
-        // ---- relay network (Valve's SDR): datacenter pings and which relay a connection runs through. Flat functions of
-        // the same DLL era, called directly (as GetQuickConnectionStatus above).
-        [DllImport("steam_api64", EntryPoint = "SteamAPI_ISteamNetworkingUtils_GetPOPCount", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int GetPOPCountNative(IntPtr self);
-        [DllImport("steam_api64", EntryPoint = "SteamAPI_ISteamNetworkingUtils_GetPOPList", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int GetPOPListNative(IntPtr self, [Out] uint[] list, int n);
-        [DllImport("steam_api64", EntryPoint = "SteamAPI_ISteamNetworkingUtils_GetPingToDataCenter", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int GetPingToDataCenterNative(IntPtr self, uint pop, out uint viaRelay);
-        [DllImport("steam_api64", EntryPoint = "SteamAPI_ISteamNetworkingUtils_GetDirectPingToPOP", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int GetDirectPingToPOPNative(IntPtr self, uint pop);
         [DllImport("steam_api64", EntryPoint = "SteamAPI_ISteamNetworkingSockets_GetConnectionInfo", CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool GetConnectionInfoNative(IntPtr self, uint hConn, IntPtr info);
@@ -83,24 +72,6 @@ namespace TLDRevamp.Net
             var sb = new System.Text.StringBuilder();
             for (int sh = 24; sh >= 0; sh -= 8) { char c = (char)((id >> sh) & 0xFF); if (c != 0) sb.Append(c); }
             return sb.ToString();
-        }
-
-        /// Every relay datacenter with this machine's ping to it (through the best relay route, and direct).
-        public static string Pops()
-        {
-            Ensure();
-            SteamNetworkingUtils.InitRelayNetworkAccess();
-            var u = CSteamUtils();
-            int n = GetPOPCountNative(u);
-            var ids = new uint[Math.Max(0, n)];
-            if (n > 0) n = GetPOPListNative(u, ids, n);
-            var rows = new System.Collections.Generic.List<string>();
-            for (int i = 0; i < n; i++)
-            {
-                int ping = GetPingToDataCenterNative(u, ids[i], out uint via), direct = GetDirectPingToPOPNative(u, ids[i]);
-                rows.Add("{\"pop\":" + Json.Str(PopName(ids[i])) + ",\"ping\":" + ping + ",\"via\":" + Json.Str(PopName(via)) + ",\"direct\":" + direct + "}");
-            }
-            return "{\"count\":" + n + ",\"pops\":[" + string.Join(",", rows) + "]}";
         }
 
         /// A connection's route (SteamNetConnectionInfo_t, SDK 1.48 layout, Windows packing): the remote end's datacenter
@@ -141,12 +112,6 @@ namespace TLDRevamp.Net
                 return type == IdentitySteamId ? (ulong)Marshal.ReadInt64(buf, 8) : 0;
             }
             finally { Marshal.FreeHGlobal(buf); }
-        }
-
-        private static IntPtr CSteamUtils()
-        {
-            var ctx = typeof(SteamClient).Assembly.GetType("Steamworks.CSteamAPIContext");
-            return (IntPtr)ctx.GetMethod("GetSteamNetworkingUtils", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
         }
 
         private static IntPtr CSteamSockets()

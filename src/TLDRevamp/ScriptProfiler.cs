@@ -28,8 +28,29 @@ namespace TLDRevamp
     /// many calls, or compare with the workers off. It also takes the GC lock twice per call; leave it off for timing.
     public static class ScriptProfiler
     {
-        private const int Capacity = 1000; // Slot<A,B,C> with ten digit types
-        private const int SetProfile = 1, SetTimers = 2, SetCoarse = 3;
+        internal static void CoarseStop()
+        {
+            _coarseHarmony?.UnpatchSelf(); _coarseHarmony = null; Release(SetCoarse); Coarse.FrameEnd(); Coarse.FrameEnd();
+        }
+        internal static void ResetProfileClock() => _lastFrameEnd = 0;
+        internal static IReadOnlyList<int> ObservedOwner => Owner;
+        internal static IReadOnlyList<string> ObservedLabel => Label;
+        internal static IReadOnlyList<MethodBase> ObservedMethod => Method;
+        internal static IEnumerable<MethodBase> Callees(MethodBase caller)
+        {
+            List<KeyValuePair<System.Reflection.Emit.OpCode, object>> code;
+            try { code = PatchProcessor.ReadMethodBody(caller).ToList(); } catch { yield break; }
+            foreach (var ins in code)
+                // Not the framework's methods or generic types: their code is shared by every caller and instantiation
+                // (probing List<T>/String members broke unrelated callers in a test)
+                // Only the game's own methods: probing the framework's shared generic code broke unrelated callers, and
+                // probing RevaMP's network internals this way crashed a two-copy test (2026-10-18). Time RevaMP by name.
+                if (ins.Value is MethodBase m && !m.IsAbstract && !m.ContainsGenericParameters && m.DeclaringType != null && !m.DeclaringType.IsGenericType &&
+                    m.DeclaringType.Assembly == typeof(mainscript).Assembly && m.GetMethodBody() != null)
+                    yield return m;
+        }
+        internal const int Capacity = 1000; // Slot<A,B,C> with ten digit types
+        internal const int SetProfile = 1, SetTimers = 2, SetCoarse = 3;
         private static readonly string[] CoarseMethods = { "carscript.Update", "mapSettingScript.Update", "fpscontroller.Update", "aiscript.Update",
             "TLDRevamp.Net.Mp.Tick", "TLDRevamp.Net.Entities.FixedTick", "TLDRevamp.Net.Entities.LateSample", "TLDRevamp.Fixes.TinyRendererCull.Tick" };
         internal static readonly string[] CoarseNames = CoarseMethods.Select(m => "coarse:" + m).Concat(new[] { "coarse:truncated" }).ToArray();
@@ -47,34 +68,26 @@ namespace TLDRevamp
                 if (slot >= 0) { CoarseGroup[slot] = i; if (!Probe(_coarseHarmony, m, SetCoarse, false)) Plugin.Log.LogWarning("Coarse timer unavailable: " + CoarseMethods[i]); }
             }
         }
-        private static void CoarseStop()
-        {
-            _coarseHarmony?.UnpatchSelf(); _coarseHarmony = null; Release(SetCoarse); Coarse.FrameEnd(); Coarse.FrameEnd();
-        }
 
         // Per slot. Frame* is the current frame window (Runner.Update to Runner.Update), rolled up by FrameEnd.
         private static readonly MethodBase[] Method = new MethodBase[Capacity];
         private static readonly string[] Label = new string[Capacity];
         private static readonly int[] Owner = new int[Capacity];
         private static readonly long[] FrameTicks = new long[Capacity], FrameCalls = new long[Capacity], FrameAlloc = new long[Capacity], FrameMax = new long[Capacity];
-        private static readonly long[] Over5 = new long[Capacity];
         private static readonly int[] Touched = new int[Capacity];
         private static int _touched;
         // On-demand profile totals
-        private static readonly long[] Ticks = new long[Capacity], Calls = new long[Capacity], Alloc = new long[Capacity], MaxTicks = new long[Capacity], SlowTicks = new long[Capacity];
         // Telemetry interval totals (reset at every tick) and last finished frame
         private static readonly long[] IntTicks = new long[Capacity], IntCalls = new long[Capacity], IntAlloc = new long[Capacity], IntMax = new long[Capacity];
         internal static readonly float[] LastFrameMs = new float[Capacity];
         private static long _intFrames;
         private static double _intStart;
 
-        private static Harmony _profileHarmony, _timerHarmony;
-        private static Stopwatch _wall;
+        private static Harmony _timerHarmony;
         /// Slow-frame attribution: a frame window longer than SlowFrameMs adds each method's time in that window to SlowTicks.
-        public static float SlowFrameMs = 25f;
-        private static long _slowFrames, _frames, _lastFrameEnd;
+        private static long _lastFrameEnd;
 
-        public static bool Running => _profileHarmony != null;
+        public static bool Running => DevHooks.ProfileRunning?.Invoke() ?? false;
         public static bool TimersOn => _timerHarmony != null;
         public static bool TimerAlloc { get; private set; }
 
@@ -82,7 +95,7 @@ namespace TLDRevamp
         /// profiled game functions).
         public static int MainThreadId = -1;
         private static readonly long Over5msTicks = Stopwatch.Frequency / 200;
-        private static readonly double TickMs = 1000.0 / Stopwatch.Frequency;
+        internal static readonly double TickMs = 1000.0 / Stopwatch.Frequency;
 
         // ---- probes ----
 
@@ -115,14 +128,14 @@ namespace TLDRevamp
             if (FrameCalls[s]++ == 0 && _touched < Capacity) Touched[_touched++] = s;
             FrameTicks[s] += ticks;
             if (ticks > FrameMax[s]) FrameMax[s] = ticks;
-            if (ticks > Over5msTicks) Over5[s]++;
+            if (ticks > Over5msTicks) DevHooks.ProfileSlowCall?.Invoke(s);
             if (alloc > 0) FrameAlloc[s] += alloc; // negative = a GC ran mid-call; skip that sample
         }
 
         private static readonly Type SlotGeneric = typeof(Slot<,,>);
         private static Type SlotType(int s) => SlotGeneric.MakeGenericType(Digits[s / 100], Digits[s / 10 % 10], Digits[s % 10]);
 
-        private static bool Probe(Harmony h, MethodBase m, int owner, bool alloc)
+        internal static bool Probe(Harmony h, MethodBase m, int owner, bool alloc)
         {
             int s = Array.IndexOf(Owner, 0);
             if (s < 0) return false;
@@ -137,12 +150,12 @@ namespace TLDRevamp
 
         private static void Clear(int s)
         {
-            FrameTicks[s] = FrameCalls[s] = FrameAlloc[s] = FrameMax[s] = Over5[s] = 0;
-            Ticks[s] = Calls[s] = Alloc[s] = MaxTicks[s] = SlowTicks[s] = 0;
+            FrameTicks[s] = FrameCalls[s] = FrameAlloc[s] = FrameMax[s] = 0;
+            DevHooks.ProfileSlotCleared?.Invoke(s);
             IntTicks[s] = IntCalls[s] = IntAlloc[s] = IntMax[s] = 0; LastFrameMs[s] = 0;
         }
 
-        private static void Release(int owner)
+        internal static void Release(int owner)
         {
             for (int s = 0; s < Capacity; s++) if (Owner[s] == owner) { Owner[s] = 0; Method[s] = null; Clear(s); }
             // A released slot may still be in this frame's touched list: FrameEnd skips unowned slots.
@@ -155,8 +168,8 @@ namespace TLDRevamp
             if (!CoarseOn) Coarse.Last[CoarseNames.Length - 1] = -1;
             if (!Running && !TimersOn && _touched == 0) return;
             long now = Stopwatch.GetTimestamp();
-            bool counted = _lastFrameEnd != 0, slow = counted && (now - _lastFrameEnd) * TickMs > SlowFrameMs;
-            if (counted && Running) { _frames++; if (slow) _slowFrames++; }
+            bool counted = _lastFrameEnd != 0, slow = counted && (now - _lastFrameEnd) * TickMs > (DevHooks.ProfileSlowMs?.Invoke() ?? 25f);
+            DevHooks.ProfileFrame?.Invoke(counted, slow);
             if (TimersOn)
             {
                 _intFrames++;
@@ -167,9 +180,7 @@ namespace TLDRevamp
                 int s = Touched[i];
                 if (Owner[s] == SetProfile && counted)
                 {
-                    Ticks[s] += FrameTicks[s]; Calls[s] += FrameCalls[s]; Alloc[s] += FrameAlloc[s];
-                    if (FrameMax[s] > MaxTicks[s]) MaxTicks[s] = FrameMax[s];
-                    if (slow) SlowTicks[s] += FrameTicks[s];
+                    DevHooks.ProfileSample?.Invoke(s, FrameTicks[s], FrameCalls[s], FrameAlloc[s], FrameMax[s], slow);
                 }
                 else if (Owner[s] == SetTimers)
                 {
@@ -189,7 +200,7 @@ namespace TLDRevamp
             return t.DeclaringType != null && t.Name.StartsWith("<") ? t.DeclaringType.Name + "." + t.Name : t.Name + "." + m.Name;
         }
 
-        private static IEnumerable<MethodBase> Resolve(string spec)
+        internal static IEnumerable<MethodBase> Resolve(string spec)
         {
             int dot = spec.LastIndexOf('.');
             var type = dot > 0 ? Reflect.FindType(spec.Substring(0, dot)) : null;
@@ -200,7 +211,7 @@ namespace TLDRevamp
 
         private static readonly string[] Targets = { "Update", "LateUpdate", "FixedUpdate", "OnGUI" };
         private static readonly string[] Callbacks = { "OnCollisionEnter", "OnCollisionStay", "OnCollisionExit", "OnTriggerEnter", "OnTriggerStay", "OnTriggerExit" };
-        private static IEnumerable<MethodBase> AllUpdates()
+        internal static IEnumerable<MethodBase> AllUpdates()
         {
             foreach (var type in typeof(mainscript).Assembly.GetTypes())
             {
@@ -228,7 +239,7 @@ namespace TLDRevamp
             }
         }
 
-        private static (int patched, int failed) ProbeAll(Harmony h, IEnumerable<MethodBase> methods, int owner, bool alloc)
+        internal static (int patched, int failed) ProbeAll(Harmony h, IEnumerable<MethodBase> methods, int owner, bool alloc)
         {
             int patched = 0, failed = 0;
             var seen = new HashSet<MethodBase>();
@@ -240,7 +251,7 @@ namespace TLDRevamp
             return (patched, failed);
         }
 
-        private static IEnumerable<MethodBase> Specs(string[] specs, Func<string, bool> missing)
+        internal static IEnumerable<MethodBase> Specs(string[] specs, Func<string, bool> missing)
         {
             foreach (var spec in specs)
             {
@@ -257,86 +268,6 @@ namespace TLDRevamp
                 foreach (var m in Resolve(spec)) { any = true; yield return m; }
                 if (!any) missing(spec);
             }
-        }
-
-        internal static IEnumerable<MethodBase> Callees(MethodBase caller)
-        {
-            List<KeyValuePair<System.Reflection.Emit.OpCode, object>> code;
-            try { code = PatchProcessor.ReadMethodBody(caller).ToList(); } catch { yield break; }
-            foreach (var ins in code)
-                // Not the framework's methods or generic types: their code is shared by every caller and instantiation
-                // (probing List<T>/String members broke unrelated callers in a test)
-                // Only the game's own methods: probing the framework's shared generic code broke unrelated callers, and
-                // probing RevaMP's network internals this way crashed a two-copy test (2026-10-18). Time RevaMP by name.
-                if (ins.Value is MethodBase m && !m.IsAbstract && !m.ContainsGenericParameters && m.DeclaringType != null && !m.DeclaringType.IsGenericType &&
-                    m.DeclaringType.Assembly == typeof(mainscript).Assembly && m.GetMethodBody() != null)
-                    yield return m;
-        }
-
-        /// Bridge `il Type.Method`: the original IL of a game method (writing exact transpilers).
-        public static string Il(string spec)
-        {
-            var sb = new StringBuilder();
-            foreach (var m in Resolve(spec))
-            {
-                sb.Append("// ").Append(m).Append('\n');
-                int i = 0;
-                foreach (var ins in PatchProcessor.ReadMethodBody(m)) sb.Append(i++).Append(": ").Append(ins.Key.Name).Append(' ').Append(ins.Value is MethodBase mb ? mb.DeclaringType?.Name + "::" + mb.Name : ins.Value?.ToString()).Append('\n');
-            }
-            return "{\"il\":" + Json.Str(sb.ToString()) + "}";
-        }
-
-        // ---- on-demand profiler ----
-
-        /// methods == null: every Update/LateUpdate/FixedUpdate/OnGUI in the game. Otherwise "Type.Method" names (every
-        /// overload), "all" or "coroutines"; a leading "alloc" also estimates allocations (see the class comment).
-        public static string Start(string[] methods)
-        {
-            if (Running) return "{\"error\":\"already running\"}";
-            bool alloc = methods != null && methods.Length > 0 && methods[0] == "alloc";
-            if (alloc) methods = methods.Skip(1).ToArray();
-            if (methods != null && methods.Length == 0) methods = null;
-            _slowFrames = _frames = 0;
-            _lastFrameEnd = 0;
-            _profileHarmony = new Harmony(Plugin.Guid + ".profiler");
-            int missing = 0;
-            var (patched, failed) = ProbeAll(_profileHarmony, methods == null ? AllUpdates() : Specs(methods, _ => { missing++; return true; }), SetProfile, alloc);
-            _wall = Stopwatch.StartNew();
-            return "{\"patched\":" + patched + ",\"failed\":" + (failed + missing) + ",\"alloc\":" + (alloc ? "true" : "false") + "}";
-        }
-
-        public static string Stop(int top)
-        {
-            if (!Running) return "{\"error\":\"not running\"}";
-            _profileHarmony.UnpatchSelf();
-            _profileHarmony = null;
-            double seconds = _wall.Elapsed.TotalSeconds;
-            var live = Enumerable.Range(0, Capacity).Where(s => Owner[s] == SetProfile && Calls[s] > 0).ToList();
-
-            string List(IEnumerable<int> rows) =>
-                string.Join(",", rows.Take(top).Select(s =>
-                    "{\"m\":" + Json.Str(Label[s] + "(" + string.Join(",", Method[s].GetParameters().Select(p => p.ParameterType.Name)) + ")") +
-                    ",\"msPerSec\":" + (Ticks[s] * TickMs / seconds).ToString("F3") +
-                    ",\"kbPerSec\":" + (Alloc[s] / 1024.0 / seconds).ToString("F1") +
-                    ",\"callsPerSec\":" + (Calls[s] / seconds).ToString("F0") +
-                    ",\"msPerFrame\":" + (Ticks[s] * TickMs / Math.Max(1, _frames)).ToString("F4") +
-                    ",\"maxMs\":" + (MaxTicks[s] * TickMs).ToString("F2") +
-                    ",\"over5ms\":" + Over5[s] + "}"));
-
-            var sb = new StringBuilder();
-            sb.Append("{\"seconds\":").Append(seconds.ToString("F1"))
-              .Append(",\"totalMsPerSec\":").Append((live.Sum(s => Ticks[s]) * TickMs / seconds).ToString("F2"))
-              .Append(",\"totalKbPerSec\":").Append((live.Sum(s => Alloc[s]) / 1024.0 / seconds).ToString("F1"))
-              .Append(",\"byTime\":[").Append(List(live.OrderByDescending(s => Ticks[s]))).Append(']')
-              .Append(",\"byAlloc\":[").Append(List(live.OrderByDescending(s => Alloc[s]))).Append(']')
-              .Append(",\"bySpike\":[").Append(List(live.OrderByDescending(s => MaxTicks[s]))).Append(']')
-              .Append(",\"frames\":").Append(_frames).Append(",\"slowFrames\":").Append(_slowFrames).Append(",\"slowFrameMs\":").Append(SlowFrameMs)
-              .Append(",\"bySlowFrames\":[").Append(string.Join(",", live.Where(s => SlowTicks[s] > 0).OrderByDescending(s => SlowTicks[s]).Take(top).Select(s =>
-                  "{\"m\":" + Json.Str(Label[s]) +
-                  ",\"msPerSlowFrame\":" + (SlowTicks[s] * TickMs / Math.Max(1, _slowFrames)).ToString("F3") +
-                  ",\"msPerFrameAll\":" + (Ticks[s] * TickMs / Math.Max(1, _frames)).ToString("F3") + "}"))).Append("]}");
-            Release(SetProfile);
-            return sb.ToString();
         }
 
         // ---- telemetry script timers ----
@@ -440,56 +371,6 @@ namespace TLDRevamp
             var b = new StringBuilder("{");
             for (int i = 0; i < n; i++) { if (i > 0) b.Append(','); b.Append(TelemetryPrivacy.CodeStr(Label[_top[i]])).Append(':').Append(Json.Num(LastFrameMs[_top[i]])); }
             return b.Append('}').ToString();
-        }
-
-        /// Probe overhead: an empty method called 200k times, unprobed vs probed (and probed with alloc estimate).
-        public static string Calibrate()
-        {
-            const int N = 200000;
-            var target = typeof(ScriptProfiler).GetMethod(nameof(Empty), BindingFlags.Static | BindingFlags.NonPublic);
-            double Run() { var sw = Stopwatch.StartNew(); for (int i = 0; i < N; i++) Empty(i); return sw.Elapsed.TotalMilliseconds * 1e6 / N; }
-            double baseNs = Math.Min(Run(), Run());
-            var h = new Harmony(Plugin.Guid + ".calibrate");
-            string result;
-            try
-            {
-                if (!Probe(h, target, SetProfile + 8, false)) return "{\"error\":\"patch failed\"}";
-                double timedNs = Math.Min(Run(), Run());
-                h.UnpatchSelf(); Release(SetProfile + 8);
-                if (!Probe(h, target, SetProfile + 8, true)) return "{\"error\":\"patch failed\"}";
-                long heap = GC.GetTotalMemory(false);
-                double allocNs = Math.Min(Run(), Run());
-                long grew = GC.GetTotalMemory(false) - heap;
-                result = "{\"calls\":" + N + ",\"baseNs\":" + Json.Num(baseNs, "F1") + ",\"probedNs\":" + Json.Num(timedNs, "F1") + ",\"overheadNs\":" + Json.Num(timedNs - baseNs, "F1") +
-                    ",\"allocProbeOverheadNs\":" + Json.Num(allocNs - baseNs, "F1") + ",\"heapGrowthBytes\":" + grew + "}";
-            }
-            finally { h.UnpatchSelf(); Release(SetProfile + 8); }
-            return result;
-        }
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-        private static int Empty(int i) => i + 1;
-
-        /// Bridge `timers on [alloc] [Type.Method ...|all|default] | off | show [n] | calibrate`
-        public static string Bridge(string arg)
-        {
-            var a = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (a.Length == 0) return "{\"on\":" + (TimersOn ? "true" : "false") + "}";
-            switch (a[0])
-            {
-                case "coarse":
-                    if (a.Length > 1 && a[1] == "off") CoarseStop();
-                    else if (a.Length > 1 && a[1] == "on") CoarseStart();
-                    return "{\"coarseTimers\":" + (CoarseOn ? "true" : "false") + ",\"callLimit\":" + CoarseClock.CallLimit + "}";
-                case "on":
-                    bool alloc = a.Length > 1 && a[1] == "alloc";
-                    var r = TimersStart(a.Skip(alloc ? 2 : 1).ToArray(), alloc);
-                    SessionLog.TimerColumnsChanged();
-                    return r;
-                case "off": { var r2 = TimersStop(); SessionLog.TimerColumnsChanged(); return r2; }
-                case "show": return TimersInterval(a.Length > 1 ? int.Parse(a[1]) : 15, false);
-                case "calibrate": return Calibrate();
-            }
-            return "{\"error\":\"timers on [alloc] [Type.Method ...|all|default] | off | show [n] | calibrate\"}";
         }
     }
 }

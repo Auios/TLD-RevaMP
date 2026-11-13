@@ -27,17 +27,36 @@ namespace TLDRevamp.Net
         private static menuhandler _builtFor;
         private static GameObject _root;
         private static TextMeshProUGUI _title, _count, _cardName, _cardRight, _msg, _confirmText;
+        internal static TextMeshProUGUI ObservedConfirmText => _confirmText;
+        internal static TextMeshProUGUI ObservedMsg => _msg;
+        internal static TextMeshProUGUI ObservedCardRight => _cardRight;
+        internal static TextMeshProUGUI ObservedCardName => _cardName;
+        internal static TextMeshProUGUI ObservedCount => _count;
+        internal static TextMeshProUGUI ObservedTitle => _title;
         private static readonly List<TextMeshProUGUI> _cardLines = new List<TextMeshProUGUI>();
+        internal static System.Collections.Generic.IReadOnlyList<TMPro.TextMeshProUGUI> ObservedCardLines => _cardLines;
         private static TMP_InputField _input;
+        internal static TMP_InputField ObservedInput => _input;
         private static TextMeshProUGUI _inputPlaceholder;
+        internal static TextMeshProUGUI ObservedInputPlaceholder => _inputPlaceholder;
         private static Button _primary, _secondary, _kick, _mute, _up, _down;
+        internal static Button ObservedMute => _mute;
+        internal static Button ObservedKick => _kick;
+        internal static Button ObservedSecondary => _secondary;
+        internal static Button ObservedPrimary => _primary;
         private static GameObject _confirm;
+        internal static GameObject ObservedConfirm => _confirm;
         private static GameObject _settingsPanel, _settingsButton;
+        internal static GameObject ObservedSettingsPanel => _settingsPanel;
         private static TMP_InputField _settingsPassword;
+        internal static TMP_InputField ObservedSettingsPassword => _settingsPassword;
         private static readonly Button[] _settingsRows = new Button[4];
+        internal static System.Collections.Generic.IReadOnlyList<Button> ObservedSettingsRows => _settingsRows;
         private static bool _settingsOpen;
-        private sealed class Tile { public GameObject Go; public Button B; public Image Img; public TextMeshProUGUI Name; public Image NameBg; }
+        internal static bool ObservedSettingsOpen { get => _settingsOpen; set => _settingsOpen = value; }
+        internal sealed class Tile { public GameObject Go; public Button B; public Image Img; public TextMeshProUGUI Name; public Image NameBg; }
         private static readonly List<Tile> _tiles = new List<Tile>();
+        internal static System.Collections.Generic.IReadOnlyList<TLDRevamp.Net.MpScreen.Tile> ObservedTiles => _tiles;
         private static Sprite _noImage;
         private static float _refreshAt;
         private static int _page;
@@ -295,7 +314,7 @@ namespace TLDRevamp.Net
 
         private static SessionSettingsSnapshot CurrentSessionSettings => Mp.Server != null ? Mp.Server.SessionSettings : DeveloperAccess.ClientSettings;
 
-        private static void ChangeSessionSetting(int row)
+        internal static void ChangeSessionSetting(int row)
         {
             if (Mp.Server == null) return;
             var server = Mp.Server;
@@ -313,7 +332,7 @@ namespace TLDRevamp.Net
             Refresh();
         }
 
-        private static void CommitPassword()
+        internal static void CommitPassword()
         {
             if (Mp.Server == null || _emptyPasswordCommit) return;
             string text = _settingsPassword.text;
@@ -435,7 +454,7 @@ namespace TLDRevamp.Net
             return _selSaved ? e.Saved != null && e.SteamId == _selSteam : e.Saved == null && e.PlayerId == _selPlayer;
         }
 
-        private static void SelectTile(int i)
+        internal static void SelectTile(int i)
         {
             int k = _page * _tiles.Count + i;
             if (k >= _entries.Count) return;
@@ -448,7 +467,7 @@ namespace TLDRevamp.Net
         }
 
         // ---- the screen
-        private static void Refresh()
+        internal static void Refresh()
         {
             _refreshAt = Time.unscaledTime + 1f;
             Collect();
@@ -608,7 +627,7 @@ namespace TLDRevamp.Net
         private static string VoiceModeText() => Voice.Setting == Voice.Mode.PushToTalk ? "push to talk" : Voice.Setting == Voice.Mode.OpenMic ? "open mic" : "off (Settings → Revamp)";
 
         // ---- actions
-        private static void Primary()
+        internal static void Primary()
         {
             _message = "";
             try
@@ -634,7 +653,7 @@ namespace TLDRevamp.Net
             Refresh();
         }
 
-        private static void Secondary()
+        internal static void Secondary()
         {
             // The shared button keeps its OWN action ("Join by address"): it used to be routed to the settings
             // panel, which is what took "Join by address" away. The dedicated settings button opens the panel.
@@ -644,7 +663,7 @@ namespace TLDRevamp.Net
             if (_addressMode) _input.ActivateInputField();
         }
 
-        private static void MuteOrRefresh()
+        internal static void MuteOrRefresh()
         {
             if (!Session.InGame) { _friendsAt = -10f; Refresh(); return; }
             var e = Selected();
@@ -653,7 +672,7 @@ namespace TLDRevamp.Net
             Refresh();
         }
 
-        private static void AskKick()
+        internal static void AskKick()
         {
             var e = Selected();
             if (e == null || Mp.Server == null || (e.Saved == null && (e.P == null || e.P.Me))) return;
@@ -689,7 +708,7 @@ namespace TLDRevamp.Net
             return "{\"open\":" + (text.Length > 0 ? "true" : "false") + ",\"text\":" + Json.Str(text) + "}";
         }
 
-        private static void Yes()
+        internal static void Yes()
         {
             var a = _askYes; _askYes = null; _askNo = null;
             if (a == null) { DoKick(); return; }
@@ -698,7 +717,7 @@ namespace TLDRevamp.Net
             Refresh();
         }
 
-        private static void No()
+        internal static void No()
         {
             var a = _askNo; _askYes = null; _askNo = null;
             _confirm.SetActive(false);
@@ -714,54 +733,6 @@ namespace TLDRevamp.Net
             if (e.Saved != null) { if (PlayerSave.Forget(e.SteamId)) { _message = e.Name + " was forgotten."; _selAny = false; } }
             else if (e.P != null && Mp.Server.Kick(e.PlayerId)) { _message = e.Name + " was kicked."; _selAny = false; }
             Refresh();
-        }
-
-        /// Diagnostics / test hooks (bridge `mp screen [open|close|tile i|primary|secondary|kick|yes|mute|text <s>]`; kick
-        /// is Forget on a saved player).
-        public static string Test(string arg)
-        {
-            var a = arg.Split(new[] { ' ' }, 2);
-            switch (a[0])
-            {
-                case "open": Toggle(); if (!IsOpen) Open(); break;
-                case "close": Close(); break;
-                case "tile": SelectTile(int.Parse(a[1])); break;
-                case "primary": Primary(); break;
-                case "secondary": Secondary(); break;
-                case "kick": AskKick(); break;
-                case "yes": Yes(); break;
-                case "no": No(); break;
-                case "mute": MuteOrRefresh(); break;
-                case "text": _input.SetTextWithoutNotify(a.Length > 1 ? a[1] : ""); break;
-                case "settings": _settingsOpen = !_settingsOpen; break;
-                case "setting":
-                    if (a.Length > 1 && int.TryParse(a[1], out int row)) ChangeSessionSetting(row);
-                    break;
-                case "password":
-                    _settingsPassword.SetTextWithoutNotify(a.Length > 1 ? a[1] : "");
-                    CommitPassword();
-                    break;
-            }
-            if (IsOpen) Refresh();
-            var tiles = new List<string>();
-            foreach (var tl in _tiles) if (tl.Go.activeSelf) tiles.Add(Json.Str(tl.Name.text));
-            var lines = new List<string>();
-            foreach (var l in _cardLines) lines.Add(Json.Str(l.text));
-            return "{\"open\":" + (IsOpen ? "true" : "false") + ",\"title\":" + Json.Str(_title?.text) + ",\"count\":" + Json.Str(_count?.text) +
-                   ",\"tiles\":[" + string.Join(",", tiles) + "],\"card\":" + Json.Str(_cardName?.text) + ",\"cardRight\":" + Json.Str(_cardRight?.text) +
-                   ",\"lines\":[" + string.Join(",", lines) + "],\"primary\":" + Json.Str(_primary != null && _primary.gameObject.activeSelf ? _primary.GetComponentInChildren<TextMeshProUGUI>().text : null) +
-                   ",\"secondary\":" + Json.Str(_secondary != null && _secondary.gameObject.activeSelf ? _secondary.GetComponentInChildren<TextMeshProUGUI>().text : null) +
-                   ",\"kick\":" + (_kick != null && _kick.gameObject.activeSelf ? "true" : "false") +
-                   ",\"mute\":" + Json.Str(_mute != null && _mute.gameObject.activeSelf ? _mute.GetComponentInChildren<TextMeshProUGUI>().text : null) +
-                   ",\"confirm\":" + Json.Str(_confirm != null && _confirm.activeSelf ? _confirmText.text : null) +
-                   ",\"input\":" + (_input != null && _input.gameObject.activeSelf ? Json.Str(_inputPlaceholder != null ? _inputPlaceholder.text : "") : "null") +
-                   ",\"settingsOpen\":" + (_settingsPanel != null && _settingsPanel.activeSelf ? "true" : "false") +
-                   ",\"settingRows\":[" + (_settingsRows[0] != null ? Json.Str(_settingsRows[0].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "," +
-                   (_settingsRows[1] != null ? Json.Str(_settingsRows[1].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "," +
-                   (_settingsRows[2] != null ? Json.Str(_settingsRows[2].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "," +
-                   (_settingsRows[3] != null ? Json.Str(_settingsRows[3].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "]" +
-                   ",\"settingsHostEditable\":" + (_settingsRows[0] != null && _settingsRows[0].interactable ? "true" : "false") +
-                   ",\"message\":" + Json.Str(_msg != null && _msg.gameObject.activeSelf ? _msg.text : null) + "}";
         }
     }
 

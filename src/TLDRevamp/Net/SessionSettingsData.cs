@@ -168,15 +168,6 @@ namespace TLDRevamp.Net
             return arg == "policy" || arg.StartsWith("policy ");
         }
 
-        /// The bridge's gate as one rule: a read-only command always runs; the host's own session control runs on
-        /// the host; every other command needs the host's policy to allow it here.
-        public static bool BridgeAllowed(bool hosting, bool policyAllows, bool readOnly, string cmd, string arg)
-        {
-            if (readOnly) return true;
-            if (IsHostControlCommand(hosting, cmd, arg)) return true;
-            return policyAllows;
-        }
-
         /// The joiner's answer to a settings snapshot it cannot read: the join fails, with a reason the player can
         /// read. A join that hangs with no message is the worst outcome: the loading screen sits there and the
         /// player cannot tell a broken host from a network problem.

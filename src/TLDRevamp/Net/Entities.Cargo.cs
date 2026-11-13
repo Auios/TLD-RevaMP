@@ -42,14 +42,9 @@ namespace TLDRevamp.Net
         public static float LetGoClaimS = 1f;
         public static long LetGoClaimTries, LetGoSeen;
         public static long CargoClaimed, HeldShown;
-
-        /// In the local player's hands: picked up (fpscontroller.pickedUp) or in the right hand.
-        /// Test only (bridge `mp forceheld <net>`): this item counts as in the local player's hands — a player carrying
-        /// a part holds the mouse button down, which a test can't (the bridge's pickup is dropped the next frame).
-        public static tosaveitemscript ForceHeld;
         internal static bool IsHeld(tosaveitemscript it)
         {
-            if (ForceHeld != null && it == ForceHeld) return true;
+            if ((DevHooks.HeldItem?.Invoke(it) ?? false)) return true;
             var p = it != null ? it.P : null;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             return p != null && (p.inRightHand || pl != null && (pl.pickedUp == p || pl.inHandP == p)) ||

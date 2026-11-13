@@ -33,10 +33,10 @@ namespace TLDRevamp.Net
         private static bool _eventsEnabled;
         private static double _nextText;
         private static float _progress;
-        internal static bool Showing => Visible || JoinLoadingPreview.Active;
+        internal static bool Showing => Visible || PreviewActive;
         internal static void Begin()
         {
-            JoinLoadingPreview.Off();
+            DevHooks.JoinPreviewEnd?.Invoke();
             State = new JoinLoadingState(); Expected.Clear(); _nextText = 0; _progress = 0;
             Metrics.Clear(); _lastBytes = 0; _bytesAt = Time.realtimeSinceStartupAsDouble;
             _detailsAt = 0; _outerScroll = Vector2.zero; Disclosure.Reset();
@@ -71,7 +71,7 @@ namespace TLDRevamp.Net
             try { State.Close(reason); }
             finally
             {
-                if (restore) { RestoreControls(); DebugBridge.CancelJoinPlacement(); }
+                if (restore) { RestoreControls(); GroundPlacement.CancelJoinPlacement(); }
                 Release();
             }
         }
@@ -142,22 +142,22 @@ namespace TLDRevamp.Net
             if (pending != _pending) { _pending = pending; State.Progress(now); }
             var pl = mainscript.s != null ? mainscript.s.player : null;
             bool floor = false;
-            if (_geometry && pl != null && !DebugBridge.TpBusy)
+            if (_geometry && pl != null && !GroundPlacement.TpBusy)
             {
                 var at = Mp.LocalGlobal();
                 // standing on a floor, whatever is around them: with the room check a joiner was placed again 1 m over
                 // for anything beside them — their own things given back (PlayerSave), a rabbit — and a teleport lets go
                 // of what the hands hold (tools/rejoin.py 2026-10-22: back 1 m off, the lamp no longer in the hand)
-                var hit = DebugBridge.FloorHit(pl.transform.position.x, pl.transform.position.z, pl.transform.position.y + .1f);
+                var hit = GroundPlacement.FloorHit(pl.transform.position.x, pl.transform.position.z, pl.transform.position.y + .1f);
                 bool supported = hit.HasValue && hit.Value.collider.attachedRigidbody == null &&
                     Math.Abs(pl.transform.position.y - hit.Value.point.y - 1.1) < .5;
-                floor = supported && DebugBridge.TpaWorldReady(at.x, at.y, at.z);
+                floor = supported && GroundPlacement.TpaWorldReady(at.x, at.y, at.z);
                 if (!floor || (_floor - at).magnitude > .05) _floorSince = -1;
                 _floor = at;
                 if (floor && _floorSince < 0) _floorSince = now;
                 // The game's 30 s placement wait can expire before slow generation finishes. Stay held and
                 // retry the real floor placement; the game's start position also sometimes needs settling.
-                if (!supported) DebugBridge.PlaceAt(at.x, at.z);
+                if (!supported) GroundPlacement.PlaceAt(at.x, at.z);
             }
             else _floorSince = -1;
             _placed = floor && _floorSince >= 0 && now - _floorSince >= .5;
@@ -183,7 +183,7 @@ namespace TLDRevamp.Net
             _version = c.MyId > 0 ? "RevaMP version accepted; mods matched" : c.LoadingMod != null ? "RevaMP version accepted; required mods offered" : "Waiting for the host's result";
             _mod = c.LoadingMod; _modBytes = c.LoadingModBytes; _modTotal = c.LoadingModTotal;
             _world = c.MyId <= 0 ? "Waiting for world settings" : _scene ? "Scene loaded" : "Loading the scene from the host's seed";
-            _placement = !c.SpotPlaced ? (DebugBridge.TpBusy ? "waiting for ground" : "waiting for join position") : _floorSince >= 0 ? (_placed ? "ground stable" : "settling") : "waiting for ground";
+            _placement = !c.SpotPlaced ? (GroundPlacement.TpBusy ? "waiting for ground" : "waiting for join position") : _floorSince >= 0 ? (_placed ? "ground stable" : "settling") : "waiting for ground";
             if (c.ConnectedToHost && c.T.Connections.Count > 0)
             {
                 _ping = c.T.Status(c.T.Connections[0]).Ping;
@@ -259,7 +259,7 @@ namespace TLDRevamp.Net
                 .Append(",\"loadingScreen\":").Append(Json.Str("revamp"))
                 .Append(",\"progressPercent\":").Append(Json.Num(Progress() * 100)).Append('}').ToString();
         }
-        private static string Reason() => !Visible ? State.Reason : !_scene ? JoinLoadingState.Names[State.Stage] : Mp.Client != null && !Mp.Client.SpotPlaced ? (DebugBridge.TpBusy ? "Waiting for ground at the join position" : "Waiting for the host's join position") : !_geometry ? "Waiting for terrain and roads" : !_manifest ? "Waiting for the host's initial object list" : !_ended ? "Waiting for the host to finish initial object sync" : _count != Expected.Count ? "Waiting for shared objects to be placed" : "Waiting for settled ground";
+        private static string Reason() => !Visible ? State.Reason : !_scene ? JoinLoadingState.Names[State.Stage] : Mp.Client != null && !Mp.Client.SpotPlaced ? (GroundPlacement.TpBusy ? "Waiting for ground at the join position" : "Waiting for the host's join position") : !_geometry ? "Waiting for terrain and roads" : !_manifest ? "Waiting for the host's initial object list" : !_ended ? "Waiting for the host to finish initial object sync" : _count != Expected.Count ? "Waiting for shared objects to be placed" : "Waiting for settled ground";
         // Stage-based progress: no known total transfer size or linear generation estimate exists.
         private static float Progress() => _progress = JoinPresentation.Forward(_progress, (State.Stage + (State.Stage == 4 && State.Total > 0 ? (float)State.Count / State.Total : 0)) / 6);
         private static string YesNo(bool value) => value ? "yes" : "no";
