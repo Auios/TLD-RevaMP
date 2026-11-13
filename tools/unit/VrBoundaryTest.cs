@@ -119,7 +119,7 @@ static class VrBoundaryTest
         // every command the bridge actually understands, and it must not name a command the bridge refuses.
         // A live script that names a stale command fails at the headset, in front of the player.
         var live = Read("docs/VR-LIVE-TEST.md");
-        var policy = Read("src/TLDRevamp/VR/VrLoaderPolicy.cs");
+        var policy = Read("src/TLDRevamp.Dev/VR/VrBridgeCommandPolicy.cs");
         foreach (var verb in new[] { "state", "start", "retry", "stop", "recenter" })
         {
             Check("the policy knows the verb " + verb, policy.Contains("\"" + verb + "\""));

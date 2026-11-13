@@ -118,7 +118,7 @@ namespace TLDRevamp.Net
                 else if (!want && e.Physical) ExitPhysical(e, rb);
                 if (e.Physical)
                 {
-                    if (TestHeld(e)) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }   // `mp holdcopy`: left behind
+                    if (DevHooks.CrashHeld?.Invoke(e) ?? false) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }   // `mp holdcopy`: left behind
                     else Servo(e, rb, dt);
                 }
             }

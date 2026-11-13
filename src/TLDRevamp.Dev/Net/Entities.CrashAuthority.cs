@@ -28,5 +28,11 @@ namespace TLDRevamp.Net
             HoldCrashUntil(net, Time.time + seconds);
             return "{\"held\":" + net + ",\"seconds\":" + seconds.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "}";
         }
+        private static readonly Dictionary<uint, float> _testHeld = new Dictionary<uint, float>();
+        internal static bool TestHeld(Ent e) => _testHeld.Count > 0 && _testHeld.TryGetValue(e.NetId, out float until) && (Time.time < until || !_testHeld.Remove(e.NetId));
+        internal static void HoldCrashUntil(uint net, float until) => _testHeld[net] = until;
+
+        internal static void ResetHeld() => _testHeld.Clear();
+
     }
 }

@@ -42,6 +42,8 @@ namespace TLDRevamp.Net
 
         /// This frame's placed objects (every shared object with LoopPlacedOnly off). Valid until the next frame; an object
         /// removed meanwhile can still be in it (its Root then gone: the loops skip it as before).
+        internal static System.Collections.Generic.IReadOnlyList<Ent> ObservedPlaced => Placed();
+
         private static List<Ent> Placed()
         {
             if (_placedFrame == Time.frameCount) return _placed;

@@ -1,3 +1,6 @@
+using static TLDRevamp.Net.EntityHealthRules;
+using static TLDRevamp.Net.EntityHealthWatch;
+using static TLDRevamp.Net.EntityPartWatch;
 using static TLDRevamp.Net.Entities;
 using System.Collections.Generic;
 using UnityEngine;
@@ -90,7 +93,7 @@ namespace TLDRevamp.Net
             { why = PartWatchRules.Blocked; blocker = hit.collider.transform.root.name; }
             if (why == null) { bw.LookAt = -1f; return; }
             if (bw.LookAt < 0f) bw.LookAt = now;
-            else if (now - bw.LookAt >= PartWatchRules.LookAfterS) ItemWatchFound(best, bw, r, why, "crosshair", blocker);
+            else if (now - bw.LookAt >= PartWatchTiming.LookAfterS) ItemWatchFound(best, bw, r, why, "crosshair", blocker);
         }
 
         private static void ItemWatchFound(Ent e, WatchedPart w, ItemReachInfo r, string why, string how, string blocker)

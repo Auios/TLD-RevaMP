@@ -29,8 +29,6 @@ namespace TLDRevamp.Net
         internal static ushort NextUsableSequence(UsableKey key)
         { _liveOut.TryGetValue(key, out ushort seq); _liveOut[key] = ++seq; return seq; }
         internal static void RememberLeaseRequest(string key) => LeaseAsked.Add(key);
-        internal static void ResetHealthObservations() { _hwSeen.Clear(); _hwOwnerSeen.Clear(); _hwActive.Clear(); _autoMarkAt = -999f; }
-        internal static void HoldCrashUntil(uint net, float until) => _testHeld[net] = until;
         internal static void SetRabbitCharge(movecreaturescript move, RabCharge charge) => RabCharges[move] = charge;
         internal static bool ApplyingState { get => _applyingState; set => _applyingState = value; }
         internal static void ObserveBreaks(uint net, out int count, out Transform done)
@@ -65,9 +63,6 @@ namespace TLDRevamp
     {
         internal static System.Action<Net.Entities.Ent, float, float, float> CopyJump;
         internal static System.Action EntityWatch, EntityTrace;
-        internal static System.Action<fpscontroller, float> ItemScan, ItemLook;
-        internal static System.Func<long> ItemFlags;
-        internal static System.Func<string> ItemLast;
         internal delegate bool SlotLookup(uint net, string slot, out int parent, out int index, out Vector3d local, out Vector3d global);
         internal static SlotLookup SlotRef;
     }

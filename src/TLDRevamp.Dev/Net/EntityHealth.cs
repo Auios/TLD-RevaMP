@@ -1,3 +1,6 @@
+using static TLDRevamp.Net.EntityHealthRules;
+using static TLDRevamp.Net.EntityHealthWatch;
+using static TLDRevamp.Net.EntityPartWatch;
 using System;
 using System.Collections.Generic;
 using System.Globalization;

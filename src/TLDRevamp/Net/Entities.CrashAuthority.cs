@@ -24,8 +24,6 @@ namespace TLDRevamp.Net
         public static string LastCrash = "";
         public static bool CrashLeaveKeep = true;       // A/B: false = before v0.65.56 (crashlease.py)
         public static long CrashLeasesKept;
-        private static readonly Dictionary<uint, float> _testHeld = new Dictionary<uint, float>();
-        private static bool TestHeld(Ent e) => _testHeld.Count > 0 && _testHeld.TryGetValue(e.NetId, out float until) && (Time.time < until || !_testHeld.Remove(e.NetId));
 
         private sealed class HeldCrash { public Ent E; public Transform Partner; public float Since, CalmSince = -1f; }
         private static readonly List<HeldCrash> _held = new List<HeldCrash>();

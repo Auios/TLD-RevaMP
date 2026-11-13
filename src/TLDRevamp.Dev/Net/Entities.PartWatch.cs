@@ -1,3 +1,4 @@
+using static TLDRevamp.Net.EntityPartWatch;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
@@ -74,14 +75,14 @@ namespace TLDRevamp.Net
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var rows = new List<string>();
             if (pl != null)
-                foreach (var part in TLDRevamp.Net.Entities.ObservedNearParts)
+                foreach (var part in EntityPartWatch.ObservedNearParts)
                 {
-                    if (part == null || !TLDRevamp.Net.Entities.ObservedWatched.TryGetValue(part, out var w)) continue;
+                    if (part == null || !EntityPartWatch.ObservedWatched.TryGetValue(part, out var w)) continue;
                     var r = Reach(part, pl);
                     rows.Add("{\"part\":" + Json.Str(part.name) + ",\"visible\":" + (r.Visible ? "true" : "false") + ",\"targetable\":" + (r.Targetable ? "true" : "false")
                              + ",\"expected\":" + (r.Expected ? "true" : "false") + ",\"reported\":" + (w.Done ? "true" : "false") + "}");
                 }
-            return "{\"enabled\":" + (PartWatch ? "true" : "false") + ",\"flags\":" + PartWatchFlags + ",\"marks\":" + PartWatchMarksSaved + ",\"near\":" + TLDRevamp.Net.Entities.ObservedNearParts.Count
+            return "{\"enabled\":" + (PartWatch ? "true" : "false") + ",\"flags\":" + PartWatchFlags + ",\"marks\":" + PartWatchMarksSaved + ",\"near\":" + EntityPartWatch.ObservedNearParts.Count
  + ",\"last\":" + Json.Str(PartWatchLast) + ",\"parts\":[" + string.Join(",", rows) + "]}";
         }
     }

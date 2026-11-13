@@ -99,8 +99,8 @@ static class BridgeCommandTest
         Check(bridge.Contains("VR.VrBridgeCommandPolicy"), "the bridge asks the policy for the split");
 
         // the policy's own rule: the documented query verbs read, the mutations do not.
-        var policy = File.ReadAllText(Path.Combine(root, "src", "TLDRevamp", "VR", "VrLoaderPolicy.cs"));
-        Check(policy.Contains("class VrBridgeCommandPolicy"), "the policy is the pure core");
+        var policy = File.ReadAllText(Path.Combine(root, "src", "TLDRevamp.Dev", "VR", "VrBridgeCommandPolicy.cs"));
+        Check(policy.Contains("class VrBridgeCommandPolicy"), "the pure command policy belongs to Dev");
         Check(policy.Contains("\"state\""), "the policy knows the state query");
         Check(policy.Contains("\"start\"") && policy.Contains("\"stop\"") && policy.Contains("\"retry\""),
             "the policy knows the mutating verbs");

@@ -102,7 +102,7 @@ namespace TLDRevamp.Net
         /// game's item streaming for every item in range every second (the freeze hooks, Entities.Proxy), and walking every
         /// shared object with Unity's == was ~1 ms an item in a world of ~12,000 — a 150-300 ms hitch every second in the
         /// DevTest session of 2026-11-10. Every object only when one was shared or bound since the list was made.
-        private static Ent OwnEntity(tosaveitemscript ts)
+        internal static Ent OwnEntity(tosaveitemscript ts)
         {
             // null: no object (it matched the first stored-away one, whose Root is null too, after a walk of every object)
             if (ReferenceEquals(ts, null) || ts == null) return null;

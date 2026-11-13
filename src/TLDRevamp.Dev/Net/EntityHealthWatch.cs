@@ -1,7 +1,10 @@
+using static TLDRevamp.Net.EntityHealthRules;
+using static TLDRevamp.Net.EntityPartWatch;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
+using static TLDRevamp.Net.Entities;
 
 namespace TLDRevamp.Net
 {
@@ -15,13 +18,12 @@ namespace TLDRevamp.Net
     /// Fitted parts you can't reach: Entities.PartWatch. Loose items you can't pick up: Entities.ItemWatch. A copy
     /// whose parts or state differ from its owner's: the census (Entities.Repair) — a repair that does not take is
     /// marked here too.
-    public static partial class Entities
+    internal static class EntityHealthWatch
     {
         public static bool HealthWatch = true;    // A/B: false = no background checks of shared objects
         public static bool AutoMarks = true;      // false: events only, no automatic marks (every watch)
         public static float HealthWatchEveryS = 0.5f, HealthWatchRangeM = 60f, AutoMarkEveryS = 30f;
         public static int HealthWatchPerTick = 3, HealthWatchFarPerTick = 12;
-        public static string GroundLayers = "sand,sand2,sand3,road";   // the ground's colliders (IsUnderGround)
         public static long HealthWatchFlags, AutoMarksSaved;
         public static string HealthWatchLast = "";
 
@@ -38,11 +40,10 @@ namespace TLDRevamp.Net
         internal static System.Collections.Generic.IReadOnlyDictionary<uint, string> ObservedHwActive => _hwActive;
         private static readonly Dictionary<uint, int> _repairFails = new Dictionary<uint, int>();
         private static readonly HashSet<uint> _hwAbove = new HashSet<uint>();   // seen above the ground this session
-        private static int _groundMask = -1;
 
-        private static void HealthWatchTick()
+        internal static void HealthWatchTick()
         {
-            if (!HealthWatch || ByNet.Count == 0) return;
+            if (!HealthWatch || ObservedEntities.Count == 0) return;
             AutoMarkWaitingTick();
             float now = Time.realtimeSinceStartup;
             if (now - _hwAt < HealthWatchEveryS) return;
@@ -52,15 +53,15 @@ namespace TLDRevamp.Net
             for (int n = 0; n < HealthWatchPerTick && _hwCursor < _hwCycle.Count;)
             {
                 uint net = _hwCycle[_hwCursor++];
-                if (!ByNet.TryGetValue(net, out var e) || e.Root == null || !e.Root.gameObject.activeInHierarchy) continue;
+                if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null || !e.Root.gameObject.activeInHierarchy) continue;
                 HealthWatchOne(e, now, true); n++;
             }
             // the loaded objects farther away: only what can never be right (a flung object leaves the range at once)
-            if (_hwFarCursor >= _hwFar.Count) { _hwFar.Clear(); _hwFarCursor = 0; foreach (var e in Placed()) if (!_hwCycle.Contains(e.NetId)) _hwFar.Add(e.NetId); }
+            if (_hwFarCursor >= _hwFar.Count) { _hwFar.Clear(); _hwFarCursor = 0; foreach (var e in ObservedPlaced) if (!_hwCycle.Contains(e.NetId)) _hwFar.Add(e.NetId); }
             for (int n = 0; n < HealthWatchFarPerTick && _hwFarCursor < _hwFar.Count;)
             {
                 uint net = _hwFar[_hwFarCursor++];
-                if (!ByNet.TryGetValue(net, out var e) || e.Root == null || !e.Root.gameObject.activeInHierarchy) continue;
+                if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null || !e.Root.gameObject.activeInHierarchy) continue;
                 HealthWatchOne(e, now, false); n++;
             }
         }
@@ -71,7 +72,7 @@ namespace TLDRevamp.Net
             _hwCycle.Clear(); _hwCursor = 0;
             _hwOwnerNow.Clear();
             var at = pl != null ? pl.transform.position : Vector3.zero;
-            foreach (var kv in ByNet)
+            foreach (var kv in ObservedEntities)
             {
                 var e = kv.Value;
                 if (e.OwnerId > 0 && e.OwnerId != MyId && OwnerGone(e.OwnerId)) _hwOwnerNow.Add(kv.Key + ":" + HealthWatchRules.OwnerLeft);
@@ -80,7 +81,7 @@ namespace TLDRevamp.Net
             foreach (var key in _hwOwnerSeen.Pass("", _hwOwnerNow, now, _ => HealthWatchRules.OwnerLeftAfterS))
             {
                 uint net = uint.Parse(key.Substring(0, key.IndexOf(':')), CultureInfo.InvariantCulture);
-                if (!ByNet.TryGetValue(net, out var e)) continue;
+                if (!ObservedEntities.TryGetValue(net, out var e)) continue;
                 HealthWatchFound(e, HealthWatchRules.OwnerLeft, "Owner left", "Owned by player " + e.OwnerId + ", who is no longer in the session; nobody simulates it, so it hangs where it was on every screen.");
             }
         }
@@ -160,7 +161,7 @@ namespace TLDRevamp.Net
         internal static string HealthWatchLine(uint net) => _hwActive.TryGetValue(net, out var s) ? s : null;
 
         /// The census (Entities.Repair) asked the owner, got the parts or state again, and the copy still differs.
-        private static void RepairFailedNote(Ent e, uint net, string diff)
+        internal static void RepairFailedNote(Ent e, uint net, string diff)
         {
             _repairFails.TryGetValue(net, out int n); _repairFails[net] = ++n;
             string name = e != null && e.Root != null ? PrefabName(e.Root.id) : "net " + net;
@@ -179,7 +180,7 @@ namespace TLDRevamp.Net
             {
                 var v = rb.velocity;
                 if (HealthWatchRules.IsRunaway(v.x, v.y, v.z))
-                    Add(2, "Runaway speed", "Moving at " + N(v.magnitude) + " m/s (" + N(v.magnitude * 3.6) + " km/h): beyond anything the game does; physics blew up on it.", null, HealthWatchRules.Runaway);
+                    Add(2, "Runaway speed", "Moving at " + EntityHealthRules.N(v.magnitude) + " m/s (" + EntityHealthRules.N(v.magnitude * 3.6) + " km/h): beyond anything the game does; physics blew up on it.", null, HealthWatchRules.Runaway);
             }
             double ground = GroundOver(p);
             if (!double.IsNaN(ground) && p.y < ground - HealthWatchRules.UnderGroundM && HealthWatchRules.IsUnderGround(p.y, ground, FloorBelow(e, p)))
@@ -189,8 +190,8 @@ namespace TLDRevamp.Net
                 // (DevTest 11-10: Attachable07 207 m, Drotkefe 200 m, BeerGib01 229 m: 56 of 161 automatic marks)
                 bool falling = rb != null && !rb.isKinematic && rb.velocity.y < -1f;
                 if (_hwAbove.Contains(e.NetId) || falling)
-                    Add(2, "Under the ground", N(ground - p.y) + " m under the ground's surface with nothing below it: it fell through the world.", null, HealthWatchRules.UnderGround);
-                else Add(1, "Under the ground (from before)", N(ground - p.y) + " m under the ground's surface with nothing below it, already when first seen this session (a save's leftover).");
+                    Add(2, "Under the ground", EntityHealthRules.N(ground - p.y) + " m under the ground's surface with nothing below it: it fell through the world.", null, HealthWatchRules.UnderGround);
+                else Add(1, "Under the ground (from before)", EntityHealthRules.N(ground - p.y) + " m under the ground's surface with nothing below it, already when first seen this session (a save's leftover).");
             }
             else if (!double.IsNaN(ground)) _hwAbove.Add(e.NetId);
             if (e.OwnerId > 0 && e.OwnerId != MyId && OwnerGone(e.OwnerId))
@@ -226,13 +227,6 @@ namespace TLDRevamp.Net
             return _hwPlayers.Count > 0 && !_hwPlayers.Contains(id);
         }
 
-        /// The ground's surface over a point (NaN: no ground there, or not loaded).
-        internal static double GroundOver(Vector3 p)
-        {
-            if (_groundMask < 0) _groundMask = LayerMask.GetMask(GroundLayers.Split(','));
-            if (_groundMask == 0) return double.NaN;
-            return Physics.Raycast(new Vector3(p.x, p.y + 1000f, p.z), Vector3.down, out var hit, 1000f, _groundMask, QueryTriggerInteraction.Ignore) ? hit.point.y : double.NaN;
-        }
         /// Anything under the object (not itself) within 300 m to stand on.
         private static bool FloorBelow(Ent e, Vector3 p)
         {
@@ -240,5 +234,17 @@ namespace TLDRevamp.Net
                 if (h.collider != null && !h.collider.transform.IsChildOf(e.Root.transform)) return true;
             return false;
         }
+
+        internal static void ResetHealthObservations() { _hwSeen.Clear(); _hwOwnerSeen.Clear(); _hwActive.Clear(); _autoMarkAt = -999f; }
+        private static int _groundMask = -1;
+
+        /// The ground's surface over a point (NaN: no ground there, or not loaded).
+        internal static double GroundOver(Vector3 p)
+        {
+            if (_groundMask < 0) _groundMask = LayerMask.GetMask(GroundLayers.Split(','));
+            if (_groundMask == 0) return double.NaN;
+            return Physics.Raycast(new Vector3(p.x, p.y + 1000f, p.z), Vector3.down, out var hit, 1000f, _groundMask, QueryTriggerInteraction.Ignore) ? hit.point.y : double.NaN;
+        }
+
     }
 }

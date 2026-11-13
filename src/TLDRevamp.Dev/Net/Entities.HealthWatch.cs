@@ -1,3 +1,5 @@
+using static TLDRevamp.Net.EntityHealthWatch;
+using static TLDRevamp.Net.EntityPartWatch;
 using System.Linq;
 using System;
 using System.Collections.Generic;
@@ -55,9 +57,9 @@ namespace TLDRevamp.Net
             }
             if (a.Length >= 2 && a[1] == "reset") { ResetHealthObservations(); return "{\"reset\":true}"; }
             var rows = new List<string>();
-            foreach (var kv in TLDRevamp.Net.Entities.ObservedHwActive) rows.Add("{\"net\":" + kv.Key + ",\"line\":" + Json.Str(kv.Value) + "}");
-            return "{\"enabled\":" + (HealthWatch ? "true" : "false") + ",\"near\":" + TLDRevamp.Net.Entities.ObservedHwCycle.Count + ",\"far\":" + TLDRevamp.Net.Entities.ObservedHwFar.Count + ",\"flags\":" + HealthWatchFlags + ",\"marks\":" + AutoMarksSaved
-                   + ",\"items\":" + (DevHooks.ItemFlags?.Invoke() ?? 0) + ",\"last\":" + Json.Str(HealthWatchLast) + ",\"itemLast\":" + Json.Str(DevHooks.ItemLast?.Invoke() ?? "") + ",\"active\":[" + string.Join(",", rows) + "]}";
+            foreach (var kv in EntityHealthWatch.ObservedHwActive) rows.Add("{\"net\":" + kv.Key + ",\"line\":" + Json.Str(kv.Value) + "}");
+            return "{\"enabled\":" + (HealthWatch ? "true" : "false") + ",\"near\":" + EntityHealthWatch.ObservedHwCycle.Count + ",\"far\":" + EntityHealthWatch.ObservedHwFar.Count + ",\"flags\":" + HealthWatchFlags + ",\"marks\":" + AutoMarksSaved
+                   + ",\"items\":" + EntityItemWatch.ItemWatchFlags + ",\"last\":" + Json.Str(HealthWatchLast) + ",\"itemLast\":" + Json.Str(EntityItemWatch.ItemWatchLast) + ",\"active\":[" + string.Join(",", rows) + "]}";
         }
         internal static (attachablescript part, partslotscript slot) _brokenSlot;   // `break slot`, for fix
     }

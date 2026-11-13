@@ -72,7 +72,7 @@ namespace TLDRevamp.Cinematic
                 case "screenshot":
                     // A screenshot of the camera's own view. It goes to a local folder of the camera's own and
                     // is never part of a report or a shared file (the repo's telemetry holds no screenshots).
-                    return CinematicCamera.Screenshot();
+                    return CinematicCameraTools.Screenshot();
                 default:
                     return "{\"error\":\"cinema: use status | on | free | orbit | off | toggle | recentre | speed <m/s> | fov <deg> | radius <m> | shot [load|unload|write] | screenshot\"}";
             }
@@ -105,14 +105,14 @@ namespace TLDRevamp.Cinematic
 
         private static string Shot(string[] rest, string restText)
         {
-            if (rest.Length == 0) return CinematicCamera.ShotStatus();
+            if (rest.Length == 0) return CinematicCameraTools.ShotStatus();
             string what = rest[0].ToLowerInvariant();
-            if (what == "unload") return CinematicCamera.UnloadShot();
+            if (what == "unload") return CinematicCameraTools.UnloadShot();
             if (what == "write")
             {
                 // The canonical form of the loaded shot list. The mod's own codec is the only writer of this
                 // format, so the file on disk and the take in the game cannot drift apart.
-                var shot = CinematicCamera.CurrentShot;
+                var shot = CinematicCameraTools.CurrentShot;
                 if (shot == null) return "{\"error\":\"no shot list is loaded\"}";
                 return "{\"shotlist\":" + Json.Str(CinematicShotCodec.Write(shot)) + "}";
             }
@@ -123,7 +123,7 @@ namespace TLDRevamp.Cinematic
                 string text = restText.Length > "load".Length ? restText.Substring("load".Length).Trim() : "";
                 text = text.Replace("\\n", "\n");
                 if (text.Length == 0) return "{\"error\":\"cinema shot load <directives>\"}";
-                return CinematicCamera.LoadShot(text);
+                return CinematicCameraTools.LoadShot(text);
             }
             return "{\"error\":\"cinema shot [load <directives> | write | unload]\"}";
         }

@@ -74,15 +74,24 @@ namespace TLDRevamp
             KeyBindings.Contribute(("Item health", KeyItemHealth), ("Debug layout (V2)", KeyDebugLayout), ("Item traffic", KeyItemTraffic), ("Debug view (Legacy)", KeyDebugView), ("Ownership labels (Legacy)", KeyOwnership), ("Owner ghost (Legacy)", KeyOwnerGhost), ("Links (Legacy)", KeyLinks), ("Object comparison", KeyCompare), ("Object events", KeyEvents));
             Net.EntityDebug.HoldForTest = Net.FillLab.HoldNet;
             DevMembers.Install();
+            Diagnostics.ErrorLog.DiagnosticMessage = Diagnostics.ErrorLogTools.OnLog;
+            DevHooks.CameraStep = Cinematic.CinematicCameraTools.Tick;
+            DevHooks.CameraReset = Cinematic.CinematicCameraTools.Reset;
+            DevHooks.EntityScans = () => { Net.EntityPartWatch.PartWatchTick(); Net.EntityHealthWatch.HealthWatchTick(); };
+            DevHooks.EntitySessionReset = Net.EntityHealthWatch.ResetAutoMarks;
+            DevHooks.RepairFailed = Net.EntityHealthWatch.RepairFailedNote;
+            DevHooks.PartRenderers = Net.EntityPartWatch.RenderersOf;
+            DevHooks.CrashHeld = Net.EntityCrashAuthorityTools.TestHeld;
+            DevHooks.CrashReset = Net.EntityCrashAuthorityTools.ResetHeld;
+            DevHooks.CommandNote = Net.EntityAnomalyTools.CommandNote;
+            DevHooks.RoadComparison = () => Fixes.PureRoadsTools.Compare;
+            DevHooks.RoadHeightComparison = Fixes.PureRoadsTools.CompareHeight;
+
             DevHooks.OwnerDecision += Net.EntityDebug.OwnerLog;
             DevHooks.ReproDriving += Net.EntityReproPlayback.ApplyDriveInput;
             DevHooks.CopyJump += Net.EntityDebug.LogJump;
             DevHooks.EntityWatch += Net.EntityMountLab.WatchTick;
             DevHooks.EntityTrace += Net.EntityMountLab.TraceTick;
-            DevHooks.ItemScan += Net.EntityItemWatch.ItemWatchScan;
-            DevHooks.ItemLook += Net.EntityItemWatch.ItemWatchLook;
-            DevHooks.ItemFlags = () => Net.EntityItemWatch.ItemWatchFlags;
-            DevHooks.ItemLast = () => Net.EntityItemWatch.ItemWatchLast;
             DevHooks.SlotRef = Net.EntityMountLab.SlotRef;
             Replay.ReplayTruthCapture.Install();
             DevHooks.EntityLateSample = Net.EntityCarDoorsTools.LateSample;
@@ -140,7 +149,7 @@ namespace TLDRevamp
             DevHooks.SessionStopped += Net.PlayerBots.Reset; DevHooks.BotsTick += Net.PlayerBots.Tick;
             DevHooks.Packet += Net.ItemTraffic.Packet; DevHooks.TrafficReset += Net.ItemTraffic.Reset;
             DevHooks.TpaObject += ObjectPanelEvents.TpaObject;
-            DevHooks.PlayerEditionApplied += () => { Fixes.LoadWatch.Enabled = false; Net.EntityItemWatch.ItemWatch = false; };
+            DevHooks.PlayerEditionApplied += () => { Fixes.LoadWatch.Enabled = false; Net.EntityItemWatch.ItemWatch = false; Net.EntityHealthWatch.HealthWatch = false; Net.EntityHealthWatch.AutoMarks = false; Net.EntityPartWatch.PartWatch = false; Net.EntityPartWatch.PartWatchMarks = false; };
             ReproRecorder.SimulationSnapshot = () => NetworkConditions.ReproRow(NetworkConditions.Current);
             Net.MpServer.DiagnosticMessage += (server, from, type, reader) => Net.ServerPanels.For(server).PanelMessage(from, type, reader);
             Net.MpServer.DiagnosticPeerLeft += (server, player) => Net.ServerPanels.For(server).PeerLeft(player);

@@ -20,7 +20,6 @@ namespace TLDRevamp.Net
         public static long Anomalies, CensusAsks, CensusDiffers, StoreOutsSeen, StoreOutsAfterJump, CensusAsked, CensusRepliesIn;
         public static float JumpM = 50f, AfterJumpS = 20f;
         private static float _jumpAt = -1000f; private static Vector3d _lastGen; private static bool _hasGen;
-        public static string LastDevCmd = ""; public static float LastDevAt = -1000f;   // Last developer command
         private static int _anomLogged;
         private static readonly List<string> _anomLines = new List<string>();
         public static string AnomalyJson()
@@ -41,8 +40,7 @@ namespace TLDRevamp.Net
             Anomalies++;
             if (_anomLogged >= AnomalyLogCap) return;
             _anomLogged++;
-            float ago = Time.realtimeSinceStartup - LastDevAt;
-            string line = what + (ago < 30f ? $" (dev command {ago:F0} s before: {LastDevCmd})" : "");
+            string line = what + (DevHooks.CommandNote?.Invoke() ?? "");
             _anomLines.Add(line);
             Plugin.Log.LogWarning("[anomaly] " + line);
         }

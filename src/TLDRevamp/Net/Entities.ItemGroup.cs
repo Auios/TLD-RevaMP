@@ -5,7 +5,7 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         /// A detached member stays in its old group's list: its own entity, then an unsplit membership, wins.
-        private static Ent EditEntityOf(tosaveitemscript it)
+        internal static Ent EditEntityOf(tosaveitemscript it)
         {
             if (it == null) return null;
             var own = OwnEntity(it);

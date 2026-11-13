@@ -320,8 +320,8 @@ namespace TLDRevamp
             if (!ReadOnlyCmd(cmd, arg))
             {
                 var safe = Net.SessionSettingsRules.RedactCommand(line, Net.Mp.Server?.Password);
-                Net.Entities.LastDevCmd = safe.Length > 80 ? safe.Substring(0, 80) : safe;
-                Net.Entities.LastDevAt = Time.realtimeSinceStartup;
+                Net.EntityAnomalyTools.LastDevCmd = safe.Length > 80 ? safe.Substring(0, 80) : safe;
+                Net.EntityAnomalyTools.LastDevAt = Time.realtimeSinceStartup;
             }
             var p = Plugin.Instance;
 
@@ -754,7 +754,7 @@ namespace TLDRevamp
                     var tparts = arg.Split(' ');
                     // `terrain roads` - every road generator of the map (and any other one in the scene) and, for a main
                     // road only generator, whether its main road runs unbroken through the chunks the game keeps
-                    if (tparts[0] == "roads") return TLDRevamp.WorldGen.MainRoadOnlyRoads.Report(WorldGen.TerrainHooks.CurrentMap);
+                    if (tparts[0] == "roads") return TLDRevamp.WorldGen.MainRoadOnlyRoadsTools.Report(WorldGen.TerrainHooks.CurrentMap);
                     // `terrain oldcode` - where the 2023 game files were found and whether the old code is loaded
                     if (tparts[0] == "oldcode") return TLDRevamp.WorldGen.Old2023.OldBuild.Stats();
                     // `terrain oldroad <z>` - the old 2023 road's point at that z (old terrain only)

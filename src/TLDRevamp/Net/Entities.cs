@@ -225,7 +225,7 @@ namespace TLDRevamp.Net
             _freedJoints.Clear();
             foreach (var kv in _gentle) if (kv.Key != null) kv.Key.maxDepenetrationVelocity = kv.Value.was;
             _gentle.Clear();
-            _held.Clear(); _after.Clear(); _testHeld.Clear(); _carriedOff.Clear();
+            _held.Clear(); _after.Clear(); DevHooks.CrashReset?.Invoke(); _carriedOff.Clear();
         }
 
         public static void Reset(bool wasHost = true)
@@ -259,7 +259,7 @@ namespace TLDRevamp.Net
             DisabledBuiltIn.Clear();
             HitchReset(wasHost);
             ResetSessionLeftovers();
-            ByNet.Clear(); Server.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; ResetAutoMarks();
+            ByNet.Clear(); Server.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
             // keyed by copies and network ids (which start at 1 again next session). (Known, the server's "sent to player N"
             // sets, needs nothing here: ServerOnJoin starts every joiner with an empty one - rehost.py)
             PhysicalCars.Clear(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); BreaksReset();
@@ -432,8 +432,7 @@ namespace TLDRevamp.Net
             if (!InSession) return;
             DevHooks.EntityWatch?.Invoke();
             AnomalyTick();
-            PartWatchTick();
-            HealthWatchTick();
+            DevHooks.EntityScans?.Invoke();
             GrabRefusedTick();
             RefetchLaterTick();
             BreakWaitTick();

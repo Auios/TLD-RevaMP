@@ -24,8 +24,8 @@ namespace TLDRevamp.VR.Native
             if (arg == "height on" || arg == "height off") { VrHeight.Enabled = arg.EndsWith("on"); return Json(); }
             if (arg == "mirror on" || arg == "mirror off") { VrPerf.DesktopMirror = arg.EndsWith("on"); return Json(); }
             if (arg == "sharedmirrors on" || arg == "sharedmirrors off") { VrPerf.SharedMirrors = arg.EndsWith("on"); return Json(); }
-            if (arg == "post on" || arg == "post off") return VrPerf.PostEffects(arg.EndsWith("on"));
-            if (arg == "post list") return VrPerf.PostList();
+            if (arg == "post on" || arg == "post off") return VrPerfTools.PostEffects(arg.EndsWith("on"));
+            if (arg == "post list") return VrPerfTools.PostList();
             if (arg == "singlepass on" || arg == "singlepass off") { VrPerf.SinglePass = arg.EndsWith("on"); return Json(); }
             if (arg == "cost")
             {
@@ -39,27 +39,27 @@ namespace TLDRevamp.VR.Native
                 return cb.Append('}').ToString();
             }
             if (arg.StartsWith("sky faces ", StringComparison.Ordinal)) { VrSky.FacesPerFrame = int.Parse(arg.Substring(10).Trim(), CultureInfo.InvariantCulture); return Json(); }
-            if (arg == "visible" || arg.StartsWith("visible ", StringComparison.Ordinal)) return VrPerf.Visible(arg.Length > 8 ? int.Parse(arg.Substring(8).Trim(), CultureInfo.InvariantCulture) : 25);
-            if (arg == "show") return VrPerf.Hide("", false);
-            if (arg.StartsWith("hide ", StringComparison.Ordinal)) return VrPerf.Hide(arg.Substring(5).Trim(), true);
-            if (arg == "cull list") return VrPerf.CullList();
-            if (arg == "cull restore") return VrPerf.CullRestore();
+            if (arg == "visible" || arg.StartsWith("visible ", StringComparison.Ordinal)) return VrPerfTools.Visible(arg.Length > 8 ? int.Parse(arg.Substring(8).Trim(), CultureInfo.InvariantCulture) : 25);
+            if (arg == "show") return VrPerfTools.Hide("", false);
+            if (arg.StartsWith("hide ", StringComparison.Ordinal)) return VrPerfTools.Hide(arg.Substring(5).Trim(), true);
+            if (arg == "cull list") return VrPerfTools.CullList();
+            if (arg == "cull restore") return VrPerfTools.CullRestore();
             if (arg.StartsWith("cull ", StringComparison.Ordinal))
             {
                 // cull <camera name|all> <layer> on|off  (a camera name may hold spaces: the last two words are the layer and the switch)
                 var w = arg.Substring(5).Trim().Split(' ');
-                if (w.Length >= 3) return VrPerf.Cull(string.Join(" ", w, 0, w.Length - 2), int.Parse(w[w.Length - 2], CultureInfo.InvariantCulture), w[w.Length - 1] == "on");
+                if (w.Length >= 3) return VrPerfTools.Cull(string.Join(" ", w, 0, w.Length - 2), int.Parse(w[w.Length - 2], CultureInfo.InvariantCulture), w[w.Length - 1] == "on");
             }
             if (arg == "taa on" || arg == "taa off") { VrPerf.NoTaa = arg.EndsWith("off"); return Json(); }
             if (arg.StartsWith("post layer ", StringComparison.Ordinal))
             {
                 var pa = arg.Substring(11).Trim().Split(' ');
-                return VrPerf.PostLayer(int.Parse(pa[0], CultureInfo.InvariantCulture), pa.Length > 1 ? pa[1] : "on");
+                return VrPerfTools.PostLayer(int.Parse(pa[0], CultureInfo.InvariantCulture), pa.Length > 1 ? pa[1] : "on");
             }
             if (arg.StartsWith("post fx ", StringComparison.Ordinal))
             {
                 var pa = arg.Substring(8).Trim().Split(' ');
-                return VrPerf.PostEffect(pa[0], pa.Length > 1 && pa[1] == "on");
+                return VrPerfTools.PostEffect(pa[0], pa.Length > 1 && pa[1] == "on");
             }
             if (arg.StartsWith("msaa ", StringComparison.Ordinal)) { VrPerf.MaxMsaa = int.Parse(arg.Substring(5).Trim(), CultureInfo.InvariantCulture); return Json(); }
             if (arg.StartsWith("scale ", StringComparison.Ordinal)) { VrPerf.RenderScale = float.Parse(arg.Substring(6).Trim(), CultureInfo.InvariantCulture); return Json(); }

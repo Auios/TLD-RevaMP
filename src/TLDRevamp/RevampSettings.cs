@@ -429,7 +429,6 @@ namespace TLDRevamp
                 foreach (var pair in saved) if (pair.Key != "hostPassword" && !Entries.Exists(e => e.Key == pair.Key)) Unclaimed[pair.Key] = pair.Value;
                 foreach (var e in Entries)
                     if (e.Key != null && !e.RuntimeOnly && saved.TryGetValue(e.Key, out string text) && int.TryParse(text, out int v)) e.Set(v);
-                if (saved.TryGetValue("debugView", out string modeText) && int.TryParse(modeText, out int mode) && mode == 0) DebugView.Mode = DebugViewMode.Off;
                 TextValues.Clear(); IntegerValues.Clear();
                 Loaded?.Invoke(saved);
                 // The host password is not a persisted value: the old plaintext line is removed by the migration

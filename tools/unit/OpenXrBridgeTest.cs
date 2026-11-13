@@ -17,7 +17,7 @@ static class OpenXrBridgeTest
     {
         string bridge = (Read("src/TLDRevamp/Fixes/OpenXrBridge.cs") + Read("src/TLDRevamp.Dev/Fixes/OpenXrBridge.cs"));
         string lifecycle = Read("src/TLDRevamp/VR/VrLoaderLifecycle.cs");
-        string policy = Read("src/TLDRevamp/VR/VrLoaderPolicy.cs");
+        string policy = Read("src/TLDRevamp/VR/VrLoaderPolicy.cs") + Read("src/TLDRevamp.Dev/VR/VrBridgeCommandPolicy.cs");
         string debug = Read("src/TLDRevamp.Dev/DebugBridge.cs");
         string plugin = Read("src/TLDRevamp/Plugin.cs");
         string contract = Read("src/TLDRevamp/Fixes/VrContractBridge.cs");
@@ -246,7 +246,7 @@ static class OpenXrBridgeTest
         // the read/mutation classification: reading the state needs no developer access, changing the session does
         Check("openxr alone is a read", debug.Contains("if (cmd == \"openxr\") return VR.VrBridgeCommandPolicy.IsQuery(arg);"));
         Check("the bridge asks the policy for the split", debug.Contains("VR.VrBridgeCommandPolicy.IsQuery"));
-        Check("the policy is the pure core", policy.Contains("class VrBridgeCommandPolicy"));
+        Check("the command policy stays pure in Dev", policy.Contains("class VrBridgeCommandPolicy"));
         Check("the policy knows the query verbs", policy.Contains("\"state\""));
         Check("the policy knows the mutation verbs", policy.Contains("\"start\"") && policy.Contains("\"retry\"")
             && policy.Contains("\"stop\"") && policy.Contains("\"recenter\""));

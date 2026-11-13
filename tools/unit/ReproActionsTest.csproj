@@ -5,6 +5,7 @@
     <Compile Include="ReproActionsStubs.cs" />
     <Compile Include="OverlayGuiStubs.cs" />
     <Compile Include="../../src/TLDRevamp/DebugView.cs" />
+    <Compile Include="../../src/TLDRevamp.Dev/DebugView.cs" />
     <Compile Include="../../src/TLDRevamp/OverlayStyle.cs" />
     <Compile Include="../../src/TLDRevamp/CompactOverlay.cs" />
     <Compile Include="../../src/TLDRevamp/ReproData.cs" />

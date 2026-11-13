@@ -12,8 +12,6 @@ namespace TLDRevamp.Net
         /// The reasons are fixed phrases: they go into bug reports, which keep only known words (TelemetryPrivacy.Results).
         internal const string Off = "part colliders off", HeldLayer = "part on held layer", NotUseLayer = "part not on use layer",
                               Blocked = "hidden object in front";
-        internal static float NearbyAfterS = 3f;   // the nearby scan: broken this long (not a part being fitted or taken off)
-        internal static float LookAfterS = 1f;     // looked at, broken, this long
 
         /// `collidersExpected`: no slot up the part's chain switches colliders off on craft. `held`: colliders on the
         /// held-item layer while fitted and not in a hand.

@@ -30,5 +30,17 @@ namespace TLDRevamp
         internal static Func<ulong> ClaimSteamId;
         internal static Func<Net.MpClient, Net.NetReader, bool> ClientMessage;
         internal static Action<Net.MpClient> ClientTick;
+        internal static Action<float> CameraStep;
+        internal static Action<bool> CameraReset;
+        internal static Action EntityScans, EntitySessionReset;
+        internal static Action<Net.Entities.Ent, uint, string> RepairFailed;
+        internal static Func<Net.Entities.Ent, bool> CrashHeld;
+        internal static Func<string> CommandNote;
+        internal static Func<attachablescript, System.Collections.Generic.IReadOnlyList<Renderer>> PartRenderers;
+
+        internal static Action CrashReset;
+
+        internal static Func<bool> RoadComparison;
+        internal static Action<mapSettingScript, Vector3d, System.Collections.Generic.List<roadGenScript.roadClass>> RoadHeightComparison;
     }
 }

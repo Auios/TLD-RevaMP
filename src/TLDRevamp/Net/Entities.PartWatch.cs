@@ -3,47 +3,20 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    /// Fitted parts near the player that show but can't be reached (PartWatchRules): found by the machine itself, not by
-    /// a player who happens to report it. Two checks: every NearbyEveryS the fitted parts within NearbyM, and every
-    /// LookEveryS the part under the crosshair (its meshes on the camera's ray within reach) — there also a hidden object
-    /// in front of a reachable part. A find is an event (part-untargetable) and, at most once per AutoMarkEveryS, an
-    /// automatic mark (AutoMark): the state of this machine and, through the host, of the other players' — the side a report from
-    /// one machine never has (the host's copy at 10:49). Each part is reported once.
+    /// Fitted-part observations shared by player reports and developer tools.
     public static partial class Entities
     {
-        public static bool PartWatch = true;   // A/B: false = no automatic checks of fitted parts
-        public static bool PartWatchMarks = true;   // false: the event only, no automatic mark
-        public static float PartWatchNearbyEveryS = 2f, PartWatchLookEveryS = 0.2f, PartWatchNearbyM = 12f;   // marks: AutoMarkEveryS
-        public static long PartWatchFlags, PartWatchMarksSaved;
+        public static float PartWatchNearbyM = 12f;   // report and watch radius
+        public static long PartWatchFlags;
         public static string PartWatchLast = "";
 
-        internal sealed class WatchedPart
-        {
-            public bool Done; public float LostAt = -1f, LookAt = -1f;
-            public readonly List<Renderer> Renderers = new List<Renderer>();
-        }
-        private static readonly Dictionary<attachablescript, WatchedPart> _watched = new Dictionary<attachablescript, WatchedPart>();
-        internal static System.Collections.Generic.IReadOnlyDictionary<attachablescript, TLDRevamp.Net.Entities.WatchedPart> ObservedWatched => _watched;
-        private static readonly List<attachablescript> _nearParts = new List<attachablescript>();
-        internal static System.Collections.Generic.IReadOnlyList<attachablescript> ObservedNearParts => _nearParts;
         private static readonly List<Collider> _pwCols = new List<Collider>();
-        private static float _pwScanAt = -99f, _pwLookAt = -99f;
-
-        private static void PartWatchTick()
-        {
-            if (!PartWatch) return;
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || pl.Cam == null) return;
-            float now = Time.realtimeSinceStartup;
-            if (now - _pwScanAt >= PartWatchNearbyEveryS) { _pwScanAt = now; PartWatchScan(pl, now); DevHooks.ItemScan?.Invoke(pl, now); }
-            if (now - _pwLookAt >= PartWatchLookEveryS) { _pwLookAt = now; PartWatchLook(pl, now); DevHooks.ItemLook?.Invoke(pl, now); }
-        }
 
         internal struct PartReach { public bool Visible, Targetable, Expected; public int Cols, Live, UseLayer, Held; }
 
         /// The game's own rule (partslotscript.Craft): crafted into a slot that switches colliders off, or onto an item that
         /// is (its holder's slot), the part's colliders are off on purpose — and so are those of what is fitted onto it.
-        private static bool CollidersExpected(attachablescript part)
+        internal static bool CollidersExpected(attachablescript part)
         {
             var at = part;
             for (int depth = 0; at != null && at.slot != null && depth < 8; depth++)
@@ -74,14 +47,15 @@ namespace TLDRevamp.Net
             bool slotReach = sc != null && sc.enabled && sc.gameObject.activeInHierarchy && (mask & (1 << sc.gameObject.layer)) != 0;
             r.Targetable = r.UseLayer > 0 || slotReach;
             r.Expected = CollidersExpected(part);
-            if (_watched.TryGetValue(part, out var w) && w.Renderers.Count > 0)
-            { foreach (var rd in w.Renderers) if (rd != null && rd.enabled && rd.gameObject.activeInHierarchy) { r.Visible = true; break; } }
+            var renderers = DevHooks.PartRenderers?.Invoke(part);
+            if (renderers != null && renderers.Count > 0)
+            { foreach (var rd in renderers) if (rd != null && rd.enabled && rd.gameObject.activeInHierarchy) { r.Visible = true; break; } }
             else foreach (var rd in part.GetComponentsInChildren<Renderer>(true)) if (rd.enabled && rd.gameObject.activeInHierarchy) { r.Visible = true; break; }
             return r;
         }
 
         /// The fitted parts within PartWatchNearbyM of the player: in a slot of an item of a shared group near it.
-        private static void NearParts(fpscontroller pl, List<attachablescript> into)
+        internal static void NearParts(fpscontroller pl, List<attachablescript> into)
         {
             into.Clear();
             var at = pl.transform.position;
@@ -104,74 +78,12 @@ namespace TLDRevamp.Net
             }
         }
 
-        private static void PartWatchScan(fpscontroller pl, float now)
-        {
-            NearParts(pl, _nearParts);
-            // gone parts (destroyed objects compare equal to null)
-            List<attachablescript> dead = null;
-            foreach (var k in _watched.Keys) if (k == null) (dead ?? (dead = new List<attachablescript>())).Add(k);
-            if (dead != null) foreach (var k in dead) _watched.Remove(k);
-            foreach (var part in _nearParts)
-            {
-                if (!_watched.TryGetValue(part, out var w)) _watched[part] = w = new WatchedPart();
-                w.Renderers.Clear(); part.GetComponentsInChildren(true, w.Renderers);
-                if (pl.pickedUp == part.tosave.P || HeldAbove(part.transform, pl)) { w.LostAt = -1f; continue; }   // carried, or on something carried
-                var r = Reach(part, pl);
-                if (!PartWatchRules.Broken(r.Visible, r.Targetable, r.Expected, r.Held, r.Live)) { w.LostAt = -1f; continue; }
-                if (w.LostAt < 0f) w.LostAt = now;
-                else if (now - w.LostAt >= PartWatchRules.NearbyAfterS) PartWatchFound(part, w, r, PartWatchRules.Why(r.Live, r.Held), "nearby", null, now);
-            }
-        }
-
-        private static void PartWatchLook(fpscontroller pl, float now)
-        {
-            if (_nearParts.Count == 0) return;
-            var cam = pl.Cam.transform; var ray = new Ray(cam.position, cam.forward);
-            float reach = pl.FrayRange; attachablescript best = null; float bestD = float.MaxValue;
-            foreach (var part in _nearParts)
-            {
-                if (part == null || !_watched.TryGetValue(part, out var w)) continue;
-                foreach (var rd in w.Renderers)
-                    if (rd != null && rd.enabled && rd.gameObject.activeInHierarchy && rd.bounds.IntersectRay(ray, out float d) && d <= reach && d < bestD) { bestD = d; best = part; }
-            }
-            foreach (var kv in _watched) if (kv.Key != best) kv.Value.LookAt = -1f;
-            if (best == null || pl.pickedUp == best.tosave.P || HeldAbove(best.transform, pl)) return;
-            var bw = _watched[best];
-            var r = Reach(best, pl);
-            string why = null, blocker = null;
-            if (!r.Targetable) { if (PartWatchRules.Broken(r.Visible, false, r.Expected, r.Held, r.Live)) why = PartWatchRules.Why(r.Live, r.Held); }
-            else if (Physics.Raycast(ray, out var hit, reach, pl.useLayer) && hit.distance < bestD - 0.05f && !OfPart(hit.collider, best) && !Shows(hit.collider.transform.root))
-            { why = PartWatchRules.Blocked; blocker = hit.collider.transform.root.name; }
-            if (why == null) { bw.LookAt = -1f; return; }
-            if (bw.LookAt < 0f) bw.LookAt = now;
-            else if (now - bw.LookAt >= PartWatchRules.LookAfterS) PartWatchFound(best, bw, r, why, "crosshair", blocker, now);
-        }
-
-        private static bool OfPart(Collider c, attachablescript part) =>
-            c.transform.IsChildOf(part.transform) || (part.slot != null && c.transform == part.slot.transform);
-
         internal static bool Shows(Transform root)
         {
             foreach (var rd in root.GetComponentsInChildren<Renderer>()) if (rd.enabled && rd.gameObject.activeInHierarchy) return true;
             return false;
         }
 
-        private static void PartWatchFound(attachablescript part, WatchedPart w, PartReach r, string why, string how, string blocker, float now)
-        {
-            if (w.Done) return;
-            w.Done = true; PartWatchFlags++;
-            var ts = part.tosave;
-            var own = OwnEntity(ts); var group = EditEntityOf(ts);
-            uint partNet = own != null ? own.NetId : 0, groupNet = group != null ? group.NetId : 0;
-            var so = part.slot != null ? part.slot.tosaveitem : null;
-            int slot = so != null && so.partslotscripts != null ? so.partslotscripts.IndexOf(part.slot) : -1;
-            string kind = PrefabName(ts.id), on = so != null ? PrefabName(so.id) : "?";
-            PartWatchLast = kind + " net " + (partNet != 0 ? partNet : groupNet) + " on " + on + " #" + slot + ": " + why + " — (" + how + ", colliders " + r.Live + "/" + r.Cols + " on, " + r.UseLayer + " on the use layer, "
-                            + r.Held + " on the held layer" + (blocker != null ? ", in front: " + blocker : "") + ", " + (own != null ? (own.Proxy ? "a copy" : "ours") : group != null ? (group.Proxy ? "a copy's part" : "our part") : "not shared") + ")";
-            SessionLog.Event("part-untargetable", partNet != 0 ? partNet : groupNet, other: groupNet, slot: slot, count: r.Cols, value: r.Live, dx: r.UseLayer, dy: r.Held, result: why);
-            Plugin.Log.LogWarning("part watch: " + PartWatchLast);
-            if (PartWatchMarks && AutoMark("auto: " + PartWatchLast, partNet != 0 ? partNet : groupNet)) PartWatchMarksSaved++;
-        }
         internal static int SharedCount => ByNet.Count;   // Debugging V2's "shared objects here" field
 
         /// The bug report's parts.json: every fitted part within PartWatchNearbyM as the player can reach it — shown,

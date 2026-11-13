@@ -70,7 +70,7 @@ namespace TLDRevamp
             ObjectPanels.PartnerViews(_net, _partners);
             bool session = Net.Mp.Server != null || Net.Mp.Client != null;
             Net.EntityHealth.HealthChecks(_net, _local, _partners, session && ObjectPanels.Comparing(_net), _checks);
-            var e = Net.Entities.EntityOf(_net);
+            var e = Net.EntityHealthRules.EntityOf(_net);
             _title = "Item health · " + (e != null && e.Root != null ? Net.ItemTraffic.ObjectName(e.Root.name) : "object") + " · net " + _net;
             int problems = 0, warnings = 0; _worst = 0;
             foreach (var c in _checks) { if (c.Level == 2) problems++; else if (c.Level == 1) warnings++; if (c.Level > _worst) _worst = c.Level; }

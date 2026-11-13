@@ -38,6 +38,7 @@ static class CinematicIsolationTest
 
     /// The source files of the feature.
     static IEnumerable<string> SourceFiles() => Directory.GetFiles(Path.Combine(Root, "src/TLDRevamp/Cinematic"), "*.cs")
+        .Concat(Directory.GetFiles(Path.Combine(Root, "src/TLDRevamp.Dev/Cinematic"), "*.cs"))
         .OrderBy(p => p, StringComparer.Ordinal);
 
     /// The lines of one file, with the comments and string literals removed.
@@ -820,7 +821,7 @@ static class CinematicIsolationTest
         // game's networking or entity code would mean the camera could reach the world.
         var allowedTypes = new HashSet<string>(StringComparer.Ordinal)
         {
-            "CinematicCamera", "CinematicState", "CinematicMode", "CinematicLimits", "CinematicCommandPolicy",
+            "CinematicCamera", "CinematicCameraTools", "CinematicState", "CinematicMode", "CinematicLimits", "CinematicCommandPolicy",
             "CinematicShotCodec", "CinematicShot", "CinematicShotStep", "CinematicCursorPolicy",
             "CinematicInputPolicy", "CinematicOrbit", "Json", "StringComparison", "Array", "NumberStyles",
             "CultureInfo", "Math", "String", "Float", "Double", "Exception", "Object", "Console", "Environment",

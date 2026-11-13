@@ -33,5 +33,12 @@ namespace TLDRevamp.Net
             }
             return "{\"error\":\"no such part on it\"}";
         }
+        public static string LastDevCmd = ""; public static float LastDevAt = -1000f;   // Last developer command
+        internal static string CommandNote()
+        {
+            float ago = Time.realtimeSinceStartup - LastDevAt;
+            return ago < 30f ? $" (dev command {ago:F0} s before: {LastDevCmd})" : "";
+        }
+
     }
 }

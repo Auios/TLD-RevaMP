@@ -85,6 +85,7 @@ namespace TLDRevamp
             var added = Entries.GetRange(first, Entries.Count - first);
             Entries.RemoveRange(first, Entries.Count - first); Entries.InsertRange(at, added);
             Loaded += saved => {
+                if (saved.TryGetValue("debugView", out string modeText) && int.TryParse(modeText, out int mode) && mode == 0) DebugView.Mode = DebugViewMode.Off;
                 if (saved.TryGetValue(DebugV2.LayoutKey, out string layout)) { SetText(DebugV2.LayoutKey, layout); DebugV2.LoadLayout(layout); }
                 DebugV2.Apply();
             };

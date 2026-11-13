@@ -21,7 +21,7 @@ static class DevSplitTest
         Check(!References("src/TLDRevamp/TLDRevamp.csproj").Any(p => p.Contains("TLDRevamp.Dev")), "core must build independently of Dev");
         var references = References("src/TLDRevamp.Dev/TLDRevamp.Dev.csproj");
         Check(references.Any(p => p == "../TLDRevamp/TLDRevamp.csproj") && references.Any(p => p.Contains("TLDRevamp.Multiplayer")), "Dev depends on core and the multiplayer API");
-        Check(File.Exists("src/TLDRevamp/Cinematic/CinematicShot.cs") && File.Exists("src/TLDRevamp/Net/HealthWatchRules.cs"), "shared player dependencies stay in core");
+        Check(File.Exists("src/TLDRevamp.Dev/Cinematic/CinematicShot.cs") && File.Exists("src/TLDRevamp.Dev/Net/HealthWatchRules.cs"), "shot lists and health rules belong to Dev");
         string core = "src/TLDRevamp/bin/Release/netstandard2.1/TLDRevamp.dll", dev = "src/TLDRevamp.Dev/bin/Release/netstandard2.1/TLDRevamp.Dev.dll";
         if (File.Exists(core) && File.Exists(dev))
         {
@@ -39,6 +39,43 @@ static class DevSplitTest
                 Check(types.Contains("TLDRevamp.Net." + name), name + " is owned by Dev");
             var coreTypes = coreMetadata.TypeDefinitions.Select(h => coreMetadata.GetTypeDefinition(h)).Select(t => coreMetadata.GetString(t.Namespace) + "." + coreMetadata.GetString(t.Name)).ToArray();
             Check(!coreTypes.Contains("TLDRevamp.DebugBridge"), "core contains no DebugBridge type");
+            foreach (string name in new[] {
+                "TLDRevamp.Cinematic.CinematicShot", "TLDRevamp.Cinematic.CinematicShotCodec",
+                "TLDRevamp.Cinematic.CinematicShotStep", "TLDRevamp.Cinematic.CinematicShotFormat",
+                "TLDRevamp.Cinematic.CinematicPlayback", "TLDRevamp.Cinematic.CinematicCommandPolicy",
+                "TLDRevamp.Cinematic.CinematicCameraTools", "TLDRevamp.VR.Native.VrSim",
+                "TLDRevamp.VR.VrBridgeVerb", "TLDRevamp.VR.VrBridgeCommandPolicy",
+                "TLDRevamp.VR.Native.VrPerfTools", "TLDRevamp.Net.HealthWatchRules",
+                "TLDRevamp.HealthCheck", "TLDRevamp.Net.EntityHealthRules", "TLDRevamp.Net.EntityHealthWatch",
+                "TLDRevamp.Net.EntityPartWatch", "TLDRevamp.Net.PartWatchTiming",
+                "TLDRevamp.DebugView", "TLDRevamp.DebugViewMode" })
+                Check(types.Contains(name) && !coreTypes.Contains(name), name + " belongs only to Dev");
+            Check(coreTypes.Contains("TLDRevamp.DebugBox") && coreTypes.Contains("TLDRevamp.DebugLayout"), "shared player layout stays in core");
+
+            string[] CoreMembers(string name)
+            {
+                var type = coreMetadata.TypeDefinitions.Select(h => coreMetadata.GetTypeDefinition(h))
+                    .Single(t => coreMetadata.GetString(t.Namespace) + "." + coreMetadata.GetString(t.Name) == name);
+                return type.GetMethods().Select(h => coreMetadata.GetString(coreMetadata.GetMethodDefinition(h).Name))
+                    .Concat(type.GetFields().Select(h => coreMetadata.GetString(coreMetadata.GetFieldDefinition(h).Name)))
+                    .Concat(type.GetProperties().Select(h => coreMetadata.GetString(coreMetadata.GetPropertyDefinition(h).Name))).ToArray();
+            }
+            var cameraMembers = CoreMembers("TLDRevamp.Cinematic.CinematicCamera");
+            foreach (string name in new[] { "Playback", "CurrentShot", "LoadShot", "UnloadShot", "ApplyShot", "_shot", "_shotError", "_nextCut", "ShotStatus", "Screenshot", "ShotFolder" })
+                Check(!cameraMembers.Contains(name), "core camera contains no shot tool: " + name);
+            var entityMembers = CoreMembers("TLDRevamp.Net.Entities");
+            foreach (string name in new[] { "HealthWatch", "HealthWatchTick", "HealthWatchCycle", "HealthWatchOne", "HealthWatchFound", "AutoMark", "AutoMarkWaitingTick", "ResetAutoMarks", "HealthWatchLine", "RepairFailedNote", "CheckSanity", "OwnerGone", "GroundOver", "FloorBelow", "PartWatchTick", "PartWatchScan", "PartWatchLook", "PartWatchFound", "_testHeld", "TestHeld", "LastDevCmd", "LastDevAt" })
+                Check(!entityMembers.Contains(name), "core entities contain no developer behavior: " + name);
+            foreach (string name in new[] { "GroundLayers", "PartsDiagnostics", "SharedCount", "PartWatchNearbyM", "PartWatchFlags", "PartWatchLast", "DeleteShared" })
+                Check(entityMembers.Contains(name), "shared player entity API stays in core: " + name);
+            var perfMembers = CoreMembers("TLDRevamp.VR.Native.VrPerf");
+            foreach (string name in new[] { "PostEffects", "PostList", "CullList", "Visible", "Hide", "Cull", "CullRestore", "PostEffect", "PostLayer" })
+                Check(!perfMembers.Contains(name), "core VR contains no rendering experiment: " + name);
+            var errorMembers = CoreMembers("TLDRevamp.Diagnostics.ErrorLog");
+            foreach (string name in new[] { "Kinds", "Order", "Stacks", "Errors", "Exceptions", "Observe" })
+                Check(!errorMembers.Contains(name), "raw developer error history leaves core: " + name);
+            Check(errorMembers.Contains("IntervalJson") && errorMembers.Contains("ReportSnapshot"), "player error telemetry stays in core");
+
             Check(types.Contains("TLDRevamp.Replay.ReplayTruth") && !coreTypes.Contains("TLDRevamp.Replay.ReplayTruth"), "truth frames belong only to Dev");
             Console.WriteLine("PASS compiled assembly boundary");
         }

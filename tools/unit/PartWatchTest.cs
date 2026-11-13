@@ -34,7 +34,7 @@ static class PartWatchTest
         Check("colliders on the held layer: held layer", PartWatchRules.Why(2, 2) == PartWatchRules.HeldLayer);
         Check("no collider on: colliders off", PartWatchRules.Why(0, 0) == PartWatchRules.Off);
         Check("on, but on other layers: not on use layer", PartWatchRules.Why(3, 0) == PartWatchRules.NotUseLayer);
-        Check("a part being fitted or taken off is given time", PartWatchRules.NearbyAfterS >= 2f && PartWatchRules.LookAfterS >= 0.5f);
+        Check("a part being fitted or taken off is given time", PartWatchTiming.NearbyAfterS >= 2f && PartWatchTiming.LookAfterS >= 0.5f);
         if (ReportWords.Length == 0) Console.WriteLine("SKIP report words: repo root not found");
         else
         {

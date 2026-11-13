@@ -287,7 +287,7 @@ namespace TLDRevamp
             // it shows whatever colours the player picked (their colour is for healthy tabs only, see Paint)
             if (cols.Contains("unreachable") && r.Colour == Green) r.Colour = Yellow;
             // a problem the background watch reported on it and that is still there (Entities.HealthWatch): always shown
-            string watch = TLDRevamp.Net.Entities.HealthWatchLine(e.NetId);
+            string watch = TLDRevamp.Net.EntityHealthWatch.HealthWatchLine(e.NetId);
             if (watch != null) { Next(); sb.Append(watch); r.Colour = Red; }
             if (r.Colour == Red) sb.Insert(0, "✗ "); else if (r.Colour == Yellow) sb.Insert(0, "! ");
             return sb.ToString();

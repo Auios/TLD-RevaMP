@@ -4,6 +4,12 @@ namespace TLDRevamp
     {
         internal static void Install()
         {
+            Reflect.RegisterMovedMembers(typeof(Cinematic.CinematicCamera), typeof(Cinematic.CinematicCameraTools));
+            Reflect.RegisterMovedMembers(typeof(Net.Entities), typeof(Net.EntityHealthRules), typeof(Net.EntityHealthWatch), typeof(Net.EntityPartWatch));
+            Reflect.RegisterMovedMembers(typeof(Net.PartWatchRules), typeof(Net.PartWatchTiming));
+            Reflect.RegisterMovedMembers(typeof(Fixes.PureRoads), typeof(Fixes.PureRoadsTools));
+            Reflect.RegisterMovedMembers(typeof(VR.Native.VrPerf), typeof(VR.Native.VrPerfTools));
+            Reflect.RegisterMovedMembers(typeof(WorldGen.MainRoadOnlyRoads), typeof(WorldGen.MainRoadOnlyRoadsTools));
             Reflect.RegisterMovedMembers(typeof(Net.Entities), typeof(Net.EntityDebug), typeof(Net.EntityMountLab), typeof(Net.EntityReproPlayback), typeof(Net.EntityItemCheck), typeof(Net.EntityItemWatch), typeof(Net.EntityContactCensus), typeof(Net.EntityFakeInput), typeof(Net.EntityTrack));
             Reflect.RegisterMovedMembers(typeof(Net.RemotePlayers), typeof(Net.RemoteReproPlayback));
             Reflect.RegisterMovedMembers(typeof(Replay.ReplayRecorder), typeof(Replay.ReplayTruthCapture));

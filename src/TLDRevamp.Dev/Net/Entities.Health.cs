@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
+using static TLDRevamp.Net.Entities;
 
 namespace TLDRevamp
 {
@@ -16,18 +17,9 @@ namespace TLDRevamp
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static class EntityHealthRules
     {
-        internal static bool Loose(Ent e, fpscontroller pl) =>
-            e.Root != null && e.Root.gameObject.activeInHierarchy && e.Root.P != null && e.Root.car == null
-            && (e.Root.attachable == null || !e.Root.attachable.attached) && !e.Held && !e.Stored && !e.ReleaseGhost && !e.CargoGhost
-            && !InLocalHands(pl, e);
-
-        /// In the local player's hands: picked up, or held in hand (a lamp while seated: inHandP).
-        internal static bool InLocalHands(fpscontroller pl, Ent e) =>
-            pl != null && e.Root != null && e.Root.P != null && (pl.pickedUp == e.Root.P || pl.inHandP == e.Root.P);
-
-        internal static Ent EntityOf(uint net) => ByNet.TryGetValue(net, out var e) ? e : null;
+        private static readonly List<Collider> Scratch = new List<Collider>();
 
         internal delegate void CheckAdd(int level, string title, string why, string how = null, string key = null);
 
@@ -64,9 +56,9 @@ namespace TLDRevamp.Net
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var rb = e.Root.GetComponent<Rigidbody>();
-            _pwCols.Clear(); e.Root.GetComponentsInChildren(true, _pwCols);
-            int all = _pwCols.Count, on = 0, heldLayer = 0;
-            foreach (var c in _pwCols)
+            Scratch.Clear(); e.Root.GetComponentsInChildren(true, Scratch);
+            int all = Scratch.Count, on = 0, heldLayer = 0;
+            foreach (var c in Scratch)
             {
                 if (c == null) continue;
                 if (c.enabled && c.gameObject.activeInHierarchy) on++;
@@ -129,10 +121,10 @@ namespace TLDRevamp.Net
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || !Loose(e, pl)) return;
-            _pwCols.Clear(); e.Root.GetComponentsInChildren(true, _pwCols);
+            Scratch.Clear(); e.Root.GetComponentsInChildren(true, Scratch);
             int live = 0, held = 0, pickup = 0, mask = pl.pickupLayer.value;
             var layers = new List<string>();
-            foreach (var c in _pwCols)
+            foreach (var c in Scratch)
             {
                 if (c == null || !c.enabled || !c.gameObject.activeInHierarchy) continue;
                 live++;
@@ -150,6 +142,17 @@ namespace TLDRevamp.Net
         }
 
         private static string Explain(Func<string[], string> explain, params string[] prefixes) => explain?.Invoke(prefixes);
-        private static string N(double n) => double.IsNaN(n) || double.IsInfinity(n) ? "?" : n.ToString(n < 10 ? "F2" : "F0", CultureInfo.InvariantCulture);
+        internal static string N(double n) => double.IsNaN(n) || double.IsInfinity(n) ? "?" : n.ToString(n < 10 ? "F2" : "F0", CultureInfo.InvariantCulture);
+
+        internal static bool Loose(Ent e, fpscontroller pl) =>
+            e.Root != null && e.Root.gameObject.activeInHierarchy && e.Root.P != null && e.Root.car == null
+            && (e.Root.attachable == null || !e.Root.attachable.attached) && !e.Held && !e.Stored && !e.ReleaseGhost && !e.CargoGhost
+            && !InLocalHands(pl, e);
+
+        /// In the local player's hands: picked up, or held in hand (a lamp while seated: inHandP).
+        internal static bool InLocalHands(fpscontroller pl, Ent e) =>
+            pl != null && e.Root != null && e.Root.P != null && (pl.pickedUp == e.Root.P || pl.inHandP == e.Root.P);
+
+        internal static Ent EntityOf(uint net) => ObservedEntities.TryGetValue(net, out var e) ? e : null;
     }
 }

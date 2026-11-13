@@ -101,7 +101,7 @@ static class SettingsLaneAuditTest
                 bridge.Contains("RedactCommand(line, Net.Mp.Server?.Password)"));
             // the anomaly watch quotes LastDevCmd, which must be the redacted form
             Check("2.4 the anomaly watch quotes the redacted command",
-                bridge.Contains("Net.Entities.LastDevCmd = safe"));
+                bridge.Contains("Net.EntityAnomalyTools.LastDevCmd = safe"));
             // the report's settings dump is allowlisted
             Check("2.5 the report's settings dump is allowlisted",
                 Read("src/TLDRevamp/FeedbackReporter.cs").Contains("TelemetryPrivacy.Setting(e.Key)"));

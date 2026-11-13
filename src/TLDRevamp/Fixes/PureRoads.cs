@@ -39,7 +39,6 @@ namespace TLDRevamp.Fixes
     [HarmonyPatch]
     public static class PureRoads
     {
-        public static bool Compare = false;
         /// Measured (one copy alone, CPUs 0-15, 60 FPS, ~1,800 km/h, 3+3 rounds on/off): 2 ms keeps AddPois under 3.8 ms per
         /// frame, as the waiting rule (4 ms: frames up to 8.9 ms, a road generated on top of the budget).
         public static float BudgetMs = 2f;
@@ -533,7 +532,7 @@ namespace TLDRevamp.Fixes
             if (!any)
             {
                 var live = mapSettingScript.RoadsNear(pos);
-                if (Compare) CompareHeight(map, pos, live);
+                DevHooks.RoadHeightComparison?.Invoke(map, pos, live);
                 return live;
             }
             try
@@ -561,42 +560,7 @@ namespace TLDRevamp.Fixes
 
         // ------------------------------------------------------------------ comparing with the live generator
 
-        private static void CompareHeight(mapSettingScript map, Vector3d pos, List<roadGenScript.roadClass> live)
-        {
-            try
-            {
-                var pure = new List<roadGenScript.roadClass>();
-                foreach (var g in map.roadGens)
-                {
-                    if (g == null || !Usable(g)) return;
-                    pure.AddRange(Near(g, pos, false, poiGenScript.alignToRoadEmu.anyRoad));
-                }
-                var sorted = new List<roadGenScript.roadClass>(live);
-                RoadTieOrder.Sort(sorted);
-                Check("height", pos, sorted, pure);
-            }
-            catch (Exception e) { Fail("compare height", e); }
-        }
-
-        private static void Check(string what, Vector3d pos, List<roadGenScript.roadClass> live, List<roadGenScript.roadClass> pure)
-        {
-            Compared++;
-            var a = roadGenScript.NearestPointOnRoadBone(pos, live, out var pa);
-            var b = roadGenScript.NearestPointOnRoadBone(pos, pure, out var pb);
-            bool same = (a == null) == (b == null) && (a == null || (a.start.Equals(b.start) && a.end.Equals(b.end) && a.roadType == b.roadType)) && pa.Equals(pb);
-            if (same) return;
-            Differ++;
-            var d = pa - pb; d.y = 0.0;
-            double m = d.magnitude;
-            if (m > WorstDifferM) WorstDifferM = m;
-            LastDiffer = what + " at " + Fmt(pos) + ": live " + Desc(a) + " " + Fmt(pa) + ", pure " + Desc(b) + " " + Fmt(pb) + " (" + m.ToString("0.###") + " m)";
-            if (Differ <= 20) Plugin.Log.LogInfo("PureRoads differ: " + LastDiffer);
-        }
-
-        private static string Desc(roadGenScript.roadClass r) => r == null ? "none" : r.roadType + " " + Fmt(r.start) + "-" + Fmt(r.end);
-        private static string Fmt(Vector3d v) => "(" + v.x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "," + v.z.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + ")";
-
-        private static void Fail(string what, Exception e)
+        internal static void Fail(string what, Exception e)
         {
             Errors++;
             LastError = what + ": " + e.Message;
@@ -612,7 +576,7 @@ namespace TLDRevamp.Fixes
                 if (s.G != null)
                     foreach (var ch in s.G.chunks.Values) { chunks++; foreach (var r in ch.roads) { roads++; if (r.generated) gen++; } }
             var ic = System.Globalization.CultureInfo.InvariantCulture;
-            return "{\"compare\":" + (Compare ? "true" : "false") + ",\"heightPatched\":" + HeightPatched +
+            return "{\"compare\":" + ((DevHooks.RoadComparison?.Invoke() ?? false) ? "true" : "false") + ",\"heightPatched\":" + HeightPatched +
                    ",\"lookups\":" + Lookups + ",\"step1\":" + Step1 + ",\"step2\":" + Step2 + ",\"step3\":" + Step3 + ",\"notFound\":" + NotFound +
                    ",\"generated\":" + Generated + ",\"pruned\":" + Pruned + ",\"chunksFinished\":" + ChunksFinished + ",\"unfinished\":" + Unfinished +
                    ",\"resets\":" + Resets + ",\"evicted\":" + Evicted + ",\"heldForBudget\":" + HeldForBudget + ",\"spawnsHeld\":" + SpawnsHeld +
