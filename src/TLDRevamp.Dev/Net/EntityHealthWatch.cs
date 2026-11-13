@@ -23,7 +23,10 @@ namespace TLDRevamp.Net
         public static bool HealthWatch = true;    // A/B: false = no background checks of shared objects
         public static bool AutoMarks = true;      // false: events only, no automatic marks (every watch)
         public static float HealthWatchEveryS = 0.5f, HealthWatchRangeM = 60f, AutoMarkEveryS = 30f;
-        public static int HealthWatchPerTick = 3, HealthWatchFarPerTick = 12;
+        public static int HealthWatchPerTick = 3, HealthWatchFarPerTick = 12, HealthWatchMaxPerTick = 40;
+        // One pass over the nearby objects takes about this long, however many there are: 3 a tick took 22 s for the
+        // ~135 shared objects at the start (2026-11-13), so a problem (which must last two passes) took ~45 s to report.
+        public static float HealthWatchPassS = 3f;
         public static long HealthWatchFlags, AutoMarksSaved;
         public static string HealthWatchLast = "";
 
@@ -50,7 +53,20 @@ namespace TLDRevamp.Net
             _hwAt = now;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (_hwCursor >= _hwCycle.Count) HealthWatchCycle(pl, now);
-            for (int n = 0; n < HealthWatchPerTick && _hwCursor < _hwCycle.Count;)
+            // a runaway is never a passing state and the object is gone (out of range, switched off) within a second or
+            // two, before a busy pass reaches it (healthwatchcheck fling with ~140 objects near, 2026-11-13): every tick a
+            // speed-only look at all the nearby objects, and the full check at once for a runaway
+            foreach (uint net in _hwCycle)
+            {
+                if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null || !e.Root.gameObject.activeInHierarchy) continue;
+                var rb = e.Root.GetComponent<Rigidbody>();
+                if (rb == null || rb.isKinematic) continue;
+                var v = rb.velocity;
+                if (HealthWatchRules.IsRunaway(v.x, v.y, v.z)) HealthWatchOne(e, now, true);
+            }
+            int perTick = Math.Min(HealthWatchMaxPerTick, Math.Max(HealthWatchPerTick,
+                (int)Math.Ceiling(_hwCycle.Count * HealthWatchEveryS / Math.Max(0.1f, HealthWatchPassS))));
+            for (int n = 0; n < perTick && _hwCursor < _hwCycle.Count;)
             {
                 uint net = _hwCycle[_hwCursor++];
                 if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null || !e.Root.gameObject.activeInHierarchy) continue;
@@ -243,7 +259,10 @@ namespace TLDRevamp.Net
         {
             if (_groundMask < 0) _groundMask = LayerMask.GetMask(GroundLayers.Split(','));
             if (_groundMask == 0) return double.NaN;
-            return Physics.Raycast(new Vector3(p.x, p.y + 1000f, p.z), Vector3.down, out var hit, 1000f, _groundMask, QueryTriggerInteraction.Ignore) ? hit.point.y : double.NaN;
+            // 2000 m (as FallRescue): a 1000 m ray from 1000 m up ended at the object itself, so the ground under anything
+            // resting on it was "none" and nothing was ever seen above the ground (_hwAbove): every fall through the world
+            // was taken for a save's leftover (healthwatchcheck sink, 2026-11-13)
+            return Physics.Raycast(new Vector3(p.x, p.y + 1000f, p.z), Vector3.down, out var hit, 2000f, _groundMask, QueryTriggerInteraction.Ignore) ? hit.point.y : double.NaN;
         }
 
     }
