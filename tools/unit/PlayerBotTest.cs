@@ -193,9 +193,10 @@ namespace TLDRevamp.Net
     {
         public const byte Add = 22, State = 23, Claim = 24, Owner = 25, PartDetached = 27, RemoveItem = 35, HandoverState = 59;
         internal enum ClaimReason : byte { Driver = 1, DriverRetry, Pickup, CargoNear, CargoContact, CargoRelease, Contents }
+        internal static bool IsFinite(Vector3 value) => Finite(value);
         internal static bool Finite(Vector3 p) => !float.IsNaN(p.x) && !float.IsNaN(p.y) && !float.IsNaN(p.z);
-        internal static bool TestFinal => ReadFinalState;
-        internal static bool TestLocked => ReadLockedState;
+        internal static bool TestFinal => EntityCodec.ReadFinalState;
+        internal static bool TestLocked => EntityCodec.ReadLockedState;
     }
     public static class Protocol { public const int StateHz = 20; }
 }

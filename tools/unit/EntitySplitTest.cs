@@ -8,7 +8,7 @@ using TLDRevamp.Net;
 using UnityEngine;
 
 // Compile the feature owners and core registry without Dev startup or Unity. Transport is captured at the kernel seam.
-static class EntitySplitTest
+static partial class EntitySplitTest
 {
     static int checks;
     const BindingFlags Static = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
@@ -27,8 +27,10 @@ static class EntitySplitTest
 
     static void Main()
     {
+        CodecVectors();
+        CarSignalChecks();
         CoreMembers.Register();
-        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms") })
+        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals") })
         {
             var type = feature.Item1;
             Check(type.IsNotPublic && type.IsAbstract && type.IsSealed, type.Name + " is internal static");
@@ -44,6 +46,17 @@ static class EntitySplitTest
                 Check(Reflect.MemberPath("TLDRevamp.Net." + old) == (retained ? "TLDRevamp.Net." + old : target), "full core alias " + old);
             }
         }
+        foreach (string part in new[] { "DetachCodec", "RotCodec", "StateCodec" })
+        {
+            string source = File.ReadAllText("src/TLDRevamp/Net/Entities." + part + ".cs").Split("    public static partial class Entities")[0];
+            source = Regex.Replace(source, @"//[^\r\n]*", "");
+            Check(!Regex.IsMatch(source, @"using\s+static\s+(?:global::)?(?:TLDRevamp\.Net\.)?Entities\s*;"), part + " has no static kernel import");
+            Check(Regex.Matches(source, @"Entities\.(\w+)").Cast<Match>().All(m => new[] { "State", "DetachSync", "IsFinite" }.Contains(m.Groups[1].Value)), part + " uses only protocol and finite kernel facts");
+        }
+        Check(typeof(Entities).GetField("ReadHandPose", Static) == null && typeof(Entities).GetField("ReadFinalState", Static) == null && typeof(Entities).GetField("SignalCars", Static) == null && typeof(Entities).GetField("SignalsApplied", Static) == null, "codec scratch and car signal state have one owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.ReadHandPose", "False") == "false" && !EntityCodec.ReadHandPose, "codec scratch full alias writes owner");
+        Check(BridgeReflect.Get("Entities.ReadLockItem") == EntityCodec.ReadLockItem.ToString(), "codec scratch short alias reads owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.SignalsApplied", "17") == "17" && EntityCarSignals.SignalsApplied == 17 && BridgeReflect.Get("Entities.SignalsApplied") == "17", "car counter full and short aliases share state");
         string plugin = File.ReadAllText("src/TLDRevamp/Plugin.cs");
         Check(plugin.IndexOf("CoreMembers.Register();") > plugin.IndexOf("private void Awake()") && plugin.IndexOf("CoreMembers.Register();") < plugin.IndexOf("TestSafety.Init();"), "core aliases register at startup before settings and bridge use");
         Check(BridgeReflect.Set("Entities.RadioResendS", "7") == "7" && EntityRadio.RadioResendS == 7, "radio setting forwards to one owner");

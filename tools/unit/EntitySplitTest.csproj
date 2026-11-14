@@ -3,6 +3,9 @@
   <ItemGroup>
     <Compile Include="EntitySplitTest.cs" />
     <Compile Include="EntitySplitStubs.cs" />
+    <Compile Include="EntityCodecVectors.cs" />
+    <Compile Include="EntityCarSignalsChecks.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.CarSignals.cs" />
     <Compile Include="../../src/TLDRevamp/CoreMembers.cs" />
     <Compile Include="../../src/TLDRevamp/Reflect.cs" />
     <Compile Include="../../src/TLDRevamp.Dev/BridgeReflect.cs" />
@@ -10,6 +13,9 @@
     <Compile Include="../../src/TLDRevamp/Net/Entities.Radio.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Clock.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Storms.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.DetachCodec.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.RotCodec.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.StateCodec.cs" />
     <Compile Include="../../src/TLDRevamp/Net/ClockMath.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
   </ItemGroup>

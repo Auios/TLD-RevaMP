@@ -244,6 +244,7 @@ namespace TLDRevamp.Net
         public const byte Refetch = 58, HandoverState = 59, AttachReq = 62, CensusAsk = 65, CensusReply = 66, CensusRepair = 63, Worn = 85, MemberGone = 86, RabbitState = 90, RabbitFx = 91, IgnitionKey = 96;
         public static readonly Dictionary<uint, GameObject> Objects = new Dictionary<uint, GameObject>();
         internal static GameObject GameObjectOf(uint id) => Objects.TryGetValue(id, out var go) ? go : null;
+        internal static bool IsFinite(Vector3 value) => Finite(value);
         internal static bool Finite(Vector3 p) => true;
         internal static int TelemetryPacketCategory(byte type, byte[] bytes, int at, int length, out uint net) { net = 0; return -1; }
         internal static bool TelemetryAtRest(uint net) => false;

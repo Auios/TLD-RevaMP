@@ -2,12 +2,12 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityCodec
     {
         /// A rotation on the wire: the three smallest of its four parts, 7 bytes.
         private const float RotScale = 32767f / 0.70710678f;
 
-        private static void WriteRot(NetWriter w, Quaternion q)
+        internal static void WriteRot(NetWriter w, Quaternion q)
         {
             float x = q.x, y = q.y, z = q.z, ww = q.w;
             float ax = Mathf.Abs(x), ay = Mathf.Abs(y), az = Mathf.Abs(z), aw = Mathf.Abs(ww);
@@ -23,7 +23,7 @@ namespace TLDRevamp.Net
             if (big != 3) w.U16((ushort)(short)Mathf.Clamp(Mathf.RoundToInt(ww * s * RotScale), -32767, 32767));
         }
 
-        private static Quaternion ReadRot(NetReader r)
+        internal static Quaternion ReadRot(NetReader r)
         {
             int big = r.U8() & 3;
             float a = (short)r.U16() / RotScale, b = (short)r.U16() / RotScale, c = (short)r.U16() / RotScale;
@@ -36,5 +36,14 @@ namespace TLDRevamp.Net
                 default: return new Quaternion(a, b, c, d);
             }
         }
+    }
+
+    public static partial class Entities
+    {
+        private static void WriteRot(NetWriter w, Quaternion q) =>
+            EntityCodec.WriteRot(w, q);
+
+        private static Quaternion ReadRot(NetReader r) =>
+            EntityCodec.ReadRot(r);
     }
 }

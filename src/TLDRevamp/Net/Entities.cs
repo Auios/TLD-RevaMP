@@ -250,7 +250,7 @@ namespace TLDRevamp.Net
                     UnityEngine.Object.Destroy(e.Root.gameObject);
                 }
             }
-            ProxyItems.Clear(); SignalCars.Clear(); _rideCars.Clear(); CargoGhostNets.Clear(); RagdollCopies.Clear(); RagdollLimbOwner.Clear(); _spraying.Clear();
+            ProxyItems.Clear(); EntityCarSignals.ResetSignals(); _rideCars.Clear(); CargoGhostNets.Clear(); RagdollCopies.Clear(); RagdollLimbOwner.Clear(); _spraying.Clear();
             HostPhysicsLock = -1; _physLockLast = -1;   // a client: its own setting again
             EntityWeather.StormReset();   // a client keeps the storms it has: its own from now
             ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();
@@ -531,7 +531,7 @@ namespace TLDRevamp.Net
                     if (spraying != e.SentSpraying) { e.SentSpraying = spraying; e.SprayRepeat = 3; }
                     bool wSpray = e.SprayRepeat > 0;
                     if (wSpray) e.SprayRepeat--;
-                    int sig = CarSignalKey(e);
+                    int sig = EntityCarSignals.CarSignalKey(e);
                     if (sig != e.SentSigKey) { e.SentSigKey = sig; e.SigRepeat = 3; }
                     bool wSig = e.SigRepeat > 0;
                     if (wSig) e.SigRepeat--;
@@ -554,7 +554,7 @@ namespace TLDRevamp.Net
                     ReleaseMotion(ref e.ReleaseMoving, released, held, stored, ref moving, first, unlocked);
                     if (released && e.SentHeld) e.FastSendUntil = now + FastAfterReleaseS;
                     bool control = lockChange || wStored || wHeld || wHand || wSig || wSpray || wDriver;
-                    WS.Reset(); WriteWheels(WS, e); WriteEngine(WS, e); WriteSignals(WS, e);
+                    WS.Reset(); WriteWheels(WS, e); WriteEngine(WS, e); EntityCarSignals.WriteSignals(WS, e);
                     bool visual = BandwidthRules.CarVisualChanged(e.SentState, e.SentStateLength, WS.Buf, WS.Len);
                     var quiet = BandwidthRules.StateQuiet(ref e.QuietTail, now, first || released || unlocked, wPos || wRot, limbs, visual, control, moving, e.SentAtRest,
                                                          locked, attachedRides, now - e.LastStateAt, driven, stored, e.ReleaseMoving);
@@ -706,7 +706,7 @@ namespace TLDRevamp.Net
                 case State:
                 {
                     ReadEntityHead(r, type == CompactState, out uint net, out uint epoch, out double st, out var sp, out var sq, out var sv, out bool driven, out bool stored, out bool held, out _);
-                    bool final = ReadFinalState;
+                    bool final = EntityCodec.ReadFinalState;
                     if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId != from || se.Epoch != epoch) { StatesStale++; return; }
                     // a ragdoll Key: forwarded reliably and never thinned (the Deltas after it need it). A tail this
                     // scanner can't size is only "not a Key" - the state itself goes on as before
@@ -739,16 +739,16 @@ namespace TLDRevamp.Net
                     if (se.PartIndex < 0 && !Plausibility.CarState(from, RemotePlayers.NameOf(from) ?? ("player " + from), net, sp, sv.magnitude, se.Speed, stored, held)) return;
                     // never thinned away: ragdoll Keys, the final rest state, a driver change,
                     // going into / out of an inventory
-                    bool lockChanged = se.Locked != ReadLockedState || se.LockFrame != (ReadLockedState ? ReadCarriedBy : 0) || se.LockContainer != ReadLockContainer;
+                    bool lockChanged = se.Locked != EntityCodec.ReadLockedState || se.LockFrame != (EntityCodec.ReadLockedState ? EntityCodec.ReadCarriedBy : 0) || se.LockContainer != EntityCodec.ReadLockContainer;
                     bool force = final || ragdollKey || lockChanged || driven != se.Driven || stored != se.Stored || held != se.Held || !se.HasState;
                     bool reliable = final || ragdollKey || lockChanged || stored != se.Stored || held != se.Held;
                     se.Stored = stored; se.Held = held; se.Speed = sv.magnitude; se.AtRest = final || stored;
                     se.Pos = sp; se.Rot = sq; se.HasState = true; se.Where = sp;
-                    se.LockFrame = ReadLockedState ? ReadCarriedBy : 0;
+                    se.LockFrame = EntityCodec.ReadLockedState ? EntityCodec.ReadCarriedBy : 0;
                     if (se.LockFrame != 0) _serverLocked.Add(se); else _serverLocked.Remove(se);
-                    se.LockContainer = ReadLockContainer;
-                    se.Locked = ReadLockedState;
-                    se.LockLocalPos = ReadLocalPos; se.LockLocalRot = ReadLocalRot;
+                    se.LockContainer = EntityCodec.ReadLockContainer;
+                    se.Locked = EntityCodec.ReadLockedState;
+                    se.LockLocalPos = EntityCodec.ReadLocalPos; se.LockLocalRot = EntityCodec.ReadLocalRot;
                     // what is locked in something follows it: the locked ones only (every server object at every car state before)
                     if (LoopPlacedOnly) { foreach (var child in _serverLocked) if (child.LockFrame != 0) ServerLockedPose(child); }
                     else foreach (var child in Server.Values) if (child.LockFrame != 0) ServerLockedPose(child);
@@ -1061,7 +1061,7 @@ namespace TLDRevamp.Net
                 {
                     int msgAt = r.Pos - 1;   // the type byte
                     ReadEntityHead(r, type == CompactState, out uint net, out uint epoch, out double st, out var sp, out var sq, out var sv, out bool driven, out bool stored, out bool held, out bool spraying);
-                    bool final = ReadFinalState;
+                    bool final = EntityCodec.ReadFinalState;
                     Ent e = null;
                     if (r.Bad || !ByNet.TryGetValue(net, out e) || !e.Proxy || epoch != e.Epoch)
                     {
@@ -1081,12 +1081,12 @@ namespace TLDRevamp.Net
                     e.Recv++;
                     TakeHandPose(e, sp, sq);
                     var s = new PoseInterpolator.Sample { T = st, Pos = sp, Rot = sq, Vel = sv };
-                    e.LockLocalPos = ReadLocalPos; e.LockLocalRot = ReadLocalRot;
-                    ApplyPoseLock(e, ReadLockedState, ReadLockedState ? ReadCarriedBy : 0, ReadLockItem, ReadLockMount, ReadLockContainer);
+                    e.LockLocalPos = EntityCodec.ReadLocalPos; e.LockLocalRot = EntityCodec.ReadLocalRot;
+                    ApplyPoseLock(e, EntityCodec.ReadLockedState, EntityCodec.ReadLockedState ? EntityCodec.ReadCarriedBy : 0, EntityCodec.ReadLockItem, EntityCodec.ReadLockMount, EntityCodec.ReadLockContainer);
                     if (TakeCarried(e, ref s, sp, sq, held, stored)) return;   // let go in our car: ours now
                     e.Driven = driven;
                     if (stored != e.Stored) ShowStored(e, stored);
-                    e.ReceivedAtRest = ReadFinalState || stored;
+                    e.ReceivedAtRest = EntityCodec.ReadFinalState || stored;
                     bool letGo = e.Held && !held;
                     if (letGo) { e.LetGoAt = Time.realtimeSinceStartup; if (LetGoSeen++ < 20) Plugin.Log.LogInfo($"let go: {(e.Root != null ? e.Root.name : "?")} net {e.NetId} by player {e.OwnerId} (its owner since {Time.realtimeSinceStartup - e.OwnerAt:F2} s)"); }
                     if (held || held != e.Held) ShowHeld(e, held);   // every state while held: a copy placed again (streaming) gets it too
@@ -1095,14 +1095,14 @@ namespace TLDRevamp.Net
                     {
                         ReadWheels(r, e);
                         ReadEngine(r, e);
-                        ReadSignals(r, e);
+                        EntityCarSignals.ReadSignals(r, e);
                         ReadRagdoll(r, e, sp, sq);
                     }
                     if (r.Bad) return;
                     if (HitchTrailer(e)) e.HitchWaiting = false;
                     e.LastVel = sv;   // the world velocity (a car-frame state's sample has the frame's own)
                     // loose only: a container's item riding a car it can't read the speed of sends its moves at 0 m/s
-                    e.Ip?.Add(s, Time.realtimeSinceStartupAsDouble, !ReadLockedState && e.CarriedBy == 0 && !held && !stored);
+                    e.Ip?.Add(s, Time.realtimeSinceStartupAsDouble, !EntityCodec.ReadLockedState && e.CarriedBy == 0 && !held && !stored);
                     if (letGo) e.Ip?.CatchUp(Time.realtimeSinceStartupAsDouble);   // the fall now, not after the held part
                     if (letGo) ClaimLetGoInCar(e, stored);   // let go in our car: ours from where it was let go, before the next physics step
                     TelemetryReceived(e, st, sp, sq, sv);
@@ -1570,7 +1570,7 @@ namespace TLDRevamp.Net
                 ReadEntityHead(r, e.SettledState[0] == CompactState, out _, out _, out _, out var pos, out var rot, out _, out _, out _, out _, out _);
                 if (e.CarriedBy == 0 && !e.Stored && !e.Held && !RidesBolted(e) && !AttachedCarPart(e) && !RidesOwnersContainer(e) && !LockedAway(e))
                     root.transform.SetPositionAndRotation(mainscript.UnityPosFromGlobal(pos), rot);
-                if (e.SettledState[0] == State) { ReadWheels(r, e); ReadEngine(r, e); ReadSignals(r, e); ReadRagdoll(r, e, pos, rot); }
+                if (e.SettledState[0] == State) { ReadWheels(r, e); ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e); ReadRagdoll(r, e, pos, rot); }
             }
             RestoreRabbitState(e);
             RebindPoseLocks(e);

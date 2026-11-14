@@ -37,22 +37,22 @@ namespace TLDRevamp.Net
         /// frame changes: the two kinds of positions never mix on one curve). True when it became ours (see below).
         private static bool TakeCarried(Ent e, ref PoseInterpolator.Sample s, Vector3d global, Quaternion globalRot, bool held, bool stored)
         {
-            uint cb = ReadCarriedBy;
+            uint cb = EntityCodec.ReadCarriedBy;
             // let go in a car this machine drives: loose cargo in our car — ours at once, from where it is shown (in
             // the car). Left to the holder, its world states put it metres behind the car here until it touched it, and
             // the claim then made a still item of it in a car at 50 km/h: the car rammed it (stopped dead, 3 parts off,
             // the lamp thrown 50 m; heldincar B2, 2026-10-08). Let go into a car it now lies in (RidingFrames), its state
             // names that car instead of none (a holder outside it too): the same.
             uint released = LooseRelease(e.CarriedBy, cb, held, stored) ? e.CarriedBy : RidingFrames && e.Held && cb != 0 && !held && !stored ? cb : 0;
-            if (!ReadLockedState && released != 0 && ByNet.TryGetValue(released, out var car) && !car.Proxy && car.Root != null && CargoClaims && e.Root != null)
+            if (!EntityCodec.ReadLockedState && released != 0 && ByNet.TryGetValue(released, out var car) && !car.Proxy && car.Root != null && CargoClaims && e.Root != null)
             {
                 if (ClaimCargo(e, released: true, reason: ClaimReason.CargoRelease)) { CarriedReleasedClaims++; return true; }
             }
             if (cb != e.CarriedBy) { e.CarriedBy = cb; if (e.Ip != null) e.Ip = new PoseInterpolator(); CarriedSwitches++; }
             if (cb == 0) return false;
             e.CarriedGlobal = global; e.CarriedGlobalRot = globalRot;
-            var l = ReadLocalPos;
-            s.Pos = new Vector3d(l.x, l.y, l.z); s.Rot = ReadLocalRot; s.Vel = Vector3.zero;   // still in the car: a stall holds it in place
+            var l = EntityCodec.ReadLocalPos;
+            s.Pos = new Vector3d(l.x, l.y, l.z); s.Rot = EntityCodec.ReadLocalRot; s.Vel = Vector3.zero;   // still in the car: a stall holds it in place
             return false;
         }
 

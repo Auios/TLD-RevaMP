@@ -233,6 +233,7 @@ namespace TLDRevamp.Net
         static void Deliver(NetWriter w) { }
         internal static bool Resolve(Ent e) => e.Root != null;
         static bool LimbsByBody(Ent e) => false;
+        internal static bool IsFinite(Vector3 value) => Finite(value);
         internal static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
         internal static void TestIdle()
         {
@@ -267,21 +268,21 @@ namespace TLDRevamp.Net
             w.Reset(); WriteStateHead(w, 1, 1, 1, 1, default, Quaternion.identity, Vector3.zero, false, final: true);
             var finalReader = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
             ReadEntityHead(finalReader, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-            IdleTrafficTest.Check(ReadFinalState && !finalReader.Bad, "normal final flag survives wire codec");
-            var snapshot = FinalSnapshot(finalReader, ReadFinalState);
+            IdleTrafficTest.Check(EntityCodec.ReadFinalState && !finalReader.Bad, "normal final flag survives wire codec");
+            var snapshot = FinalSnapshot(finalReader, EntityCodec.ReadFinalState);
             w.Buf[0] = 0;
             IdleTrafficTest.Check(snapshot[0] == State && snapshot.Length == w.Len && FinalSnapshot(finalReader, false) == null, "retained final owns its bytes; newer motion clears it");
             var replay = new NetReader { Buf = snapshot, Pos = 1, End = snapshot.Length };
             ReadEntityHead(replay, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-            IdleTrafficTest.Check(ReadFinalState && !replay.Bad, "late join replays the complete final without a live owner keepalive");
+            IdleTrafficTest.Check(EntityCodec.ReadFinalState && !replay.Bad, "late join replays the complete final without a live owner keepalive");
             w.Reset(); CompactPoseCodec.Write(w, 1, 1, 1, 1, 0, 0, 0, 0, false, true);
             finalReader = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
             ReadEntityHead(finalReader, true, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-            IdleTrafficTest.Check(ReadFinalState && !ReadCompactMoving && !finalReader.Bad && w.Len == 24, "compact final is stationary without increasing packet size");
+            IdleTrafficTest.Check(EntityCodec.ReadFinalState && !ReadCompactMoving && !finalReader.Bad && w.Len == 24, "compact final is stationary without increasing packet size");
             w.Reset(); CompactPoseCodec.Write(w, 1, 1, 2, 2, 0, 0, 0, 0, true);
             finalReader = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
             ReadEntityHead(finalReader, true, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-            IdleTrafficTest.Check(!ReadFinalState && ReadCompactMoving, "ordinary state clears final flag");
+            IdleTrafficTest.Check(!EntityCodec.ReadFinalState && ReadCompactMoving, "ordinary state clears final flag");
             double previous = 0; uint previousEpoch = 0;
             IdleTrafficTest.Check(NewerState(5, 1, ref previous, ref previousEpoch) && !NewerState(4, 1, ref previous, ref previousEpoch) && !NewerState(5, 1, ref previous, ref previousEpoch), "delayed reliable final and older motion cannot replace newer state");
             IdleTrafficTest.Check(NewerState(1, 2, ref previous, ref previousEpoch), "new ownership epoch resets timestamp ordering");
@@ -457,7 +458,7 @@ namespace TLDRevamp.Net
                 CompactPoseCodec.Write(packet, 91, 1, (ushort)(poses + finals), now, tick, 0, 0, 0, !final, final);
                 ReadEntityHead(new NetReader { Buf = packet.Buf, Pos = 1, End = packet.Len }, true,
                     out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-                IdleTrafficTest.Check(ReadFinalState == final, "only the confirmed stop sets the compact final flag");
+                IdleTrafficTest.Check(EntityCodec.ReadFinalState == final, "only the confirmed stop sets the compact final flag");
                 if (PoseReceiverDue(2, 91, true, new Vector3d(9e6, 0, 0), default, tick == 0 || final, now, farAt))
                 { far++; farAt = now; }
                 rest = final; sent = now;
@@ -524,7 +525,7 @@ namespace TLDRevamp.Net
                         RagdollSent(e, true); bytes += w.Len;
                         var r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
                         ReadStateHead(r, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-                        IdleTrafficTest.Check(ReadFinalState && StateTail.TryRead(w.Buf, 0, w.Len, out var block) &&
+                        IdleTrafficTest.Check(EntityCodec.ReadFinalState && StateTail.TryRead(w.Buf, 0, w.Len, out var block) &&
                             block.Count == 14 && block.Mode == StateTail.Mode.Key &&
                             w.Len - block.Offset == RagdollWire.KeySize(14) && w.Len == 256,
                             "one reliable final Key contains all fourteen limbs");

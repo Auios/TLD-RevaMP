@@ -63,10 +63,10 @@ namespace TLDRevamp.Net
             car.Root.Add(new[] { mount }); mount.transform.parent = car.Root.transform;
             cargo.Root.P = new TestPickup();
             // Receive the actual wire frame sample, then drive without another cargo state.
-            ReadCarriedBy = 40; ReadLocalPos = new Vector3(1, 2, 3); ReadLocalRot = Quaternion.Euler(0, 15, 0); ReadLockedState = true;
+            EntityCodec.ReadCarriedBy = 40; EntityCodec.ReadLocalPos = new Vector3(1, 2, 3); EntityCodec.ReadLocalRot = Quaternion.Euler(0, 15, 0); EntityCodec.ReadLockedState = true;
             var sample = new PoseInterpolator.Sample { T = 1, Rot = Quaternion.identity };
             TakeCarried(cargo, ref sample, default, Quaternion.identity, false, false);
-            cargo.LockLocalPos = ReadLocalPos; cargo.LockLocalRot = ReadLocalRot;
+            cargo.LockLocalPos = EntityCodec.ReadLocalPos; cargo.LockLocalRot = EntityCodec.ReadLocalRot;
             ApplyPoseLock(cargo, true, 40, 0, 0);
             cargo.Ip.Add(sample, 1.1);
             WorldOverlays.Command("ownership", "on"); WorldOverlays.Command("ghost", "on"); WorldOverlays.Command("ghostall", "on");
@@ -90,10 +90,10 @@ namespace TLDRevamp.Net
             OverlayCheck(!OverlaySample(cargo, out _, out _), "old epoch never supplies a ghost"); cargo.ReceivedStateEpoch = 1;
             cargo.PoseLocked = false; cargo.Root.P.physlock = null;
             cargo.Ip = new PoseInterpolator();
-            cargo.Ip.Add(new PoseInterpolator.Sample { T = 1, Pos = ReadLocalPos, Rot = ReadLocalRot }, 1.1);
-            cargo.Ip.Add(new PoseInterpolator.Sample { T = 1.05, Pos = ReadLocalPos, Rot = ReadLocalRot }, 1.15);
+            cargo.Ip.Add(new PoseInterpolator.Sample { T = 1, Pos = EntityCodec.ReadLocalPos, Rot = EntityCodec.ReadLocalRot }, 1.1);
+            cargo.Ip.Add(new PoseInterpolator.Sample { T = 1.05, Pos = EntityCodec.ReadLocalPos, Rot = EntityCodec.ReadLocalRot }, 1.15);
             cargo.Ip.Evaluate(1.19, .02f, out _, out _);
-            OverlayCheck(OverlaySample(cargo, out var carried, out _) && OverlayNear(carried, car.Root.transform.TransformPoint(ReadLocalPos)), "nonlocked carried reference uses local interpolator sample");
+            OverlayCheck(OverlaySample(cargo, out var carried, out _) && OverlayNear(carried, car.Root.transform.TransformPoint(EntityCodec.ReadLocalPos)), "nonlocked carried reference uses local interpolator sample");
             OverlayCheck(OverlayMode(cargo) == "in frame / interpolating", "carried mode retains actual interpolation");
             cargo.CarriedBy = 999;
             OverlayCheck(OverlaySample(cargo, out var fallback, out _) && OverlayNear(fallback, cargo.CarriedGlobal), "missing carrier uses retained wire fallback");

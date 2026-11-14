@@ -42,16 +42,16 @@ namespace TLDRevamp.Net
             if (!e.HandDraw.HasShown && e.Root != null)
                 e.HandDraw.Seed(mainscript.GlobalFromUnityPos(e.Root.transform.position), e.Root.transform.rotation);
             double now = Time.timeAsDouble;
-            if (ReadHandPose)
+            if (EntityCodec.ReadHandPose)
             {
                 SampleHandOffset(e, now, out var from, out var rot);
                 if (!e.HandPose || e.HandEpoch != e.Epoch || e.HandOwner != e.OwnerId)
-                { from = ReadHandPos; rot = ReadHandRot; }
-                if (!e.HandPose || (e.HandPos - ReadHandPos).sqrMagnitude > 1e-10f || Quaternion.Angle(e.HandRot, ReadHandRot) > .01f)
+                { from = EntityCodec.ReadHandPos; rot = EntityCodec.ReadHandRot; }
+                if (!e.HandPose || (e.HandPos - EntityCodec.ReadHandPos).sqrMagnitude > 1e-10f || Quaternion.Angle(e.HandRot, EntityCodec.ReadHandRot) > .01f)
                 { e.HandFrom = from; e.HandFromRot = rot; e.HandSince = now; }
-                e.HandPos = ReadHandPos; e.HandRot = ReadHandRot;
+                e.HandPos = EntityCodec.ReadHandPos; e.HandRot = EntityCodec.ReadHandRot;
             }
-            e.HandPose = ReadHandPose; e.HandEpoch = e.Epoch; e.HandOwner = e.OwnerId;
+            e.HandPose = EntityCodec.ReadHandPose; e.HandEpoch = e.Epoch; e.HandOwner = e.OwnerId;
         }
 
         private static void SampleHandOffset(Ent e, double now, out Vector3 lp, out Quaternion lq)

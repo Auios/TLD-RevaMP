@@ -192,13 +192,13 @@ namespace TLDRevamp.Net
             var t = at.transform; var iq = Quaternion.Inverse(f.rotation);
             var lp = iq * (t.position - f.position); var lq = iq * t.rotation;
             var path = DoorAttachFrame(f) ? AttachFramePath(at, f) : null;
-            w.U8(path != null ? (byte)2 : (byte)1); w.VarI32(Mm(lp.x)); w.VarI32(Mm(lp.y)); w.VarI32(Mm(lp.z)); WriteRot(w, lq);
+            w.U8(path != null ? (byte)2 : (byte)1); w.VarI32(EntityCodec.Mm(lp.x)); w.VarI32(EntityCodec.Mm(lp.y)); w.VarI32(EntityCodec.Mm(lp.z)); WriteRot(w, lq);
             if (path != null)
             {
                 w.VarU32((uint)path.Length);
                 foreach (int index in path) w.VarU32((uint)index);
                 var point = f.InverseTransformPoint(at.point.position);
-                w.VarI32(Mm(point.x)); w.VarI32(Mm(point.y)); w.VarI32(Mm(point.z));
+                w.VarI32(EntityCodec.Mm(point.x)); w.VarI32(EntityCodec.Mm(point.y)); w.VarI32(EntityCodec.Mm(point.z));
                 var e = OwnEntity(at.tosave);
                 if (e != null) KeepDoorAttach(e.NetId, path, point, lp, lq, at.point);
             }

@@ -410,7 +410,7 @@ namespace TLDRevamp.Net
             if (kinds == KindAll && it.car != null && Diff(d.car, local.car))
             {
                 savedatascript.Load(it, d.car); BloodFollow(it, d);
-                if (Signals(it.car, out var signal)) it.car.ignition = UsableMerge.Ignition(it.car.ignition, signal.SigHas, signal.SigIgnition);
+                if (EntityCarSignals.Signals(it.car, out var signal)) it.car.ignition = UsableMerge.Ignition(it.car.ignition, signal.SigHas, signal.SigIgnition);
             }   // the loader only dirties (Entities.Blood)
             if (kinds != KindAll && (kinds & KindBlood) != 0) BloodEditApply(it, d);   // a wash on a copy: only "clean" is taken
             if (K(KindAmmo) && it.ammo != null && Diff(d.ammo, local.ammo)) savedatascript.Load(it, d.ammo);

@@ -22,7 +22,12 @@ namespace TLDRevamp.Net
         internal static System.Collections.Generic.IReadOnlyDictionary<sandstormscript, uint> ObservedStormIds => EntityWeather.ObservedStormIds;
         internal static System.Collections.Generic.IReadOnlyDictionary<uint, sandstormscript> ObservedStormById => EntityWeather.ObservedStormById;
 
+        public static string CarSignals(uint net) => EntityCarSignals.CarSignals(net);
+        internal static int CarSignalKey(Ent e) => EntityCarSignals.CarSignalKey(e);
+
+        internal static bool TryGetEntity(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
         internal static float HostClockRate => EntityWorldClock.HostClockRate;
+        internal static bool IsFinite(Vector3 value) => Finite(value);
         internal static bool IsFinite(float value) => Finite(value);
         internal static bool IsFinite(double value) => Finite(value);
         internal static void SendToPeer(int playerId, NetWriter w, bool reliable) => ServerSendTo(playerId, w, reliable);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -15,13 +16,15 @@ namespace TLDRevamp.Net
     ///   handbrake the game's receiver (UpdMultiHandbrake: lever, sound, kickstands)
     ///   brake     only while the rear lights read it (rearlights.Upd) - the copy's own brake stays its own
     ///   steer     the cabin steering wheel (TsteerWheel), so a driver's hands and the wheel they hold agree
-    public static partial class Entities
+    internal static class EntityCarSignals
     {
         public static long SignalsApplied;
         private static readonly Dictionary<carscript, Ent> SignalCars = new Dictionary<carscript, Ent>();
 
+        internal static void ResetSignals() => SignalCars.Clear();
+
         /// After the engine in every state: u8 flags (1 car, 2 ignition, 4 brake, 8 handbrake), i8 gear, u8 horn, i8 steer.
-        private static void WriteSignals(NetWriter w, Ent e)
+        internal static void WriteSignals(NetWriter w, Ent e)
         {
             var c = e.PartIndex < 0 && e.Root != null ? e.Root.car : null;
             if (c == null) { w.U8(0); return; }
@@ -47,7 +50,7 @@ namespace TLDRevamp.Net
             return k;
         }
 
-        private static void ReadSignals(NetReader r, Ent e)
+        internal static void ReadSignals(NetReader r, Ent e)
         {
             if (r.Pos >= r.End) return;   // a sender without them (bots)
             byte f = r.U8();
@@ -60,7 +63,7 @@ namespace TLDRevamp.Net
             if (c != null) SignalCars[c] = e;
         }
 
-        private static bool Signals(carscript c, out Ent e) =>
+        internal static bool Signals(carscript c, out Ent e) =>
             SignalCars.TryGetValue(c, out e) && e.Proxy && e.SigHas && e.Root != null && e.Root.car == c;
 
         /// Project before localIgnition is calculated; a copy never simulates a second key toggle.
@@ -70,7 +73,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static void Prefix(carscript __instance)
             {
-                if (!InSession || !Signals(__instance, out var e)) return;
+                if (!Entities.InSession || !Signals(__instance, out var e)) return;
                 if (__instance.ignition != e.SigIgnition) RemotePlayers.DriverReach(__instance, RemotePlayers.IgnitionPos(__instance), RemotePlayers.ReachS);
                 __instance.ignition = e.SigIgnition;
             }
@@ -83,7 +86,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(carscript __instance)
             {
-                if (SignalCars.Count == 0 || !InSession) return;
+                if (SignalCars.Count == 0 || !Entities.InSession) return;
                 if (!Signals(__instance, out var e)) return;
                 var c = __instance;
                 c.ignition = e.SigIgnition;
@@ -112,7 +115,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(carscript __instance)
             {
-                if (SignalCars.Count == 0 || !InSession || !Signals(__instance, out var e) || __instance.TsteerWheel == null) return;
+                if (SignalCars.Count == 0 || !Entities.InSession || !Signals(__instance, out var e) || __instance.TsteerWheel == null) return;
                 var c = __instance;
                 float owner = e.SigSteer, local = c.isPlayerDriving2 ? c.isteer : 0f;
                 float target = (Mathf.Abs(local) > Mathf.Abs(owner) ? local : owner) * c.steerAngle;
@@ -157,7 +160,7 @@ namespace TLDRevamp.Net
         /// Diagnostics (bridge `mp carsig net`): a car's signals here, and on a copy what was received.
         public static string CarSignals(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null || e.Root.car == null) return "{\"error\":\"no such car\"}";
+            if (!Entities.TryGetEntity(net, out var e) || e.Root == null || e.Root.car == null) return "{\"error\":\"no such car\"}";
             var c = e.Root.car;
             var rl = e.Root.GetComponentsInChildren<rearlights>(true);
             int lit = 0, lamps = 0;

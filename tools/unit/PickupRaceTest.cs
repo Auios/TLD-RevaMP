@@ -131,11 +131,11 @@ namespace TLDRevamp.Net
             CargoClaims = true;
             var car = new Ent { NetId = 7, OwnerId = MyId }; ByNet[7] = car;
             item = new Ent { NetId = 8, Proxy = true, OwnerId = 0, CarriedBy = 7, Held = true }; item.Root.P = new TestPickup(); ByNet[8] = item;
-            ReadCarriedBy = 0; ReadLockedState = true;
+            EntityCodec.ReadCarriedBy = 0; EntityCodec.ReadLockedState = true;
             var sample = new PoseInterpolator.Sample(); Uploaded = null;
             IdleTrafficTest.Check(!TakeCarried(item, ref sample, default, Quaternion.identity, false, false) && Uploaded == null,
                 "physlocked state cannot be mistaken for loose cargo release");
-            item.CarriedBy = 7; ReadLockedState = false;
+            item.CarriedBy = 7; EntityCodec.ReadLockedState = false;
             IdleTrafficTest.Check(TakeCarried(item, ref sample, default, Quaternion.identity, false, false) && !item.Proxy && Uploaded.Length == 6,
                 "loose release in our car claims cargo without explicit release bit or central held guard");
             // a holder standing outside lets go in our car's box (or touching it): ours at once, cooldown or not

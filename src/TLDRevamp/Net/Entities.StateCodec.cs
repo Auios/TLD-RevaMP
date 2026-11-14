@@ -10,7 +10,7 @@ namespace TLDRevamp.Net
     ///   rotation        smallest three: u8 index + 3× i16 (≈0.002° steps)
     ///   velocity        3× i16 cm/s (±327 m/s)           flags    u8 (1 = driven)
     /// Wheels and engine follow (WriteWheels/WriteEngine).
-    public static partial class Entities
+    internal static partial class EntityCodec
     {
         /// Flags byte: 1 = driven (the owner's player in its driver seat), 2 = stored (in the owner's inventory: the game
         /// hides the item there — pickupable.disableThisWhenStored — and parks it at the player's inventory point),
@@ -25,7 +25,7 @@ namespace TLDRevamp.Net
                                             bool locked = false, int lockItem = -1, int lockMount = -1, uint lockContainer = 0,
                                             bool handPose = false, Vector3 handPos = default, Quaternion handRot = default)
         {
-            w.U8(State); w.VarU32(net); w.VarU32(epoch); w.U16(seq);
+            w.U8(Entities.State); w.VarU32(net); w.VarU32(epoch); w.U16(seq);
             w.U32((uint)(long)Math.Round(stamp * 1000.0));
             w.I32(Mm(g.x)); w.I32(Mm(g.y)); w.I32(Mm(g.z));
             WriteRot(w, q);
@@ -54,10 +54,10 @@ namespace TLDRevamp.Net
         internal static bool ReadHandPose;
         internal static Vector3 ReadHandPos;
         internal static Quaternion ReadHandRot;
-        private static bool ReadFinalState;
-        private static bool ReadLockedState;
-        private static int ReadLockItem, ReadLockMount;
-        private static uint ReadLockContainer;
+        internal static bool ReadFinalState;
+        internal static bool ReadLockedState;
+        internal static int ReadLockItem, ReadLockMount;
+        internal static uint ReadLockContainer;
 
         /// The carried part of the last state head read (flag 16): the car, the pose in its frame; 0 = not carried.
         internal static uint ReadCarriedBy; internal static Vector3 ReadLocalPos; internal static Quaternion ReadLocalRot;
@@ -92,11 +92,23 @@ namespace TLDRevamp.Net
                 ReadHandRot = ReadRot(r);
                 ReadHandPose = held && !stored && !ReadLockedState && Mathf.Abs(ReadHandPos.x) <= 2f && Mathf.Abs(ReadHandPos.y) <= 2f && Mathf.Abs(ReadHandPos.z) <= 2f;
             }
-            if (ReadCarriedBy != 0 && (!Finite(ReadLocalPos) || ReadLocalPos.sqrMagnitude > 1e4f)) ReadCarriedBy = 0;   // the world pose is used
-            if (ReadLockContainer != 0 && (!Finite(ReadLocalPos) || ReadLocalPos.sqrMagnitude > 1e4f)) ReadLockContainer = 0;
+            if (ReadCarriedBy != 0 && (!Entities.IsFinite(ReadLocalPos) || ReadLocalPos.sqrMagnitude > 1e4f)) ReadCarriedBy = 0;   // the world pose is used
+            if (ReadLockContainer != 0 && (!Entities.IsFinite(ReadLocalPos) || ReadLocalPos.sqrMagnitude > 1e4f)) ReadLockContainer = 0;
         }
 
-        private static int Mm(double x) => (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, Math.Round(x * 1000.0)));
+        internal static int Mm(double x) => (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, Math.Round(x * 1000.0)));
         private static short Cm(float x) => (short)Mathf.Clamp(Mathf.RoundToInt(x * 100f), -32767, 32767);
+    }
+
+    public static partial class Entities
+    {
+        internal static void WriteStateHead(NetWriter w, uint net, uint epoch, ushort seq, double stamp, Vector3d g, Quaternion q, Vector3 v, bool driven, bool stored = false, bool held = false, bool spraying = false,
+                                            uint carriedBy = 0, Vector3 localPos = default, Quaternion localRot = default, bool final = false,
+                                            bool locked = false, int lockItem = -1, int lockMount = -1, uint lockContainer = 0,
+                                            bool handPose = false, Vector3 handPos = default, Quaternion handRot = default) =>
+            EntityCodec.WriteStateHead(w, net, epoch, seq, stamp, g, q, v, driven, stored, held, spraying, carriedBy, localPos, localRot, final, locked, lockItem, lockMount, lockContainer, handPose, handPos, handRot);
+
+        internal static void ReadStateHead(NetReader r, out uint net, out uint epoch, out double stamp, out Vector3d g, out Quaternion q, out Vector3 v, out bool driven, out bool stored, out bool held, out bool spraying) =>
+            EntityCodec.ReadStateHead(r, out net, out epoch, out stamp, out g, out q, out v, out driven, out stored, out held, out spraying);
     }
 }

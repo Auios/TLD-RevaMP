@@ -176,10 +176,10 @@ namespace TLDRevamp.Net
             ReplayLockedState(worldPacket, worldBytes, new Vector3d(500, 0, 0), Quaternion.identity);
             var worldReader = new NetReader { Buf = worldPacket.Buf, Pos = 1, End = worldPacket.Len };
             ReadEntityHead(worldReader, false, out _, out _, out _, out _, out _, out _, out _, out _, out bool worldHeld, out _);
-            Check(!worldReader.Bad && !worldHeld && ReadCarriedBy == 0 && ReadLockContainer == 42 &&
-                ReadLockItem == worldItem && ReadLockMount == worldMount && worldReader.U8() == 77, "world-lock address survives codec and cached replay without a held/carried flag");
-            cargo.LockLocalPos = ReadLocalPos; cargo.LockLocalRot = ReadLocalRot;
-            ApplyPoseLock(cargo, true, 0, ReadLockItem, ReadLockMount, ReadLockContainer);
+            Check(!worldReader.Bad && !worldHeld && EntityCodec.ReadCarriedBy == 0 && EntityCodec.ReadLockContainer == 42 &&
+                EntityCodec.ReadLockItem == worldItem && EntityCodec.ReadLockMount == worldMount && worldReader.U8() == 77, "world-lock address survives codec and cached replay without a held/carried flag");
+            cargo.LockLocalPos = EntityCodec.ReadLocalPos; cargo.LockLocalRot = EntityCodec.ReadLocalRot;
+            ApplyPoseLock(cargo, true, 0, EntityCodec.ReadLockItem, EntityCodec.ReadLockMount, EntityCodec.ReadLockContainer);
             Check(cargo.Root.P.physlock == null, "address alone does not let the viewer's container store another owner's item");
             cargo.Root.transform.position += new Vector3(10, 0, 0); glovebox.cols = Array.Empty<TestHit>();
             syncs = Physics.Syncs; cargo.Epoch++; SetProxy(cargo, false);
@@ -236,7 +236,7 @@ namespace TLDRevamp.Net
             var r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
             ReadEntityHead(r, false, out uint net, out uint epoch, out double stamp, out var world, out _, out var velocity, out _, out _, out bool lockHeld, out _);
             Check(!lockHeld, "physlock frame is not a held pickup");
-            Check(net == 41 && epoch == 2 && stamp == 5 && ReadFinalState && ReadLockedState && ReadCarriedBy == 40 && ReadLockItem == item && ReadLockMount == index, "late join replays final lock, frame and container");
+            Check(net == 41 && epoch == 2 && stamp == 5 && EntityCodec.ReadFinalState && EntityCodec.ReadLockedState && EntityCodec.ReadCarriedBy == 40 && EntityCodec.ReadLockItem == item && EntityCodec.ReadLockMount == index, "late join replays final lock, frame and container");
             Check((world - child.Pos).sqrMagnitude < .00001 && velocity.sqrMagnitude == 0 && r.U8() == 77 && !r.Bad, "replay refreshes stale world fallback and preserves visual state");
             var sample = new PoseInterpolator.Sample { T = stamp, Pos = world, Rot = child.Rot };
             Check(!TakeCarried(cargo, ref sample, world, child.Rot, false, false) && cargo.CarriedBy == 40 &&
@@ -250,7 +250,7 @@ namespace TLDRevamp.Net
             WriteUnlock(w);
             r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
             ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-            Check(!ReadLockedState && ReadCarriedBy == 0 && ReadLockContainer == 0 && ReadLockItem == -1, "unlock clears wire read context");
+            Check(!EntityCodec.ReadLockedState && EntityCodec.ReadCarriedBy == 0 && EntityCodec.ReadLockContainer == 0 && EntityCodec.ReadLockItem == -1, "unlock clears wire read context");
             double previous = 5; uint previousEpoch = 2;
             Check(NewerState(PoseStamp(5, 5, false), 2, ref previous, ref previousEpoch), "same physics-step lock/unlock has a newer millisecond stamp");
             Check(!NewerState(5, 2, ref previous, ref previousEpoch) && NewerState(PoseStamp(1, 5, true), 3, ref previous, ref previousEpoch), "delayed final cannot overwrite motion; new owner clock is accepted");
@@ -267,7 +267,7 @@ namespace TLDRevamp.Net
                 w.Reset(); WriteStateHead(w, 42, 1, 2, 6.05, rest, Quaternion.identity, Vector3.zero, false, stored: stored, held: !stored);
                 r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
                 ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out bool wireStored, out bool wireHeld, out _);
-                Check(!r.Bad && wireStored == stored && wireHeld != stored && !ReadLockedState && ReadCarriedBy == 0 && ReadLockItem == -1,
+                Check(!r.Bad && wireStored == stored && wireHeld != stored && !EntityCodec.ReadLockedState && EntityCodec.ReadCarriedBy == 0 && EntityCodec.ReadLockItem == -1,
                     "inventory state survives protocol 39 after another entity's framed lock");
                 tail = default;
                 Check(BandwidthRules.StateQuiet(ref tail, 6.05, false, false, false, false, true, false, true, true, false, .05, stored: stored) == BandwidthRules.Quiet.None,

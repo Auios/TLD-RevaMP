@@ -7,6 +7,7 @@ namespace HarmonyLib
 {
     [AttributeUsage(AttributeTargets.Class)] public class HarmonyPatch : Attribute { public HarmonyPatch(Type type, string method) { } }
     [AttributeUsage(AttributeTargets.Method)] public class HarmonyPrefix : Attribute { }
+    [AttributeUsage(AttributeTargets.Method)] public class HarmonyPostfix : Attribute { }
 }
 
 namespace UnityEngine
@@ -19,10 +20,18 @@ namespace UnityEngine
         }
         public static void Destroy(GameObject go) { go.Destroyed = true; napszakvaltakozas.s.sandStorms.Remove(go.Storm); }
     }
-    public class GameObject { public sandstormscript Storm; public bool Destroyed; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Storm as T; }
-    public class Transform { public Vector3 position, eulerAngles; }
+    public class GameObject { public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Storm as T; }
+    public class Transform { public Vector3 position, eulerAngles, localEulerAngles; }
+    public class Light { public bool enabled; public float intensity; public GameObject gameObject = new GameObject(); }
+    public class AudioSource { public bool isPlaying; public float volume; }
     public class AudioClip { public string name; public float length; }
-    public struct Quaternion { public static Quaternion Euler(float x, float y, float z) => default; }
+    public struct Quaternion
+    {
+        public float x, y, z, w;
+        public Quaternion(float x, float y, float z, float w) { this.x = x; this.y = y; this.z = z; this.w = w; }
+        public static Quaternion identity => new Quaternion(0, 0, 0, 1);
+        public static Quaternion Euler(float x, float y, float z) => identity;
+    }
     public struct Vector3d { public double x, y, z; public Vector3d(double x, double y, double z) { this.x = x; this.y = y; this.z = z; } }
     public struct Vector3
     {
@@ -38,10 +47,16 @@ namespace UnityEngine
         public static int Min(int a, int b) => Math.Min(a, b);
         public static float Max(float a, float b) => Math.Max(a, b);
         public static float Abs(float a) => Math.Abs(a);
+        public static float Sqrt(float a) => (float)Math.Sqrt(a);
+        public static float Clamp(float a, float min, float max) => Math.Clamp(a, min, max);
+        public static int Clamp(int a, int min, int max) => Math.Clamp(a, min, max);
+        public static int RoundToInt(float a) => (int)Math.Round(a);
+        public static float Clamp01(float a) => Clamp(a, 0, 1);
+        public static float Lerp(float a, float b, float t) => a + (b - a) * Clamp01(t);
     }
     public static class Time
     {
-        public static float time, unscaledTime, realtimeSinceStartup, timeScale = 1;
+        public static float time, unscaledTime, realtimeSinceStartup, timeScale = 1, deltaTime;
         public static double timeAsDouble, timeSinceLevelLoadAsDouble;
     }
 }
@@ -76,6 +91,30 @@ public class sandstormscript
     public int prefabid; public float size, xdir, ydir, speed, life; public bool started;
 }
 public class itemdatabase { public static itemdatabase s; public GameObject[] storms; }
+public class tosaveitemscript
+{
+    public carscript car;
+    public headlightscript[] Headlights = Array.Empty<headlightscript>();
+    public rearlights[] Rearlights = Array.Empty<rearlights>();
+    public T[] GetComponentsInChildren<T>(bool all) => typeof(T) == typeof(headlightscript) ? (T[])(object)Headlights : (T[])(object)Rearlights;
+}
+public class headlightscript { public int currentState; public Light[] Lights = Array.Empty<Light>(); public T[] GetComponentsInChildren<T>(bool all) => (T[])(object)Lights; }
+public class rearlights { public GameObject[] FLight; public void Upd() { } }
+public class usablescript { public int currentTurnState; }
+public class enginescript { public bool running, start; public gearstickscript gearstick; }
+public class gearstickscript { public Transform TransmissionHandPos; }
+public class carscript
+{
+    public bool ignition, localIgnition, ihorn, isPlayerDriving2;
+    public int gear; public int[] gears = new int[6];
+    public float brake, handbrake, currenthorn, steerAngle = 30, steer, isteer, steerWheel, FsteerM = 2;
+    public enginescript Engine; public usablescript lightUsable; public AudioSource SHornSound;
+    public Transform TsteerWheel, TransmissionHandPos, HandBrakeHandPos, HornHandPos;
+    public int Shifts, Handbrakes;
+    public void ResetInput() { }
+    public void ShiftTo(int value) { gear = value; Shifts++; }
+    public void UpdMultiHandbrake(float value) { handbrake = value; Handbrakes++; }
+}
 public class settingsscript { public static settingsscript s; public Settings S = new Settings(); public class Settings { public bool BDevMode; } }
 public class kaposztaleves { public static kaposztaleves s; public Settings settings = new Settings(); public class Settings { public bool daynight = true; } } // test stub, not game code
 
@@ -104,14 +143,31 @@ namespace TLDRevamp.Fixes
 
 namespace TLDRevamp.Net
 {
+    internal static class RemotePlayers
+    {
+        internal const float ReachS = .25f;
+        internal static int Reaches;
+        internal static Transform IgnitionPos(carscript car) => null;
+        internal static void DriverReach(carscript car, Transform target, float seconds) { Reaches++; }
+    }
     internal static class ModObjects { public static double ClockTime; }
     public static partial class Entities
     {
+        public sealed class Ent
+        {
+            public int PartIndex = -1, SigGear, SentSigKey = -1, SigRepeat;
+            public bool Proxy, SigHas, SigIgnition, SigBrake, SigHandbrake;
+            public float SigHorn, SigSteer, SteerWheelShown;
+            public tosaveitemscript Root;
+        }
+        internal static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
         public const byte SleepSync = 38;
+        public const byte State = 23, DetachSync = 42;
         private static readonly NetWriter W = new NetWriter();
         internal static bool IsHost, InSession = true;
         internal static bool Finite(float v) => !float.IsNaN(v) && !float.IsInfinity(v);
         internal static bool Finite(double v) => !double.IsNaN(v) && !double.IsInfinity(v);
+        internal static bool Finite(Vector3 v) => Finite(v.x) && Finite(v.y) && Finite(v.z);
         internal static readonly List<(byte[] Bytes, bool Reliable, int Peer)> Sent = new List<(byte[], bool, int)>();
         private static void ServerSendTo(int playerId, NetWriter w, bool reliable) => Sent.Add((w.Buf.Take(w.Len).ToArray(), reliable, playerId));
         private static void ServerSendAll(NetWriter w, bool reliable, int except, Vector3d? near = null, double range = 0) => Sent.Add((w.Buf.Take(w.Len).ToArray(), reliable, -1));

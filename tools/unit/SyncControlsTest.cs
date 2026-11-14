@@ -66,7 +66,8 @@ namespace TLDRevamp.Net
         static readonly Dictionary<SyncFakes.Engine, Ent> ProxyEngineOwner = new Dictionary<SyncFakes.Engine, Ent>();
         static readonly NetWriter W = new NetWriter();
         static readonly object _editBuckets = new object();
-        const byte DetachReq = 37, PartOff = 26, DetachSync = 42;
+        const byte DetachReq = 37, PartOff = 26;
+        internal const byte DetachSync = 42;
         const int MyId = 1;
         static bool InSession = true, Near = true, Token = true;
         static float EditRatePerS = 20, EditBurst = 40;

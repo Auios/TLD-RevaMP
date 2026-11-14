@@ -135,7 +135,7 @@ namespace TLDRevamp.Net
                 if (car == null || car.RB == null) continue;
                 var lp = car.transform.InverseTransformPoint(p);
                 bool inBox = CarLocalBounds(car).Contains(lp);
-                if (!LetGoInCar(stored, ReadLockedState, e.CarriedBy, inBox, !inBox && OverlapsCar(e, car, CargoGhostMarginM, p - e.Root.transform.position))) continue;
+                if (!LetGoInCar(stored, EntityCodec.ReadLockedState, e.CarriedBy, inBox, !inBox && OverlapsCar(e, car, CargoGhostMarginM, p - e.Root.transform.position))) continue;
                 if (!ClaimCargo(e, released: true, reason: ClaimReason.CargoRelease)) return false;
                 if (LetGoInCarClaimed++ < 20) Plugin.Log.LogInfo($"let go in our car: {e.Root.name} net {e.NetId} claimed for {car.name} at [{lp.x:F2}, {lp.y:F2}, {lp.z:F2}] (its frame){(inBox ? "" : ", touching it")}");
                 return true;

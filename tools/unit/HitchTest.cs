@@ -44,7 +44,8 @@ namespace TLDRevamp.Net
         private static bool InSession = true, PlayerActing = true, _applyingAttach, _applyingDetach, Near = true;
         internal static int MyId;
         internal static bool IsHost = true;
-        private const byte Add = 22, Owner = 25, DetachSync = 42;
+        private const byte Add = 22, Owner = 25;
+        internal const byte DetachSync = 42;
         private static readonly Dictionary<int, HashSet<uint>> Known = new Dictionary<int, HashSet<uint>>();
         private static HashSet<uint> KnownBy(int player)
         {
