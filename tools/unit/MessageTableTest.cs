@@ -83,6 +83,9 @@ static class MessageTableTest
             Check(handler.Item1 + ": handler reads the message at its new owner", Method(handler.Item2, handler.Item3).Contains("r."));
         }
 
+        Check("CarTune: routes to its owner", client.Contains("case CarTune: EntityCarTuning.ApplyCarTune(r);"));
+        Check("CarTune: owner reads its payload", Method("EntityCarTuning", "ApplyCarTune").Contains("r.U32()"));
+        Check("CarTune: keep before reliable forward", server.Contains("case CarTune: if (EntityCarTuning.ServerKeepTune(from, r)) ServerFwdAll(from, r, true); break;"));
         var byId = rows.ToDictionary(r => r.Id, r => r, EqualityComparer<int>.Default);
         foreach (int id in toServer.Concat(toClient).Distinct().OrderBy(i => i))
             Check("a routed message has a row: id " + id, byId.ContainsKey(id));

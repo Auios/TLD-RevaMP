@@ -1,19 +1,20 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
+using DoorRef = TLDRevamp.Net.Entities.DoorRef;
 
 namespace TLDRevamp.Net
 {
     /// Test: a car's doors (hood, trunk, doors — door_rot / door_move driven by inputconnect from a usable). A player
     /// opens one through its usable (a click turns it, a drag slides it); the usable sync carries it to the others.
-    public static partial class Entities
+    internal static partial class EntityDoors
     {
-        internal sealed class DoorRef { public inputconnect Ic; public usablescript U; public Transform T; public string Name; }
         /// Plugin LateUpdate: the car-frame positions `mp relpos` asked for, as they will be drawn this frame.
         public static void LateSample()
         {
             RestoreStoredDoorAttaches();
-            TelemetryRender();
+            Entities.TelemetryRender();
             DevHooks.EntityLateSample?.Invoke();
         }
 
@@ -43,7 +44,7 @@ namespace TLDRevamp.Net
         /// `mp cardoors <net>`: each door — its name, the usable's state (turn state, slide value) and the door's.
         public static string CarDoors(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
+            if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             var sb = new System.Text.StringBuilder("{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"doors\":[");
             int n = 0;
@@ -70,7 +71,7 @@ namespace TLDRevamp.Net
 
         public static string Food(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"gone\":true}";
+            if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"gone\":true}";
             var ed = e.Root.GetComponentInChildren<ediblescript>(true);
             if (ed == null) return "{\"error\":\"not food\"}";
             int shown = 0, all = 0;
@@ -83,15 +84,20 @@ namespace TLDRevamp.Net
         /// Test: a rabbit (aiscript). `mp rabbit <net>`: fleeing?, its stimulus balance, global position and facing.
         public static string Rabbit(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
+            if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
             var a = e.Root.GetComponentInChildren<aiscript>(true);
             if (a == null) return "{\"error\":\"no aiscript\"}";
-            if (NyOf(e) != null) return RabbitJson(e);   // fleeing, ff, stimuli, pos, fwd are in it (rabbitflee.py)
+            if (Entities.NyOf(e) != null) return Entities.RabbitJson(e);   // fleeing, ff, stimuli, pos, fwd are in it (rabbitflee.py)
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             var g = mainscript.GlobalFromUnityPos(a.transform.position); var f = a.transform.forward;
             return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"fleeing\":" + (a.fleeing ? "true" : "false") + ",\"ff\":" + a.flightFight.ToString("F2", ci) +
                    ",\"stimuli\":" + (a.senses != null ? a.senses.stimuls.Count : -1) +
                    ",\"pos\":[" + g.x.ToString("F2", ci) + "," + g.y.ToString("F2", ci) + "," + g.z.ToString("F2", ci) + "],\"fwd\":[" + f.x.ToString("F2", ci) + "," + f.z.ToString("F2", ci) + "]}";
         }
+    }
+
+    public static partial class Entities
+    {
+        internal sealed class DoorRef { public inputconnect Ic; public usablescript U; public Transform T; public string Name; }
     }
 }

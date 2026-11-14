@@ -2,6 +2,17 @@
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
     <Compile Include="EntitySplitTest.cs" />
+    <Compile Include="EntityTuningStubs.cs" />
+    <Compile Include="EntityTuningChecks.cs" />
+    <Compile Include="EntityDoorChecks.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/CarTuning.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/TankAdds.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.CarTune.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Blood.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.CopyFluids.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.BusDoors.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.CarDoors.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.DoorAttachments.cs" />
     <Compile Include="EntitySplitStubs.cs" />
     <Compile Include="EntityEffectsStubs.cs" />
     <Compile Include="EntityEffectsChecks.cs" />
@@ -26,4 +37,12 @@
     <Compile Include="../../src/TLDRevamp/Net/ClockMath.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
   </ItemGroup>
+  <Target Name="ExtractFeatureWire" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
+      <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
+    </PropertyGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractFeatureWire.py&quot; &quot;$(IntermediateOutputPath)FeatureWire.g.cs&quot; $(FeatureWireBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)FeatureWire.g.cs" /></ItemGroup>
+  </Target>
 </Project>

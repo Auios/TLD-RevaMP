@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -16,7 +17,7 @@ namespace TLDRevamp.Net
     /// (2) once a second every tank of a copy is checked against the owner's latest record and put back when it differs:
     /// the fill of a player (an edit, Entities.Edits) waits for its record; fluid poured from a copy into one's own can is
     /// the owner's to count.
-    public static partial class Entities
+    internal static partial class EntityCarTuning
     {
         public static float CopyFluidCheckS = 1f, CopyFluidToleranceL = 0.01f;
         public static long CopyFluidLossSkipped, CopyFluidsRestored, CopyFluidChecks;
@@ -32,7 +33,7 @@ namespace TLDRevamp.Net
         /// from one). The record, never the spawned item: LoadStuff loads the tanks, then the item's random type
         /// (save_randomType.Load → randomTypeSelector.Refresh), which puts that type's preset fluids into its tank — milk
         /// in a car's fuel tank on the copy, while the owner's record said diesel.
-        private static void CopyTanksAre(uint id, List<save_tankscript> recs)
+        internal static void CopyTanksAre(uint id, List<save_tankscript> recs)
         {
             if (id == 0) return;
             var keep = new List<save_tankscript>();
@@ -41,7 +42,7 @@ namespace TLDRevamp.Net
         }
 
         /// Our own fill as we send it to the owner: its record of it may come while we hold the owner's state off.
-        private static void CopyTanksAreNow(tosaveitemscript it)
+        internal static void CopyTanksAreNow(tosaveitemscript it)
         {
             if (it == null || !it.loaded || it.tanks == null || it.tanks.Count == 0) return;
             var keep = new List<save_tankscript>();
@@ -57,13 +58,13 @@ namespace TLDRevamp.Net
         /// Ours now: nothing to follow (an old record would come back when it's a copy again). A copy again: our state at
         /// the hand-off is the latest until the new owner's first pass — unless it was never ours (a fresh copy has the
         /// record it spawned from).
-        private static void CopyTanksOnOwnerChange(Ent e, bool proxy)
+        internal static void CopyTanksOnOwnerChange(Ent e, bool proxy)
         {
             if (e.Items == null) return;
             foreach (var it in e.Items)
             {
                 if (it == null) continue;
-                if (!proxy) { CopyTankTruth.Remove(it.idInSave); _tankTold.Remove(it.idInSave); }
+                if (!proxy) { CopyTankTruth.Remove(it.idInSave); Entities.ForgetTankEditTruth(it.idInSave); }
                 else if (!CopyTankTruth.ContainsKey(it.idInSave)) CopyTanksAreNow(it);
             }
         }
@@ -74,19 +75,19 @@ namespace TLDRevamp.Net
             if (Time.realtimeSinceStartup < _copyTruthSweepAt) return;
             _copyTruthSweepAt = Time.realtimeSinceStartup + 60f;
             _truthUsed.Clear(); _truthGone.Clear();
-            foreach (var e in ByNet.Values) if (e.Proxy && e.ItemIds != null) foreach (var id in e.ItemIds) _truthUsed.Add(id);
+            Entities.CollectCopyFluidIds(_truthUsed);
             foreach (var id in CopyTankTruth.Keys) if (!_truthUsed.Contains(id)) _truthGone.Add(id);
             foreach (var id in _truthGone) CopyTankTruth.Remove(id);
         }
 
         /// Once a second: which fluid containers are a copy's, and every copy tank back to its owner's record.
-        private static void CopyFluidTick()
+        internal static void CopyFluidTick()
         {
             if (Time.realtimeSinceStartup < _copyFluidAt) return;
             _copyFluidAt = Time.realtimeSinceStartup + CopyFluidCheckS;
             CopyFluidContainers.Clear();
             CopyTruthSweep();
-            foreach (var e in ByNet.Values)
+            foreach (var e in Entities.CopyFluidEntities())
             {
                 if (!e.Proxy || e.Root == null || e.Items == null) continue;
                 for (int idx = 0; idx < e.Items.Count; idx++)
@@ -94,14 +95,14 @@ namespace TLDRevamp.Net
                     var it = e.Items[idx];
                     if (it == null || it.tanks == null || it.tanks.Count == 0) continue;
                     if (e.Split != null && e.Split.Contains(idx)) continue;   // came off: its own entity has it
-                    bool pending = (e.EditHoldUntil != null && e.EditHoldUntil.TryGetValue(idx, out float hold) && Time.realtimeSinceStartup < hold) || EditDirty.ContainsKey(it);
+                    bool pending = (e.EditHoldUntil != null && e.EditHoldUntil.TryGetValue(idx, out float hold) && Time.realtimeSinceStartup < hold) || Entities.HasPendingItemEdit(it);
                     foreach (var t in it.tanks)
                     {
                         if (t == null || t.F == null) continue;
                         CopyFluidContainers.Add(t.F);
-                        if (_tankFilledAt.TryGetValue(t, out float at) && Time.realtimeSinceStartup - at < 2f) pending = true;   // a player filling it: an edit is on its way
+                        if (Entities.TryTankFilledAt(t, out float at) && Time.realtimeSinceStartup - at < 2f) pending = true;   // a player filling it: an edit is on its way
                     }
-                    if (!pending) _tankTold.Remove(it.idInSave);
+                    if (!pending) Entities.ForgetTankEditTruth(it.idInSave);
                     if (pending || !it.loaded || !CopyTankTruth.TryGetValue(it.idInSave, out var truth)) continue;
                     CopyFluidChecks++;
                     for (int i = 0; i < it.tanks.Count; i++)
@@ -111,20 +112,22 @@ namespace TLDRevamp.Net
                         save_tankscript rec = null;
                         foreach (var r in truth) if (r != null && r.ind == i) { rec = r; break; }
                         if (SameFluids(t.F, rec)) continue;
-                        _applyingState = true;
+                        Entities.SetFluidApplyingState(true);
                         try
                         {
                             if (rec != null) rec.Load(t);
                             else { t.FStart(); t.F.fluids.Clear(); t.Upd(); }
                             t.F.ResetSync();
                         }
-                        finally { _applyingState = false; }
+                        finally { Entities.SetFluidApplyingState(false); }
                         CopyFluidsRestored++;
-                        SessionLog.Event("copy-fluid-restored", e.NetId, item: idx, slot: i, to: MyId, epoch: e.Epoch);
+                        SessionLog.Event("copy-fluid-restored", e.NetId, item: idx, slot: i, to: Entities.MyId, epoch: e.Epoch);
                     }
                 }
             }
         }
+
+        internal static bool TryCopyTankTruth(uint id, out List<save_tankscript> truth) => CopyTankTruth.TryGetValue(id, out truth);
 
         /// Does the tank hold what the record says (to CopyFluidToleranceL a fluid)?
         private static bool SameFluids(mainscript.fluidcontainer f, save_tankscript rec)

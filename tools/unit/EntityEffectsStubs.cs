@@ -24,7 +24,9 @@ namespace UnityEngine
         public Component ParentComponent, ChildComponent;
         public T GetComponent<T>() where T : class => this as T ?? ChildComponent as T;
         public T GetComponentInParent<T>() where T : class => ParentComponent as T;
+        public T GetComponentInParent<T>(bool all) where T : class => ParentComponent as T;
         public T GetComponentInChildren<T>() where T : class => ChildComponent as T;
+        public T GetComponentInChildren<T>(bool all) where T : class => ChildComponent as T;
         public T[] GetComponentsInChildren<T>() => Children.OfType<T>().ToArray();
         public readonly List<Component> Children = new List<Component>();
         public bool CompareTag(string tag) => Tag == tag;
@@ -103,7 +105,7 @@ public partial class mainscript
     public void Particle(particle t, Vector3 p, Vector3 n, int count) { }
     public GameObject GetExplosionType(int type) => type == 0 ? ExplosionRed : type == 2 ? ExplosionBlue : type == 3 ? ExplosionPaint : null;
 }
-public partial class tosaveitemscript { public tankscript[] tanks; public bool Held; }
+public partial class tosaveitemscript { public List<tankscript> tanks; public bool Held; }
 public class weaponscript : Component
 {
     public RaycastHit[] hit = Array.Empty<RaycastHit>(); public int tempInt; public bool alreadyShotFalse, automaticFalseShot;
@@ -124,8 +126,8 @@ public enum soundenum { burp, fart, shit }
 public class soundMainScript { public static soundMainScript s = new soundMainScript(); public int GetLength(soundenum e) => 400; public AudioClip GetClip(soundenum e, int i) => new AudioClip(); }
 public class pickupable { public sprayscript spray; public bool inRightHand; }
 public class sprayscript : Component { public float valve, valveSpeed = 4; public bool hasPaint, firing; public pickupable P; public ParticleSystem particle; public AudioSource Saudio; }
-public class fluid { public bool isExplosive() => true; }
-public class tankscript : Component
+public class fluid : mainscript.fluidcontainer { public bool isExplosive() => true; }
+public partial class tankscript : Component
 {
     public bool neverExplode, alreadyExploded, alwaysExplode; public fluid F = new fluid(); public float explosionForceNeededToExplode;
     public int Calls; public void TryExplode(float forceAdd, bool add) { Calls++; }
@@ -151,7 +153,7 @@ namespace TLDRevamp
         }
     }
     internal static class Plugin { internal static LogSink Log = new LogSink(); internal class LogSink { public void LogWarning(string message) { } } }
-    internal static class DevHooks { internal static Action SprayTick; }
+    internal static class DevHooks { internal static Action SprayTick, EntityLateSample; }
 }
 namespace TLDRevamp.Net
 {
@@ -166,8 +168,8 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         public sealed partial class Ent { public uint NetId; public List<tosaveitemscript> Items = new List<tosaveitemscript>(); public bool Spraying; }
-        internal class SEnt { public int OwnerId; public bool HasState; public Vector3d Pos, Where; }
-        internal static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
+        private sealed partial class SEnt { public int OwnerId; public bool HasState; public Vector3d Pos, Where; }
+        private static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
         private static readonly NetWriter WS = new NetWriter();
         internal static bool Finite(Vector3d v) => Finite(v.x) && Finite(v.y) && Finite(v.z);
         internal static bool Finite(Quaternion q) => Finite(q.x) && Finite(q.y) && Finite(q.z) && Finite(q.w);

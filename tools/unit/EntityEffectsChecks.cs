@@ -59,7 +59,7 @@ static partial class EntitySplitTest
         mainscript.s.ShootDecals = new[] { new GameObject(), new GameObject(), new GameObject() };
         Invoke(effects, "CaptureShot", gun, 0, false); Save("shotPlayer");
         PlayerCombat.LastPlayerHit = -1;
-        var tank = new tankscript { ParentComponent = target }; target.tanks = new[] { tank };
+        var tank = new tankscript { ParentComponent = target }; target.tanks = new System.Collections.Generic.List<tankscript> { tank };
         var cap = new tankcapscript { Tank = tank, disableCollider = true }; cap.transform.position = new Vector3(2, 3, 4);
         Set(effects, "_fxGun", gun); Patch(effects, "ShotFxHole", "Postfix", cap); Invoke(effects, "CaptureShot", gun, 0, false); Save("shotHole");
         ((System.Collections.IList)Field(effects, "_fxHoles")).Clear(); Set(effects, "_fxGun", null);
@@ -101,13 +101,13 @@ static partial class EntitySplitTest
             Invoke(row.Item2, row.Item3, 7, EffectReader(row.Item1));
             Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == EffectBytes[row.Item1] && Entities.LastExcept == 7 && Entities.Packets.Last().Reliable == (row.Item1 != "sound0"), row.Item1 + " relays original bytes excluding sender");
         }
-        Entities.Server[301] = new Entities.SEnt { OwnerId = 9 };
+        Entities.TestServer(301, 9);
         EntityExplosions.ServerExplodeReq(7, EffectReader("tankRequest"));
         Check(Entities.Packets.Last().Peer == 9 && Convert.ToHexString(Entities.Packets.Last().Bytes) == EffectBytes["tankRequest"], "explosion request goes to current owner byte for byte");
         int sent = Entities.Packets.Count;
         EntityExplosions.ServerExplodeReq(9, EffectReader("tankRequest"));
         HitCheck.Allow = false; EntityExplosions.ServerExplodeReq(7, EffectReader("tankRequest")); HitCheck.Allow = true;
-        Entities.Server.Clear(); EntityExplosions.ServerExplodeReq(7, EffectReader("tankRequest"));
+        Entities.ClearServer(); EntityExplosions.ServerExplodeReq(7, EffectReader("tankRequest"));
         EntityExplosions.ServerExplodeReq(7, Reader(new byte[] { 46 }));
         Check(Entities.Packets.Count == sent, "request guards reject owner echo, denied hit, unknown id and truncated net");
 

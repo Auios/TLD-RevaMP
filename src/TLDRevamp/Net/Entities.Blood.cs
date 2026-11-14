@@ -13,12 +13,12 @@ namespace TLDRevamp.Net
     /// killed himself by getting in the car" came 6 minutes after the uncleaned wash, on that car.
     /// Now a copy follows the owner's record both ways, and a wash on a copy goes to the owner as an edit (KindBlood:
     /// the car record, of which the owner takes only "clean").
-    public static partial class Entities
+    internal static partial class EntityCarTuning
     {
         public static long BloodCleanedOnCopy, BloodCleanSent, BloodCleanApplied;
 
         /// The record says clean, this car is bloody: wash it (the game's own way, as a sponge would).
-        private static void BloodFollow(tosaveitemscript it, itemDataClass d)
+        internal static void BloodFollow(tosaveitemscript it, itemDataClass d)
         {
             if (it == null || it.car == null || d.car == null || d.car.Count == 0 || d.car[0] == null) return;
             var w = it.car.blood;
@@ -28,7 +28,7 @@ namespace TLDRevamp.Net
         }
 
         /// Owner: an edit that washed our car's blood off.
-        private static void BloodEditApply(tosaveitemscript it, itemDataClass d)
+        internal static void BloodEditApply(tosaveitemscript it, itemDataClass d)
         {
             if (it == null || it.car == null || it.car.blood == null || d.car == null || d.car.Count == 0 || d.car[0] == null) return;
             var w = it.car.blood;
@@ -43,14 +43,14 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(washtriggerscript __instance)
             {
-                if (!InSession || _applyingState || __instance == null) return;
+                if (!Entities.InSession || Entities.ApplyingState || __instance == null) return;
                 var car = __instance.GetComponentInParent<carscript>();
                 if (car == null || car.blood != __instance) return;
                 var it = car.GetComponent<tosaveitemscript>();
                 if (it == null) it = car.GetComponentInParent<tosaveitemscript>();
                 if (it == null) return;
-                if (IsProxy(it)) BloodCleanSent++;
-                MarkEdit(it, kind: "blood");   // a copy: to the owner; our own car: its resync goes out now
+                if (Entities.IsProxy(it)) BloodCleanSent++;
+                Entities.MarkFeatureEdit(it, kind: "blood");   // a copy: to the owner; our own car: its resync goes out now
             }
         }
     }

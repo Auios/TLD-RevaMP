@@ -555,7 +555,7 @@ namespace TLDRevamp.Net
         private static void BreaksReset()
         {
             _breaksHere.Clear();
-            CarTuneReset();
+            EntityCarTuning.CarTuneReset();
             _worldBreaks.Clear(); _worldBreaksWaiting.Clear();
         }
 

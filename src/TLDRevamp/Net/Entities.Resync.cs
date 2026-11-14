@@ -280,7 +280,7 @@ namespace TLDRevamp.Net
                     if (fd == null) continue;
                     DropUncanonAttach(fd);
                     ItemSnapshot.Remap(fd, fmap);
-                    if (idx >= 0 && idx < e.ItemIds.Count) CopyTanksAre(e.ItemIds[idx], fd.tanks);
+                    if (idx >= 0 && idx < e.ItemIds.Count) EntityCarTuning.CopyTanksAre(e.ItemIds[idx], fd.tanks);
                     FarResync(e, idx, fd);
                 }
                 FarResyncs++;
@@ -303,10 +303,10 @@ namespace TLDRevamp.Net
                 if (d == null) continue;
                 DropUncanonAttach(d);
                 ItemSnapshot.Remap(d, map);
-                if (held) { CopyTanksAre(e.Items[idx].idInSave, d.tanks); continue; }   // what the tank comes to when the hold ends
+                if (held) { EntityCarTuning.CopyTanksAre(e.Items[idx].idInSave, d.tanks); continue; }   // what the tank comes to when the hold ends
                 bool useUsables = LiveRecordUsables(e, idx, stamp);
                 LiveRecordApplied(e, idx, stamp);
-                CopyTanksAre(e.Items[idx].idInSave, d.tanks);
+                EntityCarTuning.CopyTanksAre(e.Items[idx].idInSave, d.tanks);
                 ApplyState(e.Items[idx], d, applyUsables: useUsables);
                 ResyncItemsLoaded++;
             }
@@ -409,10 +409,10 @@ namespace TLDRevamp.Net
             if (K(KindUsable) && Diff(d.door_rots, local.door_rots)) savedatascript.Load(it, it.door_rots, d.door_rots);
             if (kinds == KindAll && it.car != null && Diff(d.car, local.car))
             {
-                savedatascript.Load(it, d.car); BloodFollow(it, d);
+                savedatascript.Load(it, d.car); EntityCarTuning.BloodFollow(it, d);
                 if (EntityCarSignals.Signals(it.car, out var signal)) it.car.ignition = UsableMerge.Ignition(it.car.ignition, signal.SigHas, signal.SigIgnition);
             }   // the loader only dirties (Entities.Blood)
-            if (kinds != KindAll && (kinds & KindBlood) != 0) BloodEditApply(it, d);   // a wash on a copy: only "clean" is taken
+            if (kinds != KindAll && (kinds & KindBlood) != 0) EntityCarTuning.BloodEditApply(it, d);   // a wash on a copy: only "clean" is taken
             if (K(KindAmmo) && it.ammo != null && Diff(d.ammo, local.ammo)) savedatascript.Load(it, d.ammo);
             if (K(KindUsable) && it.ginlamp != null && Diff(d.ginlamp, local.ginlamp)) savedatascript.Load(it, d.ginlamp);
             if (K(KindBusDoor) && it.busdoorscript != null && Diff(d.busdoorscript, local.busdoorscript)) savedatascript.Load(it, d.busdoorscript);

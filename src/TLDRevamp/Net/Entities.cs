@@ -434,7 +434,7 @@ namespace TLDRevamp.Net
             GrabRefusedTick();
             RefetchLaterTick();
             BreakWaitTick();
-            CarTuneTick();
+            EntityCarTuning.CarTuneTick();
             WorldBreakTick();
             PoiCensusTick();
             float dt = Time.unscaledDeltaTime;
@@ -459,7 +459,7 @@ namespace TLDRevamp.Net
             LeaseTick();
             LiveUsableTick();
             EditTick();
-            CopyFluidTick();
+            EntityCarTuning.CopyFluidTick();
             ReshareTick();
             EntityExplosions.BlastTick();
             MemberGoneTick();
@@ -783,7 +783,7 @@ namespace TLDRevamp.Net
                 case PlayerSound: EntityEffects.ServerPlayerSound(from, r); break;
                 case BreakHit: ServerBreakHit(from, r); break;
                 case BreakFx: ServerKeepBreak(r); ServerFwdAll(from, r, true); break;
-                case CarTune: if (ServerKeepTune(from, r)) ServerFwdAll(from, r, true); break;
+                case CarTune: if (EntityCarTuning.ServerKeepTune(from, r)) ServerFwdAll(from, r, true); break;
                 case WorldBreak: ServerKeepWorldBreak(r); ServerFwdAll(from, r, true); break;
                 case AiState:
                 {
@@ -1047,7 +1047,7 @@ namespace TLDRevamp.Net
                     if (owner != MyId)
                     {
                         foreach (var t in tankRecs) if (map.TryGetValue(t.id, out uint tid)) t.id = tid; else t.id = 0;
-                        foreach (var it in e.Items) if (it != null) CopyTanksAre(it.idInSave, tankRecs);   // the record, never what the copy shows after loading
+                        foreach (var it in e.Items) if (it != null) EntityCarTuning.CopyTanksAre(it.idInSave, tankRecs);   // the record, never what the copy shows after loading
                     }
                     Spawned++;
                     SessionLog.Event("add-applied", net, from: owner, epoch: epoch);
@@ -1248,7 +1248,7 @@ namespace TLDRevamp.Net
                 case PlayerSound: EntityEffects.ApplyPlayerSound(r); break;
                 case BreakHit: ApplyBreakHit(r); break;
                 case BreakFx: ApplyBreakFx(r); break;
-                case CarTune: ApplyCarTune(r); break;
+                case CarTune: EntityCarTuning.ApplyCarTune(r); break;
                 case WorldBreak: ApplyWorldBreak(r); break;
                 case AiState: ApplyAiState(r); break;
                 case AiSound: ApplyAiSound(r); break;
@@ -1339,7 +1339,7 @@ namespace TLDRevamp.Net
                 var pl = mainscript.s.player;
                 if (pl != null && pl.Bsitting && pl.seat != null && pl.seat.transform.root == e.Root.transform.root) SeatCollisionIgnore(pl, pl.seat);
             }
-            CopyTanksOnOwnerChange(e, proxy);
+            EntityCarTuning.CopyTanksOnOwnerChange(e, proxy);
             if (!proxy && e.WornBy >= 0) ClearWorn(e);   // ours now: loose where it was shown (on the head), the game's again
             if (!proxy && e.PoseLocked) { EnsurePoseLock(e); RecoverWorldLock(e); }
             if (!proxy)

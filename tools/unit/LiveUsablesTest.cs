@@ -15,6 +15,11 @@ static class LiveUsablesTest
 
 namespace TLDRevamp.Net
 {
+    internal static class EntityDoors
+    {
+        internal static bool BusControl(tosaveitemscript it, usablescript u) => false;
+        internal static void ResetDoorAttachments() { }
+    }
     public static partial class Entities
     {
         internal sealed class Ent
@@ -42,7 +47,6 @@ namespace TLDRevamp.Net
         static readonly List<bool> Reliable = new List<bool>(), RelayReliable = new List<bool>();
         static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
         static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
-        static readonly Dictionary<uint, object> _storedDoorAttaches = new Dictionary<uint, object>();
         static readonly Dictionary<tosaveitemscript, float> EditDirty = new Dictionary<tosaveitemscript, float>();
         static readonly Dictionary<tosaveitemscript, int> EditKinds = new Dictionary<tosaveitemscript, int>();
         static float _editFlushAt; static int _resyncFirst;
@@ -70,7 +74,6 @@ namespace TLDRevamp.Net
         static void ToServer(NetWriter w, bool reliable) { Sent.Add(w.Buf.AsSpan(0, w.Len).ToArray()); Reliable.Add(reliable); }
         static void Deliver(NetWriter w) => ApplyLiveUsable(Reader(w.Buf.AsSpan(0, w.Len).ToArray()));
         static void MarkEdit(tosaveitemscript it, string kind) { }
-        static bool BusControl(tosaveitemscript it, usablescript u) => false;
         static tosaveitemscript ItemOf(Component c, uint id, bool hasId) => hasId && savedatascript.s.items.TryGetValue(id, out var it) ? it : c.GetComponentInParent<tosaveitemscript>();
         static void TelemetryTouch(uint net) { }
         static tosaveitemscript _handFor; static float _handAt;

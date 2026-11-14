@@ -148,7 +148,7 @@ namespace TLDRevamp.Net
             {
                 it = ItemOf(u, u.tosaveid, u.setid);
                 if (it == null) return false;
-                if (BusControl(it, u)) return true;
+                if (EntityDoors.BusControl(it, u)) return true;
                 e = SharedGroupOf(it);
                 if (e == null || e.NetId == 0) return false;
                 idx = e.Items.IndexOf(it); int ui = Array.IndexOf(ItemUsables(it), u);
@@ -383,7 +383,7 @@ namespace TLDRevamp.Net
         }
         private static void LiveUsablesReset(bool keepPoiSequences = false)
         {
-            _storedDoorAttaches.Clear();
+            EntityDoors.ResetDoorAttachments();
             _localUsables.Clear(); _remoteUsables.Clear(); _liveIn.Clear(); _liveServerIn.Clear(); _liveRelaySeq.Clear(); _liveRecordFloor.Clear();
             if (!keepPoiSequences) _liveOut.Clear();
             else

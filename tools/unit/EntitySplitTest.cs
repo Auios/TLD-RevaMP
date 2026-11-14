@@ -27,11 +27,13 @@ static partial class EntitySplitTest
 
     static void Main()
     {
+        TuningChecks();
+        DoorChecks();
         CodecVectors();
         CarSignalChecks();
         EffectsChecks();
         CoreMembers.Register();
-        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals"), (typeof(EntityEffects), "PlayerSounds"), (typeof(EntityExplosions), "Explosions") })
+        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals"), (typeof(EntityEffects), "PlayerSounds"), (typeof(EntityExplosions), "Explosions"), (typeof(EntityCarTuning), "CarTune"), (typeof(EntityDoors), "CarDoors") })
         {
             var type = feature.Item1;
             Check(type.IsNotPublic && type.IsAbstract && type.IsSealed, type.Name + " is internal static");
@@ -54,6 +56,14 @@ static partial class EntitySplitTest
             Check(!Regex.IsMatch(source, @"using\s+static\s+(?:global::)?(?:TLDRevamp\.Net\.)?Entities\s*;"), part + " has no static kernel import");
             Check(Regex.Matches(source, @"Entities\.(\w+)").Cast<Match>().All(m => new[] { "State", "DetachSync", "IsFinite" }.Contains(m.Groups[1].Value)), part + " uses only protocol and finite kernel facts");
         }
+        foreach (string part in new[] { "CarTune", "Blood", "CopyFluids", "CarDoors", "BusDoors", "DoorAttachments" })
+        {
+            string source = File.ReadAllText("src/TLDRevamp/Net/Entities." + part + ".cs");
+            Check(!Regex.IsMatch(source, @"using\s+static\s+(?:global::)?(?:TLDRevamp\.Net\.)?Entities\s*;|Entities\.(?:W|WS|ByNet|Server)\b"), part + " uses only narrow qualified kernel calls");
+        }
+        Check(!ReferenceEquals(Field(typeof(EntityCarTuning), "W"), Field(typeof(Entities), "W")) && typeof(EntityDoors).GetField("W", Static) == null, "tuning owns its writer and doors adds no standalone writer");
+        Check(typeof(Entities).GetField("_tuneHere", Static) == null && typeof(Entities).GetField("CopyTankTruth", Static) == null && typeof(Entities).GetField("_storedDoorAttaches", Static) == null, "tuning fluid and door caches have one owner");
+        Check(BridgeReflect.Get("TLDRevamp.Net.Entities._storedDoorAttaches.Count") == "0" && BridgeReflect.Get("TLDRevamp.Net.Entities._tuneHere.Count") == "0", "historical full cache paths resolve to feature owners");
         Check(typeof(Entities).GetField("ReadHandPose", Static) == null && typeof(Entities).GetField("ReadFinalState", Static) == null && typeof(Entities).GetField("SignalCars", Static) == null && typeof(Entities).GetField("SignalsApplied", Static) == null, "codec scratch and car signal state have one owner");
         Check(BridgeReflect.Set("TLDRevamp.Net.Entities.ReadHandPose", "False") == "false" && !EntityCodec.ReadHandPose, "codec scratch full alias writes owner");
         Check(BridgeReflect.Get("Entities.ReadLockItem") == EntityCodec.ReadLockItem.ToString(), "codec scratch short alias reads owner");

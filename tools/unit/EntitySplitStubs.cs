@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace HarmonyLib
 {
-    [AttributeUsage(AttributeTargets.Class)] public class HarmonyPatch : Attribute { public HarmonyPatch(Type type, string method, params Type[] args) { } }
+    [AttributeUsage(AttributeTargets.Class)] public class HarmonyPatch : Attribute { public HarmonyPatch() { } public HarmonyPatch(Type type, string method, params Type[] args) { } }
     [AttributeUsage(AttributeTargets.Method)] public class HarmonyPrefix : Attribute { }
     [AttributeUsage(AttributeTargets.Method)] public class HarmonyPostfix : Attribute { }
 }
@@ -92,23 +92,23 @@ public class sandstormscript
     public Transform transform = new Transform(); public GameObject gameObject;
     public int prefabid; public float size, xdir, ydir, speed, life; public bool started;
 }
-public class itemdatabase { public static itemdatabase s; public GameObject[] storms; }
+public class itemdatabase { public static itemdatabase s; public GameObject[] storms; public GameObject Prefab; public GameObject Item(int id) => Prefab; }
 public partial class tosaveitemscript : Component
 {
     public carscript car;
     public headlightscript[] Headlights = Array.Empty<headlightscript>();
     public rearlights[] Rearlights = Array.Empty<rearlights>();
-    public T[] GetComponentsInChildren<T>(bool all) => typeof(T) == typeof(headlightscript) ? (T[])(object)Headlights : typeof(T) == typeof(rearlights) ? (T[])(object)Rearlights : Array.Empty<T>();
+    public T[] GetComponentsInChildren<T>(bool all) => typeof(T) == typeof(headlightscript) ? (T[])(object)Headlights : typeof(T) == typeof(rearlights) ? (T[])(object)Rearlights : Children.OfType<T>().ToArray();
 }
 public class headlightscript { public usablescript usableSet; public int currentState; public Light[] Lights = Array.Empty<Light>(); public T[] GetComponentsInChildren<T>(bool all) => (T[])(object)Lights; }
 public class rearlights { public GameObject[] FLight; public void Upd() { } }
-public class usablescript { public int currentTurnState; }
+public partial class usablescript : Component { public int currentTurnState; }
 public class enginescript { public bool running, start; public gearstickscript gearstick; }
 public class gearstickscript { public Transform TransmissionHandPos; }
-public class carscript
+public partial class carscript : Component
 {
     public bool ignition, localIgnition, ihorn, isPlayerDriving2;
-    public int gear; public int[] gears = new int[6];
+    public int gear; public Gear[] gears = new Gear[6];
     public float brake, handbrake, currenthorn, steerAngle = 30, steer, isteer, steerWheel, FsteerM = 2;
     public enginescript Engine; public usablescript lightUsable; public AudioSource SHornSound;
     public Transform TsteerWheel, TransmissionHandPos, HandBrakeHandPos, HornHandPos;

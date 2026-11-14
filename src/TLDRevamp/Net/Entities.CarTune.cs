@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
+using TuneHere = TLDRevamp.Net.Entities.TuneHere;
 
 namespace TLDRevamp.Net
 {
@@ -15,21 +17,17 @@ namespace TLDRevamp.Net
     /// car streamed out and in), before the owner could mistake the prefab's values for a change. A copy's wheels are
     /// placed from its own colliders (ProxyWheelGraphics), so with the owner's tuning applied they sit where the owner's do.
     /// Kept with the world save too (CarTuneSave).
-    public static partial class Entities
+    internal static partial class EntityCarTuning
     {
-        public const byte CarTune = 113;   // both: u32 net, CarTuning
+        private static readonly NetWriter W = new NetWriter();
         public static float CarTuneEveryS = 0.5f;
         /// An owner sends a tuned car's tuning again this often (and once soon after it took the car over): a CarTune the
         /// server refused (sent while a claim was still provisional) or lost is replaced by the next one.
         public static float CarTuneResendS = 30f;
-        public const int MaxTuneBytes = 2048;
         public static long TunesSent, TunesResent, TunesApplied, TunesReapplied, TunesReplayed, TunesRefused, TunesKept;
         public static string TuneLast = "";
 
-        private sealed partial class SEnt { public byte[] Tune; }
-
         /// This machine's tuning per car: what it applied or sent, and the placing it went on.
-        internal sealed class TuneHere { public CarTuning T; public byte[] Bytes; public int Key; public Transform Done; public float SentAt = -1000f; }
         private static readonly Dictionary<uint, TuneHere> _tuneHere = new Dictionary<uint, TuneHere>();
         internal static System.Collections.Generic.IReadOnlyDictionary<uint, TLDRevamp.Net.Entities.TuneHere> ObservedTuneHere => _tuneHere;
         private static readonly Dictionary<int, int> _prefabTuneKey = new Dictionary<int, int>();
@@ -124,22 +122,22 @@ namespace TLDRevamp.Net
         internal static bool IsTunableCar(Ent e) => e.PartIndex < 0 && e.Root != null && e.Root.car != null;
 
         /// Every CarTuneEveryS: known tunings onto cars placed anew, then the owner's own cars checked for a change.
-        private static void CarTuneTick()
+        internal static void CarTuneTick()
         {
             if (Time.realtimeSinceStartup < _tuneAt) return;
             _tuneAt = Time.realtimeSinceStartup + CarTuneEveryS;
             _tuneGone.Clear();
             foreach (var kv in _tuneHere)
             {
-                if (!ByNet.TryGetValue(kv.Key, out var e)) { _tuneGone.Add(kv.Key); continue; }
-                if (!Resolve(e) || !IsTunableCar(e) || kv.Value.Done == e.Root.transform) continue;
+                if (!Entities.TryGetEntity(kv.Key, out var e)) { _tuneGone.Add(kv.Key); continue; }
+                if (!Entities.ResolveEntity(e) || !IsTunableCar(e) || kv.Value.Done == e.Root.transform) continue;
                 ApplyTuning(e.Root.car, kv.Value.T);
                 kv.Value.Done = e.Root.transform;
                 kv.Value.Key = CaptureTuning(e.Root.car).Key();
                 TunesReapplied++;
             }
             foreach (uint net in _tuneGone) _tuneHere.Remove(net);
-            foreach (var e in Placed())
+            foreach (var e in Entities.PlacedTuningCars())
             {
                 if (e.Proxy || !IsTunableCar(e)) continue;
                 var c = e.Root.car;
@@ -156,10 +154,10 @@ namespace TLDRevamp.Net
                 }
                 else if (key == PrefabTuneKey(e.Root)) continue;   // stock: nothing to tell
                 var bytes = t.ToBytes();
-                if (bytes.Length > MaxTuneBytes) continue;
+                if (bytes.Length > Entities.MaxTuneBytes) continue;
                 _tuneHere[e.NetId] = new TuneHere { T = t, Bytes = bytes, Key = key, Done = e.Root.transform, SentAt = Time.realtimeSinceStartup };
-                W.Reset(); W.U8(CarTune); W.U32(e.NetId); W.Bytes(bytes, 0, bytes.Length);
-                ToServer(W, true);
+                W.Reset(); W.U8(Entities.CarTune); W.U32(e.NetId); W.Bytes(bytes, 0, bytes.Length);
+                Entities.SendToServer(W, true);
                 if (resend) TunesResent++; else TunesSent++;
                 TuneLast = (resend ? "resent " : "sent ") + e.NetId + " " + e.Root.name;
                 SessionLog.Event("tune-sent", e.NetId, count: bytes.Length);
@@ -167,17 +165,17 @@ namespace TLDRevamp.Net
         }
 
         /// A car's tuning from its owner (or replayed with the car): kept, and applied if the car is here.
-        private static void ApplyCarTune(NetReader r)
+        internal static void ApplyCarTune(NetReader r)
         {
             uint net = r.U32();
             int off = r.Pos, len = r.Remaining;
-            if (r.Bad || len > MaxTuneBytes) { TunesRefused++; return; }
+            if (r.Bad || len > Entities.MaxTuneBytes) { TunesRefused++; return; }
             var t = CarTuning.FromBytes(r.Buf, off, len);
             if (t == null) { TunesRefused++; TuneLast = "unreadable " + net; return; }
             var bytes = new byte[len]; System.Buffer.BlockCopy(r.Buf, off, bytes, 0, len);
             var th = new TuneHere { T = t, Bytes = bytes, Key = t.Key() };
             _tuneHere[net] = th;
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || !IsTunableCar(e)) return;   // the tick applies it once placed
+            if (!Entities.TryGetEntity(net, out var e) || !Entities.ResolveEntity(e) || !IsTunableCar(e)) return;   // the tick applies it once placed
             int matched = ApplyTuning(e.Root.car, t);
             th.Done = e.Root.transform;
             th.Key = CaptureTuning(e.Root.car).Key();
@@ -188,42 +186,48 @@ namespace TLDRevamp.Net
         // ------------------------------------------------------------------ server
 
         /// Only the car's owner tunes it; the latest is kept for whoever gets the car later. False: dropped, not passed on.
-        private static bool ServerKeepTune(int from, NetReader r)
+        internal static bool ServerKeepTune(int from, NetReader r)
         {
             uint net = r.U32();
             int off = r.Pos, len = r.Remaining;
-            if (r.Bad || len > MaxTuneBytes || !Server.TryGetValue(net, out var se) || se.OwnerId != from || CarTuning.FromBytes(r.Buf, off, len) == null)
+            if (r.Bad || len > Entities.MaxTuneBytes || !Entities.TuneOwnerIs(net, from) || CarTuning.FromBytes(r.Buf, off, len) == null)
             {
                 TunesRefused++;
                 SessionLog.Event("tune-refused", net, from: from);
                 return false;
             }
-            se.Tune = new byte[len]; System.Buffer.BlockCopy(r.Buf, off, se.Tune, 0, len);
+            Entities.KeepOwnedTune(net, r.Buf, off, len);
             TunesKept++;
             return true;
         }
 
-        private static void SendTuneTo(int playerId, SEnt se)
+        internal static void SendTuneTo(int playerId, uint net, byte[] tune)
         {
-            if (se.Tune == null) return;
-            W.Reset(); W.U8(CarTune); W.U32(se.NetId); W.Bytes(se.Tune, 0, se.Tune.Length);
-            ServerSendTo(playerId, W, true);
+            if (tune == null) return;
+            W.Reset(); W.U8(Entities.CarTune); W.U32(net); W.Bytes(tune, 0, tune.Length);
+            Entities.SendToPeer(playerId, W, true);
             TunesReplayed++;
         }
 
-        private static void CarTuneReset() { _tuneHere.Clear(); _prefabTuneKey.Clear(); }
+        internal static void CarTuneReset() { _tuneHere.Clear(); _prefabTuneKey.Clear(); }
 
         /// For the world save (CarTuneSave): the local car id of every shared car with a known tuning, and its bytes.
         internal static void KnownTunings(Dictionary<uint, byte[]> into)
         {
             foreach (var kv in _tuneHere)
-                if (ByNet.TryGetValue(kv.Key, out var e) && e.RootId != 0) into[e.RootId] = kv.Value.Bytes;
+                if (Entities.TryGetEntity(kv.Key, out var e) && e.RootId != 0) into[e.RootId] = kv.Value.Bytes;
         }
 
         /// Shared cars this machine keeps a tuning for, by local id (CarTuneSave leaves those to the session).
         internal static void TunedRootIds(HashSet<uint> into)
         {
-            foreach (var kv in _tuneHere) if (ByNet.TryGetValue(kv.Key, out var e) && e.RootId != 0) into.Add(e.RootId);
+            foreach (var kv in _tuneHere) if (Entities.TryGetEntity(kv.Key, out var e) && e.RootId != 0) into.Add(e.RootId);
         }
+    }
+
+    public static partial class Entities
+    {
+        private sealed partial class SEnt { public byte[] Tune; }
+        internal sealed class TuneHere { public CarTuning T; public byte[] Bytes; public int Key; public Transform Done; public float SentAt = -1000f; }
     }
 }

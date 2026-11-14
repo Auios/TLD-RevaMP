@@ -117,7 +117,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static void Prefix(attachablescript __instance, Transform Ppoint)
             {
-                if (InSession && __instance.slot == null && Ppoint != null && DoorAttachFrame(Ppoint.parent)) __instance.parentAtAttach = true;
+                if (InSession && __instance.slot == null && Ppoint != null && EntityDoors.DoorAttachFrame(Ppoint.parent)) __instance.parentAtAttach = true;
             }
 
             /// Every attach overload and slot Craft ends here: the local player (or the game on its behalf) attached
@@ -191,7 +191,7 @@ namespace TLDRevamp.Net
             if (f == null || at.slot != null) { w.U8(0); return; }
             var t = at.transform; var iq = Quaternion.Inverse(f.rotation);
             var lp = iq * (t.position - f.position); var lq = iq * t.rotation;
-            var path = DoorAttachFrame(f) ? AttachFramePath(at, f) : null;
+            var path = EntityDoors.DoorAttachFrame(f) ? EntityDoors.AttachFramePath(at, f) : null;
             w.U8(path != null ? (byte)2 : (byte)1); w.VarI32(EntityCodec.Mm(lp.x)); w.VarI32(EntityCodec.Mm(lp.y)); w.VarI32(EntityCodec.Mm(lp.z)); WriteRot(w, lq);
             if (path != null)
             {
@@ -200,7 +200,7 @@ namespace TLDRevamp.Net
                 var point = f.InverseTransformPoint(at.point.position);
                 w.VarI32(EntityCodec.Mm(point.x)); w.VarI32(EntityCodec.Mm(point.y)); w.VarI32(EntityCodec.Mm(point.z));
                 var e = OwnEntity(at.tosave);
-                if (e != null) KeepDoorAttach(e.NetId, path, point, lp, lq, at.point);
+                if (e != null) EntityDoors.KeepDoorAttach(e.NetId, path, point, lp, lq, at.point);
             }
             AttachPosesSent++;
         }
@@ -234,7 +234,7 @@ namespace TLDRevamp.Net
             AttachPoseOffLast = (t.position - p).magnitude; AttachPoseAngLast = Quaternion.Angle(t.rotation, q);
             if (AttachPoseOffLast > AttachPoseOffMax) AttachPoseOffMax = AttachPoseOffLast;
             t.SetPositionAndRotation(p, q);
-            if (_storedDoorAttaches.TryGetValue(pe.NetId, out var door)) door.BoundPoint = at.point;
+            EntityDoors.BindStoredDoorAttach(pe.NetId, at.point);
             AttachPosesApplied++;
         }
 
@@ -329,8 +329,8 @@ namespace TLDRevamp.Net
             var gpos = new Vector3d(r.F64(), r.F64(), r.F64());
             bool hasPose = ReadAttachPose(r, out var poseLp, out var poseLq, out var framePath, out var pointLp);
             if (r.Bad) return;
-            if (framePath != null) KeepDoorAttach(partNet, framePath, pointLp, poseLp, poseLq);
-            else _storedDoorAttaches.Remove(partNet);
+            if (framePath != null) EntityDoors.KeepDoorAttach(partNet, framePath, pointLp, poseLp, poseLq);
+            else EntityDoors.ForgetStoredDoorAttach(partNet);
             SessionLog.Event("attach-received", partNet, parentNet, item: parentIdx, slot: index, to: MyId);
             if (hasPose && indexType == 2) { hasPose = false; SlotPosesSkipped++; }   // an older sender's, a kept one
             if (ByNet.TryGetValue(partNet, out var pd) && !Resolve(pd) && StoredAttach && AttachStored(pd, attachType, indexType, index, parentNet, parentIdx, poigen, poiid, lpos, gpos))
@@ -352,7 +352,7 @@ namespace TLDRevamp.Net
                 {
                     LiveUsablesChanged(pe.Root);
                     // already on it here (our own requested attach coming back, a replay on arrival): only the pose
-                    if (hasPose && RestoreAttachFrame(at, framePath, pointLp)) ApplyAttachPose(pe, at, poseLp, poseLq);
+                    if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) ApplyAttachPose(pe, at, poseLp, poseLq);
                     SessionLog.Event("attach-applied", partNet, parentNet, item: parentIdx, slot: index, result: "already attached");
                     AttachesSame++; return;
                 }
@@ -370,7 +370,7 @@ namespace TLDRevamp.Net
             try { save_attachable.Load(at, indexType, attachType, parentId, poigen, poiid, index, lpos, gpos); }
             finally { _applyingAttach = false; }
             if (!at.attached) { SessionLog.Event("attach-refused", partNet, parentNet, slot: index, result: "loader did not attach"); AttachesFailed++; AttachFails += "load" + partNet + " "; return; }
-            if (hasPose && RestoreAttachFrame(at, framePath, pointLp)) ApplyAttachPose(pe, at, poseLp, poseLq);
+            if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) ApplyAttachPose(pe, at, poseLp, poseLq);
             if (pe.Proxy) { ApplyProxyBodies(pe); pe.Ip = new PoseInterpolator(); }
             if (ClearHeldOnAttach && pe.Held) ShowHeld(pe, false);   // bolted on: no more states come — its copy collides again
             if (ClearHeldOnAttach && pe.Stored) ShowStored(pe, false);

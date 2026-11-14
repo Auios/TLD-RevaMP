@@ -147,7 +147,7 @@ namespace TLDRevamp.Net
                     // the car record only for a wash of its blood (Entities.Blood): the owner takes nothing else of it
                     byte[] rec = StateRecord(ItemSnapshot.Capture(it), CanonMap(e.Items), out _, withCar: kinds != KindAll && (kinds & KindBlood) != 0);
                     bool withChanges = (kinds & KindTank) != 0 && TankChangesNow(it, _tankAdds);
-                    if ((kinds & KindTank) != 0 && !withChanges) CopyTanksAreNow(it);   // our fill: the owner's record of it may come while we hold it off
+                    if ((kinds & KindTank) != 0 && !withChanges) EntityCarTuning.CopyTanksAreNow(it);   // our fill: the owner's record of it may come while we hold it off
                     double stamp = SessionLog.St;
                     W.Reset(); W.U8(Edit); W.U32(e.NetId); W.F64(stamp); W.VarU32((uint)idx); W.VarU32((uint)kinds); W.VarU32((uint)rec.Length); W.Bytes(rec, 0, rec.Length);
                     if (withChanges)
@@ -320,7 +320,7 @@ namespace TLDRevamp.Net
             _tankFilledAt[t] = Time.realtimeSinceStartup;
             if (t.setpoi || !IsProxy(t)) return;
             var it = ItemOf(t, t.tosaveid, t.setid);
-            if (TankAddEdits && it != null && !_tankTold.ContainsKey(it.idInSave) && CopyTankTruth.TryGetValue(it.idInSave, out var truth)) _tankTold[it.idInSave] = truth;
+            if (TankAddEdits && it != null && !_tankTold.ContainsKey(it.idInSave) && EntityCarTuning.TryCopyTankTruth(it.idInSave, out var truth)) _tankTold[it.idInSave] = truth;
             MarkEdit(it, fromTank: true, kind: "tank");
         }
 

@@ -3,9 +3,9 @@ using HarmonyLib;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityDoors
     {
-        private static bool BusControl(tosaveitemscript it, usablescript u)
+        internal static bool BusControl(tosaveitemscript it, usablescript u)
         {
             var bus = it.busdoorscript;
             if (bus == null || bus.doors == null) return false;
@@ -21,12 +21,12 @@ namespace TLDRevamp.Net
         {
             [HarmonyPrefix]
             private static void Prefix(busdoorscripts __instance, out bool __state)
-            { __state = InSession && !_applyingState && !__instance.noMultiSync && __instance.Electronics(); }
+            { __state = Entities.InSession && !Entities.ApplyingState && !__instance.noMultiSync && __instance.Electronics(); }
 
             [HarmonyPostfix]
             private static void Postfix(busdoorscripts __instance, bool __state)
             {
-                if (__state && __instance.somethingChanged) MarkEdit(__instance.tosave, kind: "busdoor");
+                if (__state && __instance.somethingChanged) Entities.MarkFeatureEdit(__instance.tosave, kind: "busdoor");
             }
         }
     }

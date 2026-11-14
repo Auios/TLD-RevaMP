@@ -22,6 +22,7 @@ namespace UnityEngine
 
 namespace TLDRevamp.Net
 {
+    internal static class EntityCarTuning { internal static void CopyTanksOnOwnerChange(Entities.Ent e, bool proxy) { } }
     public static partial class Entities
     {
         static long GameFrozenReleased, RagdollLimbsRestored, OwnerClockResets;
@@ -54,7 +55,6 @@ namespace TLDRevamp.Net
         static bool Ridden(Ent e) => false;
         static object[] WheelsOf(Ent e) => Array.Empty<object>();
         static void BindProxyEngine(Ent e) { }
-        static void CopyTanksOnOwnerChange(Ent e, bool proxy) { }
     }
 }
 

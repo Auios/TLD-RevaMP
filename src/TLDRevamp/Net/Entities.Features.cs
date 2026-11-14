@@ -4,6 +4,64 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        public static void LateSample() => EntityDoors.LateSample();
+        public static string CarDoors(uint net) => EntityDoors.CarDoors(net);
+        public static string Food(uint net) => EntityDoors.Food(net);
+        public static string Rabbit(uint net) => EntityDoors.Rabbit(net);
+        internal static System.Collections.Generic.List<DoorRef> DoorsOf(Ent e) => EntityDoors.DoorsOf(e);
+        internal static bool ApplyingDoorAttach { get => _applyingAttach; set => _applyingAttach = value; }
+        internal static bool ApplyingDoorDetach => _applyingDetach;
+        internal static void ApplyDoorAttachPose(Ent e, attachablescript at, Vector3 position, Quaternion rotation) => ApplyAttachPose(e, at, position, rotation);
+
+        public const byte CarTune = 113;   // both: u32 net, CarTuning
+        public const int MaxTuneBytes = 2048;
+        public static float CarTuneEveryS { get => EntityCarTuning.CarTuneEveryS; set => EntityCarTuning.CarTuneEveryS = value; }
+        public static float CarTuneResendS { get => EntityCarTuning.CarTuneResendS; set => EntityCarTuning.CarTuneResendS = value; }
+        public static float CopyFluidCheckS { get => EntityCarTuning.CopyFluidCheckS; set => EntityCarTuning.CopyFluidCheckS = value; }
+        public static float CopyFluidToleranceL { get => EntityCarTuning.CopyFluidToleranceL; set => EntityCarTuning.CopyFluidToleranceL = value; }
+        public static long BloodCleanedOnCopy { get => EntityCarTuning.BloodCleanedOnCopy; set => EntityCarTuning.BloodCleanedOnCopy = value; }
+        public static long BloodCleanSent { get => EntityCarTuning.BloodCleanSent; set => EntityCarTuning.BloodCleanSent = value; }
+        public static long BloodCleanApplied { get => EntityCarTuning.BloodCleanApplied; set => EntityCarTuning.BloodCleanApplied = value; }
+        public static long TunesSent { get => EntityCarTuning.TunesSent; set => EntityCarTuning.TunesSent = value; }
+        public static long TunesResent { get => EntityCarTuning.TunesResent; set => EntityCarTuning.TunesResent = value; }
+        public static long TunesApplied { get => EntityCarTuning.TunesApplied; set => EntityCarTuning.TunesApplied = value; }
+        public static long TunesReapplied { get => EntityCarTuning.TunesReapplied; set => EntityCarTuning.TunesReapplied = value; }
+        public static long TunesReplayed { get => EntityCarTuning.TunesReplayed; set => EntityCarTuning.TunesReplayed = value; }
+        public static long TunesRefused { get => EntityCarTuning.TunesRefused; set => EntityCarTuning.TunesRefused = value; }
+        public static long TunesKept { get => EntityCarTuning.TunesKept; set => EntityCarTuning.TunesKept = value; }
+        public static string TuneLast { get => EntityCarTuning.TuneLast; set => EntityCarTuning.TuneLast = value; }
+        internal static System.Collections.Generic.IReadOnlyDictionary<uint, TuneHere> ObservedTuneHere => EntityCarTuning.ObservedTuneHere;
+        internal static CarTuning CaptureTuning(carscript c) => EntityCarTuning.CaptureTuning(c);
+        internal static int ApplyTuning(carscript c, CarTuning t) => EntityCarTuning.ApplyTuning(c, t);
+        internal static int PrefabTuneKey(tosaveitemscript root) => EntityCarTuning.PrefabTuneKey(root);
+        internal static bool IsTunableCar(Ent e) => EntityCarTuning.IsTunableCar(e);
+        internal static void KnownTunings(System.Collections.Generic.Dictionary<uint, byte[]> into) => EntityCarTuning.KnownTunings(into);
+        internal static void TunedRootIds(System.Collections.Generic.HashSet<uint> into) => EntityCarTuning.TunedRootIds(into);
+
+        internal static System.Collections.Generic.IEnumerable<Ent> PlacedTuningCars()
+        {
+            foreach (var e in Placed()) if (!e.Proxy && EntityCarTuning.IsTunableCar(e)) yield return e;
+        }
+        internal static bool TuneOwnerIs(uint net, int from) => Server.TryGetValue(net, out var se) && se.OwnerId == from;
+        internal static void KeepOwnedTune(uint net, byte[] bytes, int off, int len)
+        {
+            var se = Server[net];
+            se.Tune = new byte[len]; System.Buffer.BlockCopy(bytes, off, se.Tune, 0, len);
+        }
+        internal static void MarkFeatureEdit(tosaveitemscript it, bool fromTank = false, string kind = "") => MarkEdit(it, fromTank, kind);
+        internal static void ForgetTankEditTruth(uint id) => _tankTold.Remove(id);
+        internal static bool HasPendingItemEdit(tosaveitemscript it) => EditDirty.ContainsKey(it);
+        internal static bool TryTankFilledAt(tankscript tank, out float at) => _tankFilledAt.TryGetValue(tank, out at);
+        internal static void SetFluidApplyingState(bool value) => _applyingState = value;
+        internal static void CollectCopyFluidIds(System.Collections.Generic.HashSet<uint> into)
+        {
+            foreach (var e in ByNet.Values) if (e.Proxy && e.ItemIds != null) foreach (var id in e.ItemIds) into.Add(id);
+        }
+        internal static System.Collections.Generic.IEnumerable<Ent> CopyFluidEntities()
+        {
+            foreach (var e in ByNet.Values) if (e.Proxy && e.Root != null && e.Items != null) yield return e;
+        }
+
         public const byte RadioSync = 54;
         public static float RadioResendS { get => EntityRadio.RadioResendS; set => EntityRadio.RadioResendS = value; }
         public static string RadioStatus() => EntityRadio.RadioStatus();
