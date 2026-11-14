@@ -7,7 +7,7 @@ namespace TLDRevamp.Net
     /// and look like the player who died. The dying machine's corpse copies its player's outfit (fpscontroller.SpawnRagdol
     /// → CopyFrom), and the corpse's record carries it (save_outfit, CorpseOutfitSaved), so every other machine's copy is
     /// dressed the same.
-    public static partial class Entities
+    internal static partial class EntityRagdolls
     {
         /// A/B: an outfit's record holds the outfit. The game's own save_outfit.Save keeps only the id (its MP sends the
         /// outfit in a message of its own, syncScript.SendOutfit), so a copy made from the record - every other machine's
@@ -102,9 +102,8 @@ namespace TLDRevamp.Net
         {
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>();
-            foreach (var e in ByNet.Values)
+            foreach (var e in Entities.PlayerCorpses())
             {
-                if (e.Root == null || e.Root.name.IndexOf("PlayerRagdol", System.StringComparison.Ordinal) < 0) continue;
                 var go = e.Root.gameObject;
                 var o = go.GetComponent<playermodeloutfitscript>();
                 string outfit = "null";

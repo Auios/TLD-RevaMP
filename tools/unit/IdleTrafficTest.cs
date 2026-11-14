@@ -232,7 +232,7 @@ namespace TLDRevamp.Net
         static void ServerFwdAll(int from, NetReader r, bool reliable) { }
         static void Deliver(NetWriter w) { }
         internal static bool Resolve(Ent e) => e.Root != null;
-        static bool LimbsByBody(Ent e) => false;
+        internal static bool LimbsByBody(Ent e) => false;
         internal static bool IsFinite(Vector3 value) => Finite(value);
         internal static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
         internal static void TestIdle()
@@ -298,22 +298,22 @@ namespace TLDRevamp.Net
             var hand = new Transform { position = new Vector3(11, 2, 3) }; hand.Add(new Rigidbody());
             body.Root.ragdollPos = new TestLimbList { childs = new[] { body.Root.transform, hip, hand } };
             body.Root.transform.position = new Vector3(10000, 0, 0);
-            w.Reset(); IdleTrafficTest.Check(WriteRagdoll(w, body, true), "first complete limb pose is a Key");
-            RagdollSent(body, true);
+            w.Reset(); IdleTrafficTest.Check(EntityRagdolls.WriteRagdoll(w, body, true), "first complete limb pose is a Key");
+            EntityRagdolls.RagdollSent(body, true);
             var limbKey = new byte[w.Len]; Array.Copy(w.Buf, limbKey, w.Len);
-            IdleTrafficTest.Check(w.Len == RagdollWire.KeySize(3) && !RagdollMoved(body), "complete Key limb pose is the sent baseline");
+            IdleTrafficTest.Check(w.Len == RagdollWire.KeySize(3) && !EntityRagdolls.RagdollMoved(body), "complete Key limb pose is the sent baseline");
             body.Root.transform.position = new Vector3(20000, 0, 0);
-            IdleTrafficTest.Check(!RagdollMoved(body), "unused corpse root drift cannot cause limb traffic");
+            IdleTrafficTest.Check(!EntityRagdolls.RagdollMoved(body), "unused corpse root drift cannot cause limb traffic");
             var hipRotation = hip.rotation;
             hip.rotation = Quaternion.Euler(0, 90.2f, 0);
             hand.rotation = Quaternion.Euler(0, -.2f, 0);
-            IdleTrafficTest.Check(!RagdollMoved(body), "opposing sub-threshold world rotations cannot amplify into visible limb motion");
+            IdleTrafficTest.Check(!EntityRagdolls.RagdollMoved(body), "opposing sub-threshold world rotations cannot amplify into visible limb motion");
             hip.rotation = hipRotation; hand.rotation = Quaternion.identity;
-            hand.position += new Vector3(.005f, 0, 0); IdleTrafficTest.Check(!RagdollMoved(body), "limb jitter below a centimetre skips");
-            hand.position += new Vector3(.01f, 0, 0); IdleTrafficTest.Check(RagdollMoved(body), "real limb movement sends");
+            hand.position += new Vector3(.005f, 0, 0); IdleTrafficTest.Check(!EntityRagdolls.RagdollMoved(body), "limb jitter below a centimetre skips");
+            hand.position += new Vector3(.01f, 0, 0); IdleTrafficTest.Check(EntityRagdolls.RagdollMoved(body), "real limb movement sends");
             // The copy needs the sent Key first; a later state carries only limbs changed since that Key.
-            w.Reset(); IdleTrafficTest.Check(!WriteRagdoll(w, body, false), "one moved hand uses a Delta");
-            RagdollSent(body, true);
+            w.Reset(); IdleTrafficTest.Check(!EntityRagdolls.WriteRagdoll(w, body, false), "one moved hand uses a Delta");
+            EntityRagdolls.RagdollSent(body, true);
             IdleTrafficTest.Check(w.Len == RagdollWire.DeltaSize(3, 1UL << 2), "Delta contains only the changed hand");
             var copy = new Ent { Proxy = true };
             var copyHip = new Transform(); copyHip.Add(new Rigidbody()); var copyHand = new Transform(); copyHand.Add(new Rigidbody());
@@ -324,19 +324,19 @@ namespace TLDRevamp.Net
             copy.Root.transform.SetPositionAndRotation(hip.position, hip.rotation);
             var framePos = mainscript.GlobalFromUnityPos(hip.position);
             var rr = new NetReader { Buf = limbKey, End = limbKey.Length };
-            ReadRagdoll(rr, copy, framePos, hip.rotation);
+            EntityRagdolls.ReadRagdoll(rr, copy, framePos, hip.rotation);
             IdleTrafficTest.Check(!rr.Bad && copy.Rag.CHas, "copy retains the Key before the Delta");
             rr = new NetReader { Buf = w.Buf, End = w.Len };
-            ReadRagdoll(rr, copy, framePos, hip.rotation); RagdollTick(1);
+            EntityRagdolls.ReadRagdoll(rr, copy, framePos, hip.rotation); EntityRagdolls.RagdollTick(1);
             IdleTrafficTest.Check(!rr.Bad && rr.Pos == rr.End, "copy consumes the complete Delta");
             IdleTrafficTest.Check(copy.Rag != null && copy.Rag.Has, "drifting unused root cannot reject remote corpse payload");
             IdleTrafficTest.Check((copyHip.position - hip.position).sqrMagnitude < 1e-8f && (copyHand.position - hand.position).sqrMagnitude < 1e-8f, "Key plus Delta limb positions match owner frame");
             IdleTrafficTest.Check(Quaternion.Angle(copyHip.rotation, hip.rotation) < .03f && Quaternion.Angle(copyHand.rotation, hand.rotation) < .03f, "Key plus Delta limb rotations match owner");
-            copy.Held = true; RagdollTick(1);
+            copy.Held = true; EntityRagdolls.RagdollTick(1);
             IdleTrafficTest.Check(!copyHip.GetComponent<Rigidbody>().detectCollisions && !copyHand.GetComponent<Rigidbody>().detectCollisions, "detached held limbs cannot shove the sled");
-            copy.Held = false; copy.Stored = true; RagdollTick(1);
+            copy.Held = false; copy.Stored = true; EntityRagdolls.RagdollTick(1);
             IdleTrafficTest.Check(!copyHand.GetComponent<Rigidbody>().detectCollisions, "stored limbs stay collisionless");
-            copy.Stored = false; RagdollTick(1);
+            copy.Stored = false; EntityRagdolls.RagdollTick(1);
             IdleTrafficTest.Check(copyHand.GetComponent<Rigidbody>().detectCollisions, "loose limbs collide again");
             IdleTrafficTest.Check(LooseRelease(7, 0, false, false) && !LooseRelease(7, 0, true, false) && !LooseRelease(7, 0, false, true) && !LooseRelease(7, 8, true, false), "only loose release in the driver's car can claim cargo");
             bool active = false, moving = false;
@@ -489,9 +489,9 @@ namespace TLDRevamp.Net
                 var e = new Ent(); var ls = new Transform[14];
                 for (int i = 0; i < ls.Length; i++) { ls[i] = new Transform { position = new Vector3(i * .05f, 0, 0) }; ls[i].Add(new Rigidbody()); }
                 e.Root.ragdollPos = new TestLimbList { childs = ls };
-                var w = new NetWriter(); WriteRagdoll(w, e, true); RagdollSent(e, true);
+                var w = new NetWriter(); EntityRagdolls.WriteRagdoll(w, e, true); EntityRagdolls.RagdollSent(e, true);
                 var oldRot = new Quaternion[ls.Length];
-                for (int i = 0; i < ls.Length; i++) LocalPose(ls[0], ls[i], out _, out oldRot[i]);
+                for (int i = 0; i < ls.Length; i++) EntityRagdolls.LocalPose(ls[0], ls[i], out _, out oldRot[i]);
                 var tail = new BandwidthRules.Tail(); bool rest = false, previousVelocity = false; double last = 0;
                 for (int tick = 1; tick <= 1200; tick++)
                 {
@@ -501,15 +501,15 @@ namespace TLDRevamp.Net
                     bool oldMoved = false;
                     for (int i = 0; i < ls.Length; i++)
                     {
-                        LocalPose(ls[0], ls[i], out _, out var local);
+                        EntityRagdolls.LocalPose(ls[0], ls[i], out _, out var local);
                         if (Quaternion.Angle(local, oldRot[i]) > BandwidthRules.RotationDeg) oldMoved = true;
                     }
                     if (oldMoved)
                     {
                         if (tick <= 100) legacy++;
-                        for (int i = 0; i < ls.Length; i++) LocalPose(ls[0], ls[i], out _, out oldRot[i]);
+                        for (int i = 0; i < ls.Length; i++) EntityRagdolls.LocalPose(ls[0], ls[i], out _, out oldRot[i]);
                     }
-                    bool limbMoved = RagdollMoved(e), velocity = tick % 2 != 0;
+                    bool limbMoved = EntityRagdolls.RagdollMoved(e), velocity = tick % 2 != 0;
                     bool moving = StateMoving(e, false, limbMoved, true, ref velocity);
                     var quiet = BandwidthRules.StateQuiet(ref tail, tick / 20.0, false, false, limbMoved, false,
                         velocity != previousVelocity, moving, rest, false, false, tick / 20.0 - last);
@@ -521,8 +521,8 @@ namespace TLDRevamp.Net
                             ls[0].rotation, Vector3.zero, false, final: quiet == BandwidthRules.Quiet.Final);
                         w.U8(0); w.U8(0); w.U8(0);
                         // Finals remain complete poses; protocol 54 sends them as Keys, not full float limb lists.
-                        IdleTrafficTest.Check(WriteRagdoll(w, e, true), "final rest forces a Key");
-                        RagdollSent(e, true); bytes += w.Len;
+                        IdleTrafficTest.Check(EntityRagdolls.WriteRagdoll(w, e, true), "final rest forces a Key");
+                        EntityRagdolls.RagdollSent(e, true); bytes += w.Len;
                         var r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
                         ReadStateHead(r, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
                         IdleTrafficTest.Check(EntityCodec.ReadFinalState && StateTail.TryRead(w.Buf, 0, w.Len, out var block) &&
@@ -536,27 +536,27 @@ namespace TLDRevamp.Net
                 for (int tick = 0; tick < 100; tick++)
                 {
                     ls[13].position += new Vector3(.011f, 0, 0);
-                    bool velocity = false, limbMoved = RagdollMoved(e);
+                    bool velocity = false, limbMoved = EntityRagdolls.RagdollMoved(e);
                     bool moving = StateMoving(e, false, limbMoved, false, ref velocity);
                     IdleTrafficTest.Check(moving && BandwidthRules.StateQuiet(ref tail, 61 + tick / 20.0, false, false,
                         limbMoved, false, false, moving, rest, false, false, .05) == BandwidthRules.Quiet.None,
                         "real distal limb movement resumes the full twenty Hz without a rate cap");
-                    w.Reset(); WriteRagdoll(w, e, false); RagdollSent(e, true); rest = false;
+                    w.Reset(); EntityRagdolls.WriteRagdoll(w, e, false); EntityRagdolls.RagdollSent(e, true); rest = false;
                     IdleTrafficTest.Check(w.Len == RagdollWire.DeltaSize(14, 1UL << 13),
                         "Key then cumulative Delta retains twenty Hz distal motion with one limb per update");
                 }
                 bool stoppedSpeed = true;
-                bool stopped = StateMoving(e, false, RagdollMoved(e), true, ref stoppedSpeed);
+                bool stopped = StateMoving(e, false, EntityRagdolls.RagdollMoved(e), true, ref stoppedSpeed);
                 IdleTrafficTest.Check(!stopped && BandwidthRules.StateQuiet(ref tail, 66, false, false, false, false,
                     false, stopped, rest, false, false, .05) == BandwidthRules.Quiet.Pose &&
                     BandwidthRules.StateQuiet(ref tail, 67, false, false, false, false, false, stopped, rest, false, false, 1.05) == BandwidthRules.Quiet.Final,
                     "visible limb motion ends with one final after a quiet interval even while physics remains awake");
                 ls[13].rotation = Quaternion.Euler(0, .4f, 0);
-                IdleTrafficTest.Check(RagdollMoved(e), "visible distal rotation also resumes sending");
-                w.Reset(); WriteRagdoll(w, e, false); RagdollSent(e, true);
+                IdleTrafficTest.Check(EntityRagdolls.RagdollMoved(e), "visible distal rotation also resumes sending");
+                w.Reset(); EntityRagdolls.WriteRagdoll(w, e, false); EntityRagdolls.RagdollSent(e, true);
                 foreach (var l in ls) l.position += new Vector3(1000, 0, 0);
                 TestMain.Origin = new Vector3d(-1000, 0, 0);
-                IdleTrafficTest.Check(!RagdollMoved(e), "floating origin shift does not move globally settled limbs");
+                IdleTrafficTest.Check(!EntityRagdolls.RagdollMoved(e), "floating origin shift does not move globally settled limbs");
                 foreach (var l in ls) l.position -= new Vector3(1000, 0, 0);
                 TestMain.Origin = default;
                 // Root/whole-body movement is also visible; a vehicle retains its physical motion policy.

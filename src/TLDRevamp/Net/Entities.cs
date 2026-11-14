@@ -235,7 +235,7 @@ namespace TLDRevamp.Net
             // on the wire and touches no protocol field.
             try { Fixes.VrContractBridge.SanitizeReconnect(); } catch { }
             // the death's corpse and item ids belong to the session that made them
-            DeathReset();
+            EntityRagdolls.DeathReset();
             Tpa.ResetTelemetry();
             ResetTpaSync();
             DevHooks.TrafficReset?.Invoke();   // session ids start at 1 again; no old object's traffic belongs to the next one
@@ -250,7 +250,7 @@ namespace TLDRevamp.Net
                     UnityEngine.Object.Destroy(e.Root.gameObject);
                 }
             }
-            ProxyItems.Clear(); EntityCarSignals.ResetSignals(); _rideCars.Clear(); CargoGhostNets.Clear(); RagdollCopies.Clear(); RagdollLimbOwner.Clear(); EntityEffects.ResetSpraying();
+            ProxyItems.Clear(); EntityCarSignals.ResetSignals(); _rideCars.Clear(); CargoGhostNets.Clear(); EntityRagdolls.ResetCopies(); EntityEffects.ResetSpraying();
             HostPhysicsLock = -1; _physLockLast = -1;   // a client: its own setting again
             EntityWeather.StormReset();   // a client keeps the storms it has: its own from now
             ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();
@@ -535,7 +535,7 @@ namespace TLDRevamp.Net
                     if (sig != e.SentSigKey) { e.SentSigKey = sig; e.SigRepeat = 3; }
                     bool wSig = e.SigRepeat > 0;
                     if (wSig) e.SigRepeat--;
-                    bool limbs = RagdollMoved(e);
+                    bool limbs = EntityRagdolls.RagdollMoved(e);
                     var poseBody = t == e.Root.transform ? rb : t.GetComponent<Rigidbody>();
                     bool wAwake = poseBody != null && !poseBody.isKinematic && !poseBody.IsSleeping() &&
                                   (poseBody.velocity.sqrMagnitude > RestSpeed * RestSpeed || poseBody.angularVelocity.sqrMagnitude > RestSpin * RestSpin);
@@ -599,8 +599,8 @@ namespace TLDRevamp.Net
                     {
                         WriteStateHead(WS, e.NetId, e.Epoch, (ushort)(e.SeqOut + 1), stamp, g, q, v, driven, stored, held, spraying, carriedBy, lp, lq, final, locked, lockItem, lockMount, lockContainer, handPose, handPos, handRot);
                         WS.Bytes(e.SentState, 0, e.SentStateLength);
-                        int ragAt = WS.Len; ragKey = WriteRagdoll(WS, e, first || final);
-                        if (WS.Buf[ragAt] > 0) RagdollStatesSent++;
+                        int ragAt = WS.Len; ragKey = EntityRagdolls.WriteRagdoll(WS, e, first || final);
+                        if (WS.Buf[ragAt] > 0) EntityRagdolls.RagdollStatesSent++;
                     }
                     e.SentStored = stored; e.SentHeld = held;
                     e.SentHandPose = handPose; e.SentHandPos = handPos; e.SentHandRot = handRot;
@@ -618,7 +618,7 @@ namespace TLDRevamp.Net
                         TelemetryPose(e, 0, stamp, g, q, v);
                         StatesSent++;
                     }
-                    RagdollSent(e, poseSent);
+                    EntityRagdolls.RagdollSent(e, poseSent);
                     e.LastSentPos = g; e.LastSentRot = q;
                 }
                 else if (HandManaged(e)) { }   // HandItemRender, after final hand targets and before IK
@@ -641,7 +641,7 @@ namespace TLDRevamp.Net
                 }
             }
             EntityEffects.SprayTick(dt);
-            RagdollTick(dt);   // after the copies moved: their limbs relative to where they are now
+            EntityRagdolls.RagdollTick(dt);   // after the copies moved: their limbs relative to where they are now
         }
 
 
@@ -1065,7 +1065,7 @@ namespace TLDRevamp.Net
                     Ent e = null;
                     if (r.Bad || !ByNet.TryGetValue(net, out e) || !e.Proxy || epoch != e.Epoch)
                     {
-                        if (!r.Bad && e != null && type == State) KeepLateKey(r, msgAt, e, epoch);
+                        if (!r.Bad && e != null && type == State) EntityRagdolls.KeepLateKey(r, msgAt, e, epoch);
                         StatesStale++; return;
                     }
                     if ((DevHooks.DropState?.Invoke(net) ?? false)) { StatesStale++; return; }
@@ -1076,7 +1076,7 @@ namespace TLDRevamp.Net
                         sv = CompactVelocity(ReadCompactMoving, sp, st, e.CompactPos, e.CompactStamp);
                         e.CompactPos = sp; e.CompactStamp = st;
                     }
-                    if (!NewerState(st, epoch, ref e.ReceivedStateAt, ref e.ReceivedStateEpoch)) { if (type == State) KeepLateKey(r, msgAt, e, epoch); StatesStale++; return; }
+                    if (!NewerState(st, epoch, ref e.ReceivedStateAt, ref e.ReceivedStateEpoch)) { if (type == State) EntityRagdolls.KeepLateKey(r, msgAt, e, epoch); StatesStale++; return; }
                     e.SettledState = FinalSnapshot(r, final);
                     e.Recv++;
                     EntityHands.TakeHandPose(e, sp, sq);
@@ -1096,7 +1096,7 @@ namespace TLDRevamp.Net
                         ReadWheels(r, e);
                         ReadEngine(r, e);
                         EntityCarSignals.ReadSignals(r, e);
-                        ReadRagdoll(r, e, sp, sq);
+                        EntityRagdolls.ReadRagdoll(r, e, sp, sq);
                     }
                     if (r.Bad) return;
                     if (HitchTrailer(e)) e.HitchWaiting = false;
@@ -1375,7 +1375,7 @@ namespace TLDRevamp.Net
                 for (int i = 0; i < e.Items.Count; i++) if (e.Items[i] != null && !PartApart(e, i)) ProxyItems.Remove(e.Items[i].gameObject);
                 ProxyItems.Remove(e.Root.gameObject);
                 if (HitchTrailer(e)) ProxyItems.Remove(e.Root.attachable.gameObject);
-                RagdollRelease(e);   // its limbs: the game's again (made dynamic below with the other bodies)
+                EntityRagdolls.RagdollRelease(e);   // its limbs: the game's again (made dynamic below with the other bodies)
                 if (e.Wheels != null) foreach (var w in e.Wheels) { ProxyWheelOwner.Remove(w); ProxyWheelIndex.Remove(w); }
                 BindProxyEngine(e);
                 // the whole group moves at the car's speed (not just the root: every body left at rest was yanked by
@@ -1570,7 +1570,7 @@ namespace TLDRevamp.Net
                 ReadEntityHead(r, e.SettledState[0] == CompactState, out _, out _, out _, out var pos, out var rot, out _, out _, out _, out _, out _);
                 if (e.CarriedBy == 0 && !e.Stored && !e.Held && !RidesBolted(e) && !AttachedCarPart(e) && !RidesOwnersContainer(e) && !LockedAway(e))
                     root.transform.SetPositionAndRotation(mainscript.UnityPosFromGlobal(pos), rot);
-                if (e.SettledState[0] == State) { ReadWheels(r, e); ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e); ReadRagdoll(r, e, pos, rot); }
+                if (e.SettledState[0] == State) { ReadWheels(r, e); ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e); EntityRagdolls.ReadRagdoll(r, e, pos, rot); }
             }
             RestoreRabbitState(e);
             RebindPoseLocks(e);

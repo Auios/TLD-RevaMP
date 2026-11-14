@@ -2,8 +2,10 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityRagdolls
     {
+        private static readonly NetWriter W = new NetWriter();
+
         /// A/B: share the corpse that the game creates in fpscontroller.Death2. False leaves it local as before; the
         /// limb transport itself is already implemented in Entities.Ragdoll.
         public static bool DeathRagdollShare = true;
@@ -38,14 +40,6 @@ namespace TLDRevamp.Net
         private static GameObject _deathCorpse;
         private static uint _deathCorpseNet;
 
-        /// The network id of a shared object by its save id (0 while the share is still pending).
-        internal static uint NetIdOfSaveId(uint saveId)
-        {
-            if (saveId == 0) return 0;
-            foreach (var e in ByNet.Values) if (e.RootId == saveId) return e.NetId;
-            return 0;
-        }
-
         /// The diagnostics of the last death this machine made (bridge `mp deathinfo`): the exact ids of the corpse
         /// and of the things this death spawned, and the counters that say what happened. A test asserts these
         /// exact numbers, not "an item nearby".
@@ -62,7 +56,7 @@ namespace TLDRevamp.Net
             {
                 if (i > 0) sb.Append(',');
                 // the network id is resolved now: the host answers the share a moment after the spawn
-                uint net = NetIdOfSaveId(DeathItemSaveIds[i]);
+                uint net = Entities.NetIdOfSaveId(DeathItemSaveIds[i]);
                 if (net == 0 && i < DeathItemNetIds.Count) net = DeathItemNetIds[i];
                 sb.Append('[').Append(DeathItemSaveIds[i]).Append(',').Append(net).Append(']');
             }
@@ -102,22 +96,20 @@ namespace TLDRevamp.Net
             _deathCorpse = null;
             _deathCorpseNet = 0;
             // the shared entity goes first: the others' copies of the corpse go with it (the RemoveItem broadcast).
-            uint net = 0;
-            foreach (var e in ByNet.Values)
-                if (e.Root != null && (e.Root.transform == go.transform || e.Root.transform.IsChildOf(go.transform))) { net = e.NetId; break; }
+            Entities.TryDeathCorpse(go, out uint net);
             if (net != 0)
             {
-                try { DeleteShared(net); }
+                try { Entities.DeleteShared(net); }
                 catch (System.Exception e) { Plugin.Log.LogWarning("death corpse: release failed: " + e.Message); }
                 // the entity may be dormant here (the body streamed out): the removal still has to go out, or the
                 // others keep the corpse for good.
-                if (ByNet.ContainsKey(net))
+                if (Entities.HasEntity(net))
                 {
                     try
                     {
-                        W.Reset(); W.U8(RemoveItem); W.U32(net);
-                        ToServer(W, true);
-                        ByNet.Remove(net);
+                        W.Reset(); W.U8(Entities.RemoveItem); W.U32(net);
+                        Entities.SendToServer(W, true);
+                        Entities.ForgetDeathCorpse(net);
                     }
                     catch (System.Exception e) { Plugin.Log.LogWarning("death corpse: removal failed: " + e.Message); }
                 }
@@ -135,7 +127,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(fpscontroller __instance)
             {
-                if (!DeathRagdollShare || !InSession || __instance == null || mainscript.s == null || __instance != mainscript.s.player) return;
+                if (!DeathRagdollShare || !Entities.InSession || __instance == null || mainscript.s == null || __instance != mainscript.s.player) return;
                 var rag = __instance.spawnedRagdol;
                 if (rag == null || !__instance.died || rag.GetComponent<tosaveitemscript>() == null)
                 {
@@ -143,13 +135,13 @@ namespace TLDRevamp.Net
                     return;
                 }
                 var ts = rag.GetComponent<tosaveitemscript>();
-                long before = SpawnShared;
-                ShareSpawn(rag);
-                if (SpawnShared > before)
+                long before = Entities.SpawnShared;
+                Entities.ShareSpawn(rag);
+                if (Entities.SpawnShared > before)
                 {
                     DeathCorpsesShared++;
                     DeathCorpseSaveId = ts != null ? ts.idInSave : 0;
-                    DeathCorpseNetId = NetIdOf(rag);   // 0 while the host has not answered the share yet
+                    DeathCorpseNetId = Entities.NetIdOf(rag);   // 0 while the host has not answered the share yet
                     _deathCorpse = rag;
                     _deathCorpseNet = DeathCorpseNetId;
                 }
@@ -159,13 +151,12 @@ namespace TLDRevamp.Net
                     // SpawnRagdol re-uses the corpse object (only RagdolReset makes a new one), so the second Death
                     // call shares the same corpse and the share is refused as "already shared". The corpse's ids are
                     // kept (they are the same corpse's), and the duplicate is counted as such.
-                    bool known = false;
-                    foreach (var e in ByNet.Values) if (e.Root != null && (e.Root.transform == rag.transform || e.Root.transform.IsChildOf(rag.transform))) { known = true; break; }
+                    bool known = Entities.TryDeathCorpse(rag, out _);
                     if (!known) DeathCorpseShareMissed++;
                     else
                     {
                         DeathCorpseSaveId = ts != null ? ts.idInSave : 0;
-                        DeathCorpseNetId = NetIdOf(rag);
+                        DeathCorpseNetId = Entities.NetIdOf(rag);
                         _deathCorpse = rag;
                         _deathCorpseNet = DeathCorpseNetId;
                         DeathCorpseDuplicates++;   // the same corpse, shared once: a duplicate death, not a second corpse
@@ -182,7 +173,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(fpscontroller __instance)
             {
-                if (!InSession || __instance == null || mainscript.s == null || __instance != mainscript.s.player) return;
+                if (!Entities.InSession || __instance == null || mainscript.s == null || __instance != mainscript.s.player) return;
                 EndDeathCorpse();
             }
         }

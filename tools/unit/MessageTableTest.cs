@@ -89,6 +89,11 @@ static class MessageTableTest
             Check(handler.Item1 + ": server owner reads payload", Method("EntitySeats", handler.Item2).Contains("r.U32()"));
         }
 
+        Check("State: limb tail reads at ragdoll owner", client.Contains("EntityRagdolls.ReadRagdoll(r, e, sp, sq);"));
+        Check("State: late keys reach ragdoll owner", client.Contains("EntityRagdolls.KeepLateKey(r, msgAt, e, epoch)"));
+        Check("State: ragdoll owner reads its block", Method("EntityRagdolls", "ReadRagdoll").Contains("RagdollWire.Read(r, b)"));
+        Check("RemoveItem: dormant death removal stays reliable at ragdoll owner", Method("EntityRagdolls", "ReleaseDeathCorpse").Contains("W.U8(Entities.RemoveItem); W.U32(net);") && Method("EntityRagdolls", "ReleaseDeathCorpse").Contains("Entities.SendToServer(W, true);"));
+
         Check("Worn: server routes to hands", server.Contains("case Worn: EntityHands.ServerWorn(from, r);"));
         Check("Worn: hands reads request payload", Method("EntityHands", "ServerWorn").Contains("r.U32()"));
         Check("CarTune: routes to its owner", client.Contains("case CarTune: EntityCarTuning.ApplyCarTune(r);"));

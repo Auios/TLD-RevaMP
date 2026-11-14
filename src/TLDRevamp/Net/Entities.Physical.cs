@@ -348,7 +348,7 @@ namespace TLDRevamp.Net
 
         private static void MoveLimbs(Ent e, Rigidbody rb, Vector3 up, Quaternion rot, bool snap)
         {
-            if (!LimbsByBody(e) || e.Rag == null || !e.Rag.Has || !RagdollCopies.Contains(e)) return;
+            if (!LimbsByBody(e) || e.Rag == null || !e.Rag.Has || !EntityRagdolls.Following(e)) return;
             var ls = Limbs(e); var g = e.Rag;
             if (ls == null || ls.Length != g.TPos.Length) return;
             for (int i = 0; i < ls.Length; i++)

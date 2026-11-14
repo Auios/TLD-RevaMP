@@ -47,7 +47,7 @@ namespace TLDRevamp.Net
             // Keep every message (including all 79 animation changes) for a conservative per-update comparison.
             var w = new NetWriter();
             WriteStateHead(w, 595, 1, 1, 1, default, Quaternion.identity, Vector3.zero, false);
-            w.U8(0); w.U8(0); w.U8(0); WriteRagdoll(w, rabbit, false);
+            w.U8(0); w.U8(0); w.U8(0); EntityRagdolls.WriteRagdoll(w, rabbit, false);
             // An upright rabbit has n=0: protocol 54 adds no mode byte and keeps the 40-byte baseline.
             IdleTrafficTest.Check(StateTail.TryRead(w.Buf, 0, w.Len, out var noLimbs) &&
                 noLimbs.Mode == StateTail.Mode.None && w.Len - noLimbs.Offset == 1,

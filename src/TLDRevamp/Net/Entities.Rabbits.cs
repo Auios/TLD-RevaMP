@@ -586,7 +586,7 @@ namespace TLDRevamp.Net
         {
             if (!RabbitSync || !RabbitOwners || c.rigidbody == null || !ByNet.TryGetValue(net, out var mine) || mine.Proxy || mine.Root == null) return;
             var other = ProxyOf(c.rigidbody.transform.root);
-            if (other == null && RagdollLimbOwner.TryGetValue(c.rigidbody.gameObject, out var lo)) other = lo;   // a dead rabbit's limb
+            if (other == null && EntityRagdolls.TryLimbOwner(c.rigidbody.gameObject, out var lo)) other = lo;   // a dead rabbit's limb
             if (other == null || other.Root == null || !other.Proxy || other.Held || other.Stored || other.Physical || other.CrashTaking) return;
             bool mineRabbit = NyOf(mine) != null, otherRabbit = NyOf(other) != null;
             if (otherRabbit && mine.Root.car != null) { if (ClaimNow(other, ClaimReason.RabbitContact)) RabbitClaimedByCar++; return; }

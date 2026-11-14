@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
+using Rag = TLDRevamp.Net.Entities.Rag;
 
 namespace TLDRevamp.Net
 {
@@ -13,36 +15,13 @@ namespace TLDRevamp.Net
     /// syncScript.SendRagdoll). The same here: while limp, every state carries the limbs' poses (relative to the item);
     /// a copy keeps its limbs kinematic and follows them. A copy's creature still alive when the owner's is limp dies the
     /// game's way first (newAiScript / aiscript.Die). Grabbing a limb of a copy takes the body (pickup claim).
-    public static partial class Entities
+    internal static partial class EntityRagdolls
     {
         public static long RagdollStatesSent, RagdollStatesApplied, ModLimpErrors;
         private static readonly HashSet<Ent> RagdollCopies = new HashSet<Ent>();
         internal static System.Collections.Generic.IReadOnlyCollection<TLDRevamp.Net.Entities.Ent> ObservedRagdollCopies => RagdollCopies;
         private static readonly Dictionary<GameObject, Ent> RagdollLimbOwner = new Dictionary<GameObject, Ent>();
         private const float RagdollFollowRate = 20f;   // 1/s: a copy's limbs close this share of the gap per second (~50 ms lag)
-
-        public class Rag
-        {
-            public ragdollactivatescript Act; public GameObject ActFor;   // looked up on this root (a body streamed back in is a new one)
-            public Vector3d[] SentPos; public Quaternion[] SentRot;   // owner: global for bodies, item-relative for vehicle joints
-            public Vector3[] Pos, TPos; public Quaternion[] Rot, TRot;   // a copy: shown now / received
-            public bool Has;
-            // owner (RagdollDelta): the Key the copies have - its id, epoch, anchor, every limb's world pose then - and the
-            // one this state carries, committed only if the state is sent
-            public byte KeyId; public uint KeyEpoch; public int KeyN = -1; public float KeyAt;
-            public Vector3d KeyAnchor; public Quaternion KeyAnchorRot; public Vector3d[] KeyWorld; public Quaternion[] KeyWorldRot;
-            public bool Staged; public byte StagedId; public Vector3d StagedAnchor; public Quaternion StagedAnchorRot;
-            public Vector3d[] StagedWorld; public Quaternion[] StagedWorldRot;
-            public Transform[] HashedLimbs; public ushort Hash;
-            public Vector3[] WPos; public Quaternion[] WRot;
-            public Vector3[] SPos; public Quaternion[] SRot;   // a copy: the next targets, built here, swapped with TPos/TRot
-            // a copy, not on a car: the frame the targets are relative to - received (global) and shown (eased toward it)
-            public bool FrameHas; public Vector3d FrameT, FrameS; public Quaternion FrameTRot, FrameSRot;
-            public Transform[] OrderFor; public int[] Order;   // a copy: its limbs, parents before children
-            // a copy: the last Key (its epoch, id, anchor, every limb relative to it)
-            public bool CHas; public uint CEpoch; public byte CId; public ushort CHash;
-            public Vector3d CAnchor; public Quaternion CAnchorRot; public Vector3[] CRel; public Quaternion[] CRelRot;
-        }
 
         /// A/B: a limp body's limbs go as a Key (every limb, millimetres from an anchor whose pose rides along) and then
         /// Deltas (only the limbs that moved since that Key; cumulative, so its Key and any one Delta make the whole pose
@@ -90,7 +69,7 @@ namespace TLDRevamp.Net
             return e.Rag.Act == null || e.Rag.Act.ragdoll;
         }
 
-        private static void LocalPose(Transform root, Transform limb, out Vector3 p, out Quaternion q)
+        internal static void LocalPose(Transform root, Transform limb, out Vector3 p, out Quaternion q)
         {
             var inv = Quaternion.Inverse(root.rotation);
             p = inv * (limb.position - root.position); q = inv * limb.rotation;
@@ -98,13 +77,13 @@ namespace TLDRevamp.Net
 
         /// The owner: has a limb moved (1 cm / 0.3 deg) since the last state? - a body sent like any item: while it
         /// moves, one state at rest.
-        private static bool RagdollMoved(Ent e)
+        internal static bool RagdollMoved(Ent e)
         {
             var ls = Limbs(e);
             if (ls == null || !Limp(e)) return false;
             var r = e.Rag;
             if (r.SentPos == null || r.SentPos.Length != ls.Length) return true;
-            var t = RagdollFrame(e);
+            var t = Entities.RagdollFrame(e);
             for (int i = 0; i < ls.Length; i++)
             {
                 if (ls[i] == null || t != e.Root.transform && ls[i] == e.Root.transform) continue;
@@ -120,11 +99,11 @@ namespace TLDRevamp.Net
         /// transmitted frame: vehicles, a limb out of millimetre range, RagdollDelta off), Key or Delta. `key`: a Key is
         /// due whatever else (a first state, the final one). Returns true when it wrote a Key, which RagdollSent commits
         /// only if the state actually goes out (a Key no copy got must not be what the next Deltas refer to).
-        private static bool WriteRagdoll(NetWriter w, Ent e, bool key)
+        internal static bool WriteRagdoll(NetWriter w, Ent e, bool key)
         {
             var ls = Limbs(e);
             if (ls == null || !Limp(e)) { RagdollWire.WriteNone(w); return false; }
-            var r = e.Rag; var t = RagdollFrame(e); int n = ls.Length;
+            var r = e.Rag; var t = Entities.RagdollFrame(e); int n = ls.Length;
             if (r.SentPos == null || r.SentPos.Length != n) { r.SentPos = new Vector3d[n]; r.SentRot = new Quaternion[n]; }
             if (r.WPos == null || r.WPos.Length != n) { r.WPos = new Vector3[n]; r.WRot = new Quaternion[n]; }
             var pos = r.WPos; var rot = r.WRot;   // the wire arrays: exactly one per limb, kept with the body
@@ -216,7 +195,7 @@ namespace TLDRevamp.Net
         /// A Key in a state this machine won't apply - older than the newest it has (a reliable Key overtaken by an
         /// unreliable Delta), or the object briefly ours (a provisional claim later refused): its limbs are still what the
         /// Deltas after it refer to. Kept if it is newer than the Key held. `at`: where the message (its type byte) starts.
-        private static void KeepLateKey(NetReader r, int at, Ent e, uint epoch)
+        internal static void KeepLateKey(NetReader r, int at, Ent e, uint epoch)
         {
             if (!RagdollDelta || e == null || epoch != e.Epoch) return;
             if (!StateTail.TryRead(r.Buf, at, r.End - at, out var tail) || tail.Mode != StateTail.Mode.Key) return;
@@ -230,7 +209,7 @@ namespace TLDRevamp.Net
         }
 
         /// The state carrying the block went out (or not): only a sent Key becomes the one the next Deltas refer to.
-        private static void RagdollSent(Ent e, bool sent)
+        internal static void RagdollSent(Ent e, bool sent)
         {
             var r = e.Rag;
             if (r == null || !r.Staged) return;
@@ -246,7 +225,7 @@ namespace TLDRevamp.Net
         /// `framePos`/`frameRot`: the state's own frame (its header pose, global). A Key's and a Delta's limbs are relative to
         /// the Key's anchor; they are turned into frame-relative targets here, so the display (RagdollTick, MoveLimbs) is
         /// the same for every form. The Key is kept even while the copy isn't placed (streamed out) or isn't a copy.
-        private static void ReadRagdoll(NetReader r, Ent e, Vector3d framePos, Quaternion frameRot)
+        internal static void ReadRagdoll(NetReader r, Ent e, Vector3d framePos, Quaternion frameRot)
         {
             if (r.Pos >= r.End) return;   // a sender without them (bots)
             var b = _ragBlock;
@@ -286,7 +265,7 @@ namespace TLDRevamp.Net
             }
             if (r.Bad || !e.Proxy || e.Root == null) return;
             // limbs in the root's frame (a vehicle's back section: ~10 m); a NaN went into the copy's kinematic bodies
-            for (int i = 0; i < n; i++) if (!Finite(tp[i]) || tp[i].sqrMagnitude > 2500f) return;
+            for (int i = 0; i < n; i++) if (!Entities.IsFinite(tp[i]) || tp[i].sqrMagnitude > 2500f) return;
             var ls = Limbs(e);
             if (ls == null || ls.Length != n) return;
             if (b.Mode != RagdollWire.Frame && g.CHash != LimbHash(g, ls))
@@ -329,7 +308,7 @@ namespace TLDRevamp.Net
 
         public static long RagdollDeathsFailed;
 
-        private static void RagdollTick(float dt)
+        internal static void RagdollTick(float dt)
         {
             if (RagdollCopies.Count == 0) return;
             float k = 1f - Mathf.Exp(-RagdollFollowRate * dt);
@@ -350,7 +329,7 @@ namespace TLDRevamp.Net
                         _ragDrop.Add(e); continue;
                     }
                 }
-                var g = e.Rag; var t = e.Root.transform; bool byBody = LimbsByBody(e);
+                var g = e.Rag; var t = e.Root.transform; bool byBody = Entities.LimbsByBody(e);
                 var framePos = t.position; var frameRot = t.rotation;
                 if (e.Root.car == null && g.FrameHas)
                 {
@@ -369,7 +348,7 @@ namespace TLDRevamp.Net
                     var rb = l.GetComponent<Rigidbody>();
                     if (rb != null && !rb.isKinematic) { rb.isKinematic = true; if (!e.MadeKinematic.Contains(rb)) e.MadeKinematic.Add(rb); }
                     if (rb != null) rb.detectCollisions = !e.Held && !e.Stored && !e.ReleaseGhost && !e.CargoGhost;
-                    if (!RagdollLimbOwner.ContainsKey(l.gameObject)) { RagdollLimbOwner[l.gameObject] = e; ProxyItems.Add(l.gameObject); }
+                    if (!RagdollLimbOwner.ContainsKey(l.gameObject)) { RagdollLimbOwner[l.gameObject] = e; Entities.TrackRagdollLimb(l.gameObject, true); }
                     g.Pos[i] = Vector3.Lerp(g.Pos[i], g.TPos[i], k); g.Rot[i] = Quaternion.Slerp(g.Rot[i], g.TRot[i], k);
                     if ((g.Pos[i] - g.TPos[i]).sqrMagnitude < 1e-6f && Quaternion.Angle(g.Rot[i], g.TRot[i]) < 0.03f)
                     { g.Pos[i] = g.TPos[i]; g.Rot[i] = g.TRot[i]; }
@@ -380,7 +359,6 @@ namespace TLDRevamp.Net
             foreach (var e in _ragDrop) RagdollRelease(e);
         }
 
-        static partial void RabBodyCheck(aiscript rab, ref bool gone);   // Entities.Rabbits: a container removed its body
         private static void DieLikeTheOwner(Ent e)
         {
             var ai = e.Root.GetComponentInChildren<newAiScript>(true);
@@ -388,25 +366,29 @@ namespace TLDRevamp.Net
             else
             {
                 var rab = e.Root.GetComponentInChildren<aiscript>(true);
-                if (rab != null) { bool gone = false; RabBodyCheck(rab, ref gone); if (rab.alive && !gone) rab.Die(_playSound: false); }
+                if (rab != null) { bool gone = Entities.RagdollRabbitBodyGone(rab); if (rab.alive && !gone) rab.Die(_playSound: false); }
                 else if (e.Rag.Act != null) e.Rag.Act.SetRagdol(true);
             }
         }
 
         /// No longer a copy here (taken over, session over): its limbs are the game's again (SetProxy restores the
         /// bodies it made kinematic).
-        private static void RagdollRelease(Ent e)
+        internal static void RagdollRelease(Ent e)
         {
             RagdollCopies.Remove(e);
             if (e.Rag != null) e.Rag.Has = false;
             _ragKeys.Clear();
             foreach (var kv in RagdollLimbOwner) if (kv.Value == e) _ragKeys.Add(kv.Key);
-            foreach (var go in _ragKeys) { RagdollLimbOwner.Remove(go); if (go != null) ProxyItems.Remove(go); }
+            foreach (var go in _ragKeys) { RagdollLimbOwner.Remove(go); if (go != null) Entities.TrackRagdollLimb(go, false); }
         }
         private static readonly List<GameObject> _ragKeys = new List<GameObject>();
 
+        internal static void ResetCopies() { RagdollCopies.Clear(); RagdollLimbOwner.Clear(); }
+        internal static bool Following(Ent e) => RagdollCopies.Contains(e);
+        internal static bool TryLimbOwner(GameObject go, out Ent e) => RagdollLimbOwner.TryGetValue(go, out e);
+
         /// Grabbing a limb of a copy: which body it belongs to (its limbs are not under the item once a creature died).
-        private static Ent RagdollOf(pickupable p) =>
+        internal static Ent RagdollOf(pickupable p) =>
             p != null && RagdollLimbOwner.TryGetValue(p.gameObject, out var e) ? e : null;
 
         /// Diagnostics (bridge `mp ragdolls`): every item prefab with limbs (tosaveitemscript.ragdollPos) or a creature
@@ -430,6 +412,32 @@ namespace TLDRevamp.Net
                                   (go.GetComponentInChildren<aiscript>(true) != null ? "ai " : "") + (go.GetComponent<Rigidbody>() != null ? "rootRB" : "")) + "]");
             }
             return "{\"ragdolls\":[" + string.Join(",", rows) + "]}";
+        }
+    }
+
+    public static partial class Entities
+    {
+        public class Rag
+        {
+            public ragdollactivatescript Act; public GameObject ActFor;   // looked up on this root (a body streamed back in is a new one)
+            public Vector3d[] SentPos; public Quaternion[] SentRot;   // owner: global for bodies, item-relative for vehicle joints
+            public Vector3[] Pos, TPos; public Quaternion[] Rot, TRot;   // a copy: shown now / received
+            public bool Has;
+            // owner (RagdollDelta): the Key the copies have - its id, epoch, anchor, every limb's world pose then - and the
+            // one this state carries, committed only if the state is sent
+            public byte KeyId; public uint KeyEpoch; public int KeyN = -1; public float KeyAt;
+            public Vector3d KeyAnchor; public Quaternion KeyAnchorRot; public Vector3d[] KeyWorld; public Quaternion[] KeyWorldRot;
+            public bool Staged; public byte StagedId; public Vector3d StagedAnchor; public Quaternion StagedAnchorRot;
+            public Vector3d[] StagedWorld; public Quaternion[] StagedWorldRot;
+            public Transform[] HashedLimbs; public ushort Hash;
+            public Vector3[] WPos; public Quaternion[] WRot;
+            public Vector3[] SPos; public Quaternion[] SRot;   // a copy: the next targets, built here, swapped with TPos/TRot
+            // a copy, not on a car: the frame the targets are relative to - received (global) and shown (eased toward it)
+            public bool FrameHas; public Vector3d FrameT, FrameS; public Quaternion FrameTRot, FrameSRot;
+            public Transform[] OrderFor; public int[] Order;   // a copy: its limbs, parents before children
+            // a copy: the last Key (its epoch, id, anchor, every limb relative to it)
+            public bool CHas; public uint CEpoch; public byte CId; public ushort CHash;
+            public Vector3d CAnchor; public Quaternion CAnchorRot; public Vector3[] CRel; public Quaternion[] CRelRot;
         }
     }
 }

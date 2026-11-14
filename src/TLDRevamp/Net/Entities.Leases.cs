@@ -453,7 +453,7 @@ namespace TLDRevamp.Net
             private static void Prefix(pickupable __instance)
             {
                 if (!InSession || !IsProxy(__instance)) return;
-                var limbOf = RagdollOf(__instance);   // a limb of a dead creature: not under the item any more
+                var limbOf = EntityRagdolls.RagdollOf(__instance);   // a limb of a dead creature: not under the item any more
                 // the item's own entity first: one under another shared object (stuck on a car or its door, riding in
                 // it) matched that object's root as well, and whichever came first in ByNet won — the car (no claim:
                 // the grabbed copy snapped back to its owner's pose) or nothing

@@ -22,7 +22,7 @@ namespace UnityEngine
         }
         public static void Destroy(GameObject go) { go.Destroyed = true; napszakvaltakozas.s.sandStorms.Remove(go.Storm); }
     }
-    public class GameObject : Object { public Component Part; public Transform transform = new Transform(); public string name; public int layer; public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Part as T ?? Storm as T; public T GetComponentInChildren<T>(bool all) where T : class => GetComponent<T>(); }
+    public partial class GameObject : Object { public Component Part; public Transform transform = new Transform(); public string name; public int layer; public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Part as T ?? Storm as T; public T GetComponentInChildren<T>(bool all) where T : class => GetComponent<T>(); }
     public partial class Transform : Component { public Vector3 position, eulerAngles, localEulerAngles; }
     public class Light { public bool enabled; public float intensity; public GameObject gameObject = new GameObject(); }
     public class AudioSource : Component { public bool isPlaying; public float volume, pitch; public int priority; public AudioClip clip; }
@@ -44,7 +44,7 @@ namespace UnityEngine
         public static Vector3 operator -(Vector3 a, Vector3 b) => new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
         public static Vector3 Lerp(Vector3 a, Vector3 b, float t) => new Vector3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
     }
-    public static class Mathf
+    public static partial class Mathf
     {
         public static float Min(float a, float b) => Math.Min(a, b);
         public static int Min(int a, int b) => Math.Min(a, b);
@@ -57,7 +57,7 @@ namespace UnityEngine
         public static float Clamp01(float a) => Clamp(a, 0, 1);
         public static float Lerp(float a, float b, float t) => a + (b - a) * Clamp01(t);
     }
-    public static class Time
+    public static partial class Time
     {
         public static float time, unscaledTime, realtimeSinceStartup, timeScale = 1, deltaTime;
         public static double timeAsDouble, timeSinceLevelLoadAsDouble, realtimeSinceStartupAsDouble;

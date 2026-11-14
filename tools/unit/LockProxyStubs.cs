@@ -36,6 +36,24 @@ namespace TLDRevamp.Net
     internal static class EntityCarTuning { internal static void CopyTanksOnOwnerChange(Entities.Ent e, bool proxy) { } }
     public static partial class Entities
     {
+        internal static Transform[] Limbs(Ent e) => EntityRagdolls.Limbs(e);
+        internal static bool Limp(Ent e) => EntityRagdolls.Limp(e);
+        internal static System.Collections.Generic.IReadOnlyCollection<Ent> ObservedRagdollCopies => EntityRagdolls.ObservedRagdollCopies;
+        internal static void TrackRagdollLimb(GameObject go, bool copy) { if (copy) ProxyItems.Add(go); else ProxyItems.Remove(go); }
+        internal static bool RagdollRabbitBodyGone(aiscript rab) => false;
+        internal static long RagdollStatesSent => EntityRagdolls.RagdollStatesSent;
+        internal static long RagdollStatesApplied => EntityRagdolls.RagdollStatesApplied;
+        internal static long RagdollKeysSent => EntityRagdolls.RagdollKeysSent;
+        internal static long RagdollDeltasSent => EntityRagdolls.RagdollDeltasSent;
+        internal static long RagdollFramesSent => EntityRagdolls.RagdollFramesSent;
+        internal static long RagdollLimbsSent => EntityRagdolls.RagdollLimbsSent;
+        internal static long RagdollBlockBytes => EntityRagdolls.RagdollBlockBytes;
+        internal static long RagdollKeysIn => EntityRagdolls.RagdollKeysIn;
+        internal static long RagdollDeltasIn => EntityRagdolls.RagdollDeltasIn;
+        internal static long RagdollDeltasNoKey => EntityRagdolls.RagdollDeltasNoKey;
+        internal static long RagdollHashMismatch => EntityRagdolls.RagdollHashMismatch;
+        internal static long RagdollLateKeys => EntityRagdolls.RagdollLateKeys;
+        internal static long RagdollReleasedOnNone => EntityRagdolls.RagdollReleasedOnNone;
         static long GameFrozenReleased, RagdollLimbsRestored, OwnerClockResets;
         static readonly Dictionary<TestCar, float> DamageGraceUntil = new Dictionary<TestCar, float>();
         static readonly Dictionary<object, Ent> ProxyWheelOwner = new Dictionary<object, Ent>();

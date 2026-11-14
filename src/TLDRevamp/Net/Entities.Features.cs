@@ -4,6 +4,61 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        internal static System.Collections.Generic.IEnumerable<Ent> PlayerCorpses()
+        {
+            foreach (var e in ByNet.Values)
+                if (e.Root != null && e.Root.name.IndexOf("PlayerRagdol", System.StringComparison.Ordinal) >= 0) yield return e;
+        }
+        internal static bool TryDeathCorpse(GameObject go, out uint net)
+        {
+            foreach (var e in ByNet.Values)
+                if (e.Root != null && (e.Root.transform == go.transform || e.Root.transform.IsChildOf(go.transform))) { net = e.NetId; return true; }
+            net = 0; return false;
+        }
+        internal static void ForgetDeathCorpse(uint net) => ByNet.Remove(net);
+        internal static void TrackRagdollLimb(GameObject go, bool copy) { if (copy) ProxyItems.Add(go); else ProxyItems.Remove(go); }
+        static partial void RabBodyCheck(aiscript rab, ref bool gone);
+        internal static bool RagdollRabbitBodyGone(aiscript rab) { bool gone = false; RabBodyCheck(rab, ref gone); return gone; }
+        /// The network id of a shared object by its save id (0 while the share is still pending).
+        internal static uint NetIdOfSaveId(uint saveId)
+        {
+            if (saveId == 0) return 0;
+            foreach (var e in ByNet.Values) if (e.RootId == saveId) return e.NetId;
+            return 0;
+        }
+
+        internal static Transform[] Limbs(Ent e) => EntityRagdolls.Limbs(e);
+        internal static bool Limp(Ent e) => EntityRagdolls.Limp(e);
+        internal static System.Collections.Generic.IReadOnlyCollection<Ent> ObservedRagdollCopies => EntityRagdolls.ObservedRagdollCopies;
+        public static string RagdollPrefabs() => EntityRagdolls.RagdollPrefabs();
+        public static string CorpseList() => EntityRagdolls.CorpseList();
+        public static string DeathInfo() => EntityRagdolls.DeathInfo();
+        public static bool RagdollDelta { get => EntityRagdolls.RagdollDelta; set => EntityRagdolls.RagdollDelta = value; }
+        public static bool DeathCorpseStays { get => EntityRagdolls.DeathCorpseStays; set => EntityRagdolls.DeathCorpseStays = value; }
+        public static float RagdollKeyEveryS { get => EntityRagdolls.RagdollKeyEveryS; set => EntityRagdolls.RagdollKeyEveryS = value; }
+        public static bool DeathRagdollShare { get => EntityRagdolls.DeathRagdollShare; set => EntityRagdolls.DeathRagdollShare = value; }
+        public static bool CorpseOutfitSaved { get => EntityRagdolls.CorpseOutfitSaved; set => EntityRagdolls.CorpseOutfitSaved = value; }
+        public static bool CorpseWhole { get => EntityRagdolls.CorpseWhole; set => EntityRagdolls.CorpseWhole = value; }
+        public static float RagdollDeltaMaxShare { get => EntityRagdolls.RagdollDeltaMaxShare; set => EntityRagdolls.RagdollDeltaMaxShare = value; }
+        public static long RagdollStatesSent { get => EntityRagdolls.RagdollStatesSent; set => EntityRagdolls.RagdollStatesSent = value; }
+        public static long RagdollStatesApplied { get => EntityRagdolls.RagdollStatesApplied; set => EntityRagdolls.RagdollStatesApplied = value; }
+        public static long RagdollKeysSent { get => EntityRagdolls.RagdollKeysSent; set => EntityRagdolls.RagdollKeysSent = value; }
+        public static long RagdollDeltasSent { get => EntityRagdolls.RagdollDeltasSent; set => EntityRagdolls.RagdollDeltasSent = value; }
+        public static long RagdollFramesSent { get => EntityRagdolls.RagdollFramesSent; set => EntityRagdolls.RagdollFramesSent = value; }
+        public static long RagdollLimbsSent { get => EntityRagdolls.RagdollLimbsSent; set => EntityRagdolls.RagdollLimbsSent = value; }
+        public static long RagdollBlockBytes { get => EntityRagdolls.RagdollBlockBytes; set => EntityRagdolls.RagdollBlockBytes = value; }
+        public static long RagdollKeysIn { get => EntityRagdolls.RagdollKeysIn; set => EntityRagdolls.RagdollKeysIn = value; }
+        public static long RagdollDeltasIn { get => EntityRagdolls.RagdollDeltasIn; set => EntityRagdolls.RagdollDeltasIn = value; }
+        public static long RagdollDeltasNoKey { get => EntityRagdolls.RagdollDeltasNoKey; set => EntityRagdolls.RagdollDeltasNoKey = value; }
+        public static long RagdollHashMismatch { get => EntityRagdolls.RagdollHashMismatch; set => EntityRagdolls.RagdollHashMismatch = value; }
+        public static long RagdollLateKeys { get => EntityRagdolls.RagdollLateKeys; set => EntityRagdolls.RagdollLateKeys = value; }
+        public static long RagdollReleasedOnNone { get => EntityRagdolls.RagdollReleasedOnNone; set => EntityRagdolls.RagdollReleasedOnNone = value; }
+        public static long DeathCorpsesShared { get => EntityRagdolls.DeathCorpsesShared; set => EntityRagdolls.DeathCorpsesShared = value; }
+        public static uint DeathCorpseSaveId { get => EntityRagdolls.DeathCorpseSaveId; set => EntityRagdolls.DeathCorpseSaveId = value; }
+        public static uint DeathCorpseNetId { get => EntityRagdolls.DeathCorpseNetId; set => EntityRagdolls.DeathCorpseNetId = value; }
+        public static System.Collections.Generic.List<uint> DeathItemSaveIds => EntityRagdolls.DeathItemSaveIds;
+        public static System.Collections.Generic.List<uint> DeathItemNetIds => EntityRagdolls.DeathItemNetIds;
+
         public const byte Worn = 85;   // c to s: net, epoch, slot and pose; s to c: net, wearer, slot and pose
         public static float HeldStateHz { get => EntityHands.HeldStateHz; set => EntityHands.HeldStateHz = value; }
         public static float FastAfterReleaseS { get => EntityHands.FastAfterReleaseS; set => EntityHands.FastAfterReleaseS = value; }

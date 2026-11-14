@@ -54,7 +54,7 @@ static partial class EntitySplitTest
 
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");
         Check(kernel.Contains("WriteWheels(WS, e); WriteEngine(WS, e); EntityCarSignals.WriteSignals(WS, e);"), "state tail write order");
-        Check(kernel.Contains("ReadWheels(r, e); ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e); ReadRagdoll(r, e, pos, rot);"), "settled replay tail read order");
+        Check(kernel.Contains("ReadWheels(r, e); ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e); EntityRagdolls.ReadRagdoll(r, e, pos, rot);"), "settled replay tail read order");
         string hand = File.ReadAllText("src/TLDRevamp/Net/Entities.HandItems.cs");
         Check(hand.Contains("EntityCodec.ReadHandPose") && hand.Contains("EntityCodec.ReadHandPos") && hand.Contains("EntityCodec.ReadHandRot"), "hand items use codec owner scratch API");
         string source = File.ReadAllText("src/TLDRevamp/Net/Entities.CarSignals.cs");
