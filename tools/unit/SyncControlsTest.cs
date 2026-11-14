@@ -67,9 +67,9 @@ namespace TLDRevamp.Net
         static readonly NetWriter W = new NetWriter();
         static readonly object _editBuckets = new object();
         const byte DetachReq = 37, PartOff = 26;
-        internal const byte DetachSync = 42;
+        internal const byte DetachSync = 42, IgnitionKey = 96;
         const int MyId = 1;
-        static bool InSession = true, Near = true, Token = true;
+        internal static bool InSession = true; static bool Near = true, Token = true;
         static float EditRatePerS = 20, EditBurst = 40;
         static long DetachReqsSent, EditsOutOfReach, AutoDetachesIgnored, SuppressedFallOff, PartsReported, DetachSyncsSent, DetachSyncsApplied, DetachesStored;
         static bool _applyingDetach, PlayerActing = true, StoredAttach = true;
@@ -81,10 +81,20 @@ namespace TLDRevamp.Net
         static void ApplyProxyBodies(Ent e) { }
         static void LiveUsablesChanged(tosaveitemscript it) { }
         static int Sent, Target;
-        static bool IsProxy(object c) => c is carscript car ? car.Proxy : c is attachablescript at ? at.InheritedProxy : true;
+        internal static bool IsProxy(object c) => c is carscript car ? car.Proxy : c is attachablescript at ? at.InheritedProxy : true;
         static bool Resolve(Ent e) => true;
         static bool HitchDetach(attachablescript at) => true;
         static SyncFakes.Group GroupRecord(SEnt e) => e.Record;
+        // The split fixture runs the production kernel boundary; this source fixture keeps its existing edit fakes.
+        internal static bool TryGetEntity(uint net, out Ent e) => ByNet.TryGetValue(net, out e);
+        internal static bool ResolveEntity(Ent e) => Resolve(e);
+        internal static Ent ProxySeatCar(carscript car, bool rootOnly = false) { foreach (var e in ByNet.Values) if (e.Proxy && e.Root != null && e.Root.car == car && (!rootOnly || e.PartIndex < 0)) return e; return null; }
+        internal static bool TryKeyOwner(uint net, int from, out int owner) { owner = 0; if (!Server.TryGetValue(net, out var se) || se.OwnerId == from || !se.Car) return false; owner = se.OwnerId; return true; }
+        internal static bool TakeKeyToken(int from) => TakeToken(_editBuckets, from, EditRatePerS, EditBurst);
+        internal static bool KeyReachAllowed(int from, uint net) => AtObject(from, Server[net]);
+        internal static void RefuseKeyReach(int from, uint net) => Refuse(ref EditsOutOfReach, "key reach", "key reach");
+        internal static void SendToServer(NetWriter w, bool reliable) => ToServer(w, reliable);
+        internal static void SendToPeer(int id, NetWriter w, bool reliable) => ServerSendTo(id, w, reliable);
         static bool AtObject(int from, SEnt e) => Near;
         static bool CarriedPartsShared = true;
         static bool CarriedFar(attachablescript at, out Ent carrier) { carrier = null; return false; }
@@ -175,7 +185,7 @@ namespace TLDRevamp.Net
             car.Proxy = false; BindProxyEngine(car);
             check(!ProxyEngineOwner.ContainsKey(engine), "taking car ownership releases engine simulation");
             var c = new carscript { Proxy = true, ignition = true, ignitionUsable = new usablescript { Held = true } };
-            var prefix = typeof(Entities).GetNestedType("KeyOnCopy", BindingFlags.NonPublic).GetMethod("Prefix", BindingFlags.NonPublic | BindingFlags.Static);
+            var prefix = typeof(EntitySeats).GetNestedType("KeyOnCopy", BindingFlags.NonPublic).GetMethod("Prefix", BindingFlags.NonPublic | BindingFlags.Static);
             check(!(bool)prefix.Invoke(null, new object[] { c }), "proxy key is captured but cannot simulate its own ignition toggle");
             c.Proxy = false; check((bool)prefix.Invoke(null, new object[] { c }), "owner retains vanilla ignition simulation");
         }

@@ -13,7 +13,6 @@ namespace TLDRevamp.Net
         static string RabbitLastMove;
         static System.Collections.Generic.HashSet<uint> KnownBy(int player)
         { if (!Known.TryGetValue(player, out var set)) Known[player] = set = new System.Collections.Generic.HashSet<uint>(); return set; }
-        static long DriverSeatRefused;
         static string Refusal;
         internal static void RecordRefusal(string why) { Refusal = why; }
         static bool ServerWornNow(SEnt se) => false;

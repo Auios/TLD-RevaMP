@@ -2,6 +2,13 @@
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
     <Compile Include="EntitySplitTest.cs" />
+    <Compile Include="EntitySeatsStubs.cs" />
+    <Compile Include="EntitySeatsChecks.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Seat.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Seats.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.SeatAim.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Shotgun.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.IgnitionKey.cs" />
     <Compile Include="EntityTuningStubs.cs" />
     <Compile Include="EntityTuningChecks.cs" />
     <Compile Include="EntityDoorChecks.cs" />

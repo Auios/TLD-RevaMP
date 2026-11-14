@@ -46,6 +46,7 @@ namespace UnityEngine
     }
     public static class Mathf
     {
+        public static float Min(float a, float b) => Math.Min(a, b);
         public static int Min(int a, int b) => Math.Min(a, b);
         public static float Max(float a, float b) => Math.Max(a, b);
         public static float Abs(float a) => Math.Abs(a);
@@ -117,7 +118,7 @@ public partial class carscript : Component
     public void ShiftTo(int value) { gear = value; Shifts++; }
     public void UpdMultiHandbrake(float value) { handbrake = value; Handbrakes++; }
 }
-public class settingsscript { public static settingsscript s; public Settings S = new Settings(); public class Settings { public bool BDevMode; } }
+public class settingsscript { public static settingsscript s; public Settings S = new Settings(); public class Settings { public bool BDevMode, CBenableHandBrake; } }
 public class kaposztaleves { public static kaposztaleves s; public Settings settings = new Settings(); public class Settings { public bool daynight = true; } } // test stub, not game code
 
 namespace TLDRevamp
@@ -171,7 +172,15 @@ namespace TLDRevamp.Net
         internal static bool Finite(double v) => !double.IsNaN(v) && !double.IsInfinity(v);
         internal static bool Finite(Vector3 v) => Finite(v.x) && Finite(v.y) && Finite(v.z);
         internal static readonly List<(byte[] Bytes, bool Reliable, int Peer)> Packets = new List<(byte[], bool, int)>();
-        private static void ServerSendTo(int playerId, NetWriter w, bool reliable) => Packets.Add((w.Buf.Take(w.Len).ToArray(), reliable, playerId));
+        internal static Action<int, NetReader> PeerReceive;
+        private static void ServerSendTo(int playerId, NetWriter w, bool reliable)
+        {
+            Packets.Add((w.Buf.Take(w.Len).ToArray(), reliable, playerId));
+            if (PeerReceive != null)
+            {
+                var r = new NetReader(); r.Load(w.Len); Array.Copy(w.Buf, r.Buf, w.Len); r.U8(); PeerReceive(playerId, r);
+            }
+        }
         internal static int LastExcept;
         internal static Action PeerDeliver;
         internal static Action<byte, NetReader> HostReceive;

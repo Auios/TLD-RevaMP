@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -7,7 +8,7 @@ namespace TLDRevamp.Net
     /// and the player's CharacterController depenetrates against them — shoving the player until the game's
     /// reposition method force-ejects them 40-60 m away (the passenger flicker/eject). The player's capsule ignores
     /// the seated car's colliders for the duration of the sit (restored on exit).
-    public static partial class Entities
+    internal static partial class EntitySeats
     {
         private static readonly List<(Collider pc, Collider cc)> _ignoredPairs = new List<(Collider, Collider)>();
         public static int SeatIgnoredPairs => _ignoredPairs.Count;   // diagnostics: the seated car's colliders our capsule ignores
@@ -46,12 +47,11 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(fpscontroller __instance, seatscript _u)
             {
-                if (!InSession) return;
+                if (!Entities.InSession) return;
                 if (mainscript.s != null && mainscript.s.player == __instance)
-                { LocalSeat(out uint net, out int seat); if (net != 0) SessionLog.Event("seat-enter", net, slot: seat, from: MyId); }
-                foreach (var e in LookupSet())
-                    if (e.Root != null && e.Proxy && _u.transform.root == e.Root.transform.root)
-                    { SeatCollisionIgnore(__instance, _u); return; }
+                { LocalSeat(out uint net, out int seat); if (net != 0) SessionLog.Event("seat-enter", net, slot: seat, from: Entities.MyId); }
+                if (Entities.HasProxySeatRoot(_u.transform.root))
+                { SeatCollisionIgnore(__instance, _u); return; }
             }
         }
 
@@ -65,7 +65,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(seatscript __instance, ref bool __result)
             {
-                if (!InSession || !__result) return;
+                if (!Entities.InSession || !__result) return;
                 if (RemotePlayers.AnyRemoteInSeat(__instance)) __result = false;
             }
         }
@@ -74,37 +74,26 @@ namespace TLDRevamp.Net
         private static readonly List<KeyValuePair<int, int>> _seatedIn = new List<KeyValuePair<int, int>>();
 
         /// Server: who other than `from` sits in this car's driver seat (-1: nobody, or the car isn't loaded on the host).
-        private static int DriverSeatTakenBy(SEnt se, int from)
+        internal static int DriverSeatTakenBy(uint net, int from)
         {
-            if (!ByNet.TryGetValue(se.NetId, out var e) || !Resolve(e) || e.Root == null || e.Root.car == null) return -1;
+            if (!Entities.TryGetEntity(net, out var e) || !Entities.ResolveEntity(e) || e.Root == null || e.Root.car == null) return -1;
             var seats = VehicleSeats(e.Root);
             bool Driver(int i) => i >= 0 && i < seats.Length && seats[i] != null && seats[i].driverSeat0;
             if (from != 0 && !DedicatedServer.Enabled)
             {
                 LocalSeat(out uint n, out int i);
-                if (n == se.NetId && Driver(i)) return 0;
+                if (n == net && Driver(i)) return 0;
             }
-            Mp.Server?.SeatedIn(se.NetId, _seatedIn);
+            Entities.CollectSeatedPlayers(net, _seatedIn);
             foreach (var kv in _seatedIn) if (kv.Key != from && Driver(kv.Value)) return kv.Key;
             return -1;
         }
 
-        /// Server, a claim of a car: null = may take it, else why not.
-        private static string DriverSeatClaimRefusal(SEnt se, int from)
-        {
-            if (!se.Car || se.PartIndex >= 0) return null;
-            int by = DriverSeatTakenBy(se, from);
-            if (by >= 0) return "driven (player " + by + " sits at the wheel)";
-            if (se.ClaimedBy >= 0 && se.ClaimedBy != from && se.OwnerId == se.ClaimedBy && Time.realtimeSinceStartup - se.ClaimedAt < DriveClaimHoldS)
-                return "driven (player " + se.ClaimedBy + " just took the wheel)";
-            return null;
-        }
-
         /// Client, every 0.5 s while the local player sits in a driver seat: in someone else's car that someone else
         /// drives (its owner says so, or another player sits in this very seat), after our claim was answered.
-        private static void DriverSeatConflictTick(fpscontroller pl, Ent e)
+        internal static void DriverSeatConflictTick(fpscontroller pl, Ent e)
         {
-            if (e == null || !e.Proxy || e.OwnerId == MyId || _claimedFor != e.NetId) return;
+            if (e == null || !e.Proxy || e.OwnerId == Entities.MyId || !Entities.DriverClaimIs(e.NetId)) return;
             var seats = VehicleSeats(e.Root);
             int mine = System.Array.IndexOf(seats, pl.seat);
             bool other = e.Driven;
@@ -125,7 +114,7 @@ namespace TLDRevamp.Net
                 pl.GetOut(st.position + st.up * 1.5f + car.right * (2f * side), true);
                 DriverSeatOut++;
             }
-            _claimedFor = 0;
+            Entities.ClearDriverClaim();
             Session.Show(1, "", note);
             Plugin.Log.LogInfo($"driver seat of net {e.NetId}: {note} Moved {(to != null ? "to " + to.name : "out of the car")}.");
         }
@@ -148,14 +137,14 @@ namespace TLDRevamp.Net
             private static void Prefix(fpscontroller __instance, Vector3 pos, bool forced, out (bool sat, uint net, int seat) __state)
             {
                 __state = (__instance.Bsitting, 0u, 0);
-                if (InSession && mainscript.s != null && mainscript.s.player == __instance)
+                if (Entities.InSession && mainscript.s != null && mainscript.s.player == __instance)
                 {
                     LocalGetOutCalls++;
                     LocalSeat(out uint net, out int seat);
                     __state = (__instance.Bsitting, net, seat);
-                    if (!SeatLeaveOnExit && net != 0) { SessionLog.Event("seat-leave", net, slot: seat, from: MyId, result: forced ? "forced" : "ok"); SeatLeavesLogged++; }
+                    if (!SeatLeaveOnExit && net != 0) { SessionLog.Event("seat-leave", net, slot: seat, from: Entities.MyId, result: forced ? "forced" : "ok"); SeatLeavesLogged++; }
                 }
-                if (!InSession || !Mp.RemoteTrace) return;
+                if (!Entities.InSession || !Mp.RemoteTrace) return;
                 Plugin.Log.LogInfo($"SeatTrace: GetOut forced={forced} seated={__instance.Bsitting} seat={(__instance.seat != null ? __instance.seat.name : "null")} at={__instance.transform.position:F1}\n{System.Environment.StackTrace}");
             }
 
@@ -164,7 +153,7 @@ namespace TLDRevamp.Net
             {
                 if (SeatLeaveOnExit && __instance.Bsitting) return;   // still seated: the call didn't get out
                 if (SeatLeaveOnExit && __state.sat && __state.net != 0)
-                { SessionLog.Event("seat-leave", __state.net, slot: __state.seat, from: MyId, result: forced ? "forced" : "ok"); SeatLeavesLogged++; }
+                { SessionLog.Event("seat-leave", __state.net, slot: __state.seat, from: Entities.MyId, result: forced ? "forced" : "ok"); SeatLeavesLogged++; }
                 SeatCollisionRestore(__instance);
             }
         }

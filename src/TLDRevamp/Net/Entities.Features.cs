@@ -4,6 +4,89 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        public const byte IgnitionKey = 96;   // u32 net, u8 held: a non-owner holding a car's key (reliable)
+        public const byte ShotgunIn = 39;
+        public static int ServerObjects => Server.Count;   // the admin console's status
+        public static float DriveClaimHoldS { get => EntitySeats.DriveClaimHoldS; set => EntitySeats.DriveClaimHoldS = value; }
+        public static bool SeatLeaveOnExit { get => EntitySeats.SeatLeaveOnExit; set => EntitySeats.SeatLeaveOnExit = value; }
+        public static bool RearSeats { get => EntitySeats.RearSeats; set => EntitySeats.RearSeats = value; }
+        public static bool ItemSeats { get => EntitySeats.ItemSeats; set => EntitySeats.ItemSeats = value; }
+        public static float KeyResendS { get => EntitySeats.KeyResendS; set => EntitySeats.KeyResendS = value; }
+        public static float KeyHoldTimeoutS { get => EntitySeats.KeyHoldTimeoutS; set => EntitySeats.KeyHoldTimeoutS = value; }
+        public static float KeyTapMarginS { get => EntitySeats.KeyTapMarginS; set => EntitySeats.KeyTapMarginS = value; }
+        public static long KeyHoldsSent { get => EntitySeats.KeyHoldsSent; set => EntitySeats.KeyHoldsSent = value; }
+        public static long KeyHoldsApplied { get => EntitySeats.KeyHoldsApplied; set => EntitySeats.KeyHoldsApplied = value; }
+        public static long KeyHoldsRefused { get => EntitySeats.KeyHoldsRefused; set => EntitySeats.KeyHoldsRefused = value; }
+        public static long SeatLeavesLogged { get => EntitySeats.SeatLeavesLogged; set => EntitySeats.SeatLeavesLogged = value; }
+        public static string SeatGuardStats() => EntitySeats.SeatGuardStats();
+        internal static seatscript[] VehicleSeats(tosaveitemscript vehicle, bool always = false) => EntitySeats.VehicleSeats(vehicle, always);
+        internal static void LocalSeat(out uint net, out int idx) => EntitySeats.LocalSeat(out net, out idx);
+        internal static Transform SeatTransformCached(uint net, int idx, ref Transform carRoot, ref Transform seat) => EntitySeats.SeatTransformCached(net, idx, ref carRoot, ref seat);
+        internal static seatscript SeatScript(uint net, int idx, out carscript car) => EntitySeats.SeatScript(net, idx, out car);
+        internal static Transform SeatTransform(uint net, int idx) => EntitySeats.SeatTransform(net, idx);
+        internal static string SeatWhy(uint net, int idx) => EntitySeats.SeatWhy(net, idx);
+        internal static bool SeatAimFrame(out Transform drawn, out Rigidbody body) => EntitySeats.SeatAimFrame(out drawn, out body);
+        internal static Vector3 SeatAimPoint(Transform drawn, Rigidbody body, Vector3 p) => EntitySeats.SeatAimPoint(drawn, body, p);
+
+        internal static bool DriverClaimIs(uint net) => _claimedFor == net;
+        internal static void ClearDriverClaim() => _claimedFor = 0;
+        internal static void CollectSeatedPlayers(uint net, System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<int, int>> into) => Mp.Server?.SeatedIn(net, into);
+        internal static bool HasProxySeatRoot(Transform root)
+        {
+            foreach (var e in LookupSet()) if (e.Root != null && e.Proxy && root == e.Root.transform.root) return true;
+            return false;
+        }
+        internal static System.Collections.Generic.IEnumerable<Ent> PlacedSeatObjects()
+        {
+            foreach (var e in Placed()) if (e.Root != null && e.PartIndex < 0) yield return e;
+        }
+        internal static Ent ProxySeatCar(carscript car, bool rootOnly = false)
+        {
+            foreach (var e in ByNet.Values) if (e.Proxy && e.Root != null && e.Root.car == car && (!rootOnly || e.PartIndex < 0)) return e;
+            return null;
+        }
+        internal static Ent SeatObjectAbove(Transform st)
+        {
+            Ent best = null; int bestDepth = int.MaxValue;
+            foreach (var e in ByNet.Values)
+            {
+                if (e.Root == null || e.PartIndex >= 0 || !st.IsChildOf(e.Root.transform)) continue;
+                int d = 0;
+                for (var p = st; p != null && p != e.Root.transform; p = p.parent) d++;
+                if (d < bestDepth) { bestDepth = d; best = e; }
+            }
+            return best;
+        }
+        /// Server, a claim of a car: null = may take it, else why not.
+        private static string DriverSeatClaimRefusal(SEnt se, int from)
+        {
+            if (!se.Car || se.PartIndex >= 0) return null;
+            int by = EntitySeats.DriverSeatTakenBy(se.NetId, from);
+            if (by >= 0) return "driven (player " + by + " sits at the wheel)";
+            if (se.ClaimedBy >= 0 && se.ClaimedBy != from && se.OwnerId == se.ClaimedBy && Time.realtimeSinceStartup - se.ClaimedAt < EntitySeats.DriveClaimHoldS)
+                return "driven (player " + se.ClaimedBy + " just took the wheel)";
+            return null;
+        }
+
+        internal static bool TryKeyOwner(uint net, int from, out int owner)
+        {
+            owner = 0;
+            if (!Server.TryGetValue(net, out var se) || se.OwnerId == from || !se.Car) return false;
+            owner = se.OwnerId;
+            return true;
+        }
+        internal static bool TakeKeyToken(int from) => TakeToken(_editBuckets, from, EditRatePerS, EditBurst);
+        internal static bool KeyReachAllowed(int from, uint net) => AtObject(from, Server[net]);
+        internal static void RefuseKeyReach(int from, uint net) => Refuse(ref EditsOutOfReach, "key reach", $"ignition key from player {from}: they aren't at net {net}");
+        internal static bool TryPassengerControlOwner(int from, uint net, out int owner)
+        {
+            owner = 0;
+            if (!Server.TryGetValue(net, out var se) || se.OwnerId == from) return false;
+            if (!HitCheck.AllowOnObject(from, $"passenger controls of car {net}", se.HasState ? se.Pos : se.Where, HitCheck.ObjSeatM, 10f)) return false;
+            owner = se.OwnerId;
+            return true;
+        }
+
         public static void LateSample() => EntityDoors.LateSample();
         public static string CarDoors(uint net) => EntityDoors.CarDoors(net);
         public static string Food(uint net) => EntityDoors.Food(net);

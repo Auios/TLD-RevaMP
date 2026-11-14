@@ -28,6 +28,7 @@ namespace UnityEngine
         public T GetComponentInChildren<T>() where T : class => ChildComponent as T;
         public T GetComponentInChildren<T>(bool all) where T : class => ChildComponent as T;
         public T[] GetComponentsInChildren<T>() => Children.OfType<T>().ToArray();
+        public T[] GetComponentsInChildren<T>(bool all) => Children.OfType<T>().ToArray();
         public readonly List<Component> Children = new List<Component>();
         public bool CompareTag(string tag) => Tag == tag;
         public string Tag;
@@ -48,6 +49,7 @@ namespace UnityEngine
     }
     public partial struct Vector3
     {
+        public static float Dot(Vector3 a, Vector3 b) => a.x * b.x + a.y * b.y + a.z * b.z;
         public static Vector3 one => new Vector3(1, 1, 1);
         public static Vector3 up => new Vector3(0, 1, 0);
         public static Vector3 forward => new Vector3(0, 0, 1);
@@ -73,9 +75,11 @@ namespace UnityEngine
     public struct RaycastHit { public Collider collider; public Vector3 point, normal; }
     public struct Ray { public Ray(Vector3 p, Vector3 n) { } }
     public enum QueryTriggerInteraction { Collide }
-    public static class Physics
+    public static partial class Physics
     {
         public const int DefaultRaycastLayers = -5;
+        public static readonly List<(Collider, Collider, bool)> Ignored = new List<(Collider, Collider, bool)>();
+        public static void IgnoreCollision(Collider a, Collider b, bool value) => Ignored.Add((a, b, value));
         public static Collider World;
         public static bool Raycast(Vector3 p, Vector3 n, out RaycastHit hit, float d, int mask, QueryTriggerInteraction q) { hit = new RaycastHit { collider = World }; return World != null; }
     }
@@ -120,7 +124,7 @@ public class stepSoundScript : Component
     public mainscript.walkSoundType currentType; public float StepSoundVolume, stepSound, syncMultiplier; public AudioClip StepSoundClip; public int currentClipIndex;
     public void Step(float modifier) { }
 }
-public class fpscontroller : Component { public stepSoundScript stepScript; public AudioSource SBurp, SFart; public pickupable pickedUp; public void Burp() { } public void Fart() { } public void Shit() { } }
+public partial class fpscontroller : Component { public stepSoundScript stepScript; public AudioSource SBurp, SFart; public pickupable pickedUp; public void Burp() { } public void Fart() { } public void Shit() { } }
 public class mpplayerscript : Component { }
 public enum soundenum { burp, fart, shit }
 public class soundMainScript { public static soundMainScript s = new soundMainScript(); public int GetLength(soundenum e) => 400; public AudioClip GetClip(soundenum e, int i) => new AudioClip(); }
@@ -152,8 +156,8 @@ namespace TLDRevamp
             return (HarmonyLib.AccessTools.FieldRef<T, F>)method.CreateDelegate(typeof(HarmonyLib.AccessTools.FieldRef<T, F>));
         }
     }
-    internal static class Plugin { internal static LogSink Log = new LogSink(); internal class LogSink { public void LogWarning(string message) { } } }
-    internal static class DevHooks { internal static Action SprayTick, EntityLateSample; }
+    internal static class Plugin { internal static LogSink Log = new LogSink(); internal class LogSink { public void LogInfo(string message) { } public void LogWarning(string message) { } } }
+    internal static class DevHooks { internal static Action SprayTick, EntityLateSample; internal static Func<float, float> PassengerSteer; internal static Func<bool> PassengerLights; }
 }
 namespace TLDRevamp.Net
 {
@@ -164,7 +168,7 @@ namespace TLDRevamp.Net
         internal static Transform BodyPart(int id, int part) => Bone;
         internal static bool BodyHit(int id, Ray ray, float max, out int part, out RaycastHit hit) { part = 0; hit = new RaycastHit { point = new Vector3(2, 3, 4), normal = Vector3.up }; return Bone != null; }
     }
-    internal static class HitCheck { internal const float ObjShotM = 1, ObjSizeM = 1; internal static bool Allow = true; internal static bool AllowOnObject(int from, string why, Vector3d at, float a, float b) => Allow; }
+    internal static class HitCheck { internal const float ObjShotM = 1, ObjSizeM = 1, ObjSeatM = 1; internal static bool Allow = true; internal static bool AllowOnObject(int from, string why, Vector3d at, float a, float b) => Allow; }
     public static partial class Entities
     {
         public sealed partial class Ent { public uint NetId; public List<tosaveitemscript> Items = new List<tosaveitemscript>(); public bool Spraying; }

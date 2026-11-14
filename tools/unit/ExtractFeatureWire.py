@@ -6,10 +6,12 @@ import sys
 root = Path(__file__).resolve().parents[2]
 
 
-def method(part, name):
-    path = f'src/TLDRevamp/Net/Entities.{part}.cs'
-    source = (subprocess.check_output(['git', 'show', f'08b120c:{path}'], cwd=root).decode()
-              if '--baseline' in sys.argv else (root / path).read_text(encoding='utf-8'))
+def method(part, name, seats=False):
+    path = 'src/TLDRevamp/Net/Entities' + ('.' + part if part else '') + '.cs'
+    baseline = '--seats-baseline' in sys.argv if seats else '--baseline' in sys.argv
+    revision = 'aa5fc86' if seats else '08b120c'
+    source = (subprocess.check_output(['git', 'show', f'{revision}:{path}'], cwd=root).decode()
+              if baseline else (root / path).read_text(encoding='utf-8'))
     source = source.replace('\r\n', '\n')
     start = source.rfind('\n', 0, source.index(' static void ' + name + '(')) + 1
     brace = source.index('{', start)
@@ -18,7 +20,10 @@ def method(part, name):
         depth += (source[end] == '{') - (source[end] == '}')
         end += 1
     body = source[start:end]
-    if '--baseline' in sys.argv:
+    if seats and baseline:
+        body = body.replace('DriverSeatRefused++;', 'EntitySeats.DriverSeatRefused++;')
+        body = body.replace('DriverSeatConflictTick(', 'EntitySeats.DriverSeatConflictTick(')
+    if not seats and baseline:
         for hook in ('DoorAttachFrame', 'AttachFramePath', 'KeepDoorAttach'):
             body = body.replace(hook + '(', 'EntityDoors.' + hook + '(')
         body = body.replace('CopyTanksAreNow(', 'EntityCarTuning.CopyTanksAreNow(')
@@ -31,3 +36,10 @@ target.write_text('using UnityEngine;\nusing System.Collections.Generic;\nnamesp
                   + method('Attach', 'WriteAttachPose') + '\n'
                   + method('LiveUsables', 'WriteLiveUsable') + '\n'
                   + method('Edits', 'EditTick') + '\n} }\n', encoding='utf-8', newline='\n')
+
+# Driver claims remain in the kernel. Exercise their real producer and arbitration bodies too.
+with target.open('a', encoding='utf-8', newline='\n') as output:
+    output.write('namespace TLDRevamp.Net { public static partial class Entities {\n'
+                 + '\n'.join(method(part, name, True) for part, name in (
+                     ('Pickup', 'WriteClaim'), ('Pickup', 'ServerClaim'), ('', 'RefuseClaim'),
+                     ('', 'DriveClaimTick'), ('', 'CheckDriverSeat'))) + '\n} }\n')

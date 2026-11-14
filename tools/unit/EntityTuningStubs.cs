@@ -78,7 +78,7 @@ public class attachablescript : Component
 }
 namespace TLDRevamp
 {
-    internal static class SessionLog { internal static double St = 123.5; internal static void Event(string what, uint net, int item = 0, int slot = 0, int to = 0, uint epoch = 0, int count = 0, int from = 0) { } }
+    internal static class SessionLog { internal static double St = 123.5; internal static void Event(string what, uint net, int item = 0, int slot = 0, int to = 0, uint epoch = 0, int count = 0, int from = 0, string result = "") { } }
     internal static partial class GameLookups { internal static MethodInfo Method(Type t, string n, Type[] args) => t.GetMethod(n, args); }
 }
 namespace TLDRevamp.Net

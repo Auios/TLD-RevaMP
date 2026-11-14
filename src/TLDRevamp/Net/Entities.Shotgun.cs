@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -10,10 +11,9 @@ namespace TLDRevamp.Net
     /// throttle/brake/clutch stay with the driver. In a session the passenger's car is a display copy, so those inputs
     /// would only move the copy. Here they go to the car's owner, who merges them into its own input frame
     /// (steer added and clamped, buttons OR-ed) — the same mix the game makes when both players are local.
-    public static partial class Entities
+    internal static partial class EntitySeats
     {
-        public const byte ShotgunIn = 39;
-        public static int ServerObjects => Server.Count;   // the admin console's status
+        private static readonly NetWriter WS = new NetWriter();
         public static long ShotgunSent, ShotgunApplied;
 
         // bits of the message (held = state this frame, edges = pressed since the last send)
@@ -35,8 +35,8 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(carscript __instance)
             {
-                if (!InSession) return;
-                if (__instance.isPlayerDriving2 && !__instance.isPlayerDriving && IsProxy(__instance))
+                if (!Entities.InSession) return;
+                if (__instance.isPlayerDriving2 && !__instance.isPlayerDriving && Entities.IsProxy(__instance))
                 {
                     var c = __instance;
                     _shotCar = c;
@@ -56,7 +56,7 @@ namespace TLDRevamp.Net
         }
 
         /// Per frame from Tick: send the captured controls (20 Hz while active, one release frame at the end).
-        private static void ShotgunTick(float dt)
+        internal static void ShotgunTick(float dt)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
             bool active = _shotCar != null && pl != null && pl.Bsitting && pl.seat != null && pl.seat.Car == _shotCar && !pl.seat.driverSeat0 && pl.seat.driverSeat1;
@@ -66,14 +66,14 @@ namespace TLDRevamp.Net
             _shotSendAcc = 0f;
             Ent e = null;
             if (_shotCar != null)
-                foreach (var x in ByNet.Values) if (x.Proxy && x.Root != null && x.Root.car == _shotCar) { e = x; break; }
+                e = Entities.ProxySeatCar(_shotCar);
             if (e != null)
             {
-                W.Reset(); W.U8(ShotgunIn); W.U32(e.NetId);
+                W.Reset(); W.U8(Entities.ShotgunIn); W.U32(e.NetId);
                 W.U8((byte)(sbyte)Mathf.RoundToInt(Mathf.Clamp(active ? _shotSteer : 0f, -1f, 1f) * 127f));
                 W.U8((byte)Mathf.RoundToInt(Mathf.Clamp01(active ? _shotHandbrake : 0f) * 255f));
                 W.U16(active ? _shotHeld : (ushort)0); W.U16(_shotEdges);
-                ToServer(W, true);
+                Entities.SendToServer(W, true);
                 ShotgunSent++;
             }
             _shotEdges = 0;
@@ -82,24 +82,23 @@ namespace TLDRevamp.Net
         }
 
         /// Server: to the car's owner.
-        private static void ServerShotgun(int from, NetReader r)
+        internal static void ServerShotgun(int from, NetReader r)
         {
             uint net = r.U32();
-            if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId == from) return;
-            if (!HitCheck.AllowOnObject(from, $"passenger controls of car {net}", se.HasState ? se.Pos : se.Where, HitCheck.ObjSeatM, 10f)) return;
+            if (r.Bad || !Entities.TryPassengerControlOwner(from, net, out int owner)) return;
             r.Pos = 0;
             WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
-            ServerSendTo(se.OwnerId, WS, true);
+            Entities.SendToPeer(owner, WS, true);
         }
 
         // ---- the owner's side
         private sealed class ShotIn { public float Steer, Handbrake, At; public ushort Held, Edges, FrameEdges; }
         private static readonly Dictionary<carscript, ShotIn> RemoteShot = new Dictionary<carscript, ShotIn>();
 
-        private static void ApplyShotgun(NetReader r)
+        internal static void ApplyShotgun(NetReader r)
         {
             uint net = r.U32(); float steer = (sbyte)r.U8() / 127f, hb = r.U8() / 255f; ushort held = r.U16(), edges = r.U16();
-            if (r.Bad || !ByNet.TryGetValue(net, out var e) || e.Proxy || e.Root == null || e.Root.car == null) return;
+            if (r.Bad || !Entities.TryGetEntity(net, out var e) || e.Proxy || e.Root == null || e.Root.car == null) return;
             if (!RemoteShot.TryGetValue(e.Root.car, out var s)) RemoteShot[e.Root.car] = s = new ShotIn();
             s.Steer = steer; s.Handbrake = hb; s.Held = held; s.Edges |= edges; s.At = Time.realtimeSinceStartup;
             ShotgunApplied++;
@@ -116,7 +115,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(carscript __instance)
             {
-                if (!InSession || RemoteShot.Count == 0) return;
+                if (!Entities.InSession || RemoteShot.Count == 0) return;
                 if (RemoteShot.TryGetValue(__instance, out var s)) { s.FrameEdges = s.Edges; s.Edges = 0; }
                 MergeRemote(__instance, afterLocal: false);
             }
@@ -144,7 +143,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static void Prefix(carscript __instance)
             {
-                if (!InSession || RemoteShot.Count == 0 || __instance.driving2 || __instance.multiControlling) return;
+                if (!Entities.InSession || RemoteShot.Count == 0 || __instance.driving2 || __instance.multiControlling) return;
                 if (!Fresh(__instance, out var s)) return;
                 __instance.steer = __instance.isteer * __instance.steerAngle;
                 if (__instance.iLightsBDown) __instance.InteractSwitchLights();

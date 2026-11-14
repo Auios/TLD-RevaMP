@@ -22,6 +22,11 @@ namespace UnityEngine
 
 namespace TLDRevamp.Net
 {
+    internal static class EntitySeats
+    {
+        internal static long DriverSeatRefused;
+        internal static void SeatCollisionIgnore(TestPlayer player, TestSeat seat) => Entities.SeatCollisionIgnore(player, seat);
+    }
     internal static class EntityCarTuning { internal static void CopyTanksOnOwnerChange(Entities.Ent e, bool proxy) { } }
     public static partial class Entities
     {

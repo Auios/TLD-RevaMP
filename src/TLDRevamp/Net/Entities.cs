@@ -265,7 +265,7 @@ namespace TLDRevamp.Net
             PhysicalCars.Clear(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); BreaksReset();
             _tankTold.Clear(); _tankAddsOut.Clear(); _censusFirst.Clear(); _censusDue.Clear(); _repairWait.Clear(); _repairCycle.Clear(); _repairCursor = 0; _repairRunAt.Clear(); _placeRunAt.Clear(); _placeWait.Clear();
             ResetPoiCensus(); Leases.Clear(); LeaseTypes.Clear(); LeaseUntil.Clear(); LeaseAsked.Clear(); _leaseRetryAt.Clear(); PendingGrants.Clear(); _leasesDone.Clear(); _captureKnown = null; Captures.Clear();
-            ShotgunReset();
+            EntitySeats.ShotgunReset();
             AiReset();
             RabbitReset();
             PoiUsablesReset(); LiveUsablesReset();
@@ -440,10 +440,10 @@ namespace TLDRevamp.Net
             float dt = Time.unscaledDeltaTime;
             EntityWorldClock.HostClockTick();
             DriveClaimTick();
-            ShotgunTick(dt);
+            EntitySeats.ShotgunTick(dt);
             PushTick(dt);
             EntityRadio.RadioTick(dt);
-            KeyTick(); DevHooks.KeyTestTick?.Invoke();
+            EntitySeats.KeyTick(); DevHooks.KeyTestTick?.Invoke();
             HitchTick(); EditBackTick();
             PhysLockTick(dt);
             PushGripTick();
@@ -671,7 +671,7 @@ namespace TLDRevamp.Net
                         W.Reset(); WriteClaim(W, e.NetId, ClaimReason.Driver); ToServer(W, true);
                         ClaimsSent++;
                     }
-                    else DriverSeatConflictTick(pl, e);   // our claim answered: someone else at this wheel (Entities.Seat)
+                    else EntitySeats.DriverSeatConflictTick(pl, e);   // our claim answered: someone else at this wheel (Entities.Seat)
                     return;
                 }
             ShareItem(root, null);
@@ -773,8 +773,8 @@ namespace TLDRevamp.Net
                 case Resync: ServerResync(from, r); break;
                 case Edit: ServerEdit(from, r); break;
                 case Protocol.LiveUsable: ServerLiveUsable(from, r); break;
-                case IgnitionKey: ServerKey(from, r); break;
-                case ShotgunIn: ServerShotgun(from, r); break;
+                case IgnitionKey: EntitySeats.ServerKey(from, r); break;
+                case ShotgunIn: EntitySeats.ServerShotgun(from, r); break;
                 case PushIn: ServerPush(from, r); break;
                 case PlayerCombat.PlayerDamage: PlayerCombat.ServerReceive(from, r); break;
                 case ShotFx: EntityEffects.ServerShotFx(from, r); break;
@@ -1225,8 +1225,8 @@ namespace TLDRevamp.Net
                 case Resync: ApplyResync(r); break;
                 case Edit: ApplyEdit(r); break;
                 case Protocol.LiveUsable: ApplyLiveUsable(r); break;
-                case IgnitionKey: ApplyKey(r); break;
-                case ShotgunIn: ApplyShotgun(r); break;
+                case IgnitionKey: EntitySeats.ApplyKey(r); break;
+                case ShotgunIn: EntitySeats.ApplyShotgun(r); break;
                 case PushIn: ApplyPush(r); break;
                 case RadioSync: EntityRadio.ApplyRadio(r); break;
                 case PhysLockSync: ApplyPhysLock(r); break;
@@ -1337,7 +1337,7 @@ namespace TLDRevamp.Net
             if (proxy && e.Root != null && mainscript.s != null)
             {
                 var pl = mainscript.s.player;
-                if (pl != null && pl.Bsitting && pl.seat != null && pl.seat.transform.root == e.Root.transform.root) SeatCollisionIgnore(pl, pl.seat);
+                if (pl != null && pl.Bsitting && pl.seat != null && pl.seat.transform.root == e.Root.transform.root) EntitySeats.SeatCollisionIgnore(pl, pl.seat);
             }
             EntityCarTuning.CopyTanksOnOwnerChange(e, proxy);
             if (!proxy && e.WornBy >= 0) ClearWorn(e);   // ours now: loose where it was shown (on the head), the game's again

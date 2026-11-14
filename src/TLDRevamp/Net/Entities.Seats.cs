@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntitySeats
     {
         /// A vehicle's seats: its own hierarchy's (indices as before), then those of every body outside it that carries its
         /// part slots — Bus01's rear section (BusBack: its own body on a joint, 33 of the bus's 81 seats). Before, a player
@@ -53,16 +54,7 @@ namespace TLDRevamp.Net
         /// stool for a stool's, wherever the stool is).
         private static Ent SeatObject(seatscript seat)
         {
-            Ent best = null; int bestDepth = int.MaxValue;
-            var st = seat.transform;
-            foreach (var e in ByNet.Values)
-            {
-                if (e.Root == null || e.PartIndex >= 0 || !st.IsChildOf(e.Root.transform)) continue;
-                int d = 0;
-                for (var p = st; p != null && p != e.Root.transform; p = p.parent) d++;
-                if (d < bestDepth) { bestDepth = d; best = e; }
-            }
-            return best;
+            return Entities.SeatObjectAbove(seat.transform);
         }
 
         /// The local player's seat, if it belongs to a shared object: (network id, seat index), else net 0.
@@ -82,7 +74,7 @@ namespace TLDRevamp.Net
                 }
             }
             var root = pl.seat.transform.root;
-            foreach (var e in Placed())
+            foreach (var e in Entities.PlacedSeatObjects())
             {
                 if (e.Root == null || e.PartIndex >= 0) continue;
                 // only the vehicle itself: an item in the seated player's hand is in the car's hierarchy too (hand →
@@ -114,7 +106,7 @@ namespace TLDRevamp.Net
         /// v0.57.89) — before the bots sat in their cars no test had seated players in numbers.
         internal static Transform SeatTransformCached(uint net, int idx, ref Transform carRoot, ref Transform seat)
         {
-            if (!ByNet.TryGetValue(net, out var e) || (e.Root == null && !Resolve(e))) return null;
+            if (!Entities.TryGetEntity(net, out var e) || (e.Root == null && !Entities.ResolveEntity(e))) return null;
             var root = e.Root.transform.root;
             if (seat != null && carRoot == root) return seat;
             carRoot = root;
@@ -126,7 +118,7 @@ namespace TLDRevamp.Net
         internal static seatscript SeatScript(uint net, int idx, out carscript car)
         {
             car = null;
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return null;
+            if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return null;
             var seats = VehicleSeats(e.Root);
             if (idx < 0 || idx >= seats.Length || seats[idx] == null) return null;
             car = seats[idx].Car != null ? seats[idx].Car : e.Root.car;
@@ -135,7 +127,7 @@ namespace TLDRevamp.Net
 
         internal static Transform SeatTransform(uint net, int idx)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e)) return null;
+            if (!Entities.TryGetEntity(net, out var e) || !Entities.ResolveEntity(e)) return null;
             var seats = VehicleSeats(e.Root);
             if (idx < 0 || idx >= seats.Length) return null;
             return seats[idx].sitPos != null ? seats[idx].sitPos : seats[idx].transform;
@@ -145,8 +137,8 @@ namespace TLDRevamp.Net
         /// Why would SeatTransform(net, idx) fail right now (the seat-flicker probe).
         internal static string SeatWhy(uint net, int idx)
         {
-            if (!ByNet.TryGetValue(net, out var e)) return "{\"why\":\"net absent from ByNet\"}";
-            if (!Resolve(e)) return "{\"why\":\"Resolve failed (dormant)\"}";
+            if (!Entities.TryGetEntity(net, out var e)) return "{\"why\":\"net absent from ByNet\"}";
+            if (!Entities.ResolveEntity(e)) return "{\"why\":\"Resolve failed (dormant)\"}";
             if (e.Root == null) return "{\"why\":\"root null\"}";
             var seats = e.Root.transform.root.GetComponentsInChildren<seatscript>(true);
             return "{\"why\":\"idx " + idx + "/" + seats.Length + "\"}";

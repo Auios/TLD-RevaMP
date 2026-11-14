@@ -5,7 +5,7 @@ namespace TLDRevamp
     {
         internal static void Register()
         {
-            Reflect.RegisterMovedMembers(typeof(Net.Entities), typeof(Net.EntityRadio), typeof(Net.EntityWorldClock), typeof(Net.EntityWeather), typeof(Net.EntityCodec), typeof(Net.EntityCarSignals), typeof(Net.EntityEffects), typeof(Net.EntityExplosions), typeof(Net.EntityCarTuning), typeof(Net.EntityDoors));
+            Reflect.RegisterMovedMembers(typeof(Net.Entities), typeof(Net.EntityRadio), typeof(Net.EntityWorldClock), typeof(Net.EntityWeather), typeof(Net.EntityCodec), typeof(Net.EntityCarSignals), typeof(Net.EntityEffects), typeof(Net.EntityExplosions), typeof(Net.EntityCarTuning), typeof(Net.EntityDoors), typeof(Net.EntitySeats));
         }
     }
 }

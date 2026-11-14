@@ -10,7 +10,7 @@ namespace TLDRevamp.Net
     /// car, which is drawn at its physics pose, 230 of 230). While RayStuff runs, the camera is put where it is in the
     /// vehicle's physics frame, where the owner's camera is, and back afterwards. Everything RayStuff does with the camera
     /// (rays, forces, push points) acts on physics bodies, so all of it is in that frame.
-    public static partial class Entities
+    internal static partial class EntitySeats
     {
         public static long SeatAimFrames;
 
@@ -19,7 +19,7 @@ namespace TLDRevamp.Net
         internal static bool SeatAimFrame(out Transform drawn, out Rigidbody body)
         {
             drawn = null; body = null;
-            if (!InSession) return false;
+            if (!Entities.InSession) return false;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || !pl.Bsitting || pl.seat == null) return false;
             body = pl.seat.GetComponentInParent<Rigidbody>();

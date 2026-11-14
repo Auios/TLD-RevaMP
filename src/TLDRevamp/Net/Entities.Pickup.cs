@@ -47,7 +47,7 @@ namespace TLDRevamp.Net
                 return;
             }
             string seatTaken = DriverSeatClaimRefusal(se, from);   // someone else at its wheel (Entities.Seat)
-            if (seatTaken != null) { DriverSeatRefused++; RefuseClaim(from, se, seatTaken, reason); return; }
+            if (seatTaken != null) { EntitySeats.DriverSeatRefused++; RefuseClaim(from, se, seatTaken, reason); return; }
             se.ClaimedBy = from; se.ClaimedAt = Time.realtimeSinceStartup; se.ClaimedFromEpoch = se.Epoch;
             OwnerLog(se, from, ClaimName(reason) + (se.Driven ? " (owner's driver report " + (Time.realtimeSinceStartup - se.DrivenAt).ToString("F1") + " s old)" : ""));
             se.OwnerId = from; se.Epoch++;

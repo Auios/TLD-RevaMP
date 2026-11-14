@@ -10,9 +10,9 @@ namespace TLDRevamp.Net
     /// "ignition not turned on"). The key isn't one of the car's saved usables, so no edit carried it either. Now the
     /// holding goes to the owner (on change, again every KeyResendS while held), whose game is made to see the key held
     /// for as long: the toggle or the start happens there, the game's own way, and comes back with its signals.
-    public static partial class Entities
+    internal static partial class EntitySeats
     {
-        public const byte IgnitionKey = 96;   // u32 net, u8 held: a non-owner holding a car's key (reliable)
+        private static readonly NetWriter W = new NetWriter();
         public static float KeyResendS = 0.5f, KeyHoldTimeoutS = 1.5f;
         public static long KeyHoldsSent, KeyHoldsApplied, KeyHoldsRefused;
 
@@ -26,13 +26,13 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static bool Prefix(carscript __instance)
             {
-                if (!InSession || !IsProxy(__instance)) return true;
+                if (!Entities.InSession || !Entities.IsProxy(__instance)) return true;
                 if (__instance.ignitionUsable != null && __instance.ignitionUsable.Holding()) _keySeen[__instance] = Time.time;
                 return false;
             }
         }
 
-        private static void KeyTick()
+        internal static void KeyTick()
         {
             if (_keyCar == null && _keySeen.Count == 0 && _keyHolds.Count == 0) return;
             // copy side
@@ -45,7 +45,7 @@ namespace TLDRevamp.Net
                 if (_keyCar != null) SendKey(_keyNet, false, Mathf.Max(0f, _keyLastAt - _keyFirstAt));
                 _keyCar = held; _keyNet = 0;
                 uint net = 0;
-                if (held != null) foreach (var e in ByNet.Values) if (e.Proxy && e.Root != null && e.Root.car == held && e.PartIndex < 0) { net = e.NetId; break; }
+                if (held != null) { var e = Entities.ProxySeatCar(held, true); if (e != null) net = e.NetId; }
                 if (net != 0) { _keyNet = net; _keyFirstAt = Time.time; SendKey(net, true, 0f); }
                 else _keyCar = null;
             }
@@ -58,7 +58,7 @@ namespace TLDRevamp.Net
             foreach (var kv in _keyHolds)
             {
                 var c = kv.Key; var h = kv.Value;
-                if (c == null || c.ignitionUsable == null || IsProxy(c)) { _keyDone.Add(c); continue; }
+                if (c == null || c.ignitionUsable == null || Entities.IsProxy(c)) { _keyDone.Add(c); continue; }
                 // still held past the game's toggle time: a start (cranking while held), not a switch
                 if (!h.Active && now - h.PressAt > c.startingTime + KeyTapMarginS) { h.Active = true; h.Until = Mathf.Max(h.Until, now); }
                 if (!h.Active) { if (now > h.PressAt + KeyHoldTimeoutS) _keyDone.Add(c); continue; }
@@ -76,21 +76,21 @@ namespace TLDRevamp.Net
         private static void SendKey(uint net, bool held, float heldS)
         {
             if (net == 0) return;
-            W.Reset(); W.U8(IgnitionKey); W.U32(net); W.U8((byte)(held ? 1 : 0)); W.U16((ushort)Mathf.Clamp(Mathf.RoundToInt(heldS * 1000f), 0, 65535));
-            ToServer(W, true);
+            W.Reset(); W.U8(Entities.IgnitionKey); W.U32(net); W.U8((byte)(held ? 1 : 0)); W.U16((ushort)Mathf.Clamp(Mathf.RoundToInt(heldS * 1000f), 0, 65535));
+            Entities.SendToServer(W, true);
             _keySentAt = Time.realtimeSinceStartup;
             KeyHoldsSent++;
         }
 
         /// Server: from a player at the car (seated in it, or within reach) to its owner.
-        private static void ServerKey(int from, NetReader r)
+        internal static void ServerKey(int from, NetReader r)
         {
             uint net = r.U32(); byte held = r.U8(); ushort ms = r.U16();
-            if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId == from || !se.Car) { KeyHoldsRefused++; return; }
-            if (from != 0 && !TakeToken(_editBuckets, from, EditRatePerS, EditBurst)) { KeyHoldsRefused++; return; }
-            if (from != 0 && !AtObject(from, se)) { KeyHoldsRefused++; Refuse(ref EditsOutOfReach, "key reach", $"ignition key from player {from}: they aren't at net {net}"); return; }
-            W.Reset(); W.U8(IgnitionKey); W.U32(net); W.U8(held); W.U16(ms);
-            ServerSendTo(se.OwnerId, W, true);
+            if (r.Bad || !Entities.TryKeyOwner(net, from, out int owner)) { KeyHoldsRefused++; return; }
+            if (from != 0 && !Entities.TakeKeyToken(from)) { KeyHoldsRefused++; return; }
+            if (from != 0 && !Entities.KeyReachAllowed(from, net)) { KeyHoldsRefused++; Entities.RefuseKeyReach(from, net); return; }
+            W.Reset(); W.U8(Entities.IgnitionKey); W.U32(net); W.U8(held); W.U16(ms);
+            Entities.SendToPeer(owner, W, true);
         }
 
         // ---- the owner's side
@@ -101,10 +101,10 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<carscript, KeyHold> _keyHolds = new Dictionary<carscript, KeyHold>();
         private static readonly List<carscript> _keyDone = new List<carscript>();
 
-        private static void ApplyKey(NetReader r)
+        internal static void ApplyKey(NetReader r)
         {
             uint net = r.U32(); bool held = r.U8() != 0; float heldS = r.U16() / 1000f;
-            if (r.Bad || !ByNet.TryGetValue(net, out var e) || e.Proxy || !Resolve(e) || e.Root == null || e.Root.car == null) return;
+            if (r.Bad || !Entities.TryGetEntity(net, out var e) || e.Proxy || !Entities.ResolveEntity(e) || e.Root == null || e.Root.car == null) return;
             var c = e.Root.car;
             float now = Time.realtimeSinceStartup;
             if (!_keyHolds.TryGetValue(c, out var h)) { if (!held) return; _keyHolds[c] = h = new KeyHold { PressAt = now }; }
