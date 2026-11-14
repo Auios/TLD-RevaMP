@@ -130,8 +130,6 @@ namespace TLDRevamp.Net
         internal static void WritePoi(NetWriter w, int poi, PoiState state) => throw new NotSupportedException();
         internal static void ApplyAttachPose(Ent e, attachablescript at, Vector3 p, Quaternion q) { at.transform.localPosition = p; at.transform.localRotation = q; }
         internal static void TelemetryRender() { }
-        internal static nyulscript NyOf(Ent e) => null;
-        internal static string RabbitJson(Ent e) => "{}";
     }
     internal static partial class ItemSnapshot { internal static object Capture(tosaveitemscript it) => it; }
     internal static partial class Protocol { internal const byte LiveUsable = 93; internal const int StateHz = 20; }

@@ -71,7 +71,7 @@ namespace UnityEngine
         public static Quaternion operator *(Quaternion a, Quaternion b) => b;
     }
     public class Collider : Component { public Vector3 ClosestPoint(Vector3 p) => p; public bool isTrigger, enabled = true; public Bounds bounds; }
-    public struct Bounds { public Vector3 center; public float SqrDistance(Vector3 p) => (p - center).sqrMagnitude; }
+    public partial struct Bounds { public Vector3 center; public float SqrDistance(Vector3 p) => (p - center).sqrMagnitude; }
     public struct RaycastHit { public float distance; public Collider collider; public Vector3 point, normal; }
     public struct Ray { public Ray(Vector3 p, Vector3 n) { } }
     public enum QueryTriggerInteraction { Collide }

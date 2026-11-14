@@ -3,6 +3,13 @@
   <ItemGroup>
     <Compile Include="EntitySplitTest.cs" />
     <Compile Include="EntityAIStubs.cs" />
+    <Compile Include="EntityRabbitsStubs.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Rabbits.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.RabbitOwners.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.RabbitRole.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.RabbitState.cs" />
+    <Compile Include="EntityRabbitsChecks.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/RabbitStateCodec.cs" />
     <Compile Include="EntityAIChecks.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Ai.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Tumbleweeds.cs" />
@@ -69,7 +76,8 @@
       <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
     </PropertyGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractFeatureWire.py&quot; &quot;$(IntermediateOutputPath)FeatureWire.g.cs&quot; $(FeatureWireBaseline)" />
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractRabbitWire.py&quot; &quot;$(IntermediateOutputPath)RabbitWire.g.cs&quot; $(RabbitWireBaseline)" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractAIWire.py&quot; &quot;$(IntermediateOutputPath)AIWire.g.cs&quot; $(AIWireBaseline)" />
-    <ItemGroup><Compile Include="$(IntermediateOutputPath)FeatureWire.g.cs" /><Compile Include="$(IntermediateOutputPath)AIWire.g.cs" /></ItemGroup>
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)RabbitWire.g.cs" /><Compile Include="$(IntermediateOutputPath)FeatureWire.g.cs" /><Compile Include="$(IntermediateOutputPath)AIWire.g.cs" /></ItemGroup>
   </Target>
 </Project>

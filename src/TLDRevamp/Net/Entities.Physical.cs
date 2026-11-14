@@ -93,7 +93,7 @@ namespace TLDRevamp.Net
             CargoNearTick(dt);   // before the copies move this step: claimed before they touch
             BodyNearTick(dt);    // the same for loose items the local player walks into (Entities.BodyPush)
             ItemNearTick(dt);    // and for loose items a moving item of ours is about to hit (Entities.ItemPush)
-            RabbitNearTick(dt);
+            EntityRabbits.RabbitNearTick(dt);
             DevHooks.EntityWatch?.Invoke();
             if (CopiesMoveByBody) BodyMotionTick(dt);
             else foreach (var e in ByNet.Values) if (e.MovedByBody) StopBodyMotion(e);   // switched off: back to transform writes

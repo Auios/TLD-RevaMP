@@ -4,6 +4,150 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        public const byte RabbitState = 90, RabbitFx = 91;
+        private static readonly bool _rabbitLookupsReady = EntityRabbits.InitializeRabbitLookups();
+        internal sealed class RabCharge { public Vector3d At; public float Speed, Until, OwnSpeed; }
+        public static bool RabbitSync { get => EntityRabbits.RabbitSync; set => EntityRabbits.RabbitSync = value; }
+        public static bool RabbitOwners { get => EntityRabbits.RabbitOwners; set => EntityRabbits.RabbitOwners = value; }
+        public static float RabbitNearM { get => EntityRabbits.RabbitNearM; set => EntityRabbits.RabbitNearM = value; }
+        public static float RabbitSwitchM { get => EntityRabbits.RabbitSwitchM; set => EntityRabbits.RabbitSwitchM = value; }
+        public static float RabbitHoldS { get => EntityRabbits.RabbitHoldS; set => EntityRabbits.RabbitHoldS = value; }
+        public static float RabbitCarMoveMps { get => EntityRabbits.RabbitCarMoveMps; set => EntityRabbits.RabbitCarMoveMps = value; }
+        public static float RabbitClaimM { get => EntityRabbits.RabbitClaimM; set => EntityRabbits.RabbitClaimM = value; }
+        public static float RabbitClaimSteps { get => EntityRabbits.RabbitClaimSteps; set => EntityRabbits.RabbitClaimSteps = value; }
+        public static float RabbitNextSize { get => EntityRabbits.RabbitNextSize; set => EntityRabbits.RabbitNextSize = value; }
+        internal static nyulscript NyOf(Ent e) => EntityRabbits.NyOf(e);
+        internal static void RabbitBeforeShare(tosaveitemscript root) => EntityRabbits.RabbitBeforeShare(root);
+        internal static void RabbitSpawned(GameObject go) => EntityRabbits.RabbitSpawned(go);
+        internal static bool RabbitBreakOnCopy(breakablescript br, float force) => EntityRabbits.RabbitBreakOnCopy(br, force);
+        internal static void RabbitContact(uint net, Collision c) => EntityRabbits.RabbitContact(net, c);
+        internal static string RabbitJson(Ent e) => EntityRabbits.RabbitJson(e);
+        public static string RabbitList() => EntityRabbits.RabbitList();
+        internal static System.Collections.Generic.IReadOnlyDictionary<movecreaturescript, RabCharge> ObservedRabCharges => EntityRabbits.ObservedRabCharges;
+        internal static bool RabbitHandoverActive(Ent e) => Time.realtimeSinceStartup - e.OwnerAt <= HandoverWindowS;
+        internal static byte[] CaptureRabbitSnapshot(NetReader r) => FinalSnapshot(r, true);
+        internal static Ent RabbitOfItem(tosaveitemscript it)
+        {
+            foreach (var e in ByNet.Values) if (e.Root == it && e.PartIndex < 0) return e;
+            return null;
+        }
+        internal static void CollectRabbits(System.Collections.Generic.List<Ent> into)
+        {
+            foreach (var e in ByNet.Values) if (NyOf(e) != null) into.Add(e);
+        }
+        internal static System.Collections.Generic.IEnumerable<Ent> KnownRabbits()
+        {
+            foreach (var e in ByNet.Values) if (NyOf(e) != null) yield return e;
+        }
+        internal static bool HasRabbitCars => _localCars.Count != 0;
+        internal static System.Collections.Generic.IEnumerable<carscript> LocalRabbitCars()
+        {
+            foreach (var car in _localCars) yield return car;
+        }
+        internal static bool ClaimRabbitObject(Ent e, ClaimReason reason) => ClaimCargo(e, reason: reason);
+        internal static Bounds RabbitCarBounds(carscript car) => CarLocalBounds(car);
+        internal static Ent RabbitProxyOf(Transform root) => ProxyOf(root);
+
+        /// Server: nearest ready player or moving car, with the original hold and switch distances.
+        internal static void ChooseRabbitOwner(float dt, ref float elapsed, System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<int, Vector3d>> anchors)
+        {
+            if (Mp.Server == null || !EntityRabbits.RabbitSync || !EntityRabbits.RabbitOwners) return;
+            elapsed += dt;
+            if (elapsed < 0.25f) return;
+            elapsed = 0f;
+            bool any = false;
+            foreach (var se in Server.Values) if (se.Rabbit) { any = true; break; }
+            if (!any) return;
+            Mp.Server.ReadyPeers(anchors);
+            if (!DedicatedServer.Enabled && mainscript.s != null && mainscript.s.player != null)
+                anchors.Add(new System.Collections.Generic.KeyValuePair<int, Vector3d>(0, mainscript.GlobalFromUnityPos(mainscript.s.player.transform.position)));
+            float rt = Time.realtimeSinceStartup;
+            foreach (var c in Server.Values)
+                if (c.Car && c.PartIndex < 0 && c.HasState && ((c.Driven && rt - c.DrivenAt < 1f) || c.Speed > EntityRabbits.RabbitCarMoveMps))
+                    anchors.Add(new System.Collections.Generic.KeyValuePair<int, Vector3d>(c.OwnerId, c.Where));
+            if (anchors.Count < 2) return;   // one machine: nothing to decide
+            double near2 = EntityRabbits.RabbitNearM * (double)EntityRabbits.RabbitNearM;
+            foreach (var se in Server.Values)
+            {
+                // locked in a container (a dead rabbit in a car's bed): it goes with the container's owner (contents claims),
+                // and this rule took it back every ~2 s — an owner change on every machine each time
+                if (!se.Rabbit || se.PartIndex >= 0 || se.CrashReturnTo >= 0 || se.Held || se.Stored || se.LockFrame != 0 || rt < se.RabbitHoldUntil) continue;
+                int best = -1; double bestD = double.MaxValue, curD = double.MaxValue;
+                foreach (var p in anchors)
+                {
+                    double d = (p.Value - se.Where).sqrMagnitude;
+                    if (p.Key == se.OwnerId) { if (d < curD) curD = d; continue; }
+                    if (d < bestD && (p.Key == 0 || KnownBy(p.Key).Contains(se.NetId))) { bestD = d; best = p.Key; }
+                }
+                if (best < 0 || bestD > near2) continue;
+                double bd = System.Math.Sqrt(bestD), cd = curD == double.MaxValue ? double.MaxValue : System.Math.Sqrt(curD);
+                if (cd <= bd + EntityRabbits.RabbitSwitchM) continue;
+                EntityRabbits.RabbitLastMove = "net " + se.NetId + ": " + se.OwnerId + " -> " + best + " (" + bd.ToString("F1") + " m against " + (cd == double.MaxValue ? "none" : cd.ToString("F1")) + ")";
+                OwnerLog(se, best, "rabbit: nearest player / moving car");
+                se.OwnerId = best; se.Epoch++; EntityRabbits.RabbitOwnerMoves++;
+                W.Reset(); W.U8(Owner); W.U32(se.NetId); W.VarU32((uint)best); W.U32(se.Epoch);
+                ServerSendAll(W, true, -1);
+                CascadeOwner(se);
+            }
+        }
+
+        /// A provisional local claim uses the shared claim writer before the next physics step.
+        internal static bool ClaimNow(Ent e, ClaimReason reason)
+        {
+            float now = Time.realtimeSinceStartup;
+            if (now - e.OwnerAt < CargoClaimCooldownS) return false;
+            e.OwnerAt = now;
+            SetProxy(e, false);
+            e.OwnerId = MyId;
+            W.Reset(); WriteClaim(W, e.NetId, reason); ToServer(W, true);
+            ClaimsSent++;
+            return true;
+        }
+
+        /// A newly claimed rabbit stays with its claimer for the existing hold interval.
+        internal static void RabHold(uint net) { if (Server.TryGetValue(net, out var se) && se.Rabbit) se.RabbitHoldUntil = Time.realtimeSinceStartup + RabbitHoldS; }
+
+        /// Server, at Share: record position and root kind.
+        private static void ShareFacts(byte[] rec, SEnt se)
+        {
+            var d = RecordCodec.Decode(rec);
+            if (d == null || d.items.Count == 0) return;
+            se.Where = d.items[0].transform.pos;
+            se.TelemetryCategory = TelemetryPrefabCategory(d.items[0].prefabID);
+            uint id = d.items[0].id;
+            foreach (var n in d.nyul) if (n != null && n.id == id) { se.Rabbit = true; break; }
+            foreach (var c in d.car) if (c != null && c.id == id) { se.Car = true; break; }
+        }
+
+        private static void ServerRabbitState(int from, NetReader r)
+        {
+            var s = RabbitStateCodec.Read(r);
+            if (r.Bad || !Server.TryGetValue(s.Net, out var se) || se.Epoch != s.Epoch)
+            { EntityRabbits.RabbitStatesStale++; return; }
+            if (se.OwnerId != from)
+            {
+                // One final target from the departing owner, using the existing handover epoch/window.
+                if (se.PrevOwnerId != from || Time.realtimeSinceStartup - se.PrevOwnerAt > HandoverAcceptS || se.RabbitHandoverEpoch == s.Epoch)
+                { EntityRabbits.RabbitStatesStale++; return; }
+                se.RabbitHandoverEpoch = s.Epoch;
+            }
+            se.RabbitSnapshot = FinalSnapshot(r, true);
+            // The host keeps the durable snapshot; returning known copies get it from StateInterestCatchUp.
+            WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
+            if (se.OwnerId != from) ServerSendTo(se.OwnerId, WS, true);
+            foreach (var kv in Known)
+                if (kv.Key != from && kv.Key != se.OwnerId && kv.Value.Contains(s.Net) && RabbitReceiverNear(kv.Key, se)) ServerSendTo(kv.Key, WS, true);
+        }
+
+        private static void SendRabbitSnapshot(int playerId, SEnt se)
+        {
+            if (se.RabbitSnapshot == null) return;
+            var r = new NetReader { Buf = se.RabbitSnapshot, Pos = 1, End = se.RabbitSnapshot.Length };
+            var s = RabbitStateCodec.Read(r);
+            if (r.Bad || s.Epoch != se.Epoch) return;
+            WS.Reset(); WS.Bytes(se.RabbitSnapshot, 0, se.RabbitSnapshot.Length); ServerSendTo(playerId, WS, true);
+        }
+
         public const byte BreakHit = 48, BreakFx = 49, AiState = 50, AiSound = 51, WorldBreak = 112;
         private static readonly bool _aiLookupsReady = EntityAI.InitializeAiLookups();
         public static string AiStats() => EntityAI.AiStats();
@@ -97,8 +241,7 @@ namespace TLDRevamp.Net
         }
         internal static void ForgetDeathCorpse(uint net) => ByNet.Remove(net);
         internal static void TrackRagdollLimb(GameObject go, bool copy) { if (copy) ProxyItems.Add(go); else ProxyItems.Remove(go); }
-        static partial void RabBodyCheck(aiscript rab, ref bool gone);
-        internal static bool RagdollRabbitBodyGone(aiscript rab) { bool gone = false; RabBodyCheck(rab, ref gone); return gone; }
+        internal static bool RagdollRabbitBodyGone(aiscript rab) { bool gone = false; EntityRabbits.RabBodyCheck(rab, ref gone); return gone; }
         /// The network id of a shared object by its save id (0 while the share is still pending).
         internal static uint NetIdOfSaveId(uint saveId)
         {

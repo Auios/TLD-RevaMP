@@ -29,7 +29,7 @@ namespace TLDRevamp.Net
         internal static ushort NextUsableSequence(UsableKey key)
         { _liveOut.TryGetValue(key, out ushort seq); _liveOut[key] = ++seq; return seq; }
         internal static void RememberLeaseRequest(string key) => LeaseAsked.Add(key);
-        internal static void SetRabbitCharge(movecreaturescript move, RabCharge charge) => RabCharges[move] = charge;
+        internal static void SetRabbitCharge(movecreaturescript move, RabCharge charge) => EntityRabbits.SetRabbitCharge(move, charge);
         internal static bool ApplyingState { get => _applyingState; set => _applyingState = value; }
         internal static void ObserveBreaks(uint net, out int count, out Transform done) => EntityAI.ObserveBreaks(net, out count, out done);
         internal readonly struct ServerObservation

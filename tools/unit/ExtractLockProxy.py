@@ -37,5 +37,13 @@ source = source[source.index('        private static class PickupClaim'):]
 roles += '\n' + method('Prefix').replace('Prefix(', 'PickupPrefix(')
 source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Attach.cs').read_text(encoding='utf-8')
 
+roles += '\n' + method('CascadeOwner')
+source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Features.cs').read_text(encoding='utf-8')
+for name in ['ChooseRabbitOwner', 'ServerRabbitState', 'SendRabbitSnapshot']:
+    roles += '\n' + method(name)
+for name in ['RabbitHandoverActive', 'CaptureRabbitSnapshot']:
+    roles += '\n' + next(line for line in source.splitlines() if ' static ' in line and name + '(' in line)
+roles += '\n        internal static void SendToServer(NetWriter w, bool reliable) => ToServer(w, reliable);\n'
+
 target.write_text('using System;\nusing UnityEngine;\nusing System.Collections.Generic;\nnamespace TLDRevamp.Net { public static partial class Entities {\n' +
-                  roles + '\n' + method('CascadeOwner') + '\n} }\n', encoding='utf-8', newline='\n')
+                  roles + '\n} }\n', encoding='utf-8', newline='\n')

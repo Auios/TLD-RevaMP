@@ -267,7 +267,7 @@ namespace TLDRevamp.Net
             ResetPoiCensus(); Leases.Clear(); LeaseTypes.Clear(); LeaseUntil.Clear(); LeaseAsked.Clear(); _leaseRetryAt.Clear(); PendingGrants.Clear(); _leasesDone.Clear(); _captureKnown = null; Captures.Clear();
             EntitySeats.ShotgunReset();
             EntityAI.AiReset();
-            RabbitReset();
+            EntityRabbits.RabbitReset();
             PoiUsablesReset(); LiveUsablesReset();
             InterestReset(); EditCheckReset();
             EntityHands.WornReset();
@@ -451,7 +451,7 @@ namespace TLDRevamp.Net
             EntityWorldClock.ServerTimeTick(dt);
             ServerInterestTick(dt);
             ServerHandoffTick(dt);
-            ServerRabbitTick(dt);
+            EntityRabbits.ServerRabbitTick(dt);
             EntityWorldClock.SleepTick(dt);
             double now = Time.realtimeSinceStartupAsDouble;
             _driverCheck += dt;
@@ -465,7 +465,7 @@ namespace TLDRevamp.Net
             MemberGoneTick();
             if (IsHost) ShareQuotaTick();
             EntityAI.AiTick();
-            RabbitTick();
+            EntityRabbits.RabbitTick();
             EntityHands.WornTick();
             GentleTick();
             ClaimTraceTick();
@@ -1252,8 +1252,8 @@ namespace TLDRevamp.Net
                 case WorldBreak: EntityAI.ApplyWorldBreak(r); break;
                 case AiState: EntityAI.ApplyAiState(r); break;
                 case AiSound: EntityAI.ApplyAiSound(r); break;
-                case RabbitState: ApplyRabbitState(r); break;
-                case RabbitFx: ApplyRabbitFx(r); break;
+                case RabbitState: EntityRabbits.ApplyRabbitState(r); break;
+                case RabbitFx: EntityRabbits.ApplyRabbitFx(r); break;
                 case PoiUsable: ApplyPoiUsable(r); break;
                 case RemoveItem: { uint net = r.U32(); if (!r.Bad) ApplyRemoveItem(net); break; }
                 case MemberGone: ApplyMemberGone(r); break;
@@ -1286,7 +1286,7 @@ namespace TLDRevamp.Net
                     if (r.Bad || !ByNet.TryGetValue(net, out var e) || epoch < e.Epoch) return;
                     HitchBeforeOwner(e, owner, epoch);
                     // ours until now, someone else's from this epoch on: our last word on its state goes to them
-                    if (!e.Proxy && e.OwnerId == MyId && owner != MyId && epoch != e.Epoch) { SendRabbitHandover(e, epoch); SendHandover(e, epoch); }
+                    if (!e.Proxy && e.OwnerId == MyId && owner != MyId && epoch != e.Epoch) { EntityRabbits.SendRabbitHandover(e, epoch); SendHandover(e, epoch); }
                     if (owner == MyId) { e.SentAtRest = false; e.SentWornSlot = -1; e.SentStateLength = 0; e.LastStateEpoch = 0; e.CompactStamp = 0; }   // ours (again, or confirmed after a refused claim): one fresh state out (and what it is worn as)
                     if (e.WornBy >= 0 && owner != e.WornBy) EntityHands.ClearWorn(e);   // someone else's now: off the head it was on
                     // Lost a grab race (both players picked it up at once; the server gave it to the other — it never takes
@@ -1430,7 +1430,7 @@ namespace TLDRevamp.Net
                 e.Ip = null;
                 AttachContact(e);   // simulated here: relay contact impulses to the other machine's entity
             }
-            RabbitRole(e, proxy);
+            EntityRabbits.RabbitRole(e, proxy);
             if (proxy && e.PoseLocked && e.ReceivedStateEpoch == e.Epoch) EnsurePoseLock(e);
         }
 
@@ -1572,7 +1572,7 @@ namespace TLDRevamp.Net
                     root.transform.SetPositionAndRotation(mainscript.UnityPosFromGlobal(pos), rot);
                 if (e.SettledState[0] == State) { ReadWheels(r, e); ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e); EntityRagdolls.ReadRagdoll(r, e, pos, rot); }
             }
-            RestoreRabbitState(e);
+            EntityRabbits.RestoreRabbitState(e);
             RebindPoseLocks(e);
             // Simulated here: the new game object relays its contacts again, as Bind does. The relay sat on the old object,
             // which the game destroyed when it streamed out (or replaced in the same frame), so an owned object that came

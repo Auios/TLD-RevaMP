@@ -27,6 +27,7 @@ static partial class EntitySplitTest
 
     static void Main()
     {
+        RabbitChecks();
         AIChecks();
         RagdollsChecks();
         HandsChecks();
@@ -37,7 +38,7 @@ static partial class EntitySplitTest
         CarSignalChecks();
         EffectsChecks();
         CoreMembers.Register();
-        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals"), (typeof(EntityEffects), "PlayerSounds"), (typeof(EntityExplosions), "Explosions"), (typeof(EntityCarTuning), "CarTune"), (typeof(EntityDoors), "CarDoors"), (typeof(EntitySeats), "Seat"), (typeof(EntityHands), "Carried"), (typeof(EntityRagdolls), "Death"), (typeof(EntityAI), "Ai") })
+        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals"), (typeof(EntityEffects), "PlayerSounds"), (typeof(EntityExplosions), "Explosions"), (typeof(EntityCarTuning), "CarTune"), (typeof(EntityDoors), "CarDoors"), (typeof(EntitySeats), "Seat"), (typeof(EntityHands), "Carried"), (typeof(EntityRagdolls), "Death"), (typeof(EntityAI), "Ai"), (typeof(EntityRabbits), "Rabbits") })
         {
             var type = feature.Item1;
             Check(type.IsNotPublic && type.IsAbstract && type.IsSealed, type.Name + " is internal static");

@@ -1,8 +1,9 @@
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityRabbits
     {
         /// SetProxy: a rabbit changing hands. Made a copy: it stops biting here. Made ours: it carries on from the
         /// owner's last word - where it was heading, roar and bite over, its last speed as "last frame's" (aiscript kills a
@@ -24,17 +25,17 @@ namespace TLDRevamp.Net
             RabViews.Remove(ny);
         }
 
-        private static void SendRabbitHandover(Ent e, uint epoch)
+        internal static void SendRabbitHandover(Ent e, uint epoch)
         {
             var ny = NyOf(e);
-            if (!RabbitSync || ny == null || ny.AI == null || !Finite(ny.AI.interestPos)) return;
+            if (!RabbitSync || ny == null || ny.AI == null || !Entities.IsFinite(ny.AI.interestPos)) return;
             var target = mainscript.GlobalFromUnityPos(ny.AI.interestPos);
             var w = new NetWriter();
             RabbitStateCodec.Write(w, new RabbitStateCodec.State {
                 Net = e.NetId, Epoch = epoch, Flags = RabFlags(ny),
                 Run = (byte)Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp(ny.runValue, 0f, 0.5f) * 200f), 0, 100),
                 Seen = Time.time - NyLastSee(ny) < ny.targetForgetTime, X = target.x, Y = target.y, Z = target.z });
-            ToServer(w, true); RabbitStatesSent++;
+            Entities.SendToServer(w, true); RabbitStatesSent++;
         }
 
         private static void RabbitHandoverTarget(Ent e, RabbitStateCodec.State s)

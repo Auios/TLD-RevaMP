@@ -7,10 +7,10 @@ namespace TLDRevamp.Net
     {
         static readonly NetWriter W = new NetWriter();
         static bool WornSync = false;
-        static float RabbitHoldS = 2, RabbitNearM = 60, RabbitSwitchM = 5, RabbitCarMoveMps = 1.5f, _rabSrvAcc;
-        static bool RabbitSync = true, RabbitOwners = true;
-        static long RabbitOwnerMoves;
-        static string RabbitLastMove;
+        internal static float RabbitHoldS = 2, RabbitNearM = 60, RabbitSwitchM = 5, RabbitCarMoveMps = 1.5f;
+        internal static bool RabbitSync = true, RabbitOwners = true;
+        internal static long RabbitOwnerMoves;
+        internal static string RabbitLastMove;
         static System.Collections.Generic.HashSet<uint> KnownBy(int player)
         { if (!Known.TryGetValue(player, out var set)) Known[player] = set = new System.Collections.Generic.HashSet<uint>(); return set; }
         static string Refusal;
@@ -91,9 +91,9 @@ namespace TLDRevamp.Net
             Mp.Server = new TestServer();
             Mp.Server.Positions[0] = default; Mp.Server.Positions[1] = new Vector3d(20, 0, 0);
             var rabbit = new SEnt { NetId = 9, Epoch = 1, OwnerId = 1, Rabbit = true, Held = true }; Server[9] = rabbit;
-            ServerRabbitTick(.25f);
+            EntityRabbits.ServerRabbitTick(.25f);
             IdleTrafficTest.Check(rabbit.OwnerId == 1, "ordinary held pose excludes rabbit from nearest-player transfer");
-            rabbit.Held = false; ServerRabbitTick(.25f);
+            rabbit.Held = false; EntityRabbits.ServerRabbitTick(.25f);
             IdleTrafficTest.Check(rabbit.OwnerId == 0, "nearest-player policy resumes when held pose clears");
             Mp.Server = null; Known.Clear(); Server.Clear();
 

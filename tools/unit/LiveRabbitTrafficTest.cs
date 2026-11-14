@@ -7,13 +7,10 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         public const byte RabbitState = 90;
-        static long RabbitStatesStale, RabbitStatesApplied, RabbitStatesSent;
         static float HandoverAcceptS = 5, HandoverWindowS = 2;
-        static ref float NyLastSee(nyulscript ny) => ref ny.lastSee;
-        static byte RabFlags(nyulscript ny) => ny.AI.fleeing ? (byte)1 : (byte)4;
         static readonly List<int> RabbitRecipients = new List<int>();
         static byte[] LastInterestPacket;
-        static nyulscript NyOf(Ent e) => e.Root?.nyul;
+        internal static nyulscript NyOf(Ent e) => e.Root?.nyul;
         static void ServerSendTo(int player, NetWriter w, bool reliable)
         {
             IdleTrafficTest.Check(reliable, "rabbit changes and cached snapshots use reliable transport");
@@ -97,22 +94,22 @@ namespace TLDRevamp.Net
                 var next = new Ent { NetId = 596, Epoch = 2, Proxy = true, OwnerAt = Time.realtimeSinceStartup };
                 next.Root.nyul = new TestRabbit { AI = new TestOldAi { alive = true, fleeing = fleeing } };
                 next.Root.transform.position = new Vector3(500, 2, 0);
-                RabViews[next.Root.nyul] = new RabView { Has = true, Flags = 1, Interest = new Vector3d(40, 2, 0) };
+                EntityRabbits.SeedView(next.Root.nyul);
                 SetProxy(next, false); ByNet[596] = next;
                 var transfer = new SEnt { NetId = 596, Epoch = 2, OwnerId = 2, PrevOwnerId = 1, PrevOwnerAt = Time.realtimeSinceStartup };
                 Server[596] = transfer; Known[2] = new HashSet<uint>();
-                SendRabbitHandover(old, 2);
+                EntityRabbits.SendRabbitHandover(old, 2);
                 ServerRabbitState(1, new NetReader { Buf = Uploaded, Pos = 1, End = Uploaded.Length });
-                ApplyRabbitState(new NetReader { Buf = LastInterestPacket, Pos = 1, End = LastInterestPacket.Length });
+                EntityRabbits.ApplyRabbitState(new NetReader { Buf = LastInterestPacket, Pos = 1, End = LastInterestPacket.Length });
                 IdleTrafficTest.Check(next.Root.nyul.AI.interestPos.x == 540 && !next.Root.nyul.AI.fleeing, "second machine's real RabbitRole plus final handover target continues forward without a stimulus");
-                long rejected = RabbitStatesStale;
+                long rejected = EntityRabbits.RabbitStatesStale;
                 ServerRabbitState(1, new NetReader { Buf = Uploaded, Pos = 1, End = Uploaded.Length });
-                IdleTrafficTest.Check(RabbitStatesStale == rejected + 1, "departing owner gets only one final target per epoch");
+                IdleTrafficTest.Check(EntityRabbits.RabbitStatesStale == rejected + 1, "departing owner gets only one final target per epoch");
                 transfer.RabbitHandoverEpoch = 0; transfer.PrevOwnerAt = Time.realtimeSinceStartup - 6;
                 ServerRabbitState(1, new NetReader { Buf = Uploaded, Pos = 1, End = Uploaded.Length });
-                IdleTrafficTest.Check(RabbitStatesStale == rejected + 2, "late departing owner cannot change target");
-                next.OwnerAt -= 3; old.Root.nyul.AI.interestPos.x = 900; SendRabbitHandover(old, 2);
-                ApplyRabbitState(new NetReader { Buf = Uploaded, Pos = 1, End = Uploaded.Length });
+                IdleTrafficTest.Check(EntityRabbits.RabbitStatesStale == rejected + 2, "late departing owner cannot change target");
+                next.OwnerAt -= 3; old.Root.nyul.AI.interestPos.x = 900; EntityRabbits.SendRabbitHandover(old, 2);
+                EntityRabbits.ApplyRabbitState(new NetReader { Buf = Uploaded, Pos = 1, End = Uploaded.Length });
                 IdleTrafficTest.Check(next.Root.nyul.AI.interestPos.x == 540, "late final target does not overwrite established local AI");
                 ByNet.Clear(); Server.Clear(); Known.Clear();
             }
@@ -123,17 +120,17 @@ namespace TLDRevamp.Net
                 "reliable change reaches host and all known copies; owner and unknown viewers excluded");
             RabbitRecipients.Clear(); SendRabbitSnapshot(3, se);
             IdleTrafficTest.Check(RabbitRecipients.Count == 1 && RabbitRecipients[0] == 3, "late joiner gets cached animation/target without a keepalive");
-            long stale = RabbitStatesStale; ServerRabbitState(2, RabbitReader(w)); se.Epoch++;
+            long stale = EntityRabbits.RabbitStatesStale; ServerRabbitState(2, RabbitReader(w)); se.Epoch++;
             ServerRabbitState(1, RabbitReader(w)); SendRabbitSnapshot(3, se);
-            IdleTrafficTest.Check(RabbitStatesStale == stale + 2 && RabbitRecipients.Count == 1, "wrong owner and old epoch cannot replace or replay snapshot");
+            IdleTrafficTest.Check(EntityRabbits.RabbitStatesStale == stale + 2 && RabbitRecipients.Count == 1, "wrong owner and old epoch cannot replace or replay snapshot");
             var copy = new Ent { Proxy = true, Epoch = 3, Root = null }; ByNet[595] = copy;
-            ApplyRabbitState(RabbitReader(w));
+            EntityRabbits.ApplyRabbitState(RabbitReader(w));
             IdleTrafficTest.Check(copy.RabbitSnapshot != null, "streamed-out copy caches rabbit changes without resolving a GameObject");
-            copy.Root = new TestItem { nyul = new TestRabbit() }; RestoreRabbitState(copy);
-            IdleTrafficTest.Check(RabViews[copy.Root.nyul].Has && RabViews[copy.Root.nyul].Run == .45f && RabSeen[copy.Root.nyul], "streamed-in rabbit restores cached animation and seen state");
-            IdleTrafficTest.Check(Math.Abs(RabViews[copy.Root.nyul].Interest.x - decoded.X) < 1e-9, "cached target remains global while rabbit and floating origin move");
+            copy.Root = new TestItem { nyul = new TestRabbit() }; EntityRabbits.RestoreRabbitState(copy);
+            IdleTrafficTest.Check(EntityRabbits.ViewHas(copy.Root.nyul) && EntityRabbits.ViewRun(copy.Root.nyul) == .45f && EntityRabbits.ViewSeen(copy.Root.nyul), "streamed-in rabbit restores cached animation and seen state");
+            IdleTrafficTest.Check(Math.Abs(EntityRabbits.ViewX(copy.Root.nyul) - decoded.X) < 1e-9, "cached target remains global while rabbit and floating origin move");
             var cached = copy.RabbitSnapshot; copy.Epoch++;
-            ApplyRabbitState(RabbitReader(w)); IdleTrafficTest.Check(ReferenceEquals(cached, copy.RabbitSnapshot), "client rejects old owner epoch");
+            EntityRabbits.ApplyRabbitState(RabbitReader(w)); IdleTrafficTest.Check(ReferenceEquals(cached, copy.RabbitSnapshot), "client rejects old owner epoch");
             ByNet.Clear(); Server.Clear(); Known.Clear();
 
             foreach (string idle in new[] { "standing", "eating", "sitting" })
@@ -169,5 +166,30 @@ namespace TLDRevamp.Net
             for (int tick = 0; tick < 150; tick++) ip.Evaluate(1.2 + tick / 60.0, 1f / 60, out shown, out _);
             IdleTrafficTest.Check((shown - stop).sqrMagnitude < 1e-8, "final compact pose has zero velocity and no idle drift");
         }
+    }
+}
+
+namespace TLDRevamp.Net
+{
+    // The unchanged lightweight game surfaces around the real rabbit role/state files.
+    internal static partial class EntityRabbits
+    {
+        private static float _rabSrvAcc;
+        internal static bool RabbitSync => Entities.RabbitSync;
+        internal static bool RabbitOwners => Entities.RabbitOwners;
+        internal static float RabbitNearM => Entities.RabbitNearM;
+        internal static float RabbitSwitchM => Entities.RabbitSwitchM;
+        internal static float RabbitCarMoveMps => Entities.RabbitCarMoveMps;
+        internal static long RabbitOwnerMoves { get => Entities.RabbitOwnerMoves; set => Entities.RabbitOwnerMoves = value; }
+        internal static string RabbitLastMove { get => Entities.RabbitLastMove; set => Entities.RabbitLastMove = value; }
+        internal static long RabbitStatesStale, RabbitStatesApplied, RabbitStatesSent;
+        private static ref float NyLastSee(nyulscript ny) => ref ny.lastSee;
+        private static byte RabFlags(nyulscript ny) => ny.AI.fleeing ? (byte)1 : (byte)4;
+        private static nyulscript NyOf(Entities.Ent e) => Entities.NyOf(e);
+        internal static void SeedView(nyulscript ny) => RabViews[ny] = new RabView { Has = true, Flags = 1, Interest = new Vector3d(40, 2, 0) };
+        internal static bool ViewHas(nyulscript ny) => RabViews[ny].Has;
+        internal static float ViewRun(nyulscript ny) => RabViews[ny].Run;
+        internal static bool ViewSeen(nyulscript ny) => RabSeen[ny];
+        internal static double ViewX(nyulscript ny) => RabViews[ny].Interest.x;
     }
 }

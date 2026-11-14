@@ -16,7 +16,7 @@ namespace UnityEngine
 }
 public class ragdollactivatescript : Component { public bool ragdoll; public Rigidbody[] RBs; public Rigidbody RB; public void SetRagdol(bool on) { ragdoll = on; } }
 public partial class newAiScript : Component { public bool died; public void Die(bool _playSound) { died = true; } }
-public class nyulscript : Component { }
+public partial class nyulscript : Component { }
 public partial class aiscript { public bool alive = true; public void Die(bool _playSound) { alive = false; } }
 public class TestLimbSet { public Component[] joints; public Transform[] childs; public pickupable[] ps; }
 public partial class tosaveitemscript { public TestLimbSet ragdollPos; }

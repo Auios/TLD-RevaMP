@@ -59,6 +59,8 @@ namespace TLDRevamp.Net
         internal class SeatServer
         {
             internal readonly List<KeyValuePair<int, int>> Seats = new List<KeyValuePair<int, int>>();
+            internal readonly List<KeyValuePair<int, Vector3d>> Peers = new List<KeyValuePair<int, Vector3d>>();
+            internal void ReadyPeers(List<KeyValuePair<int, Vector3d>> into) { into.Clear(); into.AddRange(Peers); }
             internal void SeatedIn(uint net, List<KeyValuePair<int, int>> into) { into.Clear(); into.AddRange(Seats); }
         }
     }
@@ -88,7 +90,6 @@ namespace TLDRevamp.Net
         public const byte Claim = 24, Owner = 25;
         private static float _lastDriveClaimTry;
         internal static bool DriveClaimRootOnly = true;
-        internal static float RabbitHoldS = 2;
         internal static int Cascades, Shares;
         internal static string ClaimLog;
         internal static long ClaimsSent, ClaimsRefused, RefusedCrash, RefusedHeld, RefusedStored, RefusedDriven;

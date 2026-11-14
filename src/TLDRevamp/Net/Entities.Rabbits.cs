@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
+using ClaimReason = TLDRevamp.Net.Entities.ClaimReason;
+using RabCharge = TLDRevamp.Net.Entities.RabCharge;
 
 namespace TLDRevamp.Net
 {
@@ -27,9 +30,8 @@ namespace TLDRevamp.Net
     ///    is about to hit. Car flips, pushes and run-overs are then the game's own physics, on one machine, and every
     ///    other machine sees the result.
     /// A/B: RabbitSync false = before (copies think on their own, no events), RabbitOwners false = no ownership rules.
-    public static partial class Entities
+    internal static partial class EntityRabbits
     {
-        public const byte RabbitState = 90, RabbitFx = 91;
         public static bool RabbitSync = true, RabbitOwners = true;
         public static float RabbitNearM = 60f, RabbitSwitchM = 5f, RabbitHoldS = 2f, RabbitCarMoveMps = 1.5f;
         public static float RabbitClaimM = 0.5f, RabbitClaimSteps = 4f;   // claim before the touch: margin + closing speed × physics steps
@@ -37,6 +39,10 @@ namespace TLDRevamp.Net
                            RabbitOwnerMoves, RabbitClaimedByCar, RabbitClaimedObjects, RabbitBreakHitsSent, RabbitBreakHitsSkipped, RabbitSizesRolled;
         public static string RabbitLastMove = "";
         public static float RabbitNextSize = -1f;   // test: the next shared rabbit's size (bridge `set`)
+
+        private static readonly NetWriter W = new NetWriter();
+        internal static bool InitializeRabbitLookups() => NyLastRoar != null && NyLastAttack != null && NyLastSee != null && NyEvil != null && NyIdleGo != null;
+        internal static void SetRabbitCharge(movecreaturescript move, RabCharge charge) => RabCharges[move] = charge;
 
         private const byte RfRoar = 0, RfAttack = 1, RfIdle = 2, RfDie = 3, RfEyes = 4, RfEars = 5, RfEvil = 6;
 
@@ -59,10 +65,9 @@ namespace TLDRevamp.Net
             if (ny == null) return null;
             var it = ny.GetComponentInParent<tosaveitemscript>();
             foreach (var e in RabEnts) if (e.Root == it) return e;
-            foreach (var e in ByNet.Values) if (e.Root == it && e.PartIndex < 0) return e;
-            return null;
+            return Entities.RabbitOfItem(it);
         }
-        private static bool RabCopy(Component c) => RabbitSync && InSession && !_rabReplay && IsProxy(c);
+        private static bool RabCopy(Component c) => RabbitSync && Entities.InSession && !_rabReplay && Entities.IsProxy(c);
 
         // ================================================================ sharing: the size first
         /// From ShareItem: a rabbit not yet started rolls its size now, as its Start would (Start then leaves it): the
@@ -76,7 +81,7 @@ namespace TLDRevamp.Net
         }
 
         /// Fixes.Rabbits: the player's spawner made one.
-        internal static void RabbitSpawned(GameObject go) { if (InSession && go != null) ShareSpawn(go); }
+        internal static void RabbitSpawned(GameObject go) { if (Entities.InSession && go != null) Entities.ShareSpawn(go); }
 
         // ================================================================ copies don't think
         [HarmonyPatch(typeof(aiscript), "Update")]
@@ -94,7 +99,7 @@ namespace TLDRevamp.Net
             return false;
         }
 
-        static partial void RabBodyCheck(aiscript rab, ref bool gone) { gone = RabBodyGone(rab); }
+        internal static void RabBodyCheck(aiscript rab, ref bool gone) { gone = RabBodyGone(rab); }
 
         [HarmonyPatch(typeof(movecreaturescript), "Update")]
         private static class RabMoveUpdate
@@ -110,7 +115,6 @@ namespace TLDRevamp.Net
 
         // ---- test staging (bridge `mp rabbitdo <net> charge <gx> <gz> <m/s> <s>`): the rabbit runs at that point, at
         // that speed, on whichever machine simulates it - a hit that does not depend on what the rabbit feels like
-        internal sealed class RabCharge { public Vector3d At; public float Speed, Until, OwnSpeed; }
         private static readonly Dictionary<movecreaturescript, RabCharge> RabCharges = new Dictionary<movecreaturescript, RabCharge>();
         internal static System.Collections.Generic.IReadOnlyDictionary<movecreaturescript, TLDRevamp.Net.Entities.RabCharge> ObservedRabCharges => RabCharges;
         private static void Charge(movecreaturescript m)
@@ -132,7 +136,7 @@ namespace TLDRevamp.Net
             private static bool Prefix(nyulscript __instance)
             {
                 if (RabCopy(__instance)) return false;
-                if (InSession && RabbitSync) { _voiceOf = __instance; _voiceKind = RfIdle; _voiceClip = null; }
+                if (Entities.InSession && RabbitSync) { _voiceOf = __instance; _voiceKind = RfIdle; _voiceClip = null; }
                 return true;
             }
             [HarmonyPostfix]
@@ -198,8 +202,8 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static void Prefix(nyulscript __instance, ref bool _playSound)
             {
-                if (!InSession || !RabbitSync || _rabReplay) return;
-                if (IsProxy(__instance)) { _playSound = false; return; }
+                if (!Entities.InSession || !RabbitSync || _rabReplay) return;
+                if (Entities.IsProxy(__instance)) { _playSound = false; return; }
                 Voice(__instance, RfDie);
             }
             [HarmonyPostfix] private static void Postfix(nyulscript __instance) => Voiced(__instance);
@@ -208,7 +212,7 @@ namespace TLDRevamp.Net
 
         private static void Voice(nyulscript ny, byte kind)
         {
-            if (!InSession || !RabbitSync || _rabReplay) return;
+            if (!Entities.InSession || !RabbitSync || _rabReplay) return;
             _voiceOf = ny; _voiceKind = kind; _voiceClip = null;
         }
 
@@ -227,18 +231,18 @@ namespace TLDRevamp.Net
         {
             var e = RabEnt(ny);
             if (e == null || e.NetId == 0) return;
-            W.Reset(); W.U8(RabbitFx); W.U32(e.NetId); W.U8(kind); W.VarU32((uint)(arg + 1));
-            ToServer(W, true); RabbitFxSent++;
+            W.Reset(); W.U8(Entities.RabbitFx); W.U32(e.NetId); W.U8(kind); W.VarU32((uint)(arg + 1));
+            Entities.SendToServer(W, true); RabbitFxSent++;
         }
 
         /// A copy: the owner's roar, bite, voice, death sound; anyone's shot that took its eyes or ears; the owner's EMP evil.
-        private static void ApplyRabbitFx(NetReader r)
+        internal static void ApplyRabbitFx(NetReader r)
         {
             uint net = r.U32(); byte kind = r.U8(); int arg = (int)r.VarU32() - 1;
-            if (r.Bad || !ByNet.TryGetValue(net, out var e) || !Resolve(e)) return;
+            if (r.Bad || !Entities.TryGetEntity(net, out var e) || !Entities.ResolveEntity(e)) return;
             var ny = NyOf(e);
             if (ny == null) return;
-            bool copy = IsProxy(ny);
+            bool copy = Entities.IsProxy(ny);
             _rabReplay = true;
             try
             {
@@ -288,7 +292,7 @@ namespace TLDRevamp.Net
 
         private static void SenseLost(sensoryscript s, byte kind)
         {
-            if (!InSession || !RabbitSync || _rabReplay) return;
+            if (!Entities.InSession || !RabbitSync || _rabReplay) return;
             var ny = s.GetComponentInParent<nyulscript>();
             if (ny != null) SendRabbitFx(ny, kind, 0);
         }
@@ -309,7 +313,7 @@ namespace TLDRevamp.Net
             {
                 if (__state || !NyEvil(__instance)) return;
                 RabGreen[__instance] = !natural;
-                if (InSession && RabbitSync && !_rabReplay && !IsProxy(__instance)) SendRabbitFx(__instance, RfEvil, natural ? 1 : 0);
+                if (Entities.InSession && RabbitSync && !_rabReplay && !Entities.IsProxy(__instance)) SendRabbitFx(__instance, RfEvil, natural ? 1 : 0);
             }
         }
 
@@ -324,14 +328,14 @@ namespace TLDRevamp.Net
         }
 
         /// Per frame (Entities.Tick).
-        private static void RabbitTick()
+        internal static void RabbitTick()
         {
             float now = Time.unscaledTime;
             if (now >= _rabScanAt)
             {
                 _rabScanAt = now + 1f;
                 RabEnts.Clear();
-                foreach (var e in ByNet.Values) if (NyOf(e) != null) RabEnts.Add(e);
+                Entities.CollectRabbits(RabEnts);
                 Prune(RabViews); Prune(RabLastSent); Prune(RabGreen);
             }
             if (!RabbitSync || RabEnts.Count == 0) return;
@@ -355,7 +359,7 @@ namespace TLDRevamp.Net
                 byte f = RabFlags(ny);
                 byte run = (byte)Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp(ny.runValue, 0f, 0.5f) * 200f), 0, 100);
                 var interest = ny.AI != null ? ny.AI.interestPos - ny.transform.position : Vector3.zero;
-                bool validInterest = Finite(interest) && interest.sqrMagnitude <= 1e8f;
+                bool validInterest = Entities.IsFinite(interest) && interest.sqrMagnitude <= 1e8f;
                 if (!validInterest) interest = Vector3.zero;
                 if (!RabLastSent.TryGetValue(ny, out var ls)) RabLastSent[ny] = ls = new RabSent();
                 // "seen its target lately" (no second roar for a new owner): the nyulscript's own forget time
@@ -363,22 +367,22 @@ namespace TLDRevamp.Net
                 bool rawSend = BandwidthRules.CreatureDue(ls.RawFlags, f, Mathf.Abs(ls.RawRun - run) <= 2 && (ls.RawInterest - interest).sqrMagnitude < 0.25f, now, ls.RawAt);
                 if (rawSend) { ls.RawFlags = f; ls.RawRun = run; ls.RawInterest = interest; ls.RawAt = now; }
                 var target = ny.AI != null && validInterest ? mainscript.GlobalFromUnityPos(ny.AI.interestPos) : default;
-                if (WasteFixes && (f & 128) != 0) { f &= 248; run = 0; target = default; seen = false; }
-                bool audience = OwnerAudience(mainscript.GlobalFromUnityPos(ny.transform.position));
+                if (Entities.WasteFixes && (f & 128) != 0) { f &= 248; run = 0; target = default; seen = false; }
+                bool audience = Entities.CreatureAudience(mainscript.GlobalFromUnityPos(ny.transform.position));
                 bool entered = audience && !ls.Audience; ls.Audience = audience;
                 if (!BandwidthRules.RabbitDue(ls.Epoch != e.Epoch || entered, ls.Flags, f, ls.Run, run, ls.Seen, seen))
                 {
-                    StatesSkippedRabbitAnimation++;
-                    if (WasteFixes && (f & 128) != 0 && rawSend) StatesSkippedDeadAnimation++;
+                    Entities.StatesSkippedRabbitAnimation++;
+                    if (Entities.WasteFixes && (f & 128) != 0 && rawSend) Entities.StatesSkippedDeadAnimation++;
                     continue;
                 }
                 if (!InterestRules.Due(audience, ls.Epoch != e.Epoch || ((ls.Flags ^ f) & 248) != 0, now, ls.SentAt, MpServer.CarBeyondInterval))
-                { SkippedByInterest(0); continue; }
+                { Entities.SkippedByInterest(0); continue; }
                 ls.SentAt = now;
                 ls.Flags = f; ls.Run = run; ls.Interest = target; ls.Seen = seen; ls.Epoch = e.Epoch;
                 W.Reset(); RabbitStateCodec.Write(W, new RabbitStateCodec.State {
                     Net = e.NetId, Epoch = e.Epoch, Flags = f, Run = run, Seen = seen, X = target.x, Y = target.y, Z = target.z });
-                ToServer(W, true); RabbitStatesSent++;
+                Entities.SendToServer(W, true); RabbitStatesSent++;
             }
             RabbitDamageFlush(now);
             RabbitBreakFlush(now);
@@ -428,7 +432,7 @@ namespace TLDRevamp.Net
                 {
                     var p = Vector3.Lerp(t.feet, t.top, i / 6f);
                     var c = col.ClosestPoint(p);
-                    if ((c - p).sqrMagnitude <= BodyR * BodyR) { touch = true; hit = c; }
+                    if ((c - p).sqrMagnitude <= Entities.BodyR * Entities.BodyR) { touch = true; hit = c; }
                 }
                 if (!touch) continue;
                 _rabDmg.TryGetValue(t.id, out float acc);
@@ -459,7 +463,7 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static void Prefix(playerdeathtriggerscript __instance)
             {
-                if (!InSession || !RabbitSync) return;
+                if (!Entities.InSession || !RabbitSync) return;
                 if (!_rabTriggerOf.TryGetValue(__instance, out bool rab)) _rabTriggerOf[__instance] = rab = __instance.GetComponentInParent<nyulscript>() != null;
                 _rabTrigger = rab;
             }
@@ -485,33 +489,20 @@ namespace TLDRevamp.Net
             _rabBreakFlushAt = now + 0.1f;
             foreach (var kv in _rabHits)
             {
-                if (kv.Key == null || !BreakRef(kv.Key, out uint net, out int bi)) continue;
-                W.Reset(); W.U8(BreakHit); W.U32(net); W.VarU32((uint)bi); W.U8(3); W.F32(kv.Value.Sum / kv.Value.N); W.F32(0f); W.F32(0f); W.F32(0f); W.VarU32((uint)kv.Value.N);
-                ToServer(W, true); RabbitBreakHitsSent++;
+                if (kv.Key == null || !Entities.BreakRef(kv.Key, out uint net, out int bi)) continue;
+                W.Reset(); W.U8(Entities.BreakHit); W.U32(net); W.VarU32((uint)bi); W.U8(3); W.F32(kv.Value.Sum / kv.Value.N); W.F32(0f); W.F32(0f); W.F32(0f); W.VarU32((uint)kv.Value.N);
+                Entities.SendToServer(W, true); RabbitBreakHitsSent++;
             }
             _rabHits.Clear();
         }
 
         // ================================================================ one machine simulates a rabbit and what it hits
-        /// A claim, at once here (as a pickup): ours from the next physics step; the server confirms or hands it back.
-        private static bool ClaimNow(Ent e, ClaimReason reason)
-        {
-            float now = Time.realtimeSinceStartup;
-            if (now - e.OwnerAt < CargoClaimCooldownS) return false;
-            e.OwnerAt = now;
-            SetProxy(e, false);
-            e.OwnerId = MyId;
-            W.Reset(); WriteClaim(W, e.NetId, reason); ToServer(W, true);
-            ClaimsSent++;
-            return true;
-        }
-
         private static readonly List<Ent> _rabMine = new List<Ent>();
         /// Runner.FixedUpdate (Entities.FixedTick), before the copies move: claims before the touch.
         ///  - another machine's rabbit coming at a car simulated here (or it at the rabbit): the rabbit is ours;
         ///  - a rabbit simulated here coming at a copy of a parked car or a loose item: that is ours (a driven car is its
         ///    driver's: the driver's machine takes the rabbit instead).
-        private static void RabbitNearTick(float dt)
+        internal static void RabbitNearTick(float dt)
         {
             if (!RabbitSync || !RabbitOwners || RabEnts.Count == 0) return;
             _rabMine.Clear();
@@ -519,20 +510,20 @@ namespace TLDRevamp.Net
             {
                 if (e.Root == null || NyOf(e) == null) continue;
                 if (!e.Proxy) { _rabMine.Add(e); continue; }
-                if (e.Held || e.Stored || e.Physical || e.CrashTaking || _localCars.Count == 0) continue;
+                if (e.Held || e.Stored || e.Physical || e.CrashTaking || !Entities.HasRabbitCars) continue;
                 var rb = e.Root.GetComponent<Rigidbody>();
                 if (rb == null) continue;
                 float rr = RabRadius(e);
-                foreach (var car in _localCars)
+                foreach (var car in Entities.LocalRabbitCars())
                 {
                     if (car == null || car.RB == null || car.RB.isKinematic) continue;
-                    if (!NearBox(car.transform, CarLocalBounds(car), rb.position, rr, (car.RB.GetPointVelocity(rb.position) - e.LastVel).magnitude, dt)) continue;
-                    if (ClaimNow(e, ClaimReason.RabbitNear)) { RabbitClaimedByCar++; if (IsHost) RabHold(e.NetId); }
+                    if (!NearBox(car.transform, Entities.RabbitCarBounds(car), rb.position, rr, (car.RB.GetPointVelocity(rb.position) - e.LastVel).magnitude, dt)) continue;
+                    if (Entities.ClaimNow(e, ClaimReason.RabbitNear)) { RabbitClaimedByCar++; if (Entities.IsHost) Entities.RabHold(e.NetId); }
                     break;
                 }
             }
             if (_rabMine.Count == 0) return;
-            foreach (var o in Placed())
+            foreach (var o in Entities.PlacedHandItems())
             {
                 if (!o.Proxy || o.Root == null || o.PartIndex >= 0 || o.Held || o.Stored || o.Physical || o.CrashTaking || NyOf(o) != null) continue;
                 bool car = o.Root.car != null;
@@ -545,10 +536,10 @@ namespace TLDRevamp.Net
                     if (mrb == null || mrb.isKinematic) continue;
                     var p = mrb.position; float rr = RabRadius(m);
                     float closing = (mrb.velocity - o.LastVel).magnitude;
-                    bool near = car ? NearBox(o.Root.car.transform, CarLocalBounds(o.Root.car), p, rr, closing, dt)
+                    bool near = car ? NearBox(o.Root.car.transform, Entities.RabbitCarBounds(o.Root.car), p, rr, closing, dt)
                                     : (orb.position - p).magnitude < rr + ItemRadius(o) + RabbitClaimM + closing * dt * RabbitClaimSteps;
                     if (!near) continue;
-                    if (car ? ClaimNow(o, ClaimReason.RabbitObjectNear) : ClaimCargo(o, reason: ClaimReason.RabbitObjectNear)) RabbitClaimedObjects++;
+                    if (car ? Entities.ClaimNow(o, ClaimReason.RabbitObjectNear) : Entities.ClaimRabbitObject(o, reason: ClaimReason.RabbitObjectNear)) RabbitClaimedObjects++;
                     break;
                 }
             }
@@ -584,33 +575,18 @@ namespace TLDRevamp.Net
         /// ContactRelay (a root simulated here touched something): the claim before the touch missed - now.
         internal static void RabbitContact(uint net, Collision c)
         {
-            if (!RabbitSync || !RabbitOwners || c.rigidbody == null || !ByNet.TryGetValue(net, out var mine) || mine.Proxy || mine.Root == null) return;
-            var other = ProxyOf(c.rigidbody.transform.root);
+            if (!RabbitSync || !RabbitOwners || c.rigidbody == null || !Entities.TryGetEntity(net, out var mine) || mine.Proxy || mine.Root == null) return;
+            var other = Entities.RabbitProxyOf(c.rigidbody.transform.root);
             if (other == null && EntityRagdolls.TryLimbOwner(c.rigidbody.gameObject, out var lo)) other = lo;   // a dead rabbit's limb
             if (other == null || other.Root == null || !other.Proxy || other.Held || other.Stored || other.Physical || other.CrashTaking) return;
             bool mineRabbit = NyOf(mine) != null, otherRabbit = NyOf(other) != null;
-            if (otherRabbit && mine.Root.car != null) { if (ClaimNow(other, ClaimReason.RabbitContact)) RabbitClaimedByCar++; return; }
+            if (otherRabbit && mine.Root.car != null) { if (Entities.ClaimNow(other, ClaimReason.RabbitContact)) RabbitClaimedByCar++; return; }
             if (!mineRabbit || otherRabbit || other.PartIndex >= 0) return;
-            if (other.Root.car != null) { if (!other.Driven && ClaimNow(other, ClaimReason.RabbitObjectContact)) RabbitClaimedObjects++; }
-            else if (other.Root.P != null && ClaimCargo(other, reason: ClaimReason.RabbitObjectContact)) RabbitClaimedObjects++;
+            if (other.Root.car != null) { if (!other.Driven && Entities.ClaimNow(other, ClaimReason.RabbitObjectContact)) RabbitClaimedObjects++; }
+            else if (other.Root.P != null && Entities.ClaimRabbitObject(other, reason: ClaimReason.RabbitObjectContact)) RabbitClaimedObjects++;
         }
 
-        /// Server: a rabbit just claimed stays with the claimer a moment (the nearest-player rule would take it back).
-        private static void RabHold(uint net) { if (Server.TryGetValue(net, out var se) && se.Rabbit) se.RabbitHoldUntil = Time.realtimeSinceStartup + RabbitHoldS; }
-
-        /// Server, at Share: what the record is (its root: a rabbit, a car).
-        private static void ShareFacts(byte[] rec, SEnt se)
-        {
-            var d = RecordCodec.Decode(rec);
-            if (d == null || d.items.Count == 0) return;
-            se.Where = d.items[0].transform.pos;
-            se.TelemetryCategory = TelemetryPrefabCategory(d.items[0].prefabID);
-            uint id = d.items[0].id;
-            foreach (var n in d.nyul) if (n != null && n.id == id) { se.Rabbit = true; break; }
-            foreach (var c in d.car) if (c != null && c.id == id) { se.Car = true; break; }
-        }
-
-        private static void RabbitReset()
+        internal static void RabbitReset()
         {
             RabViews.Clear(); RabLastSent.Clear(); RabGreen.Clear(); RabEnts.Clear(); RabSeen.Clear(); _rabDmg.Clear(); _rabDmgDir.Clear(); _rabDmgAt.Clear(); _rabDmgNet.Clear();
             _rabHits.Clear(); _rabTriggerOf.Clear(); _rabRadius.Clear(); _rabMine.Clear(); RabCharges.Clear();
@@ -621,7 +597,7 @@ namespace TLDRevamp.Net
         public static string RabbitList()
         {
             var rows = new List<string>();
-            foreach (var e in ByNet.Values) if (NyOf(e) != null) rows.Add(RabbitJson(e));
+            foreach (var e in Entities.KnownRabbits()) rows.Add(RabbitJson(e));
             return "{\"rabbits\":[" + string.Join(",", rows) + "],\"stats\":" + RabbitStats() + ",\"spawn\":" + Fixes.Rabbits.Stats() + "}";
         }
 

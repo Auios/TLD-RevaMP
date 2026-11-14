@@ -275,6 +275,6 @@ static partial class EntitySplitTest
         Check(EntityAI.AiStatesSent == sent && EntityAI.WorldBreaksSent == breaks && (float)Field(AIOwner, "_aiScanAt") == scanAt && (float)Field(AIOwner, "_aiDmgFlushAt") == flushAt, "reset preserves cumulative counters and original timer lifetimes");
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");
         Check(kernel.IndexOf("EntityAI.BreakWaitTick();") < kernel.IndexOf("EntityCarTuning.CarTuneTick();") && kernel.IndexOf("EntityCarTuning.CarTuneTick();") < kernel.IndexOf("EntityAI.WorldBreakTick();"), "retry tuning and world scan tick order preserved");
-        Check(kernel.IndexOf("EntityAI.AiTick();") < kernel.IndexOf("RabbitTick();") && kernel.IndexOf("EntityAI.BreaksReset();") < kernel.IndexOf("EntityAI.AiReset();") && kernel.IndexOf("EntityAI.AiReset();") < kernel.IndexOf("RabbitReset();"), "AI tick and reset remain before rabbits");
+        Check(kernel.IndexOf("EntityAI.AiTick();") < kernel.IndexOf("EntityRabbits.RabbitTick();") && kernel.IndexOf("EntityAI.BreaksReset();") < kernel.IndexOf("EntityAI.AiReset();") && kernel.IndexOf("EntityAI.AiReset();") < kernel.IndexOf("EntityRabbits.RabbitReset();"), "AI tick and reset remain before rabbits");
     }
 }

@@ -32,7 +32,7 @@ public class sens { public Collider selfCol; }
 public class gamemodesettingsscript { public static gamemodesettingsscript s = new gamemodesettingsscript(); public Settings S = new Settings(); public class Settings { public int peacefulEnemies; } }
 public class breakablescript : Component
 {
-    public bool destroyed, noShoot; public aiscript AI; public newAiScript newAI; public GameObject Gib, reducedGib, spawnedGib;
+    public bool destroyed, noShoot, decreaseAfterAttack; public float health = 10, shootHealth = 10; public aiscript AI; public newAiScript newAI; public GameObject Gib, reducedGib, spawnedGib;
     public int BreakCalls, ForceCalls, ShootCalls; public Vector3 LastDir; public float LastForce;
     public static Action<breakablescript> DuringBreak;
     public void Break() { BreakCalls++; DuringBreak?.Invoke(this); destroyed = true; }
@@ -67,7 +67,6 @@ namespace TLDRevamp.Net
         internal static bool TestTumbleWire, StoredContentsApart;
         internal static long ShareMembersDropped, StoredContentsShared;
         internal static readonly Dictionary<uint, Ent> PendingShare = new Dictionary<uint, Ent>();
-        private static void RabbitBeforeShare(tosaveitemscript root) { }
         private static List<tosaveitemscript> StoredContents(tosaveitemscript root, List<tosaveitemscript> items) => null;
         private static ulong[] StateHashes(List<tosaveitemscript> items, List<itemDataClass> records) => new ulong[items.Count];
         private static bool AttachedToItem(tosaveitemscript item) => false;
@@ -82,7 +81,6 @@ namespace TLDRevamp.Net
         internal static long StatesSkippedDeadAnimation;
         internal static readonly List<tosaveitemscript> Reshares = new List<tosaveitemscript>();
         internal static void QueueReshare(tosaveitemscript it) => Reshares.Add(it);
-        internal static bool RabbitBreakOnCopy(breakablescript b, float force) => false;
         private static bool OwnerAudience(Vector3d at) => TestAudience;
         internal static void SkippedByInterest(int player) { }
     }

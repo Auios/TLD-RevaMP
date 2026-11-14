@@ -77,7 +77,7 @@ static class MessageTableTest
         var toServer = Routed(mp.Substring(serverAt, serverEnd - serverAt), "Entities.ServerReceive(", server, consts);
         var toClient = Routed(mp.Substring(clientAt), "Entities.ClientReceive(", client, consts);
         Check("the dispatchers route messages", toServer.Count > 10 && toClient.Count > 10);
-        foreach (var handler in new[] { ("BreakHit", "EntityAI", "ApplyBreakHit"), ("BreakFx", "EntityAI", "ApplyBreakFx"), ("WorldBreak", "EntityAI", "ApplyWorldBreak"), ("AiState", "EntityAI", "ApplyAiState"), ("AiSound", "EntityAI", "ApplyAiSound"), ("Worn", "EntityHands", "ApplyWorn"), ("IgnitionKey", "EntitySeats", "ApplyKey"), ("ShotgunIn", "EntitySeats", "ApplyShotgun"), ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms"), ("ShotFx", "EntityEffects", "ApplyShotFx"), ("PlayerSound", "EntityEffects", "ApplyPlayerSound"), ("ExplodeReq", "EntityExplosions", "ApplyExplodeReq"), ("ExplosionFx", "EntityExplosions", "ApplyExplosionFx") })
+        foreach (var handler in new[] { ("RabbitState", "EntityRabbits", "ApplyRabbitState"), ("RabbitFx", "EntityRabbits", "ApplyRabbitFx"), ("BreakHit", "EntityAI", "ApplyBreakHit"), ("BreakFx", "EntityAI", "ApplyBreakFx"), ("WorldBreak", "EntityAI", "ApplyWorldBreak"), ("AiState", "EntityAI", "ApplyAiState"), ("AiSound", "EntityAI", "ApplyAiSound"), ("Worn", "EntityHands", "ApplyWorn"), ("IgnitionKey", "EntitySeats", "ApplyKey"), ("ShotgunIn", "EntitySeats", "ApplyShotgun"), ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms"), ("ShotFx", "EntityEffects", "ApplyShotFx"), ("PlayerSound", "EntityEffects", "ApplyPlayerSound"), ("ExplodeReq", "EntityExplosions", "ApplyExplodeReq"), ("ExplosionFx", "EntityExplosions", "ApplyExplosionFx") })
         {
             Check(handler.Item1 + ": routed to its feature owner", client.Contains("case " + handler.Item1 + ": " + handler.Item2 + "." + handler.Item3 + "(r);"));
             Check(handler.Item1 + ": handler reads the message at its new owner", Method(handler.Item2, handler.Item3).Contains("r."));
@@ -88,6 +88,12 @@ static class MessageTableTest
             Check(handler.Item1 + ": server routes to seats", server.Contains("case " + handler.Item1 + ": EntitySeats." + handler.Item2 + "(from, r);"));
             Check(handler.Item1 + ": server owner reads payload", Method("EntitySeats", handler.Item2).Contains("r.U32()"));
         }
+
+        Check("RabbitState: authority stays on kernel", server.Contains("ServerRabbitState(from, r);") && Method("Entities", "ServerRabbitState").Contains("se.Epoch != s.Epoch") && Method("Entities", "ServerRabbitState").Contains("se.OwnerId != from"));
+        Check("RabbitState: stale counter belongs to rabbits", Method("Entities", "ServerRabbitState").Contains("EntityRabbits.RabbitStatesStale++"));
+        Check("RabbitState: host keeps durable snapshot before relaying", Method("Entities", "ServerRabbitState").IndexOf("se.RabbitSnapshot = FinalSnapshot(r, true);") < Method("Entities", "ServerRabbitState").IndexOf("WS.Reset();"));
+        Check("RabbitFx: reliable generic relay stays on kernel", server.Contains("case RabbitFx: ServerFwdAll(from, r, true);"));
+        Check("RabbitState: receiver uses existing codec", Method("EntityRabbits", "ApplyRabbitState").Contains("RabbitStateCodec.Read(r)"));
 
         Check("State: limb tail reads at ragdoll owner", client.Contains("EntityRagdolls.ReadRagdoll(r, e, sp, sq);"));
         Check("State: late keys reach ragdoll owner", client.Contains("EntityRagdolls.KeepLateKey(r, msgAt, e, epoch)"));
