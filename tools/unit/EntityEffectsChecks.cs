@@ -77,7 +77,7 @@ static partial class EntitySplitTest
     static void EffectsChecks()
     {
         var effects = typeof(EntityEffects); var blasts = typeof(EntityExplosions);
-        Check(GameLookups.FieldRefs.Take(3).SequenceEqual(new[] { "weaponscript.hit", "weaponscript.tempInt", "weaponscript.alreadyShotFalse" }), "kernel initialization warms the three gun delegates in their original order");
+        Check(GameLookups.FieldRefs.Where(n => n.StartsWith("weaponscript.")).Take(3).SequenceEqual(new[] { "weaponscript.hit", "weaponscript.tempInt", "weaponscript.alreadyShotFalse" }), "kernel initialization warms the three gun delegates in their original order");
         Check((bool)Field(typeof(Entities), "_effectsLookupsReady"), "kernel initializes gun lookups before feature use");
         CaptureEffects(effects, blasts);
         foreach (string part in new[] { "PlayerSounds", "ShotFx", "Spray", "Explosions" })

@@ -262,11 +262,11 @@ namespace TLDRevamp.Net
             ByNet.Clear(); Server.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
             // keyed by copies and network ids (which start at 1 again next session). (Known, the server's "sent to player N"
             // sets, needs nothing here: ServerOnJoin starts every joiner with an empty one - rehost.py)
-            PhysicalCars.Clear(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); BreaksReset();
+            PhysicalCars.Clear(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); EntityAI.BreaksReset();
             _tankTold.Clear(); _tankAddsOut.Clear(); _censusFirst.Clear(); _censusDue.Clear(); _repairWait.Clear(); _repairCycle.Clear(); _repairCursor = 0; _repairRunAt.Clear(); _placeRunAt.Clear(); _placeWait.Clear();
             ResetPoiCensus(); Leases.Clear(); LeaseTypes.Clear(); LeaseUntil.Clear(); LeaseAsked.Clear(); _leaseRetryAt.Clear(); PendingGrants.Clear(); _leasesDone.Clear(); _captureKnown = null; Captures.Clear();
             EntitySeats.ShotgunReset();
-            AiReset();
+            EntityAI.AiReset();
             RabbitReset();
             PoiUsablesReset(); LiveUsablesReset();
             InterestReset(); EditCheckReset();
@@ -433,9 +433,9 @@ namespace TLDRevamp.Net
             DevHooks.EntityScans?.Invoke();
             GrabRefusedTick();
             RefetchLaterTick();
-            BreakWaitTick();
+            EntityAI.BreakWaitTick();
             EntityCarTuning.CarTuneTick();
-            WorldBreakTick();
+            EntityAI.WorldBreakTick();
             PoiCensusTick();
             float dt = Time.unscaledDeltaTime;
             EntityWorldClock.HostClockTick();
@@ -464,7 +464,7 @@ namespace TLDRevamp.Net
             EntityExplosions.BlastTick();
             MemberGoneTick();
             if (IsHost) ShareQuotaTick();
-            AiTick();
+            EntityAI.AiTick();
             RabbitTick();
             EntityHands.WornTick();
             GentleTick();
@@ -782,16 +782,16 @@ namespace TLDRevamp.Net
                 case ExplosionFx: EntityExplosions.ServerExplosionFx(from, r); break;
                 case PlayerSound: EntityEffects.ServerPlayerSound(from, r); break;
                 case BreakHit: ServerBreakHit(from, r); break;
-                case BreakFx: ServerKeepBreak(r); ServerFwdAll(from, r, true); break;
+                case BreakFx: EntityAI.ServerKeepBreak(r); ServerFwdAll(from, r, true); break;
                 case CarTune: if (EntityCarTuning.ServerKeepTune(from, r)) ServerFwdAll(from, r, true); break;
-                case WorldBreak: ServerKeepWorldBreak(r); ServerFwdAll(from, r, true); break;
+                case WorldBreak: EntityAI.ServerKeepWorldBreak(r); ServerFwdAll(from, r, true); break;
                 case AiState:
                 {
                     // the creature's owner's stream, like State: a machine that just lost it doesn't keep steering the copies
                     uint net = r.U32();
-                    if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId != from) { AiStatesStale++; break; }
+                    if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId != from) { EntityAI.AiStatesStale++; break; }
                     int item = (int)r.VarU32();
-                    if (r.Bad || r.Remaining != 15) { AiStatesStale++; break; }
+                    if (r.Bad || r.Remaining != 15) { EntityAI.AiStatesStale++; break; }
                     if (se.AiSnapshotEpoch != se.Epoch) { se.AiSnapshots.Clear(); se.AiSnapshotEpoch = se.Epoch; }
                     se.AiSnapshots[item] = FinalSnapshot(r, true);
                     RelayCreature(se, from, r);
@@ -886,7 +886,7 @@ namespace TLDRevamp.Net
             _hitchDeparted.Remove(playerId);
             EntityRadio.ServerRadioTo(playerId);
             ServerPoiUsablesTo(playerId);   // building doors/gates changed this session
-            ServerWorldBreaksTo(playerId);
+            EntityAI.ServerWorldBreaksTo(playerId);
         }
 
         /// A player left: their cars go to the host (it keeps simulating them from the last state).
@@ -1246,12 +1246,12 @@ namespace TLDRevamp.Net
                 case ExplodeReq: EntityExplosions.ApplyExplodeReq(r); break;
                 case ExplosionFx: EntityExplosions.ApplyExplosionFx(r); break;
                 case PlayerSound: EntityEffects.ApplyPlayerSound(r); break;
-                case BreakHit: ApplyBreakHit(r); break;
-                case BreakFx: ApplyBreakFx(r); break;
+                case BreakHit: EntityAI.ApplyBreakHit(r); break;
+                case BreakFx: EntityAI.ApplyBreakFx(r); break;
                 case CarTune: EntityCarTuning.ApplyCarTune(r); break;
-                case WorldBreak: ApplyWorldBreak(r); break;
-                case AiState: ApplyAiState(r); break;
-                case AiSound: ApplyAiSound(r); break;
+                case WorldBreak: EntityAI.ApplyWorldBreak(r); break;
+                case AiState: EntityAI.ApplyAiState(r); break;
+                case AiSound: EntityAI.ApplyAiSound(r); break;
                 case RabbitState: ApplyRabbitState(r); break;
                 case RabbitFx: ApplyRabbitFx(r); break;
                 case PoiUsable: ApplyPoiUsable(r); break;

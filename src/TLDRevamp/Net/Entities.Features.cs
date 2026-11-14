@@ -4,6 +4,86 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        public const byte BreakHit = 48, BreakFx = 49, AiState = 50, AiSound = 51, WorldBreak = 112;
+        private static readonly bool _aiLookupsReady = EntityAI.InitializeAiLookups();
+        public static string AiStats() => EntityAI.AiStats();
+        internal static bool BreakRef(breakablescript br, out uint net, out int bi) => EntityAI.BreakRef(br, out net, out bi);
+        internal static float BodyR => EntityAI.BodyR;
+        internal static float SeenAt(newAiScript a, Vector3 from, Vector3 dir, float maxDist, Vector3 feet, Vector3 top, bool skipSelf) => EntityAI.SeenAt(a, from, dir, maxDist, feet, top, skipSelf);
+        internal static int TumbleweedsNear(thumbleweedMain m) => EntityAI.TumbleweedsNear(m);
+        public static long TumbleShared { get => EntityAI.TumbleShared; set => EntityAI.TumbleShared = value; }
+        public static long TumbleLimited { get => EntityAI.TumbleLimited; set => EntityAI.TumbleLimited = value; }
+        public static bool AiStickyRemote { get => EntityAI.AiStickyRemote; set => EntityAI.AiStickyRemote = value; }
+        public static int BreakTrace { get => EntityAI.BreakTrace; set => EntityAI.BreakTrace = value; }
+        public static bool BreaksKept { get => EntityAI.BreaksKept; set => EntityAI.BreaksKept = value; }
+        public static bool RagdollListHealed { get => EntityAI.RagdollListHealed; set => EntityAI.RagdollListHealed = value; }
+        public static float TumbleNearM { get => EntityAI.TumbleNearM; set => EntityAI.TumbleNearM = value; }
+        public static bool WorldBreakGibs { get => EntityAI.WorldBreakGibs; set => EntityAI.WorldBreakGibs = value; }
+        public static float WorldBreakM { get => EntityAI.WorldBreakM; set => EntityAI.WorldBreakM = value; }
+        public static float WorldBreakNearM { get => EntityAI.WorldBreakNearM; set => EntityAI.WorldBreakNearM = value; }
+        public static bool WorldBreaksKept { get => EntityAI.WorldBreaksKept; set => EntityAI.WorldBreaksKept = value; }
+
+        internal static Ent BreakObjectOf(tosaveitemscript it)
+        {
+            foreach (var e in ByNet.Values) if (e.Root == it) return e;
+            foreach (var e in ByNet.Values) if (e.Items != null && e.Items.Contains(it)) return e;
+            return null;
+        }
+        internal static void CollectCreatureAis(System.Collections.Generic.List<newAiScript> into)
+        {
+            foreach (var e in ByNet.Values)
+                foreach (var it in e.Items) if (it != null && it.npc != null) into.Add(it.npc);
+        }
+        internal static System.Collections.Generic.IEnumerable<thumbleweedScript> KnownTumbleweeds()
+        {
+            foreach (var e in ByNet.Values) if (e.Root != null && e.Root.thumbleweed != null) yield return e.Root.thumbleweed;
+        }
+        internal static bool CreatureAudience(Vector3d at) => OwnerAudience(at);
+        internal static void KeepBreakIndex(uint net, int bi)
+        {
+            if (!Server.TryGetValue(net, out var se)) return;
+            if (se.Broken == null) se.Broken = new System.Collections.Generic.List<int>();
+            if (se.Broken.Count < EntityAI.MaxBreaksPerObject) se.Broken.Add(bi);
+        }
+        private static void SendBreaksTo(int playerId, SEnt se) => EntityAI.SendBreaksTo(playerId, se.NetId, se.Broken);
+
+        private static void ServerBreakHit(int from, NetReader r)
+        {
+            uint net = r.U32(); int bi = (int)r.VarU32(); byte kind = r.U8();
+            if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId == from) return;
+            // where the hit thing is: the host's own copy of it if it has one (a creature walks away from where its
+            // object's record says), else the object's last position, with a shot's reach for anything
+            var br = EntityAI.BreakableOf(net, bi);
+            bool exact = br != null;
+            var at = exact ? mainscript.GlobalFromUnityPos(br.transform.position) : se.HasState ? se.Pos : se.Where;
+            double reach = kind == 1 || !exact ? HitCheck.ObjShotM : HitCheck.ObjForceM;
+            if (!HitCheck.AllowOnObject(from, $"breakable {bi} of object {net} {(br != null ? br.transform.root.name : "not placed here")} ({(kind == 1 ? "shot" : kind == 3 ? "bite" : "blow")})", at, reach, exact ? 10f : HitCheck.ObjSizeM)) return;
+            r.Pos = 0;
+            WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
+            ServerSendTo(se.OwnerId, WS, true);
+        }
+
+        private static void ServerFwdAll(int from, NetReader r, bool reliable)
+        {
+            r.Pos = 0;
+            WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
+            ServerSendAll(WS, reliable, from);
+        }
+
+        /// Server: a creature hit's attacker must own the creature (the shared object it belongs to); `where` is the
+        /// creature as the host has it (its copy here, else the owner's last state), when it has one.
+        internal static bool CreatureOf(int from, uint net, int idx, out Vector3d where, out bool known)
+        {
+            where = default; known = false;
+            if (!Server.TryGetValue(net, out var se) || se.OwnerId != from) return false;
+            var a = EntityAI.AiOf(net, idx);
+            var ny = a == null && ByNet.TryGetValue(net, out var re) && Resolve(re) ? NyOf(re) : null;
+            if (a != null) { where = mainscript.GlobalFromUnityPos(a.transform.position); known = true; }
+            else if (ny != null) { where = mainscript.GlobalFromUnityPos(ny.transform.position); known = true; }
+            else if (se.HasState) { where = se.Pos; known = true; }
+            return true;
+        }
+
         internal static System.Collections.Generic.IEnumerable<Ent> PlayerCorpses()
         {
             foreach (var e in ByNet.Values)

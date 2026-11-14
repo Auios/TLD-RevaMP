@@ -14,15 +14,18 @@ namespace UnityEngine
 {
     public class Object
     {
+        public string name;
         public static GameObject LastCreated;
-        public static T[] FindObjectsOfType<T>() => Array.Empty<T>();
+        internal static object[] Found = Array.Empty<object>();
+        internal static int Finds;
+        public static T[] FindObjectsOfType<T>() { Finds++; return Found.OfType<T>().ToArray(); }
         public static GameObject Instantiate(GameObject prefab, Vector3 pos, Quaternion rot)
         {
             var go = new GameObject(); go.Storm.transform.position = pos; if (prefab.Part != null) { go.Part = (Component)Activator.CreateInstance(prefab.Part.GetType()); go.Part.Go = go; go.Part.name = prefab.Part.name + "(Clone)"; go.Part.transform.position = pos; go.Part.transform.rotation = rot; } LastCreated = go; return go;
         }
         public static void Destroy(GameObject go) { go.Destroyed = true; napszakvaltakozas.s.sandStorms.Remove(go.Storm); }
     }
-    public partial class GameObject : Object { public Component Part; public Transform transform = new Transform(); public string name; public int layer; public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Part as T ?? Storm as T; public T GetComponentInChildren<T>(bool all) where T : class => GetComponent<T>(); }
+    public partial class GameObject : Object { public Component Part; public Transform transform = new Transform(); public string name; public int layer; public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Part as T ?? Storm as T; public T GetComponentInChildren<T>(bool all = false) where T : class => GetComponent<T>(); }
     public partial class Transform : Component { public Vector3 position, eulerAngles, localEulerAngles; }
     public class Light { public bool enabled; public float intensity; public GameObject gameObject = new GameObject(); }
     public class AudioSource : Component { public bool isPlaying; public float volume, pitch; public int priority; public AudioClip clip; }

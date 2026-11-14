@@ -8,7 +8,7 @@ namespace UnityEngine
     public class CharacterController : Collider { }
     public class CapsuleCollider : Collider { }
     public enum RigidbodyInterpolation { None, Interpolate }
-    public partial class Rigidbody : Component { public bool isKinematic; public RigidbodyInterpolation interpolation; public Vector3 position; public Quaternion rotation = Quaternion.identity; }
+    public partial class Rigidbody : Component { public bool isKinematic; public RigidbodyInterpolation interpolation; public Vector3 position, velocity; public Quaternion rotation = Quaternion.identity; }
     public struct Pose { public Vector3 position; public Quaternion rotation; public Pose(Vector3 p, Quaternion q) { position = p; rotation = q; } }
     public partial class Transform
     {
@@ -52,6 +52,8 @@ namespace TLDRevamp.Net
 {
     internal static class Mp
     {
+        internal static Vector3d LocalGlobal() => mainscript.GlobalFromUnityPos(mainscript.s.player.transform.position);
+        internal static bool SceneTearingDown;
         internal static bool RemoteTrace;
         internal static SeatServer Server = new SeatServer();
         internal class SeatServer

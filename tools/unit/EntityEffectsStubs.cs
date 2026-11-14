@@ -70,9 +70,9 @@ namespace UnityEngine
         public static Quaternion AngleAxis(float a, Vector3 n) => identity;
         public static Quaternion operator *(Quaternion a, Quaternion b) => b;
     }
-    public class Collider : Component { public bool isTrigger, enabled = true; public Bounds bounds; }
+    public class Collider : Component { public Vector3 ClosestPoint(Vector3 p) => p; public bool isTrigger, enabled = true; public Bounds bounds; }
     public struct Bounds { public Vector3 center; public float SqrDistance(Vector3 p) => (p - center).sqrMagnitude; }
-    public struct RaycastHit { public Collider collider; public Vector3 point, normal; }
+    public struct RaycastHit { public float distance; public Collider collider; public Vector3 point, normal; }
     public struct Ray { public Ray(Vector3 p, Vector3 n) { } }
     public enum QueryTriggerInteraction { Collide }
     public static partial class Physics
@@ -161,14 +161,14 @@ namespace TLDRevamp
 }
 namespace TLDRevamp.Net
 {
-    internal static class PlayerCombat { internal static int LastN, LastPlayerHit = -1; internal static float LastPlayerT; internal static Vector3 LastOrigin, LastDir; }
+    internal static partial class PlayerCombat { internal static int LastN, LastPlayerHit = -1; internal static float LastPlayerT; internal static Vector3 LastOrigin, LastDir; }
     public static partial class RemotePlayers
     {
         internal static Transform Bone;
         internal static Transform BodyPart(int id, int part) => Bone;
         internal static bool BodyHit(int id, Ray ray, float max, out int part, out RaycastHit hit) { part = 0; hit = new RaycastHit { point = new Vector3(2, 3, 4), normal = Vector3.up }; return Bone != null; }
     }
-    internal static class HitCheck { internal const float ObjShotM = 1, ObjSizeM = 1, ObjSeatM = 1; internal static bool Allow = true; internal static bool AllowOnObject(int from, string why, Vector3d at, float a, float b) => Allow; }
+    internal static class HitCheck { internal const float ObjShotM = 1, ObjSizeM = 1, ObjSeatM = 1, ObjForceM = 1; internal const byte KCreature = 1; internal static bool Allow = true; internal static bool AllowOnObject(int from, string why, Vector3d at, double a, double b) => Allow; }
     public static partial class Entities
     {
         public sealed partial class Ent { public uint NetId; public List<tosaveitemscript> Items = new List<tosaveitemscript>(); public bool Spraying; }

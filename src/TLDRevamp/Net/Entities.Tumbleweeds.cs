@@ -13,7 +13,7 @@ namespace TLDRevamp.Net
     /// one is shared (the others get it as an item; its owner moves it). The limit counts every tumbleweed around the
     /// player, the others' too: players together do not get twice as many. The wind blows on the owner's machine only
     /// (a copy is moved by its owner).
-    public static partial class Entities
+    internal static partial class EntityAI
     {
         public static long TumbleShared, TumbleLimited;
         public static float TumbleNearM = 300f;   // the others' tumbleweeds this near the player count for its limit
@@ -25,7 +25,7 @@ namespace TLDRevamp.Net
             private static bool Prefix(thumbleweedMain __instance, bool ignoreLimit, out tosaveitemscript __state)
             {
                 __state = __instance.nowSpawned;
-                if (!InSession || ignoreLimit) return true;
+                if (!Entities.InSession || ignoreLimit) return true;
                 if (TumbleweedsNear(__instance) >= __instance.thumbleweedLimit) { TumbleLimited++; return false; }
                 return true;
             }
@@ -34,10 +34,10 @@ namespace TLDRevamp.Net
             private static void Postfix(thumbleweedMain __instance, tosaveitemscript __state)
             {
                 var it = __instance.nowSpawned;
-                if (!InSession || it == null || it == __state) return;
-                long before = SpawnShared;
-                ShareSpawn(it.gameObject);
-                if (SpawnShared > before) TumbleShared++;
+                if (!Entities.InSession || it == null || it == __state) return;
+                long before = Entities.SpawnShared;
+                Entities.ShareSpawn(it.gameObject);
+                if (Entities.SpawnShared > before) TumbleShared++;
             }
         }
 
@@ -50,13 +50,13 @@ namespace TLDRevamp.Net
             _tumbles.Clear();
             var pl = mainscript.s != null ? mainscript.s.player : null;
             foreach (var t in m.thumbleweeds) if (t != null) Count(t, pl);
-            foreach (var e in ByNet.Values) if (e.Root != null && e.Root.thumbleweed != null) Count(e.Root.thumbleweed, pl);
+            foreach (var t in Entities.KnownTumbleweeds()) Count(t, pl);
             return _tumbles.Count;
         }
 
         private static void Count(thumbleweedScript t, fpscontroller pl)
         {
-            if (!IsProxy(t)) { _tumbles.Add(t); return; }
+            if (!Entities.IsProxy(t)) { _tumbles.Add(t); return; }
             if (pl != null && (t.transform.position - pl.transform.position).sqrMagnitude <= TumbleNearM * TumbleNearM) _tumbles.Add(t);
         }
 
@@ -65,7 +65,7 @@ namespace TLDRevamp.Net
         private static class TumbleWind
         {
             [HarmonyPrefix]
-            private static void Prefix(thumbleweedScript __instance) { if (InSession) __instance.bwind = !IsProxy(__instance); }
+            private static void Prefix(thumbleweedScript __instance) { if (Entities.InSession) __instance.bwind = !Entities.IsProxy(__instance); }
         }
     }
 }

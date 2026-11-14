@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -19,15 +20,17 @@ namespace TLDRevamp.Net
     /// Breakables (bottles, windows, lamps, the creatures' bodies): a hit on a COPY — a shot, a push by a body this
     /// machine simulates — goes to the owner, which runs the game's own TryBreak there; the owner's Break is replayed on
     /// every copy (sound, slice, the creature's death) without a second gib — the gib is the owner's.
-    public static partial class Entities
+    internal static partial class EntityAI
     {
-        public const byte BreakHit = 48, BreakFx = 49, AiState = 50, AiSound = 51, WorldBreak = 112;
+        private static readonly NetWriter W = new NetWriter();
         public static long BreakHitsSent, BreakHitsRun, BreakFxSent, BreakFxApplied, AiStatesSent, AiStatesApplied, AiStatesStale, AiSoundsSent, AiSoundsApplied,
                            AiRemoteSeen, AiRemoteAttackFrames, AiDamageSent;
 
         private static bool _breakFxReplay;   // a copy replaying the owner's Break: no forwarding, no BreakFx back
         private static Vector3 _hitDir;       // the direction a forwarded force hit came from (wakes a creature)
         private static bool _aiSoundReplay;   // a copy playing the owner's creature voice
+
+        internal static bool InitializeAiLookups() => _spawnedGib != null && DamageFromM != null && ChaseStartF != null && CurChaseF != null;
 
         // ================================================================ breakables
         /// A/B: false = before: a creature that was ever locked in a car could not die. The lock destroys its limbs' bodies
@@ -66,7 +69,7 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static bool Prefix(breakablescript __instance, float force, Vector3 dir)
             {
-                if (!InSession || _breakFxReplay || !IsProxy(__instance)) return true;
+                if (!Entities.InSession || _breakFxReplay || !Entities.IsProxy(__instance)) return true;
                 if (!__instance.noShoot) ForwardHit(__instance, 1, force, dir);
                 return false;
             }
@@ -78,8 +81,8 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static bool Prefix(breakablescript __instance, float force)
             {
-                if (!InSession || _breakFxReplay || !IsProxy(__instance)) return true;
-                if (RabbitBreakOnCopy(__instance, force)) return false;   // a rabbit's bite: summed (Entities.Rabbits)
+                if (!Entities.InSession || _breakFxReplay || !Entities.IsProxy(__instance)) return true;
+                if (Entities.RabbitBreakOnCopy(__instance, force)) return false;   // a rabbit's bite: summed (Entities.Rabbits)
                 // nothing to break: TryBreak(0) on the owner only woke and turned its creature (DamageFrom)
                 if (force <= 0f) { ZeroHitsIgnored++; return false; }
                 if (EntityExplosions.BlastDepth == 0) ForwardHit(__instance, 2, force, _hitDir);   // inside a blast the owner replays the blast
@@ -97,10 +100,10 @@ namespace TLDRevamp.Net
                 // rabbit's copy brushing the next one: the owner sees that same touch with its own bodies. Forwarded, each
                 // went to the owner as a hit: the "Playing" save's joiner sent 1124 in its first minutes (force 0, every one
                 // waking the host's rabbit and turning it, DamageFrom), with nobody near them. As for collisions (CopyBreakCollision).
-                if (InSession && !_breakFxReplay && IsProxy(__instance) && (RB == null || IsProxy(RB))) { CopyTouchesIgnored++; return false; }
+                if (Entities.InSession && !_breakFxReplay && Entities.IsProxy(__instance) && (RB == null || Entities.IsProxy(RB))) { CopyTouchesIgnored++; return false; }
                 if (RB != null) _hitDir = RB.position - __instance.transform.position;
-                if (HitTrace > 0 && InSession && IsProxy(__instance))
-                    Plugin.Log.LogInfo("[hittrace] touched by " + (RB != null ? RB.name + " proxy " + IsProxy(RB) : "no body"));
+                if (HitTrace > 0 && Entities.InSession && Entities.IsProxy(__instance))
+                    Plugin.Log.LogInfo("[hittrace] touched by " + (RB != null ? RB.name + " proxy " + Entities.IsProxy(RB) : "no body"));
                 return true;
             }
             [HarmonyFinalizer]
@@ -117,7 +120,7 @@ namespace TLDRevamp.Net
         private static class CopyBreakBlast
         {
             [HarmonyPrefix]
-            private static bool Prefix(breakablescript __instance) => !InSession || _breakFxReplay || !IsProxy(__instance);
+            private static bool Prefix(breakablescript __instance) => !Entities.InSession || _breakFxReplay || !Entities.IsProxy(__instance);
         }
 
         /// A copy bumped: only a body THIS machine simulates counts (the owner sees its own bodies and the static world).
@@ -130,11 +133,11 @@ namespace TLDRevamp.Net
                 // the game reads c.collider.gameObject for anything with a creature on it, and a collider destroyed in this physics
                 // step is gone by then: NullReferenceException in OnCollisionEnter (monkey runs, 1-3 a run, on both machines)
                 if ((__instance.AI != null || __instance.newAI != null) && c.collider == null) { BreakBumpsNoCollider++; return false; }
-                if (!InSession || !IsProxy(__instance)) return true;
-                if (c.rigidbody == null || IsProxy(c.rigidbody)) return false;
+                if (!Entities.InSession || !Entities.IsProxy(__instance)) return true;
+                if (c.rigidbody == null || Entities.IsProxy(c.rigidbody)) return false;
                 if (HitTrace > 0)
                 {
-                    var other = c.rigidbody.transform.root; var oe = EntOfRoot(other);
+                    var other = c.rigidbody.transform.root; var oe = Entities.EntOfRoot(other);
                     Plugin.Log.LogInfo("[hittrace] bumped by " + c.rigidbody.name + " (root " + other.name + (oe != null ? " net " + oe.NetId + " owner " + oe.OwnerId : " not shared") +
                                        (c.rigidbody.isKinematic ? ", kinematic" : "") + ") at " + c.relativeVelocity.magnitude.ToString("F2") + " m/s");
                 }
@@ -178,33 +181,33 @@ namespace TLDRevamp.Net
                 if (BreakTrace > 0 && !__state)
                 {
                     BreakTrace--;
-                    var e = EntOfRoot(__instance.transform.root);
+                    var e = Entities.EntOfRoot(__instance.transform.root);
                     var g = mainscript.GlobalFromUnityPos(__instance.transform.position);
                     var rb = __instance.GetComponentInParent<Rigidbody>();
                     Plugin.Log.LogInfo("[breaktrace] " + __instance.transform.root.name + " net " + (e != null ? e.NetId : 0) + " owner " + (e != null ? e.OwnerId : -9) +
-                                       " proxy " + IsProxy(__instance) + " at " + g.x.ToString("F1") + "," + g.y.ToString("F1") + "," + g.z.ToString("F1") +
+                                       " proxy " + Entities.IsProxy(__instance) + " at " + g.x.ToString("F1") + "," + g.y.ToString("F1") + "," + g.z.ToString("F1") +
                                        " rb " + (rb == null ? "none" : (rb.isKinematic ? "kin" : "dyn") + " v " + rb.velocity.magnitude.ToString("F2")) + " t " + Time.time.ToString("F1") + "\n" + System.Environment.StackTrace);
                 }
             }
             [HarmonyPostfix]
             private static void Postfix(breakablescript __instance, bool __state)
             {
-                if (__state || !InSession || _breakFxReplay) return;
-                if (IsProxy(__instance))
+                if (__state || !Entities.InSession || _breakFxReplay) return;
+                if (Entities.IsProxy(__instance))
                 {
                     if (BreaksKept) { var c0 = BreakOwner(__instance); SessionLog.Event("break-on-copy", c0 != null ? c0.NetId : 0, result: "not shared"); }
                     return;
                 }
                 if (!BreakRef(__instance, out uint net, out int bi)) { if (BreaksKept) SessionLog.Event("break-no-object", result: __instance.name); if (WorldBreakGibs) WorldBreakOut(__instance); return; }
                 // a member that is an item of its own goes as a member (MemberGone): kept here too, its number would mean another one later
-                bool kept = BreaksKept && (__instance.GetComponent<tosaveitemscript>() == null || (ByNet.TryGetValue(net, out var broke) && broke.Root != null && broke.Root.gameObject == __instance.gameObject));
-                W.Reset(); W.U8(BreakFx); W.U32(net); W.VarU32((uint)bi); W.U8(kept ? BreakKeep : (byte)0);
-                ToServer(W, true); BreakFxSent++;
+                bool kept = BreaksKept && (__instance.GetComponent<tosaveitemscript>() == null || (Entities.TryGetEntity(net, out var broke) && broke.Root != null && broke.Root.gameObject == __instance.gameObject));
+                W.Reset(); W.U8(Entities.BreakFx); W.U32(net); W.VarU32((uint)bi); W.U8(kept ? BreakKeep : (byte)0);
+                Entities.SendToServer(W, true); BreakFxSent++;
                 if (BreaksKept) SessionLog.Event("break-sent", net, item: bi, result: kept ? "kept" : "member");
-                if (kept) KeepBreakHere(net, bi, ByNet.TryGetValue(net, out var here) && here.Root != null ? here.Root.transform : null);
+                if (kept) KeepBreakHere(net, bi, Entities.TryGetEntity(net, out var here) && here.Root != null ? here.Root.transform : null);
                 // the gib is the owner's: the copies replay the break without one, so it goes out as an object of its own
-                if (ReshareSurvivors && _spawnedGib(__instance) is GameObject gib && gib != null)
-                    foreach (var t in gib.GetComponentsInChildren<tosaveitemscript>(true)) QueueReshare(t);
+                if (Entities.ReshareSurvivors && _spawnedGib(__instance) is GameObject gib && gib != null)
+                    foreach (var t in gib.GetComponentsInChildren<tosaveitemscript>(true)) Entities.QueueReshare(t);
             }
         }
 
@@ -227,7 +230,7 @@ namespace TLDRevamp.Net
         private static readonly List<KeptBreak> _worldBreaks = new List<KeptBreak>();          // server: every one of this session
         private static readonly List<KeptBreak> _worldBreaksWaiting = new List<KeptBreak>();   // here: not found yet
 
-        private static void ServerKeepWorldBreak(NetReader r)
+        internal static void ServerKeepWorldBreak(NetReader r)
         {
             if (!WorldBreaksKept) return;
             var g = new Vector3d(r.F64(), r.F64(), r.F64()); string name = r.Str();
@@ -235,19 +238,19 @@ namespace TLDRevamp.Net
             _worldBreaks.Add(new KeptBreak { G = g, Name = name });
         }
 
-        private static void ServerWorldBreaksTo(int playerId)
+        internal static void ServerWorldBreaksTo(int playerId)
         {
             foreach (var b in _worldBreaks)
             {
-                W.Reset(); W.U8(WorldBreak); W.F64(b.G.x); W.F64(b.G.y); W.F64(b.G.z); W.Str(b.Name);
-                ServerSendTo(playerId, W, true);
+                W.Reset(); W.U8(Entities.WorldBreak); W.F64(b.G.x); W.F64(b.G.y); W.F64(b.G.z); W.Str(b.Name);
+                Entities.SendToPeer(playerId, W, true);
                 WorldBreaksReplayed++;
             }
         }
 
         /// Per frame, cheap unless a kept break is near this player and due: one look over the world's breakables for all of them.
         /// A piece that isn't there is looked for less and less often; it may never be (another build's world).
-        private static void WorldBreakTick()
+        internal static void WorldBreakTick()
         {
             if (_worldBreaksWaiting.Count == 0) return;
             float now = Time.realtimeSinceStartup;
@@ -274,14 +277,14 @@ namespace TLDRevamp.Net
         {
             int pieces = 0;
             if (_spawnedGib(br) is GameObject gib && gib != null)
-                foreach (var t in gib.GetComponentsInChildren<tosaveitemscript>(true)) { QueueReshare(t); WorldGibsShared++; pieces++; }
+                foreach (var t in gib.GetComponentsInChildren<tosaveitemscript>(true)) { Entities.QueueReshare(t); WorldGibsShared++; pieces++; }
             if (WorldBreaksSent < 20)
                 Plugin.Log.LogInfo($"world break: {WorldPieceName(br)} at {mainscript.GlobalFromUnityPos(br.transform.position)}, its gib {(_spawnedGib(br) != null ? _spawnedGib(br).name : "none")}: {pieces} pieces to share");
             // an item nobody shares (not yet, or never: a gib of a gib) isn't the same piece of the world elsewhere
             if (br.GetComponentInParent<tosaveitemscript>() != null) return;
             var g = mainscript.GlobalFromUnityPos(br.transform.position);
-            W.Reset(); W.U8(WorldBreak); W.F64(g.x); W.F64(g.y); W.F64(g.z); W.Str(WorldPieceName(br));
-            ToServer(W, true); WorldBreaksSent++;
+            W.Reset(); W.U8(Entities.WorldBreak); W.F64(g.x); W.F64(g.y); W.F64(g.z); W.Str(WorldPieceName(br));
+            Entities.SendToServer(W, true); WorldBreaksSent++;
         }
 
         /// The object's own name: the world generator puts all it makes under one root (ObjGenParent).
@@ -293,7 +296,7 @@ namespace TLDRevamp.Net
 
         /// Another machine broke a piece of the world: ours, the same name near the same spot, the game's own Break
         /// (its sound, slice) without the gib - that comes as its own shared object.
-        private static void ApplyWorldBreak(NetReader r)
+        internal static void ApplyWorldBreak(NetReader r)
         {
             var g = new Vector3d(r.F64(), r.F64(), r.F64()); string name = r.Str();
             if (r.Bad || string.IsNullOrEmpty(name) || double.IsNaN(g.x) || double.IsNaN(g.y) || double.IsNaN(g.z)) return;
@@ -330,16 +333,16 @@ namespace TLDRevamp.Net
                 Plugin.Log.LogInfo("[hittrace] " + br.transform.root.name + " net " + net + " breakable " + bi + " kind " + kind + " force " + force.ToString("F2") +
                                    " at " + g.x.ToString("F1") + "," + g.y.ToString("F1") + "," + g.z.ToString("F1") + " frame " + Time.frameCount + "\n" + System.Environment.StackTrace);
             }
-            W.Reset(); W.U8(BreakHit); W.U32(net); W.VarU32((uint)bi); W.U8(kind); W.F32(force); W.F32(dir.x); W.F32(dir.y); W.F32(dir.z);
-            ToServer(W, true); BreakHitsSent++;
+            W.Reset(); W.U8(Entities.BreakHit); W.U32(net); W.VarU32((uint)bi); W.U8(kind); W.F32(force); W.F32(dir.x); W.F32(dir.y); W.F32(dir.z);
+            Entities.SendToServer(W, true); BreakHitsSent++;
         }
 
-        private static bool BreakRef(breakablescript br, out uint net, out int bi)
+        internal static bool BreakRef(breakablescript br, out uint net, out int bi)
         {
             net = 0; bi = -1;
             if (!BreaksKept)
             {
-                var whole = EntOfRoot(br.transform.root);
+                var whole = Entities.EntOfRoot(br.transform.root);
                 if (whole == null) return false;
                 bi = System.Array.IndexOf(br.transform.root.GetComponentsInChildren<breakablescript>(true), br);
                 net = whole.NetId;
@@ -360,8 +363,8 @@ namespace TLDRevamp.Net
             for (var it = br.GetComponentInParent<tosaveitemscript>(); it != null;
                  it = it.transform.parent != null ? it.transform.parent.GetComponentInParent<tosaveitemscript>() : null)
             {
-                foreach (var e in ByNet.Values) if (e.Root == it) return e;
-                foreach (var e in ByNet.Values) if (e.Items != null && e.Items.Contains(it)) return e;
+                var e = Entities.BreakObjectOf(it);
+                if (e != null) return e;
             }
             return null;
         }
@@ -381,9 +384,9 @@ namespace TLDRevamp.Net
             return all;
         }
 
-        private static breakablescript BreakableOf(uint net, int bi)
+        internal static breakablescript BreakableOf(uint net, int bi)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return null;
+            if (!Entities.TryGetEntity(net, out var e) || !Entities.ResolveEntity(e) || e.Root == null) return null;
             if (!BreaksKept)
             {
                 var whole = e.Root.transform.root.GetComponentsInChildren<breakablescript>(true);
@@ -396,24 +399,8 @@ namespace TLDRevamp.Net
         private static readonly AccessTools.FieldRef<breakablescript, GameObject> _spawnedGib = GameLookups.FieldRefAccess<breakablescript, GameObject>(typeof(breakablescript), "spawnedGib");
         private static readonly System.Reflection.MethodInfo DamageFromM = GameLookups.Method(typeof(breakablescript), "DamageFrom");
 
-        private static void ServerBreakHit(int from, NetReader r)
-        {
-            uint net = r.U32(); int bi = (int)r.VarU32(); byte kind = r.U8();
-            if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId == from) return;
-            // where the hit thing is: the host's own copy of it if it has one (a creature walks away from where its
-            // object's record says), else the object's last position, with a shot's reach for anything
-            var br = BreakableOf(net, bi);
-            bool exact = br != null;
-            var at = exact ? mainscript.GlobalFromUnityPos(br.transform.position) : se.HasState ? se.Pos : se.Where;
-            double reach = kind == 1 || !exact ? HitCheck.ObjShotM : HitCheck.ObjForceM;
-            if (!HitCheck.AllowOnObject(from, $"breakable {bi} of object {net} {(br != null ? br.transform.root.name : "not placed here")} ({(kind == 1 ? "shot" : kind == 3 ? "bite" : "blow")})", at, reach, exact ? 10f : HitCheck.ObjSizeM)) return;
-            r.Pos = 0;
-            WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
-            ServerSendTo(se.OwnerId, WS, true);
-        }
-
         /// Owner: someone hit our breakable — the game's own call here.
-        private static void ApplyBreakHit(NetReader r)
+        internal static void ApplyBreakHit(NetReader r)
         {
             uint net = r.U32(); int bi = (int)r.VarU32(); byte kind = r.U8(); float force = r.F32();
             var dir = new Vector3(r.F32(), r.F32(), r.F32());
@@ -422,7 +409,7 @@ namespace TLDRevamp.Net
             if (float.IsNaN(force) || float.IsInfinity(force) || force < 0f) return;   // as for player damage (PlayerCombat)
             if (float.IsNaN(dir.x) || float.IsNaN(dir.y) || float.IsNaN(dir.z) || float.IsInfinity(dir.sqrMagnitude)) dir = Vector3.zero;
             var br = BreakableOf(net, bi);
-            if (br == null || IsProxy(br) || br.destroyed) return;
+            if (br == null || Entities.IsProxy(br) || br.destroyed) return;
             BreakHitsRun++;
             if (kind == 1) br.TryBreakShoot(force, dir);
             else
@@ -432,33 +419,26 @@ namespace TLDRevamp.Net
             }
         }
 
-        private static void ServerFwdAll(int from, NetReader r, bool reliable)
-        {
-            r.Pos = 0;
-            WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
-            ServerSendAll(WS, reliable, from);
-        }
-
         /// A copy: the owner's break, replayed with the game's own Break (its sound, slice, a creature's death) — not its gib.
-        private static void ApplyBreakFx(NetReader r)
+        internal static void ApplyBreakFx(NetReader r)
         {
             uint net = r.U32(); int bi = (int)r.VarU32();
             byte flags = r.Remaining > 0 ? r.U8() : (byte)0;
             if (r.Bad) return;
             bool kept = BreaksKept && (flags & BreakKeep) != 0;
             // for a copy that just came: its members that are gone go at the end of this frame, and the numbers count without them
-            if (BreaksKept) SessionLog.Event("break-got", net, item: bi, result: ((flags & BreakLate) != 0 ? "late " : "") + (kept ? "kept" : "member") + (ByNet.ContainsKey(net) ? "" : ", no object"));
-            if (kept && (flags & BreakLate) != 0) { if (ByNet.ContainsKey(net)) KeepBreakHere(net, bi, null); return; }
+            if (BreaksKept) SessionLog.Event("break-got", net, item: bi, result: ((flags & BreakLate) != 0 ? "late " : "") + (kept ? "kept" : "member") + (Entities.TryGetEntity(net, out _) ? "" : ", no object"));
+            if (kept && (flags & BreakLate) != 0) { if (Entities.TryGetEntity(net, out _)) KeepBreakHere(net, bi, null); return; }
             var br = BreakableOf(net, bi);
             if (br == null)
             {
                 // stored far here: nothing to break yet, and the owner's message won't come again
-                if (kept && ByNet.ContainsKey(net)) KeepBreakHere(net, bi, null);
+                if (kept && Entities.TryGetEntity(net, out _)) KeepBreakHere(net, bi, null);
                 return;
             }
-            if (br.destroyed || !IsProxy(br)) return;
+            if (br.destroyed || !Entities.IsProxy(br)) return;
             BreakQuietly(br);
-            if (kept) KeepBreakHere(net, bi, ByNet.TryGetValue(net, out var here) && here.Root != null ? here.Root.transform : null);
+            if (kept) KeepBreakHere(net, bi, Entities.TryGetEntity(net, out var here) && here.Root != null ? here.Root.transform : null);
         }
 
         private static void BreakQuietly(breakablescript br)
@@ -493,37 +473,36 @@ namespace TLDRevamp.Net
             else if (b.Breaks.Count == 1 || b.Done == doneOn) b.Done = doneOn;
         }
 
-        private static void ServerKeepBreak(NetReader r)
+        internal static void ServerKeepBreak(NetReader r)
         {
             if (!BreaksKept) return;
             uint net = r.U32(); int bi = (int)r.VarU32();
             byte flags = r.Remaining > 0 ? r.U8() : (byte)0;
-            if (r.Bad || bi < 0 || (flags & BreakKeep) == 0 || !Server.TryGetValue(net, out var se)) return;
-            if (se.Broken == null) se.Broken = new List<int>();
-            if (se.Broken.Count < MaxBreaksPerObject) se.Broken.Add(bi);
+            if (r.Bad || bi < 0 || (flags & BreakKeep) == 0) return;
+            Entities.KeepBreakIndex(net, bi);
         }
 
-        private static void SendBreaksTo(int playerId, SEnt se)
+        internal static void SendBreaksTo(int playerId, uint net, List<int> broken)
         {
-            if (se.Broken == null) return;
-            foreach (int bi in se.Broken)
+            if (broken == null) return;
+            foreach (int bi in broken)
             {
-                W.Reset(); W.U8(BreakFx); W.U32(se.NetId); W.VarU32((uint)bi); W.U8((byte)(BreakKeep | BreakLate));
-                ServerSendTo(playerId, W, true);
+                W.Reset(); W.U8(Entities.BreakFx); W.U32(net); W.VarU32((uint)bi); W.U8((byte)(BreakKeep | BreakLate));
+                Entities.SendToPeer(playerId, W, true);
                 BreaksReplayed++;
             }
         }
 
         /// Once a second: an object placed anew since its breaks. Its owner may have changed since; the breaks stand.
-        private static void BreakWaitTick()
+        internal static void BreakWaitTick()
         {
             if (_breaksHere.Count == 0 || Time.realtimeSinceStartup < _breakWaitAt) return;
             _breakWaitAt = Time.realtimeSinceStartup + 1f;
             _breaksDone.Clear();
             foreach (var kv in _breaksHere)
             {
-                if (!ByNet.TryGetValue(kv.Key, out var e)) { _breaksDone.Add(kv.Key); SessionLog.Event("breaks-forgotten", kv.Key); continue; }
-                if (!Resolve(e) || e.Root == null) continue;
+                if (!Entities.TryGetEntity(kv.Key, out var e)) { _breaksDone.Add(kv.Key); SessionLog.Event("breaks-forgotten", kv.Key); continue; }
+                if (!Entities.ResolveEntity(e) || e.Root == null) continue;
                 var placed = e.Root.transform;
                 if (kv.Value.Done == placed) continue;
                 bool threw = false;
@@ -552,7 +531,14 @@ namespace TLDRevamp.Net
             foreach (uint net in _breaksDone) _breaksHere.Remove(net);
         }
 
-        private static void BreaksReset()
+        internal static void ObserveBreaks(uint net, out int count, out Transform done)
+        {
+            _breaksHere.TryGetValue(net, out var kept);
+            count = kept != null ? kept.Breaks.Count : 0;
+            done = kept != null ? kept.Done : null;
+        }
+
+        internal static void BreaksReset()
         {
             _breaksHere.Clear();
             EntityCarTuning.CarTuneReset();
@@ -621,7 +607,7 @@ namespace TLDRevamp.Net
                 __state = float.NaN;
                 _aiSawRemote = null;
                 var a = __instance;
-                if (!InSession || RemotePlayers.Count == 0 || a.died || a.rb == null || a.rb.isKinematic || a.head == null) return;
+                if (!Entities.InSession || RemotePlayers.Count == 0 || a.died || a.rb == null || a.rb.isKinematic || a.head == null) return;
                 if (gamemodesettingsscript.s == null || gamemodesettingsscript.s.S.peacefulEnemies == 2) return;
                 if (a.target == null) { a.TargetNull(); a.TargetReset(); }   // its remote target's body went away
                 // the closest remote player the game's rules let it see
@@ -672,8 +658,8 @@ namespace TLDRevamp.Net
             private static void Postfix(newAiScript __instance)
             {
                 var a = __instance;
-                if (!InSession) return;
-                if (a.rb != null && a.rb.isKinematic) { if (IsProxy(a)) ShowCopy(a); return; }
+                if (!Entities.InSession) return;
+                if (a.rb != null && a.rb.isKinematic) { if (Entities.IsProxy(a)) ShowCopy(a); return; }
                 if (_aiSawRemote == a) a.isSeeing = true;   // the game clears it before its sight pass
                 if (RemotePlayers.Count == 0 || a.died || a.rb == null || a.currentPlayer != null) return;
                 if (gamemodesettingsscript.s == null || gamemodesettingsscript.s.S.peacefulEnemies == 2) return;
@@ -726,7 +712,7 @@ namespace TLDRevamp.Net
                 foreach (var kv in _aiDmgAcc)
                 {
                     var c = _aiDmgFrom[kv.Key];
-                    if (c == null || !ItemRef(c.tosave != null ? c.tosave : c.GetComponentInParent<tosaveitemscript>(), out uint cNet, out int cIdx)) continue;
+                    if (c == null || !Entities.ItemRef(c.tosave != null ? c.tosave : c.GetComponentInParent<tosaveitemscript>(), out uint cNet, out int cIdx)) continue;
                     PlayerCombat.SendInstant(kv.Key, kv.Value, _aiDmgDir[kv.Key], c.transform.position, cNet, cIdx); AiDamageSent++;
                 }
                 _aiDmgAcc.Clear(); _aiDmgDir.Clear(); _aiDmgFrom.Clear();
@@ -768,7 +754,7 @@ namespace TLDRevamp.Net
                    (a.anim != null && a.anim.onGround ? 16 : 0) | (a.anim != null && a.anim.duck ? 32 : 0) | (a.died ? 64 : 0));
 
         /// Per frame: the owner's creatures' state out (10 Hz, on change; once a second regardless — it's unreliable).
-        private static void AiTick()
+        internal static void AiTick()
         {
             if (RemotePlayers.Count == 0) return;   // nobody to show them to
             float now = Time.unscaledTime;
@@ -776,8 +762,7 @@ namespace TLDRevamp.Net
             {
                 _aiScanAt = now + 2f;
                 AiAll.Clear();
-                foreach (var e in ByNet.Values)
-                    foreach (var it in e.Items) if (it != null && it.npc != null) AiAll.Add(it.npc);
+                Entities.CollectCreatureAis(AiAll);
                 _aiGone.Clear();
                 foreach (var k in AiViews.Keys) if (k == null) _aiGone.Add(k);
                 foreach (var k in AiLastSent.Keys) if (k == null) _aiGone.Add(k);
@@ -787,8 +772,8 @@ namespace TLDRevamp.Net
             _aiSendAt = now + 0.1f;
             foreach (var a in AiAll)
             {
-                if (a == null || IsProxy(a)) continue;
-                if (!ItemRef(a.tosave != null ? a.tosave : a.GetComponentInParent<tosaveitemscript>(), out uint net, out int idx)) continue;
+                if (a == null || Entities.IsProxy(a)) continue;
+                if (!Entities.ItemRef(a.tosave != null ? a.tosave : a.GetComponentInParent<tosaveitemscript>(), out uint net, out int idx)) continue;
                 byte f = AiFlags(a);
                 sbyte fw = (sbyte)Mathf.Clamp(Mathf.RoundToInt((a.anim != null ? a.anim.targetForward : 0f) * 127f), -127, 127);
                 sbyte tu = (sbyte)Mathf.Clamp(Mathf.RoundToInt((a.anim != null ? a.anim.targetTurn : 0f) * 127f), -127, 127);
@@ -797,37 +782,37 @@ namespace TLDRevamp.Net
                 if (!AiLastSent.TryGetValue(a, out var ls)) AiLastSent[a] = ls = new AiSent { At = -10f };
                 bool rawSend = BandwidthRules.CreatureDue(ls.RawFlags, f, ls.RawFwd == fw && ls.RawTurn == tu && (ls.RawLook - look).sqrMagnitude < 0.04f, now, ls.RawAt);
                 if (rawSend) { ls.RawFlags = f; ls.RawFwd = fw; ls.RawTurn = tu; ls.RawLook = look; ls.RawAt = now; }
-                if (WasteFixes && a.died) { f = 64; fw = tu = 0; look = Vector3.zero; }
-                uint epoch = ByNet.TryGetValue(net, out var ent) ? ent.Epoch : 0;
-                bool audience = OwnerAudience(mainscript.GlobalFromUnityPos(a.transform.position));
+                if (Entities.WasteFixes && a.died) { f = 64; fw = tu = 0; look = Vector3.zero; }
+                uint epoch = Entities.TryGetEntity(net, out var ent) ? ent.Epoch : 0;
+                bool audience = Entities.CreatureAudience(mainscript.GlobalFromUnityPos(a.transform.position));
                 bool entered = audience && !ls.Audience; ls.Audience = audience;
-                if (!entered && ls.Epoch == epoch && ls.Flags == f && ls.Fwd == fw && ls.Turn == tu && (ls.Look - look).sqrMagnitude < 0.04f && (WasteFixes && a.died || now - ls.At < 1f))
+                if (!entered && ls.Epoch == epoch && ls.Flags == f && ls.Fwd == fw && ls.Turn == tu && (ls.Look - look).sqrMagnitude < 0.04f && (Entities.WasteFixes && a.died || now - ls.At < 1f))
                 {
-                    if (WasteFixes && a.died && rawSend) StatesSkippedDeadAnimation++;
+                    if (Entities.WasteFixes && a.died && rawSend) Entities.StatesSkippedDeadAnimation++;
                     continue;
                 }
                 if (!InterestRules.Due(audience, ls.Epoch != epoch || ((ls.Flags ^ f) & 65) != 0, now, ls.At, MpServer.CarBeyondInterval))
-                { SkippedByInterest(0); continue; }
+                { Entities.SkippedByInterest(0); continue; }
                 ls.Flags = f; ls.Fwd = fw; ls.Turn = tu; ls.Look = look; ls.At = now; ls.Epoch = epoch;
-                W.Reset(); W.U8(AiState); W.U32(net); W.VarU32((uint)idx); W.U8(f); W.U8((byte)fw); W.U8((byte)tu);
+                W.Reset(); W.U8(Entities.AiState); W.U32(net); W.VarU32((uint)idx); W.U8(f); W.U8((byte)fw); W.U8((byte)tu);
                 W.F32(look.x); W.F32(look.y); W.F32(look.z);
-                ToServer(W, false); AiStatesSent++;
+                Entities.SendToServer(W, false); AiStatesSent++;
             }
         }
 
-        private static newAiScript AiOf(uint net, int idx)
+        internal static newAiScript AiOf(uint net, int idx)
         {
-            if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Items == null || idx < 0 || idx >= e.Items.Count || e.Items[idx] == null) return null;
+            if (!Entities.TryGetEntity(net, out var e) || !Entities.ResolveEntity(e) || e.Items == null || idx < 0 || idx >= e.Items.Count || e.Items[idx] == null) return null;
             return e.Items[idx].GetComponentInChildren<newAiScript>(true);
         }
 
-        private static void ApplyAiState(NetReader r)
+        internal static void ApplyAiState(NetReader r)
         {
             uint net = r.U32(); int idx = (int)r.VarU32(); byte f = r.U8(); sbyte fw = (sbyte)r.U8(), tu = (sbyte)r.U8();
             var look = new Vector3(r.F32(), r.F32(), r.F32());
-            if (r.Bad || !Finite(look) || look.sqrMagnitude > 1e6f) return;   // where the copy's creature looks
+            if (r.Bad || !Entities.IsFinite(look) || look.sqrMagnitude > 1e6f) return;   // where the copy's creature looks
             var a = AiOf(net, idx);
-            if (a == null || !IsProxy(a)) return;
+            if (a == null || !Entities.IsProxy(a)) return;
             if (!AiViews.TryGetValue(a, out var v)) AiViews[a] = v = new AiView();
             v.Flags = f; v.Fwd = fw / 127f; v.Turn = tu / 127f; v.Look = look;
             AiStatesApplied++;
@@ -838,44 +823,30 @@ namespace TLDRevamp.Net
         private static class AiVoice
         {
             [HarmonyPrefix]
-            private static bool Prefix(newAiScript __instance) => !InSession || _aiSoundReplay || !IsProxy(__instance);
+            private static bool Prefix(newAiScript __instance) => !Entities.InSession || _aiSoundReplay || !Entities.IsProxy(__instance);
 
             [HarmonyPostfix]
             private static void Postfix(newAiScript __instance, newAiScript.aiSoundType _soundType, int _index, float _pitch)
             {
-                if (!InSession || _aiSoundReplay || IsProxy(__instance)) return;
-                if (!ItemRef(__instance.tosave != null ? __instance.tosave : __instance.GetComponentInParent<tosaveitemscript>(), out uint net, out int idx)) return;
-                W.Reset(); W.U8(AiSound); W.U32(net); W.VarU32((uint)idx); W.U8((byte)_soundType); W.VarU32((uint)Mathf.Max(0, _index)); W.F32(_pitch);
-                ToServer(W, true); AiSoundsSent++;
+                if (!Entities.InSession || _aiSoundReplay || Entities.IsProxy(__instance)) return;
+                if (!Entities.ItemRef(__instance.tosave != null ? __instance.tosave : __instance.GetComponentInParent<tosaveitemscript>(), out uint net, out int idx)) return;
+                W.Reset(); W.U8(Entities.AiSound); W.U32(net); W.VarU32((uint)idx); W.U8((byte)_soundType); W.VarU32((uint)Mathf.Max(0, _index)); W.F32(_pitch);
+                Entities.SendToServer(W, true); AiSoundsSent++;
             }
         }
 
-        private static void ApplyAiSound(NetReader r)
+        internal static void ApplyAiSound(NetReader r)
         {
             uint net = r.U32(); int idx = (int)r.VarU32(); int type = r.U8(); int clip = (int)r.VarU32(); float pitch = r.F32();
             if (r.Bad) return;
             var a = AiOf(net, idx);
-            if (a == null || !IsProxy(a)) return;
+            if (a == null || !Entities.IsProxy(a)) return;
             _aiSoundReplay = true;
             try { a.SoundSound((newAiScript.aiSoundType)Mathf.Clamp(type, 0, 4), clip, pitch, false); AiSoundsApplied++; }
             finally { _aiSoundReplay = false; }
         }
 
-        /// Server: a creature hit's attacker must own the creature (the shared object it belongs to); `where` is the
-        /// creature as the host has it (its copy here, else the owner's last state), when it has one.
-        internal static bool CreatureOf(int from, uint net, int idx, out Vector3d where, out bool known)
-        {
-            where = default; known = false;
-            if (!Server.TryGetValue(net, out var se) || se.OwnerId != from) return false;
-            var a = AiOf(net, idx);
-            var ny = a == null && ByNet.TryGetValue(net, out var re) && Resolve(re) ? NyOf(re) : null;
-            if (a != null) { where = mainscript.GlobalFromUnityPos(a.transform.position); known = true; }
-            else if (ny != null) { where = mainscript.GlobalFromUnityPos(ny.transform.position); known = true; }
-            else if (se.HasState) { where = se.Pos; known = true; }
-            return true;
-        }
-
-        private static void AiReset() { AiViews.Clear(); AiLastSent.Clear(); AiAll.Clear(); _aiDmgAcc.Clear(); _aiDmgDir.Clear(); _aiDmgFrom.Clear(); AiChasing.Clear(); }
+        internal static void AiReset() { AiViews.Clear(); AiLastSent.Clear(); AiAll.Clear(); _aiDmgAcc.Clear(); _aiDmgDir.Clear(); _aiDmgFrom.Clear(); AiChasing.Clear(); }
 
         public static string AiStats() => "{\"breakHitsSent\":" + BreakHitsSent + ",\"breakHitsRun\":" + BreakHitsRun + ",\"copyTouchesIgnored\":" + CopyTouchesIgnored + ",\"zeroHitsIgnored\":" + ZeroHitsIgnored + ",\"breakFxSent\":" + BreakFxSent +
                                           ",\"breakFxApplied\":" + BreakFxApplied + ",\"statesSent\":" + AiStatesSent + ",\"statesApplied\":" + AiStatesApplied +

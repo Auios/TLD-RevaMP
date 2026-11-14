@@ -2,6 +2,11 @@
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
     <Compile Include="EntitySplitTest.cs" />
+    <Compile Include="EntityAIStubs.cs" />
+    <Compile Include="EntityAIChecks.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Ai.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Tumbleweeds.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/InterestRules.cs" />
     <Compile Include="EntityRagdollsStubs.cs" />
     <Compile Include="EntityRagdollsChecks.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Ragdoll.cs" />
@@ -64,6 +69,7 @@
       <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
     </PropertyGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractFeatureWire.py&quot; &quot;$(IntermediateOutputPath)FeatureWire.g.cs&quot; $(FeatureWireBaseline)" />
-    <ItemGroup><Compile Include="$(IntermediateOutputPath)FeatureWire.g.cs" /></ItemGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractAIWire.py&quot; &quot;$(IntermediateOutputPath)AIWire.g.cs&quot; $(AIWireBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)FeatureWire.g.cs" /><Compile Include="$(IntermediateOutputPath)AIWire.g.cs" /></ItemGroup>
   </Target>
 </Project>

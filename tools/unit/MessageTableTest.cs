@@ -77,7 +77,7 @@ static class MessageTableTest
         var toServer = Routed(mp.Substring(serverAt, serverEnd - serverAt), "Entities.ServerReceive(", server, consts);
         var toClient = Routed(mp.Substring(clientAt), "Entities.ClientReceive(", client, consts);
         Check("the dispatchers route messages", toServer.Count > 10 && toClient.Count > 10);
-        foreach (var handler in new[] { ("Worn", "EntityHands", "ApplyWorn"), ("IgnitionKey", "EntitySeats", "ApplyKey"), ("ShotgunIn", "EntitySeats", "ApplyShotgun"), ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms"), ("ShotFx", "EntityEffects", "ApplyShotFx"), ("PlayerSound", "EntityEffects", "ApplyPlayerSound"), ("ExplodeReq", "EntityExplosions", "ApplyExplodeReq"), ("ExplosionFx", "EntityExplosions", "ApplyExplosionFx") })
+        foreach (var handler in new[] { ("BreakHit", "EntityAI", "ApplyBreakHit"), ("BreakFx", "EntityAI", "ApplyBreakFx"), ("WorldBreak", "EntityAI", "ApplyWorldBreak"), ("AiState", "EntityAI", "ApplyAiState"), ("AiSound", "EntityAI", "ApplyAiSound"), ("Worn", "EntityHands", "ApplyWorn"), ("IgnitionKey", "EntitySeats", "ApplyKey"), ("ShotgunIn", "EntitySeats", "ApplyShotgun"), ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms"), ("ShotFx", "EntityEffects", "ApplyShotFx"), ("PlayerSound", "EntityEffects", "ApplyPlayerSound"), ("ExplodeReq", "EntityExplosions", "ApplyExplodeReq"), ("ExplosionFx", "EntityExplosions", "ApplyExplosionFx") })
         {
             Check(handler.Item1 + ": routed to its feature owner", client.Contains("case " + handler.Item1 + ": " + handler.Item2 + "." + handler.Item3 + "(r);"));
             Check(handler.Item1 + ": handler reads the message at its new owner", Method(handler.Item2, handler.Item3).Contains("r."));
@@ -99,6 +99,11 @@ static class MessageTableTest
         Check("CarTune: routes to its owner", client.Contains("case CarTune: EntityCarTuning.ApplyCarTune(r);"));
         Check("CarTune: owner reads its payload", Method("EntityCarTuning", "ApplyCarTune").Contains("r.U32()"));
         Check("CarTune: keep before reliable forward", server.Contains("case CarTune: if (EntityCarTuning.ServerKeepTune(from, r)) ServerFwdAll(from, r, true); break;"));
+        Check("BreakFx: keep before shared reliable forward", server.Contains("case BreakFx: EntityAI.ServerKeepBreak(r); ServerFwdAll(from, r, true); break;"));
+        Check("WorldBreak: keep before shared reliable forward", server.Contains("case WorldBreak: EntityAI.ServerKeepWorldBreak(r); ServerFwdAll(from, r, true); break;"));
+        Check("BreakHit: authority and shared writer stay in kernel", server.Contains("case BreakHit: ServerBreakHit(from, r);") && Method("Entities", "ServerBreakHit").Contains("se.OwnerId == from") && Method("Entities", "ServerBreakHit").Contains("ServerSendTo(se.OwnerId, WS, true);"));
+        Check("AiState: stale authority still counted at feature owner", server.Contains("se.OwnerId != from) { EntityAI.AiStatesStale++; break; }") && server.Contains("r.Remaining != 15) { EntityAI.AiStatesStale++; break; }"));
+        Check("AiSound: shared reliable forward unchanged", server.Contains("case AiSound: ServerFwdAll(from, r, true);"));
         var byId = rows.ToDictionary(r => r.Id, r => r, EqualityComparer<int>.Default);
         foreach (int id in toServer.Concat(toClient).Distinct().OrderBy(i => i))
             Check("a routed message has a row: id " + id, byId.ContainsKey(id));

@@ -49,7 +49,7 @@ public class save_tankscript
     public save_tankscript(tankscript t, uint root, int index) { id = root; ind = index; type = t.F.fluids.Select(f => f.type).ToArray(); amount = t.F.fluids.Select(f => f.amount).ToArray(); }
     public void Load(tankscript t) { t.F.fluids = type.Select((v, i) => new mainscript.FluidValue { type = v, amount = amount[i] }).ToList(); }
 }
-public class itemDataClass { public List<save_carscript> car; }
+public class itemDataClass { public List<int> items = new List<int> { 1 }; public List<save_carscript> car; }
 public class save_carscript { public bool blood; }
 public class washtriggerscript : Component { public bool ON, destroyOnRepair; public void GotClean() { ON = false; } }
 public class busdoorscripts : Component
@@ -78,8 +78,8 @@ public class attachablescript : Component
 }
 namespace TLDRevamp
 {
-    internal static class SessionLog { internal static double St = 123.5; internal static void Event(string what, uint net, int item = 0, int slot = 0, int to = 0, uint epoch = 0, int count = 0, int from = 0, string result = "") { } }
-    internal static partial class GameLookups { internal static MethodInfo Method(Type t, string n, Type[] args) => t.GetMethod(n, args); }
+    internal static class SessionLog { internal static double St = 123.5; internal static void Event(string what, uint net = 0, int item = 0, int slot = 0, int to = 0, uint epoch = 0, int count = 0, int from = 0, string result = "") { } }
+    internal static partial class GameLookups { internal static MethodInfo Method(Type t, string n, Type[] args = null) => args == null ? t.GetMethod(n) : t.GetMethod(n, args); }
 }
 namespace TLDRevamp.Net
 {
@@ -130,9 +130,9 @@ namespace TLDRevamp.Net
         internal static void WritePoi(NetWriter w, int poi, PoiState state) => throw new NotSupportedException();
         internal static void ApplyAttachPose(Ent e, attachablescript at, Vector3 p, Quaternion q) { at.transform.localPosition = p; at.transform.localRotation = q; }
         internal static void TelemetryRender() { }
-        internal static object NyOf(Ent e) => null;
+        internal static nyulscript NyOf(Ent e) => null;
         internal static string RabbitJson(Ent e) => "{}";
     }
-    internal static class ItemSnapshot { internal static object Capture(tosaveitemscript it) => it; }
-    internal static class Protocol { internal const byte LiveUsable = 93; internal const int StateHz = 20; }
+    internal static partial class ItemSnapshot { internal static object Capture(tosaveitemscript it) => it; }
+    internal static partial class Protocol { internal const byte LiveUsable = 93; internal const int StateHz = 20; }
 }

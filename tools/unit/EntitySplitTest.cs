@@ -27,6 +27,7 @@ static partial class EntitySplitTest
 
     static void Main()
     {
+        AIChecks();
         RagdollsChecks();
         HandsChecks();
         SeatsChecks();
@@ -36,7 +37,7 @@ static partial class EntitySplitTest
         CarSignalChecks();
         EffectsChecks();
         CoreMembers.Register();
-        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals"), (typeof(EntityEffects), "PlayerSounds"), (typeof(EntityExplosions), "Explosions"), (typeof(EntityCarTuning), "CarTune"), (typeof(EntityDoors), "CarDoors"), (typeof(EntitySeats), "Seat"), (typeof(EntityHands), "Carried"), (typeof(EntityRagdolls), "Death") })
+        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals"), (typeof(EntityEffects), "PlayerSounds"), (typeof(EntityExplosions), "Explosions"), (typeof(EntityCarTuning), "CarTune"), (typeof(EntityDoors), "CarDoors"), (typeof(EntitySeats), "Seat"), (typeof(EntityHands), "Carried"), (typeof(EntityRagdolls), "Death"), (typeof(EntityAI), "Ai") })
         {
             var type = feature.Item1;
             Check(type.IsNotPublic && type.IsAbstract && type.IsSealed, type.Name + " is internal static");
@@ -59,7 +60,7 @@ static partial class EntitySplitTest
             Check(!Regex.IsMatch(source, @"using\s+static\s+(?:global::)?(?:TLDRevamp\.Net\.)?Entities\s*;"), part + " has no static kernel import");
             Check(Regex.Matches(source, @"Entities\.(\w+)").Cast<Match>().All(m => new[] { "State", "DetachSync", "IsFinite" }.Contains(m.Groups[1].Value)), part + " uses only protocol and finite kernel facts");
         }
-        foreach (string part in new[] { "CarTune", "Blood", "CopyFluids", "CarDoors", "BusDoors", "DoorAttachments", "Carried", "HandItems", "Worn", "Death", "Corpses", "Ragdoll" })
+        foreach (string part in new[] { "CarTune", "Blood", "CopyFluids", "CarDoors", "BusDoors", "DoorAttachments", "Carried", "HandItems", "Worn", "Death", "Corpses", "Ragdoll", "Ai", "Tumbleweeds" })
         {
             string source = File.ReadAllText("src/TLDRevamp/Net/Entities." + part + ".cs");
             Check(!Regex.IsMatch(source, @"using\s+static\s+(?:global::)?(?:TLDRevamp\.Net\.)?Entities\s*;|Entities\.(?:W|WS|ByNet|Server)\b"), part + " uses only narrow qualified kernel calls");

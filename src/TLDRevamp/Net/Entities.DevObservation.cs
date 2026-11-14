@@ -31,12 +31,7 @@ namespace TLDRevamp.Net
         internal static void RememberLeaseRequest(string key) => LeaseAsked.Add(key);
         internal static void SetRabbitCharge(movecreaturescript move, RabCharge charge) => RabCharges[move] = charge;
         internal static bool ApplyingState { get => _applyingState; set => _applyingState = value; }
-        internal static void ObserveBreaks(uint net, out int count, out Transform done)
-        {
-            _breaksHere.TryGetValue(net, out var kept);
-            count = kept != null ? kept.Breaks.Count : 0;
-            done = kept != null ? kept.Done : null;
-        }
+        internal static void ObserveBreaks(uint net, out int count, out Transform done) => EntityAI.ObserveBreaks(net, out count, out done);
         internal readonly struct ServerObservation
         {
             internal readonly int OwnerId, CrashReturnTo;

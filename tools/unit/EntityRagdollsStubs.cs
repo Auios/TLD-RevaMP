@@ -14,11 +14,11 @@ namespace UnityEngine
     public class Material { public bool HasProperty(string name) => true; public float GetFloat(string name) => 0; }
     public static class ColorUtility { public static string ToHtmlStringRGB(Color c) => "FFFFFF"; }
 }
-public class ragdollactivatescript : Component { public bool ragdoll; public Rigidbody[] RBs; public void SetRagdol(bool on) { ragdoll = on; } }
-public class newAiScript : Component { public bool died; public void Die(bool _playSound) { died = true; } }
+public class ragdollactivatescript : Component { public bool ragdoll; public Rigidbody[] RBs; public Rigidbody RB; public void SetRagdol(bool on) { ragdoll = on; } }
+public partial class newAiScript : Component { public bool died; public void Die(bool _playSound) { died = true; } }
 public class nyulscript : Component { }
 public partial class aiscript { public bool alive = true; public void Die(bool _playSound) { alive = false; } }
-public class TestLimbSet { public Transform[] childs; public pickupable[] ps; }
+public class TestLimbSet { public Component[] joints; public Transform[] childs; public pickupable[] ps; }
 public partial class tosaveitemscript { public TestLimbSet ragdollPos; }
 public partial class fpscontroller
 {
@@ -62,7 +62,7 @@ namespace TLDRevamp.Net
         internal static bool TestDeleteDormant, TestShareMiss, TestDeleteThrow, TestSharePendingNet;
         internal static Transform RagdollFrame(Ent e) => e.Root.transform;
         internal static bool LimbsByBody(Ent e) => e.MovedByBody && e.Root.car != null;
-        internal static void ShareSpawn(GameObject go) { if (TestShareMiss || ByNet.Values.Any(e => e.Root?.gameObject == go)) return; SpawnShared++; var ts = go.GetComponent<tosaveitemscript>(); ByNet[301] = new Ent { NetId = 301, RootId = ts.idInSave, Root = ts }; }
+        internal static void ShareSpawn(GameObject go) { if (TestTumbleWire) { TestTumbleShareSpawn(go); return; } if (TestShareMiss || ByNet.Values.Any(e => e.Root?.gameObject == go)) return; SpawnShared++; var ts = go.GetComponent<tosaveitemscript>(); ByNet[301] = new Ent { NetId = 301, RootId = ts.idInSave, Root = ts }; }
         internal static uint NetIdOf(GameObject go) => TestSharePendingNet ? 0 : ByNet.Values.FirstOrDefault(e => e.Root?.gameObject == go)?.NetId ?? 0;
         internal static string DeleteShared(uint net) { if (TestDeleteThrow) throw new Exception("fixture"); if (!TestDeleteDormant) { W.Reset(); W.U8(RemoveItem); W.U32(net); ToServer(W, true); ByNet.Remove(net); } return "ok"; }
     }
