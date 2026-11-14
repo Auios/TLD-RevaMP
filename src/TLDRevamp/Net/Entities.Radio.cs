@@ -4,9 +4,10 @@ using UnityEngine;
 namespace TLDRevamp.Net
 {
     /// Stamped station anchors follow the host's broadcast through transit, pauses and clip changes.
-    public static partial class Entities
+    internal static class EntityRadio
     {
-        public const byte RadioSync = 54;
+        private static readonly NetWriter W = new NetWriter();
+        private static double _radioSentAt = -100;
         public static float RadioResendS = 5f;
         public static long RadioSent, RadioApplied;
 
@@ -20,9 +21,9 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<mainscript.radioCH, RadioAnchor> _radioAnchors = new Dictionary<mainscript.radioCH, RadioAnchor>();
         private static double _radioStamp = -1;
 
-        private static void RadioTick(float dt)
+        internal static void RadioTick(float dt)
         {
-            if (!IsHost || mainscript.s == null || mainscript.s.radioChs == null || mainscript.s.radioChsAM == null) return;
+            if (!Entities.IsHost || mainscript.s == null || mainscript.s.radioChs == null || mainscript.s.radioChsAM == null) return;
             var fm = mainscript.s.radioChs; var am = mainscript.s.radioChsAM;
             bool changed = _radioLast.Length != fm.Count + am.Count;
             if (changed) { _radioLast = new int[fm.Count + am.Count]; _radioStartLast = new float[_radioLast.Length]; }
@@ -36,20 +37,28 @@ namespace TLDRevamp.Net
             if (!changed && ModObjects.ClockTime - _radioSentAt < RadioResendS) return;
             _radioSentAt = ModObjects.ClockTime;
             WriteRadio();
-            ServerSendAll(W, true, 0);
+            Entities.SendToPeers(W, true, 0);
             RadioSent++;
         }
 
+        internal static void ResetSession()
+        {
+            _radioSentAt = -100;
+            _radioLast = new int[0]; _radioStartLast = new float[0]; _radioAnchors.Clear(); _radioStamp = -1;
+        }
+
+        internal static void InvalidateBroadcast() => _radioSentAt = -100;
+
         private static void WriteRadio()
         {
-            W.Reset(); W.U8(RadioSync); W.F64(ModObjects.ClockTime); W.F32(_hostRate);
+            W.Reset(); W.U8(Entities.RadioSync); W.F64(ModObjects.ClockTime); W.F32(Entities.HostClockRate);
             WriteStations(W, mainscript.s.radioChs); WriteStations(W, mainscript.s.radioChsAM);
         }
 
-        private static void ServerRadioTo(int playerId)
+        internal static void ServerRadioTo(int playerId)
         {
             if (mainscript.s == null || mainscript.s.radioChs == null || mainscript.s.radioChsAM == null) return;
-            WriteRadio(); ServerSendTo(playerId, W, true); RadioSent++;
+            WriteRadio(); Entities.SendToPeer(playerId, W, true); RadioSent++;
         }
 
         private static void WriteStations(NetWriter w, List<mainscript.radioCH> chs)
@@ -65,11 +74,11 @@ namespace TLDRevamp.Net
         }
 
         // ---- a client
-        private static void ApplyRadio(NetReader r)
+        internal static void ApplyRadio(NetReader r)
         {
             double stamp = r.F64(); float rate = r.F32();
             ReadStations(r, out var fm, out var fmT); ReadStations(r, out var am, out var amT);
-            if (r.Bad || IsHost || mainscript.s == null || double.IsNaN(stamp) || double.IsInfinity(stamp) || !Finite(rate) || rate < 0f) return;
+            if (r.Bad || Entities.IsHost || mainscript.s == null || double.IsNaN(stamp) || double.IsInfinity(stamp) || !Entities.IsFinite(rate) || rate < 0f) return;
             if (stamp <= _radioStamp) { Fixes.SessionClocks.RadioStale++; return; }
             _radioStamp = stamp;
             if (fm.Length != mainscript.s.radioChs.Count || am.Length != mainscript.s.radioChsAM.Count) return;
@@ -104,7 +113,7 @@ namespace TLDRevamp.Net
         {
             int n = r.U8();
             clips = new int[n]; times = new float[n];
-            for (int i = 0; i < n; i++) { clips[i] = r.U16() - 1; times[i] = r.F32(); if (!Finite(times[i]) || times[i] < 0f) times[i] = 0f; }
+            for (int i = 0; i < n; i++) { clips[i] = r.U16() - 1; times[i] = r.F32(); if (!Entities.IsFinite(times[i]) || times[i] < 0f) times[i] = 0f; }
         }
 
         /// Vanilla sleep advances FM stations directly, bypassing RADIO; only the host may choose broadcasts.
@@ -114,7 +123,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static bool Prefix(mainscript.radioCH __instance)
             {
-                if (!InSession || IsHost || __instance.custom) return true;
+                if (!Entities.InSession || Entities.IsHost || __instance.custom) return true;
                 Fixes.SessionClocks.RadioLocalAdvancesBlocked++;
                 return false;
             }
@@ -131,7 +140,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static bool Prefix(mainscript __instance, List<mainscript.radioCH> _radio)
             {
-                if (_radioInner || !InSession || IsHost || _radio == null) return true;
+                if (_radioInner || !Entities.InSession || Entities.IsHost || _radio == null) return true;
                 _radioCustom.Clear();
                 foreach (var ch in _radio)
                 {
@@ -154,7 +163,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static bool Prefix(List<mainscript.radioCH> _radio)
             {
-                if (!InSession || IsHost || _radio == null) return true;
+                if (!Entities.InSession || Entities.IsHost || _radio == null) return true;
                 foreach (var ch in _radio)
                     if (ch != null) { if (ch.custom) ch.cTime = Time.unscaledTime - ch.startTime; else FollowStation(ch); }
                 return false;

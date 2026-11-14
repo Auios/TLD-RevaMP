@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using HarmonyLib;
 using UnityEngine;
 
 namespace TLDRevamp.Net
@@ -11,9 +10,9 @@ namespace TLDRevamp.Net
     /// the player nearest it (Fixes.Sandstorms); the host sends every storm (place, size, direction, speed, strength)
     /// when one comes up or goes and every StormResendS. A client makes, moves and removes its storms to match; how it
     /// looks and blows near a client is the game's own.
-    public static partial class Entities
+    internal static class EntityWeather
     {
-        public const byte StormSync = 56;
+        private static readonly NetWriter W = new NetWriter();
         public static float StormResendS = 2f;
         public static long StormSyncsSent, StormSyncsApplied, StormsMade, StormsRemoved, StormSpawnsSkipped, StormSnaps;
 
@@ -26,11 +25,11 @@ namespace TLDRevamp.Net
         private static int _stormLastCount = -1;
 
         // ---- the host
-        private static void StormTick(float dt)
+        internal static void StormTick(float dt)
         {
             if (napszakvaltakozas.s == null) return;
             var list = napszakvaltakozas.s.sandStorms;
-            if (IsHost)
+            if (Entities.IsHost)
             {
                 bool changed = list.Count != _stormLastCount;
                 foreach (var st in list) if (st != null && !StormIds.ContainsKey(st)) { StormIds[st] = _stormNext++; changed = true; }
@@ -38,7 +37,7 @@ namespace TLDRevamp.Net
                 if (!changed && _stormAcc < StormResendS) return;
                 _stormAcc = 0f; _stormLastCount = list.Count;
                 PruneStormIds();
-                W.Reset(); W.U8(StormSync);
+                W.Reset(); W.U8(Entities.StormSync);
                 int n = 0; foreach (var st in list) if (st != null) n++;
                 W.U8((byte)Mathf.Min(n, 255));
                 int k = 0;
@@ -50,7 +49,7 @@ namespace TLDRevamp.Net
                     W.F64(g.x); W.F64(g.z); W.F32(st.transform.eulerAngles.y);
                     W.F32(st.size); W.F32(st.xdir); W.F32(st.ydir); W.F32(st.speed); W.F32(st.life);
                 }
-                ServerSendAll(W, true, 0);
+                Entities.SendToPeers(W, true, 0);
                 StormSyncsSent++;
             }
         }
@@ -65,17 +64,17 @@ namespace TLDRevamp.Net
         }
 
         // ---- a client
-        private static void ApplyStorms(NetReader r)
+        internal static void ApplyStorms(NetReader r)
         {
             int n = r.U8();
             var seen = new HashSet<uint>();
             var rows = new List<(uint id, int pf, double x, double z, float yaw, float size, float xd, float yd, float sp, float life)>();
             for (int i = 0; i < n; i++)
                 rows.Add((r.U32(), r.U8(), r.F64(), r.F64(), r.F32(), r.F32(), r.F32(), r.F32(), r.F32(), r.F32()));
-            if (r.Bad || IsHost || napszakvaltakozas.s == null || mainscript.s == null || itemdatabase.s == null) return;
+            if (r.Bad || Entities.IsHost || napszakvaltakozas.s == null || mainscript.s == null || itemdatabase.s == null) return;
             foreach (var row in rows)
             {
-                if (!Finite(row.x) || !Finite(row.z) || !Finite(row.yaw) || !Finite(row.size) || !Finite(row.xd) || !Finite(row.yd) || !Finite(row.sp) || !Finite(row.life)) continue;
+                if (!Entities.IsFinite(row.x) || !Entities.IsFinite(row.z) || !Entities.IsFinite(row.yaw) || !Entities.IsFinite(row.size) || !Entities.IsFinite(row.xd) || !Entities.IsFinite(row.yd) || !Entities.IsFinite(row.sp) || !Entities.IsFinite(row.life)) continue;
                 seen.Add(row.id);
                 StormById.TryGetValue(row.id, out var st);
                 var pos = mainscript.UnityPosFromGlobal(new Vector3d(row.x, mainscript.GlobalFromUnityPos(Vector3.zero).y, row.z));
@@ -114,7 +113,7 @@ namespace TLDRevamp.Net
             StormSyncsApplied++;
         }
 
-        private static void StormReset()
+        internal static void StormReset()
         {
             StormIds.Clear(); StormById.Clear(); _stormLastCount = -1; _stormAcc = 0f;
         }

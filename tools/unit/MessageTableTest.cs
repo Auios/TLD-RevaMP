@@ -68,11 +68,20 @@ static class MessageTableTest
         string mp = File.ReadAllText(Path.Combine(sourceRoot, "Net", "Mp.cs")).Replace("\r\n", "\n");
         int serverAt = mp.IndexOf("switch (type)"), serverEnd = mp.IndexOf("void OnTransport", serverAt), clientAt = mp.IndexOf("switch (type)", serverEnd);
         Check("Mp.cs has its two dispatchers", serverAt > 0 && serverEnd > serverAt && clientAt > serverEnd);
-        string entities = string.Join("\n", src.Where(p => Path.GetFileName(p.Key).StartsWith("Entities")).Select(p => p.Value));
-        string Method(string name) => Regex.Match(entities, @"void " + name + @"\(.*?\n        \}\n", RegexOptions.Singleline).Value;
-        var toServer = Routed(mp.Substring(serverAt, serverEnd - serverAt), "Entities.ServerReceive(", Method("ServerReceive"), consts);
-        var toClient = Routed(mp.Substring(clientAt), "Entities.ClientReceive(", Method("ClientReceive"), consts);
+        string Method(string owner, string name)
+        {
+            string bodies = string.Join("\n", src.Values.Where(t => Regex.IsMatch(t, @"\bclass\s+" + Regex.Escape(owner) + @"\b")));
+            return Regex.Match(bodies, @"void " + name + @"\(.*?\n        \}\n", RegexOptions.Singleline).Value;
+        }
+        string server = Method("Entities", "ServerReceive"), client = Method("Entities", "ClientReceive");
+        var toServer = Routed(mp.Substring(serverAt, serverEnd - serverAt), "Entities.ServerReceive(", server, consts);
+        var toClient = Routed(mp.Substring(clientAt), "Entities.ClientReceive(", client, consts);
         Check("the dispatchers route messages", toServer.Count > 10 && toClient.Count > 10);
+        foreach (var handler in new[] { ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms") })
+        {
+            Check(handler.Item1 + ": routed to its feature owner", client.Contains("case " + handler.Item1 + ": " + handler.Item2 + "." + handler.Item3 + "(r);"));
+            Check(handler.Item1 + ": handler reads the message at its new owner", Method(handler.Item2, handler.Item3).Contains("r."));
+        }
 
         var byId = rows.ToDictionary(r => r.Id, r => r, EqualityComparer<int>.Default);
         foreach (int id in toServer.Concat(toClient).Distinct().OrderBy(i => i))

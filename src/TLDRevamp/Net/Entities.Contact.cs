@@ -105,16 +105,7 @@ namespace TLDRevamp.Net
             if (impulse.magnitude > ContactImpulseMaxApplied) ContactImpulseMaxApplied = impulse.magnitude;
         }
 
-        /// Server: a sleep ended — everyone's clock jumps to the sleeper's world time. While a player sleeps their live
-        /// clock comes here too, with where their sleep's cloud curve stands (sleepProgress, -1 when it ends; NaN from a
-        /// sender without it): the world clock carries it on (Fixes.CloudClock).
-        internal static void ServerSleepSync(int from, float worldTime, double stamp, float sleepProgress = float.NaN)
-        {
-            if (!float.IsNaN(sleepProgress)) { _sleepProgress = sleepProgress; _sleepProgressAt = ModObjects.ClockTime; Fixes.CloudClock.SleepProgress(sleepProgress); }
-            if (from != 0) ApplyWorldTime((float)ClockMath.Project(worldTime, stamp, ModObjects.ClockTime, _hostRate), true);
-            _worldEpoch++;
-            WriteWorldClock(true); ServerSendAll(W, true, 0); Fixes.SessionClocks.WorldSent++;
-        }
+        internal static void ServerSleepSync(int from, float worldTime, double stamp, float sleepProgress = float.NaN) => EntityWorldClock.ServerSleepSync(from, worldTime, stamp, sleepProgress);
 
 
     }

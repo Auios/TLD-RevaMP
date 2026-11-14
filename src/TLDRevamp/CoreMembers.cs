@@ -1,0 +1,11 @@
+namespace TLDRevamp
+{
+    /// Historical member paths stay usable as core features gain their own owners.
+    internal static class CoreMembers
+    {
+        internal static void Register()
+        {
+            Reflect.RegisterMovedMembers(typeof(Net.Entities), typeof(Net.EntityRadio), typeof(Net.EntityWorldClock), typeof(Net.EntityWeather));
+        }
+    }
+}

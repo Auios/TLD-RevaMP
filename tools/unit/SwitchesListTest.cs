@@ -18,9 +18,9 @@ static class P {
     foreach (var p in paths) {
       int dot = p.LastIndexOf('.');
       string type = p.Substring(0, dot), field = p.Substring(dot + 1), cls = type.Substring(type.LastIndexOf('.') + 1);
-      // Dev registers the original member paths through Reflect.RegisterMovedMembers.
+      // Core and Dev register the original member paths through Reflect.RegisterMovedMembers.
       var ownerNames = new HashSet<string> { cls };
-      string plugin = (File.ReadAllText(Path.Combine(root, "src/TLDRevamp.Dev/DevPlugin.cs")) + File.ReadAllText(Path.Combine(root, "src/TLDRevamp.Dev/DevMembers.cs")));
+      string plugin = File.ReadAllText(Path.Combine(src, "CoreMembers.cs")) + File.ReadAllText(Path.Combine(root, "src/TLDRevamp.Dev/DevPlugin.cs")) + File.ReadAllText(Path.Combine(root, "src/TLDRevamp.Dev/DevMembers.cs"));
       foreach (Match registration in Regex.Matches(plugin, @"RegisterMovedMembers\(typeof\(([^)]+)\),([^;]+)")) {
         string original = registration.Groups[1].Value.Split('.').Last();
         if (original != cls) continue;
