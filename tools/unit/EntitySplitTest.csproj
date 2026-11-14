@@ -3,6 +3,13 @@
   <ItemGroup>
     <Compile Include="EntitySplitTest.cs" />
     <Compile Include="EntitySplitStubs.cs" />
+    <Compile Include="EntityEffectsStubs.cs" />
+    <Compile Include="EntityEffectsChecks.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.PlayerSounds.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.ShotFx.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Spray.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Explosions.cs" />
+
     <Compile Include="EntityCodecVectors.cs" />
     <Compile Include="EntityCarSignalsChecks.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.CarSignals.cs" />

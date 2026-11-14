@@ -77,7 +77,7 @@ static class MessageTableTest
         var toServer = Routed(mp.Substring(serverAt, serverEnd - serverAt), "Entities.ServerReceive(", server, consts);
         var toClient = Routed(mp.Substring(clientAt), "Entities.ClientReceive(", client, consts);
         Check("the dispatchers route messages", toServer.Count > 10 && toClient.Count > 10);
-        foreach (var handler in new[] { ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms") })
+        foreach (var handler in new[] { ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms"), ("ShotFx", "EntityEffects", "ApplyShotFx"), ("PlayerSound", "EntityEffects", "ApplyPlayerSound"), ("ExplodeReq", "EntityExplosions", "ApplyExplodeReq"), ("ExplosionFx", "EntityExplosions", "ApplyExplosionFx") })
         {
             Check(handler.Item1 + ": routed to its feature owner", client.Contains("case " + handler.Item1 + ": " + handler.Item2 + "." + handler.Item3 + "(r);"));
             Check(handler.Item1 + ": handler reads the message at its new owner", Method(handler.Item2, handler.Item3).Contains("r."));

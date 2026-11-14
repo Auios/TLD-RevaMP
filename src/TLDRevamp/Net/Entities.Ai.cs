@@ -82,7 +82,7 @@ namespace TLDRevamp.Net
                 if (RabbitBreakOnCopy(__instance, force)) return false;   // a rabbit's bite: summed (Entities.Rabbits)
                 // nothing to break: TryBreak(0) on the owner only woke and turned its creature (DamageFrom)
                 if (force <= 0f) { ZeroHitsIgnored++; return false; }
-                if (_blastDepth == 0) ForwardHit(__instance, 2, force, _hitDir);   // inside a blast the owner replays the blast
+                if (EntityExplosions.BlastDepth == 0) ForwardHit(__instance, 2, force, _hitDir);   // inside a blast the owner replays the blast
                 return false;
             }
         }

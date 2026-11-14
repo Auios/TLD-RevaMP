@@ -11,9 +11,10 @@ namespace TLDRevamp.Net
     /// The same here. A player model's own steps (its animation's step events, if it has any) are not played for a
     /// remote player: the steps come from the player who takes them.
     /// Steps go unreliable (a step lost is a step not heard; a resent one arrives late, and holds up the messages behind it).
-    public static partial class Entities
+    internal static partial class EntityEffects
     {
-        public const byte PlayerSound = 57;
+        private static readonly NetWriter W = new NetWriter();
+        private static readonly NetWriter WS = new NetWriter();
         public static long PlayerSoundsSent, PlayerSoundsPlayed, ModelStepsMuted;
         public static long[] SoundsSentBy = new long[4], SoundsPlayedBy = new long[4];
         private static string _lastSound = "null";
@@ -23,29 +24,29 @@ namespace TLDRevamp.Net
 
         private static void SendPlayerSound(Snd kind, Vector3 at, int type, int clip, float volume, float pitch, int priority)
         {
-            if (!InSession) return;
+            if (!Entities.InSession) return;
             var g = mainscript.GlobalFromUnityPos(at);
-            W.Reset(); W.U8(PlayerSound); W.U8((byte)kind);
+            W.Reset(); W.U8(Entities.PlayerSound); W.U8((byte)kind);
             W.F64(g.x); W.F64(g.y); W.F64(g.z);
             W.U8((byte)type); W.U16((ushort)clip); W.F32(volume); W.F32(pitch); W.U8((byte)priority);
-            ToServer(W, kind != Snd.Step);
+            Entities.SendToServer(W, kind != Snd.Step);
             PlayerSoundsSent++; SoundsSentBy[(int)kind]++;
         }
 
-        private static void ServerPlayerSound(int from, NetReader r)
+        internal static void ServerPlayerSound(int from, NetReader r)
         {
             int kind = r.U8();
             r.Pos = 0;
             WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
-            ServerSendAll(WS, kind != (int)Snd.Step, from);
+            Entities.SendToPeers(WS, kind != (int)Snd.Step, from);
         }
 
-        private static void ApplyPlayerSound(NetReader r)
+        internal static void ApplyPlayerSound(NetReader r)
         {
             int kind = r.U8();
             var g = new Vector3d(r.F64(), r.F64(), r.F64());
             int type = r.U8(), clip = r.U16(); float volume = r.F32(), pitch = r.F32(); int priority = r.U8();
-            if (r.Bad || mainscript.s == null || kind > 3 || !Finite(g) || !Finite(volume) || !Finite(pitch)) return;
+            if (r.Bad || mainscript.s == null || kind > 3 || !Entities.IsFinite(g) || !Entities.IsFinite(volume) || !Entities.IsFinite(pitch)) return;
             var at = mainscript.UnityPosFromGlobal(g);
             GameObject go = null;
             if (kind == (int)Snd.Step)
@@ -81,7 +82,7 @@ namespace TLDRevamp.Net
             private static bool Prefix(stepSoundScript __instance, out bool __state)
             {
                 __state = false;
-                if (!InSession) return true;
+                if (!Entities.InSession) return true;
                 var pl = mainscript.s != null ? mainscript.s.player : null;
                 if (pl != null && __instance == pl.stepScript)
                 {
@@ -127,7 +128,7 @@ namespace TLDRevamp.Net
         /// Played just now (it was not already playing - the game plays nothing then): which clip of its list it was.
         private static void Sent(AudioSource src, bool wasPlaying, Snd kind, soundenum e)
         {
-            if (!InSession || wasPlaying || src == null || src.clip == null || soundMainScript.s == null) return;
+            if (!Entities.InSession || wasPlaying || src == null || src.clip == null || soundMainScript.s == null) return;
             if (mainscript.s == null || mainscript.s.player == null || src.GetComponentInParent<fpscontroller>() != mainscript.s.player) return;
             int n = soundMainScript.s.GetLength(e), clip = -1;
             for (int i = 0; i < n; i++) if (soundMainScript.s.GetClip(e, i) == src.clip) { clip = i; break; }

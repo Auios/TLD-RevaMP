@@ -14,14 +14,17 @@ namespace TLDRevamp.Net
     /// kinematic, their car damage is already the owner's — Entities.Proxy). A tank or explosive on a COPY doesn't go off
     /// inside a blast — the owner's machine replays the same blast and sets its own off (that's broadcast in turn); set
     /// off directly (a shot at someone's can), the request goes to the owner, whose explosion everyone then sees.
-    public static partial class Entities
+    internal static class EntityExplosions
     {
-        public const byte ExplodeReq = 46, ExplosionFx = 47;
+        private static readonly NetWriter W = new NetWriter();
+        private static readonly NetWriter WS = new NetWriter();
         public static long ExplosionsSent, ExplosionsApplied, ExplosionsRejected, ExplodeReqsSent, ExplodeReqsRun, CopyBlastsSkipped;
 
         private static explosionscript _replaying;   // another machine's explosion replayed here: not sent back out
                                                     // (a tank of OURS it sets off is a new explosion, and is sent)
         private static int _blastDepth;     // inside an explosionscript.Explode (any)
+
+        internal static int BlastDepth => _blastDepth;
 
         private struct PendingBlast { public explosionscript X; public byte Type; public Vector3d At; public Quaternion Rot; public float F, Add; }
         private static readonly List<PendingBlast> Pending = new List<PendingBlast>();
@@ -33,7 +36,7 @@ namespace TLDRevamp.Net
             private static void Prefix(explosionscript __instance, float pF, float distAdd)
             {
                 _blastDepth++;
-                if (!InSession || mainscript.s == null || (_replaying != null && __instance == _replaying)) return;
+                if (!Entities.InSession || mainscript.s == null || (_replaying != null && __instance == _replaying)) return;
                 int type = BlastType(__instance);
                 if (type < 0) return;
                 Pending.Add(new PendingBlast { X = __instance, Type = (byte)type, At = mainscript.GlobalFromUnityPos(__instance.transform.position),
@@ -51,14 +54,14 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static bool Prefix(tankscript __instance, float forceAdd, bool add)
             {
-                if (!InSession || !IsProxy(__instance)) return true;
+                if (!Entities.InSession || !Entities.IsProxy(__instance)) return true;
                 if (_blastDepth > 0) { CopyBlastsSkipped++; return false; }
                 if (__instance.neverExplode || __instance.alreadyExploded || __instance.F == null || !(__instance.F.isExplosive() || __instance.alwaysExplode)
                     || forceAdd < __instance.explosionForceNeededToExplode) return false;   // wouldn't go off anyway
-                if (TankRef(__instance, out uint net, out int ti))
+                if (Entities.TankRef(__instance, out uint net, out int ti))
                 {
-                    W.Reset(); W.U8(ExplodeReq); W.U32(net); W.U8(1); W.VarU32((uint)ti); W.F32(forceAdd); W.Bool(add);
-                    ToServer(W, true); ExplodeReqsSent++;
+                    W.Reset(); W.U8(Entities.ExplodeReq); W.U32(net); W.U8(1); W.VarU32((uint)ti); W.F32(forceAdd); W.Bool(add);
+                    Entities.SendToServer(W, true); ExplodeReqsSent++;
                 }
                 return false;
             }
@@ -71,13 +74,13 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static bool Prefix(explosivescript __instance, float force)
             {
-                if (!InSession || !IsProxy(__instance)) return true;
+                if (!Entities.InSession || !Entities.IsProxy(__instance)) return true;
                 if (_blastDepth > 0) { CopyBlastsSkipped++; return false; }
                 if (!(force > __instance.forceNeeded)) return false;
-                if (ItemRef(__instance.GetComponentInParent<tosaveitemscript>(), out uint net, out int idx))
+                if (Entities.ItemRef(__instance.GetComponentInParent<tosaveitemscript>(), out uint net, out int idx))
                 {
-                    W.Reset(); W.U8(ExplodeReq); W.U32(net); W.U8(2); W.VarU32((uint)idx); W.F32(force); W.Bool(false);
-                    ToServer(W, true); ExplodeReqsSent++;
+                    W.Reset(); W.U8(Entities.ExplodeReq); W.U32(net); W.U8(2); W.VarU32((uint)idx); W.F32(force); W.Bool(false);
+                    Entities.SendToServer(W, true); ExplodeReqsSent++;
                 }
                 return false;
             }
@@ -85,57 +88,56 @@ namespace TLDRevamp.Net
 
         /// Per frame: this machine's explosions go out (after the frame they started in: an explosive colours its
         /// blast after Explode returns).
-        private static void BlastTick()
+        internal static void BlastTick()
         {
             if (Pending.Count == 0) return;
             foreach (var b in Pending)
             {
                 var c = b.X != null && b.X.particle != null ? b.X.particle.main.startColor.color : Color.white;
-                W.Reset(); W.U8(ExplosionFx); W.U8(b.Type);
+                W.Reset(); W.U8(Entities.ExplosionFx); W.U8(b.Type);
                 W.F64(b.At.x); W.F64(b.At.y); W.F64(b.At.z);
                 W.F32(b.Rot.x); W.F32(b.Rot.y); W.F32(b.Rot.z); W.F32(b.Rot.w);
                 W.F32(b.F); W.F32(b.Add);
                 W.F32(c.r); W.F32(c.g); W.F32(c.b); W.F32(c.a);
-                ToServer(W, true);
+                Entities.SendToServer(W, true);
                 ExplosionsSent++;
             }
             Pending.Clear();
         }
 
         // ---------------------------------------------------------------- server
-        private static void ServerExplodeReq(int from, NetReader r)
+        internal static void ServerExplodeReq(int from, NetReader r)
         {
             uint net = r.U32();
-            if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId == from) return;
-            if (!HitCheck.AllowOnObject(from, $"explosive or tank on object {net}", se.HasState ? se.Pos : se.Where, HitCheck.ObjShotM, HitCheck.ObjSizeM)) return;
+            if (r.Bad || !Entities.TryExplosionRequestOwner(from, net, out int owner)) return;
             r.Pos = 0;
             WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
-            ServerSendTo(se.OwnerId, WS, true);
+            Entities.SendToPeer(owner, WS, true);
         }
 
-        private static void ServerExplosionFx(int from, NetReader r)
+        internal static void ServerExplosionFx(int from, NetReader r)
         {
             r.Pos = 0;
             WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
-            ServerSendAll(WS, true, from);
+            Entities.SendToPeers(WS, true, from);
         }
 
         // ---------------------------------------------------------------- owner / everyone
         /// Owner: someone set off our tank or explosive — the game's own call here (and so the blast everyone sees).
-        private static void ApplyExplodeReq(NetReader r)
+        internal static void ApplyExplodeReq(NetReader r)
         {
             uint net = r.U32(); byte kind = r.U8(); int i = (int)r.VarU32(); float force = r.F32(); bool add = r.Bool();
-            if (r.Bad || !Finite(force) || force < 0f || i < 0) return;   // an infinite force passes the game's threshold
+            if (r.Bad || !Entities.IsFinite(force) || force < 0f || i < 0) return;   // an infinite force passes the game's threshold
             if (kind == 1)
             {
-                var t = TankOf(net, i);
-                if (t == null || IsProxy(t)) return;
+                var t = Entities.TankOf(net, i);
+                if (t == null || Entities.IsProxy(t)) return;
                 ExplodeReqsRun++;
                 t.TryExplode(force, add);
             }
             else if (kind == 2)
             {
-                if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || i >= e.Items.Count || e.Items[i] == null || e.Proxy) return;
+                if (!Entities.TryGetEntity(net, out var e) || !Entities.ResolveEntity(e) || i >= e.Items.Count || e.Items[i] == null || e.Proxy) return;
                 var x = e.Items[i].GetComponentInChildren<explosivescript>();
                 if (x == null) return;
                 ExplodeReqsRun++;
@@ -144,7 +146,7 @@ namespace TLDRevamp.Net
         }
 
         /// Another machine's explosion, replayed here with the game's own code.
-        private static void ApplyExplosionFx(NetReader r)
+        internal static void ApplyExplosionFx(NetReader r)
         {
             int type = r.U8();
             var at = new Vector3d(r.F64(), r.F64(), r.F64());
@@ -154,7 +156,7 @@ namespace TLDRevamp.Net
             if (r.Bad || mainscript.s == null) return;
             // the game's own Explode pushes this machine's bodies and hurts its player: a non-finite force or place spread
             // into both; a rotation from the wire may not be unit length
-            if (!Finite(at) || !Finite(f) || !Finite(add) || f < 0f || add < 0f || !Finite(rot)) { ExplosionsRejected++; return; }
+            if (!Entities.IsFinite(at) || !Entities.IsFinite(f) || !Entities.IsFinite(add) || f < 0f || add < 0f || !Entities.IsFinite(rot)) { ExplosionsRejected++; return; }
             float qm = Mathf.Sqrt(rot.x * rot.x + rot.y * rot.y + rot.z * rot.z + rot.w * rot.w);
             rot = qm > 1e-3f ? new Quaternion(rot.x / qm, rot.y / qm, rot.z / qm, rot.w / qm) : Quaternion.identity;
             var prefab = mainscript.s.GetExplosionType(type);
@@ -180,19 +182,6 @@ namespace TLDRevamp.Net
             if (ms.ExplosionBlue != null && n == ms.ExplosionBlue.name + "(Clone)") return 2;
             if (ms.ExplosionPaint != null && n == ms.ExplosionPaint.name + "(Clone)") return 3;
             return -1;
-        }
-
-        private static bool ItemRef(tosaveitemscript it, out uint net, out int idx)
-        {
-            net = 0; idx = -1;
-            if (it == null) return false;
-            foreach (var e in ByNet.Values)
-            {
-                if (e.Items == null) continue;
-                int i = e.Items.IndexOf(it);
-                if (i >= 0) { net = e.NetId; idx = i; return true; }
-            }
-            return false;
         }
 
         public static string ExplosionStats() => "{\"sent\":" + ExplosionsSent + ",\"applied\":" + ExplosionsApplied + ",\"reqSent\":" + ExplodeReqsSent +

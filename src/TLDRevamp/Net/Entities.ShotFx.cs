@@ -14,9 +14,8 @@ namespace TLDRevamp.Net
     /// and the same tank hole. A tank hole leaks on the tank's OWNER — the fuel travels by resync like any other — and is
     /// shown leaking on copies, whose loss isn't sent back as an edit (else two machines would drain one tank).
     /// Holes aren't saved (they never were, in single player either).
-    public static partial class Entities
+    internal static partial class EntityEffects
     {
-        public const byte ShotFx = 45;
         public static long ShotFxSent, ShotFxApplied, ShotFxDecals, ShotFxHoles, ShotFxUnplaced, ShotFxRejected, ShotFxNoGun;
 
         private const byte KObj = 1, KWorld = 2, KPlayer = 3, KHole = 4;
@@ -32,6 +31,10 @@ namespace TLDRevamp.Net
         /// Tank holes on copies: shown leaking, not sent to the owner as an edit.
         private static readonly HashSet<tankcapscript> DisplayHoles = new HashSet<tankcapscript>();
         private static bool _displayPour;
+        internal static bool DisplayPour => _displayPour;
+
+        // Load these with the kernel so missing gun fields still fail at the same time.
+        internal static bool InitializeLookups() => GunHits != null && GunTempInt != null && GunFalseShot != null;
 
         // ---------------------------------------------------------------- shooter
         [HarmonyPatch(typeof(weaponscript), nameof(weaponscript.Shot))]
@@ -48,7 +51,7 @@ namespace TLDRevamp.Net
             [HarmonyPostfix]
             private static void Postfix(weaponscript __instance, int _s, bool __state)
             {
-                try { if (InSession) CaptureShot(__instance, _s, __state); }
+                try { if (Entities.InSession) CaptureShot(__instance, _s, __state); }
                 catch (System.Exception ex) { Plugin.Log.LogWarning("ShotFx capture: " + ex.Message); }
                 finally { _fxGun = null; _fxHoles.Clear(); }
             }
@@ -63,7 +66,7 @@ namespace TLDRevamp.Net
             {
                 if (_fxGun == null || !__instance.disableCollider || __instance.Tank == null) return;
                 _fxHoles.Add(__instance);
-                if (IsProxy(__instance.Tank)) { DisplayHoles.RemoveWhere(h => h == null); DisplayHoles.Add(__instance); }
+                if (Entities.IsProxy(__instance.Tank)) { DisplayHoles.RemoveWhere(h => h == null); DisplayHoles.Add(__instance); }
             }
         }
 
@@ -73,7 +76,7 @@ namespace TLDRevamp.Net
             bool real = gun.ActuallyShotTime == now;
             bool falseShot = !real && s == 0 && gun.ShotTime == now && (gun.automaticFalseShot || !falseBefore);
             if (!real && !falseShot) return;
-            W.Reset(); W.U8(ShotFx);
+            W.Reset(); W.U8(Entities.ShotFx);
             bool hasGun = GunRef(gun, out uint gnet, out int gidx);
             W.U8((byte)((real && s == 0 ? FReal : 0) | (falseShot ? FFalse : 0) | (hasGun ? FGun : 0)));
             if (hasGun) { W.U32(gnet); W.VarU32((uint)gidx); }
@@ -130,7 +133,7 @@ namespace TLDRevamp.Net
                 }
                 foreach (var h in _fxHoles)
                 {
-                    if (h == null || count >= 32 || !TankRef(h.Tank, out uint tnet, out int ti)) continue;
+                    if (h == null || count >= 32 || !Entities.TankRef(h.Tank, out uint tnet, out int ti)) continue;
                     var tt = h.Tank.transform;
                     W.U8(KHole); W.U8(SNone); W.U8(255);
                     W.U32(tnet); W.VarU32((uint)ti);
@@ -139,7 +142,7 @@ namespace TLDRevamp.Net
                 }
             }
             W.Buf[countAt] = (byte)count;
-            ToServer(W, true);
+            Entities.SendToServer(W, true);
             ShotFxSent++;
         }
 
@@ -147,7 +150,7 @@ namespace TLDRevamp.Net
         private static void WriteHit(Collider c, byte surf, int decal, Vector3 p, Vector3 n, Transform decalT)
         {
             var root = c.transform.root;
-            var e = EntOfRoot(root);
+            var e = Entities.EntOfRoot(root);
             if (e != null)
             {
                 W.U8(KObj); W.U8(surf); W.U8((byte)(decal < 0 ? 255 : decal));
@@ -164,21 +167,21 @@ namespace TLDRevamp.Net
         }
 
         // ---------------------------------------------------------------- server / everyone else
-        private static void ServerShotFx(int from, NetReader r)
+        internal static void ServerShotFx(int from, NetReader r)
         {
             r.Pos = 0;
             WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
-            ServerSendAll(WS, true, from);
+            Entities.SendToPeers(WS, true, from);
         }
 
-        private static void ApplyShotFx(NetReader r)
+        internal static void ApplyShotFx(NetReader r)
         {
             byte flags = r.U8();
             weaponscript gun = null;
             if ((flags & FGun) != 0)
             {
                 uint gnet = r.U32(); int gidx = (int)r.VarU32();
-                if (ByNet.TryGetValue(gnet, out var ge) && Resolve(ge) && gidx >= 0 && gidx < ge.Items.Count && ge.Items[gidx] != null)
+                if (Entities.TryGetEntity(gnet, out var ge) && Entities.ResolveEntity(ge) && gidx >= 0 && gidx < ge.Items.Count && ge.Items[gidx] != null)
                     gun = ge.Items[gidx].GetComponentInChildren<weaponscript>();
             }
             int sound = r.U8();
@@ -186,7 +189,7 @@ namespace TLDRevamp.Net
             var dir = RV3(r);
             int count = r.U8();
             if (r.Bad || mainscript.s == null) return;
-            if (!Finite(muzzle) || !Finite(dir)) { ShotFxRejected++; return; }
+            if (!Entities.IsFinite(muzzle) || !Entities.IsFinite(dir)) { ShotFxRejected++; return; }
             if (gun == null) ShotFxNoGun++;
             if (gun != null && (flags & FReal) != 0) gun.RShot(0, sound);
             if (gun != null && (flags & FFalse) != 0) gun.RShot(1, sound);
@@ -202,7 +205,7 @@ namespace TLDRevamp.Net
                     {
                         uint net = r.U32(); string path = r.Str(); var lp = RV3(r); var ln = RV3(r);
                         Quaternion lr = Quaternion.identity; if (decal != 255) { lr = RQ(r); scale = r.F32(); }
-                        if (r.Bad || !ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) break;
+                        if (r.Bad || !Entities.TryGetEntity(net, out var e) || !Entities.ResolveEntity(e) || e.Root == null) break;
                         var root = e.Root.transform.root;
                         p = root.TransformPoint(lp); n = root.TransformDirection(ln); rot = root.rotation * lr;
                         parent = ColliderAt(root, path, p); placed = true;
@@ -229,7 +232,7 @@ namespace TLDRevamp.Net
                     case KHole:
                     {
                         uint net = r.U32(); int ti = (int)r.VarU32(); var lp = RV3(r); var ln = RV3(r);
-                        tank = r.Bad ? null : TankOf(net, ti);
+                        tank = r.Bad ? null : Entities.TankOf(net, ti);
                         if (tank == null) break;
                         p = tank.transform.TransformPoint(lp); n = tank.transform.TransformDirection(ln); placed = true;
                         break;
@@ -238,7 +241,7 @@ namespace TLDRevamp.Net
                 }
                 if (!placed) { ShotFxUnplaced++; continue; }
                 // holes and decals parented into cars, players and the world: a non-finite place broke their bounds
-                if (!Finite(p) || !Finite(n) || !Finite(rot) || !Finite(scale)) { ShotFxRejected++; continue; }
+                if (!Entities.IsFinite(p) || !Entities.IsFinite(n) || !Entities.IsFinite(rot) || !Entities.IsFinite(scale)) { ShotFxRejected++; continue; }
                 if (kind == KHole) { MakeHole(tank, p, n); ShotFxHoles++; continue; }
                 Impact(gun, surf, p, n, muzzle);
                 if (decal != 255 && MakeDecal(decal, p, n, rot, scale, parent) != null) ShotFxDecals++;
@@ -287,7 +290,7 @@ namespace TLDRevamp.Net
             go.transform.parent = tank.transform;
             cap.canToggle = false; cap.canTune = false; cap.radius = 1.5f; cap.valve = 1f; cap.noText = true;
             cap.Tank = tank; cap.defPourAngle = 5f;
-            if (IsProxy(tank)) { DisplayHoles.RemoveWhere(h => h == null); DisplayHoles.Add(cap); }
+            if (Entities.IsProxy(tank)) { DisplayHoles.RemoveWhere(h => h == null); DisplayHoles.Add(cap); }
             cap.FStart();
         }
 
@@ -302,38 +305,12 @@ namespace TLDRevamp.Net
         }
 
         // ---------------------------------------------------------------- helpers
-        internal static Ent EntOfRoot(Transform root)
-        {
-            var own = PlacedOfTransform(root);
-            if (own != null) return own;
-            foreach (var e in LookupSet()) if (e.Root != null && e.Root.transform.root == root) return e;
-            return null;
-        }
-
         private static bool GunRef(weaponscript gun, out uint net, out int idx)
         {
             net = 0; idx = -1;
             var it = gun.GetComponentInParent<tosaveitemscript>();
             if (it == null) return false;
-            foreach (var e in ByNet.Values)
-            {
-                if (e.Items == null) continue;
-                int i = e.Items.IndexOf(it);
-                if (i >= 0) { net = e.NetId; idx = i; return true; }
-            }
-            return false;
-        }
-
-        private static bool TankRef(tankscript t, out uint net, out int ti)
-        {
-            net = 0; ti = -1;
-            foreach (var e in ByNet.Values)
-            {
-                if (e.Items == null || e.Root == null) continue;
-                int i = TanksOf(e).IndexOf(t);
-                if (i >= 0) { net = e.NetId; ti = i; return true; }
-            }
-            return false;
+            return Entities.ItemRef(it, out net, out idx);
         }
 
         private static string PathOf(Transform t, Transform root)

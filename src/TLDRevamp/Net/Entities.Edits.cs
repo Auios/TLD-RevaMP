@@ -290,7 +290,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(tankscript __instance)
             {
-                if (!InSession || __instance.setpoi || _displayPour) return;
+                if (!InSession || __instance.setpoi || EntityEffects.DisplayPour) return;
                 var it = ItemOf(__instance, __instance.tosaveid, __instance.setid);
                 // a copy's own simulation (its fluid flowing out of an open cap) is the owner's too: only a fill is an edit
                 if (ScopedEdits && it != null && IsProxy(it) && !(_tankFilledAt.TryGetValue(__instance, out float at) && Time.realtimeSinceStartup - at < 2f))

@@ -29,8 +29,9 @@ static partial class EntitySplitTest
     {
         CodecVectors();
         CarSignalChecks();
+        EffectsChecks();
         CoreMembers.Register();
-        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals") })
+        foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals"), (typeof(EntityEffects), "PlayerSounds"), (typeof(EntityExplosions), "Explosions") })
         {
             var type = feature.Item1;
             Check(type.IsNotPublic && type.IsAbstract && type.IsSealed, type.Name + " is internal static");
@@ -75,11 +76,11 @@ static partial class EntitySplitTest
         EntityWorldClock.HostClockTick();
         EntityRadio.RadioTick(0.1f);
         var radio = Bytes(w => { w.Write((byte)54); w.Write(10d); w.Write(1f); w.Write((byte)1); w.Write((ushort)3); w.Write(10f); w.Write((byte)0); });
-        Check(Entities.Sent.Last().Bytes.SequenceEqual(radio) && Entities.Sent.Last().Reliable, "radio legacy bytes and reliable broadcast");
-        int sends = Entities.Sent.Count; EntityRadio.RadioTick(0.1f); Check(Entities.Sent.Count == sends, "unchanged station waits for resend");
-        EntityRadio.ServerRadioTo(5); Check(Entities.Sent.Last().Peer == 5 && Entities.Sent.Last().Bytes.SequenceEqual(radio), "radio join replay uses same bytes");
+        Check(Entities.Packets.Last().Bytes.SequenceEqual(radio) && Entities.Packets.Last().Reliable, "radio legacy bytes and reliable broadcast");
+        int sends = Entities.Packets.Count; EntityRadio.RadioTick(0.1f); Check(Entities.Packets.Count == sends, "unchanged station waits for resend");
+        EntityRadio.ServerRadioTo(5); Check(Entities.Packets.Last().Peer == 5 && Entities.Packets.Last().Bytes.SequenceEqual(radio), "radio join replay uses same bytes");
         Time.timeScale = 0; EntityWorldClock.HostClockTick(); EntityRadio.RadioTick(0.1f);
-        Check(Entities.Sent.Count == sends + 2 && Entities.HostClockRate == 0, "rate change invalidates radio immediately");
+        Check(Entities.Packets.Count == sends + 2 && Entities.HostClockRate == 0, "rate change invalidates radio immediately");
         Entities.IsHost = false;
         EntityRadio.ApplyRadio(Reader(radio)); long applied = EntityRadio.RadioApplied;
         EntityRadio.ApplyRadio(Reader(radio));
@@ -93,33 +94,33 @@ static partial class EntitySplitTest
         Entities.IsHost = true; Time.timeScale = 1; EntityWorldClock.ClockReset(); EntityWorldClock.HostClockTick();
         EntityWorldClock.ServerWorldClockTo(9);
         var clock = Bytes(w => { w.Write((byte)97); w.Write(10d); w.Write(100f); w.Write(1f); w.Write((ushort)0); w.Write(true); w.Write(2400d); w.Write(-1f); });
-        Check(Entities.Sent.Last().Bytes.SequenceEqual(clock) && Entities.Sent.Last().Reliable && Entities.Sent.Last().Peer == 9, "clock join bytes and reliable snap");
+        Check(Entities.Packets.Last().Bytes.SequenceEqual(clock) && Entities.Packets.Last().Reliable && Entities.Packets.Last().Peer == 9, "clock join bytes and reliable snap");
         EntityWorldClock.ServerTimeTick(0.1f);
-        Check(!Entities.Sent.Last().Reliable && Entities.Sent.Last().Bytes[19] == 0, "periodic clock remains unreliable without snap");
-        Entities.IsHost = false; EntityWorldClock.ReceiveWorldClock(Reader(clock)); EntityWorldClock.ReceiveWorldClock(Reader(Entities.Sent.Last().Bytes));
+        Check(!Entities.Packets.Last().Reliable && Entities.Packets.Last().Bytes[19] == 0, "periodic clock remains unreliable without snap");
+        Entities.IsHost = false; EntityWorldClock.ReceiveWorldClock(Reader(clock)); EntityWorldClock.ReceiveWorldClock(Reader(Entities.Packets.Last().Bytes));
         Check(TLDRevamp.Fixes.SessionClocks.WorldReceived == 1 && TLDRevamp.Fixes.SessionClocks.WorldStale == 1, "clock stale anchor rejected");
         EntityWorldClock.ReceiveWorldClock(Reader(clock));
         Check(TLDRevamp.Fixes.SessionClocks.WorldReceived == 2, "equal stamp forced clock still applies");
         Hook(typeof(EntityWorldClock), "WorldFollowsHost", napszakvaltakozas.s);
         Check(TLDRevamp.Fixes.SessionClocks.WorldSnapped == 1, "world patch follows initial host anchor");
         mainscript.s.sleeping = true; EntityWorldClock.SleepTick(0.25f);
-        Check(Entities.Sent.Last().Bytes.SequenceEqual(Bytes(w => { w.Write(Entities.SleepSync); w.Write(100f); w.Write(10d); w.Write(0.5f); })) && Entities.Sent.Last().Reliable, "sleep request legacy bytes");
+        Check(Entities.Packets.Last().Bytes.SequenceEqual(Bytes(w => { w.Write(Entities.SleepSync); w.Write(100f); w.Write(10d); w.Write(0.5f); })) && Entities.Packets.Last().Reliable, "sleep request legacy bytes");
         mainscript.s.sleeping = false; EntityWorldClock.SleepTick(0);
-        Check(Entities.Sent.Last().Bytes.SequenceEqual(Bytes(w => { w.Write(Entities.SleepSync); w.Write(100f); w.Write(10d); w.Write(-1f); })), "wake request legacy bytes");
+        Check(Entities.Packets.Last().Bytes.SequenceEqual(Bytes(w => { w.Write(Entities.SleepSync); w.Write(100f); w.Write(10d); w.Write(-1f); })), "wake request legacy bytes");
         Check((bool)Field(typeof(EntityWorldClock), "_worldAwaitingWake"), "client wake awaits host epoch");
         long sleeps = EntityWorldClock.SleepClocksSent;
         Set(typeof(EntityWorldClock), "_sleepClockAcc", 0.125f); EntityWorldClock.ClockReset();
         Check(EntityWorldClock.SleepClocksSent == sleeps && (float)Field(typeof(EntityWorldClock), "_sleepClockAcc") == 0.125f, "clock reset preserves cumulative count and sleep accumulator lifetime");
         Entities.IsHost = true; mainscript.s.sleeping = true; EntityWorldClock.SleepTick(0.25f);
-        Check(Entities.Sent[^2].Peer == -2 && Entities.Sent[^1].Bytes[0] == 97 && (ushort)Field(typeof(EntityWorldClock), "_worldEpoch") == 1, "synchronous host sleep sends request before snapped reply");
+        Check(Entities.Packets[^2].Peer == -2 && Entities.Packets[^1].Bytes[0] == 97 && (ushort)Field(typeof(EntityWorldClock), "_worldEpoch") == 1, "synchronous host sleep sends request before snapped reply");
         mainscript.s.sleeping = false;
 
         var storm = new GameObject().Storm; storm.prefabid = 2; storm.transform.position = new Vector3(4, 0, 6); storm.transform.eulerAngles = new Vector3(0, 8, 0);
         storm.size = 10; storm.xdir = 12; storm.ydir = 14; storm.speed = 16; storm.life = 18; napszakvaltakozas.s.sandStorms.Add(storm);
         EntityWeather.StormTick(0.1f);
         var storms = Bytes(w => { w.Write((byte)56); w.Write((byte)1); w.Write(1u); w.Write((byte)2); w.Write(4d); w.Write(6d); w.Write(8f); w.Write(10f); w.Write(12f); w.Write(14f); w.Write(16f); w.Write(18f); });
-        Check(Entities.Sent.Last().Bytes.SequenceEqual(storms) && Entities.Sent.Last().Reliable, "storm legacy bytes and reliable broadcast");
-        sends = Entities.Sent.Count; EntityWeather.StormTick(0.1f); Check(Entities.Sent.Count == sends, "storm unchanged count waits for resend");
+        Check(Entities.Packets.Last().Bytes.SequenceEqual(storms) && Entities.Packets.Last().Reliable, "storm legacy bytes and reliable broadcast");
+        sends = Entities.Packets.Count; EntityWeather.StormTick(0.1f); Check(Entities.Packets.Count == sends, "storm unchanged count waits for resend");
         Entities.IsHost = false; itemdatabase.s = new itemdatabase { storms = new[] { new GameObject(), new GameObject(), new GameObject() } };
         EntityWeather.ApplyStorms(Reader(storms));
         Check(EntityWeather.StormSyncsApplied == 1 && EntityWeather.StormsMade == 1 && storm.gameObject.Destroyed, "storm receive replaces local storm with host state");

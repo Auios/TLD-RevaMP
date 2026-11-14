@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace HarmonyLib
 {
-    [AttributeUsage(AttributeTargets.Class)] public class HarmonyPatch : Attribute { public HarmonyPatch(Type type, string method) { } }
+    [AttributeUsage(AttributeTargets.Class)] public class HarmonyPatch : Attribute { public HarmonyPatch(Type type, string method, params Type[] args) { } }
     [AttributeUsage(AttributeTargets.Method)] public class HarmonyPrefix : Attribute { }
     [AttributeUsage(AttributeTargets.Method)] public class HarmonyPostfix : Attribute { }
 }
@@ -14,18 +14,20 @@ namespace UnityEngine
 {
     public class Object
     {
+        public static GameObject LastCreated;
+        public static T[] FindObjectsOfType<T>() => Array.Empty<T>();
         public static GameObject Instantiate(GameObject prefab, Vector3 pos, Quaternion rot)
         {
-            var go = new GameObject(); go.Storm.transform.position = pos; return go;
+            var go = new GameObject(); go.Storm.transform.position = pos; if (prefab.Part != null) { go.Part = (Component)Activator.CreateInstance(prefab.Part.GetType()); go.Part.Go = go; go.Part.name = prefab.Part.name + "(Clone)"; go.Part.transform.position = pos; go.Part.transform.rotation = rot; } LastCreated = go; return go;
         }
         public static void Destroy(GameObject go) { go.Destroyed = true; napszakvaltakozas.s.sandStorms.Remove(go.Storm); }
     }
-    public class GameObject { public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Storm as T; }
-    public class Transform { public Vector3 position, eulerAngles, localEulerAngles; }
+    public class GameObject : Object { public Component Part; public Transform transform = new Transform(); public string name; public int layer; public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Part as T ?? Storm as T; }
+    public partial class Transform : Component { public Vector3 position, eulerAngles, localEulerAngles; }
     public class Light { public bool enabled; public float intensity; public GameObject gameObject = new GameObject(); }
-    public class AudioSource { public bool isPlaying; public float volume; }
+    public class AudioSource : Component { public bool isPlaying; public float volume, pitch; public int priority; public AudioClip clip; }
     public class AudioClip { public string name; public float length; }
-    public struct Quaternion
+    public partial struct Quaternion
     {
         public float x, y, z, w;
         public Quaternion(float x, float y, float z, float w) { this.x = x; this.y = y; this.z = z; this.w = w; }
@@ -33,7 +35,7 @@ namespace UnityEngine
         public static Quaternion Euler(float x, float y, float z) => identity;
     }
     public struct Vector3d { public double x, y, z; public Vector3d(double x, double y, double z) { this.x = x; this.y = y; this.z = z; } }
-    public struct Vector3
+    public partial struct Vector3
     {
         public float x, y, z;
         public Vector3(float x, float y, float z) { this.x = x; this.y = y; this.z = z; }
@@ -61,7 +63,7 @@ namespace UnityEngine
     }
 }
 
-public class mainscript
+public partial class mainscript
 {
     public static mainscript s;
     public List<radioCH> radioChs = new List<radioCH>(), radioChsAM = new List<radioCH>();
@@ -91,14 +93,14 @@ public class sandstormscript
     public int prefabid; public float size, xdir, ydir, speed, life; public bool started;
 }
 public class itemdatabase { public static itemdatabase s; public GameObject[] storms; }
-public class tosaveitemscript
+public partial class tosaveitemscript : Component
 {
     public carscript car;
     public headlightscript[] Headlights = Array.Empty<headlightscript>();
     public rearlights[] Rearlights = Array.Empty<rearlights>();
-    public T[] GetComponentsInChildren<T>(bool all) => typeof(T) == typeof(headlightscript) ? (T[])(object)Headlights : (T[])(object)Rearlights;
+    public T[] GetComponentsInChildren<T>(bool all) => typeof(T) == typeof(headlightscript) ? (T[])(object)Headlights : typeof(T) == typeof(rearlights) ? (T[])(object)Rearlights : Array.Empty<T>();
 }
-public class headlightscript { public int currentState; public Light[] Lights = Array.Empty<Light>(); public T[] GetComponentsInChildren<T>(bool all) => (T[])(object)Lights; }
+public class headlightscript { public usablescript usableSet; public int currentState; public Light[] Lights = Array.Empty<Light>(); public T[] GetComponentsInChildren<T>(bool all) => (T[])(object)Lights; }
 public class rearlights { public GameObject[] FLight; public void Upd() { } }
 public class usablescript { public int currentTurnState; }
 public class enginescript { public bool running, start; public gearstickscript gearstick; }
@@ -120,7 +122,7 @@ public class kaposztaleves { public static kaposztaleves s; public Settings sett
 
 namespace TLDRevamp
 {
-    internal static class GameLookups { internal static Type RuntimeFoundType(string name, Type found) => found; }
+    internal static partial class GameLookups { internal static Type RuntimeFoundType(string name, Type found) => found; }
     internal static class Json { internal static string Str(string value) => System.Text.Json.JsonSerializer.Serialize(value); }
 }
 
@@ -143,7 +145,7 @@ namespace TLDRevamp.Fixes
 
 namespace TLDRevamp.Net
 {
-    internal static class RemotePlayers
+    internal static partial class RemotePlayers
     {
         internal const float ReachS = .25f;
         internal static int Reaches;
@@ -153,7 +155,7 @@ namespace TLDRevamp.Net
     internal static class ModObjects { public static double ClockTime; }
     public static partial class Entities
     {
-        public sealed class Ent
+        public sealed partial class Ent
         {
             public int PartIndex = -1, SigGear, SentSigKey = -1, SigRepeat;
             public bool Proxy, SigHas, SigIgnition, SigBrake, SigHandbrake;
@@ -168,17 +170,23 @@ namespace TLDRevamp.Net
         internal static bool Finite(float v) => !float.IsNaN(v) && !float.IsInfinity(v);
         internal static bool Finite(double v) => !double.IsNaN(v) && !double.IsInfinity(v);
         internal static bool Finite(Vector3 v) => Finite(v.x) && Finite(v.y) && Finite(v.z);
-        internal static readonly List<(byte[] Bytes, bool Reliable, int Peer)> Sent = new List<(byte[], bool, int)>();
-        private static void ServerSendTo(int playerId, NetWriter w, bool reliable) => Sent.Add((w.Buf.Take(w.Len).ToArray(), reliable, playerId));
-        private static void ServerSendAll(NetWriter w, bool reliable, int except, Vector3d? near = null, double range = 0) => Sent.Add((w.Buf.Take(w.Len).ToArray(), reliable, -1));
+        internal static readonly List<(byte[] Bytes, bool Reliable, int Peer)> Packets = new List<(byte[], bool, int)>();
+        private static void ServerSendTo(int playerId, NetWriter w, bool reliable) => Packets.Add((w.Buf.Take(w.Len).ToArray(), reliable, playerId));
+        internal static int LastExcept;
+        internal static Action PeerDeliver;
+        internal static Action<byte, NetReader> HostReceive;
+        private static void ServerSendAll(NetWriter w, bool reliable, int except, Vector3d? near = null, double range = 0)
+        {
+            Packets.Add((w.Buf.Take(w.Len).ToArray(), reliable, -1)); LastExcept = except; PeerDeliver?.Invoke();
+        }
         internal static void SendToServer(NetWriter w, bool reliable)
         {
-            Sent.Add((w.Buf.Take(w.Len).ToArray(), reliable, -2));
+            Packets.Add((w.Buf.Take(w.Len).ToArray(), reliable, -2));
             // The kernel captures a request before synchronous host dispatch can reuse a feature's writer.
             if (IsHost)
             {
-                var r = new NetReader(); r.Load(w.Len); Array.Copy(w.Buf, r.Buf, w.Len); r.U8();
-                EntityWorldClock.ServerSleepSync(0, r.F32(), r.F64(), r.F32());
+                var r = new NetReader(); r.Load(w.Len); Array.Copy(w.Buf, r.Buf, w.Len); byte kind = r.U8();
+                if (kind == SleepSync) EntityWorldClock.ServerSleepSync(0, r.F32(), r.F64(), r.F32()); else HostReceive?.Invoke(kind, r);
             }
         }
     }

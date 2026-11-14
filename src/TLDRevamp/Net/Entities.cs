@@ -250,7 +250,7 @@ namespace TLDRevamp.Net
                     UnityEngine.Object.Destroy(e.Root.gameObject);
                 }
             }
-            ProxyItems.Clear(); EntityCarSignals.ResetSignals(); _rideCars.Clear(); CargoGhostNets.Clear(); RagdollCopies.Clear(); RagdollLimbOwner.Clear(); _spraying.Clear();
+            ProxyItems.Clear(); EntityCarSignals.ResetSignals(); _rideCars.Clear(); CargoGhostNets.Clear(); RagdollCopies.Clear(); RagdollLimbOwner.Clear(); EntityEffects.ResetSpraying();
             HostPhysicsLock = -1; _physLockLast = -1;   // a client: its own setting again
             EntityWeather.StormReset();   // a client keeps the storms it has: its own from now
             ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();
@@ -461,7 +461,7 @@ namespace TLDRevamp.Net
             EditTick();
             CopyFluidTick();
             ReshareTick();
-            BlastTick();
+            EntityExplosions.BlastTick();
             MemberGoneTick();
             if (IsHost) ShareQuotaTick();
             AiTick();
@@ -640,7 +640,7 @@ namespace TLDRevamp.Net
                     t.SetPositionAndRotation(mainscript.UnityPosFromGlobal(pos), rot);
                 }
             }
-            SprayTick(dt);
+            EntityEffects.SprayTick(dt);
             RagdollTick(dt);   // after the copies moved: their limbs relative to where they are now
         }
 
@@ -777,10 +777,10 @@ namespace TLDRevamp.Net
                 case ShotgunIn: ServerShotgun(from, r); break;
                 case PushIn: ServerPush(from, r); break;
                 case PlayerCombat.PlayerDamage: PlayerCombat.ServerReceive(from, r); break;
-                case ShotFx: ServerShotFx(from, r); break;
-                case ExplodeReq: ServerExplodeReq(from, r); break;
-                case ExplosionFx: ServerExplosionFx(from, r); break;
-                case PlayerSound: ServerPlayerSound(from, r); break;
+                case ShotFx: EntityEffects.ServerShotFx(from, r); break;
+                case ExplodeReq: EntityExplosions.ServerExplodeReq(from, r); break;
+                case ExplosionFx: EntityExplosions.ServerExplosionFx(from, r); break;
+                case PlayerSound: EntityEffects.ServerPlayerSound(from, r); break;
                 case BreakHit: ServerBreakHit(from, r); break;
                 case BreakFx: ServerKeepBreak(r); ServerFwdAll(from, r, true); break;
                 case CarTune: if (ServerKeepTune(from, r)) ServerFwdAll(from, r, true); break;
@@ -1090,7 +1090,7 @@ namespace TLDRevamp.Net
                     bool letGo = e.Held && !held;
                     if (letGo) { e.LetGoAt = Time.realtimeSinceStartup; if (LetGoSeen++ < 20) Plugin.Log.LogInfo($"let go: {(e.Root != null ? e.Root.name : "?")} net {e.NetId} by player {e.OwnerId} (its owner since {Time.realtimeSinceStartup - e.OwnerAt:F2} s)"); }
                     if (held || held != e.Held) ShowHeld(e, held);   // every state while held: a copy placed again (streaming) gets it too
-                    ShowSpraying(e, spraying);
+                    EntityEffects.ShowSpraying(e, spraying);
                     if (type == State)
                     {
                         ReadWheels(r, e);
@@ -1242,10 +1242,10 @@ namespace TLDRevamp.Net
                 case CensusRepair: ApplyCensusRepair(r); break;
                 case DetachSync: ApplyDetachSync(r); break;
                 case PlayerCombat.PlayerDamage: PlayerCombat.ClientReceive(r); break;
-                case ShotFx: ApplyShotFx(r); break;
-                case ExplodeReq: ApplyExplodeReq(r); break;
-                case ExplosionFx: ApplyExplosionFx(r); break;
-                case PlayerSound: ApplyPlayerSound(r); break;
+                case ShotFx: EntityEffects.ApplyShotFx(r); break;
+                case ExplodeReq: EntityExplosions.ApplyExplodeReq(r); break;
+                case ExplosionFx: EntityExplosions.ApplyExplosionFx(r); break;
+                case PlayerSound: EntityEffects.ApplyPlayerSound(r); break;
                 case BreakHit: ApplyBreakHit(r); break;
                 case BreakFx: ApplyBreakFx(r); break;
                 case CarTune: ApplyCarTune(r); break;

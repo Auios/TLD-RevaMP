@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -9,21 +10,23 @@ namespace TLDRevamp.Net
     /// "spraying" (flag 8, sent on change, three times); on the copies the can is kept firing — the game's own Update
     /// then shows the mist from the can, pointing where the holder points it, and plays the hiss. Only the effect: a
     /// copy paints nothing (its raycast stroke is the owner's alone: Fire is not called here).
-    public static partial class Entities
+    internal static partial class EntityEffects
     {
         public static bool SprayFx = true;   // A/B: false = the copies stay silent (before v0.65.23)
         public static long SprayShown;
         private static readonly HashSet<Ent> _spraying = new HashSet<Ent>();
 
+        internal static void ResetSpraying() => _spraying.Clear();
+
         /// Owner: the can in this player's hands is spraying (its valve open past the first frames).
         internal static bool IsSpraying(tosaveitemscript it)
         {
-            if (it == null || !IsHeld(it)) return false;
+            if (it == null || !Entities.IsHeld(it)) return false;
             var sp = it.GetComponent<sprayscript>();
             return sp != null && sp.valve > 0.1f && sp.hasPaint;
         }
 
-        private static void ShowSpraying(Ent e, bool spraying)
+        internal static void ShowSpraying(Ent e, bool spraying)
         {
             if (e.Spraying == spraying) return;
             e.Spraying = spraying;
@@ -32,7 +35,7 @@ namespace TLDRevamp.Net
 
         /// Per frame: copies of cans being sprayed keep their valve open, as Fire does on the holder's machine. Their
         /// Update closes it again when nothing keeps it open (firing false) — the flag off, or the copy gone.
-        private static void SprayTick(float dt)
+        internal static void SprayTick(float dt)
         {
             SprayHoldTick();
             if (_spraying.Count == 0) return;
@@ -62,7 +65,7 @@ namespace TLDRevamp.Net
 
         public static string LampState(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
+            if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
             int on = 0, all = 0; var states = new List<string>(); int sw = -1;
             foreach (var h in e.Root.GetComponentsInChildren<headlightscript>(true))
             {
@@ -76,7 +79,7 @@ namespace TLDRevamp.Net
         /// `mp sprayfx <net>`: a can's spray as shown here — valve, mist emitting, hiss playing; owner or copy.
         public static string SprayFxState(uint net)
         {
-            if (!ByNet.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
+            if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
             var sp = e.Root.GetComponent<sprayscript>();
             if (sp == null) return "{\"error\":\"not a spray can\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
