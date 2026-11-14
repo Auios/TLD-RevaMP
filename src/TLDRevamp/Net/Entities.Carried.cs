@@ -1,4 +1,5 @@
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -10,16 +11,16 @@ namespace TLDRevamp.Net
     /// (the server's records and distance rules, a machine without the car).
     /// Hand-relative held poses take display priority when the holder model exists (Entities.HandItems); this car-frame
     /// stream remains the fallback, including the release/cargo takeover rules.
-    public static partial class Entities
+    internal static partial class EntityHands
     {
         public static long CarriedSent, CarriedSwitches, CarriedNoCar, CarriedReleasedClaims, CarriedTakeovers;
 
         /// Owner: the car our player sits in, if this held item rides in it; its pose in the car's frame.
-        private static uint CarriedBy(Ent e, Transform t, Quaternion q, out Vector3 lp, out Quaternion lq)
+        internal static uint CarriedBy(Ent e, Transform t, Quaternion q, out Vector3 lp, out Quaternion lq)
         {
             lp = default; lq = Quaternion.identity;
-            LocalSeat(out uint car, out _);
-            if (car == 0 || car == e.NetId || !ByNet.TryGetValue(car, out var c) || c.Root == null) return 0;
+            EntitySeats.LocalSeat(out uint car, out _);
+            if (car == 0 || car == e.NetId || !Entities.TryGetEntity(car, out var c) || c.Root == null) return 0;
             var ct = c.Root.transform;
             lp = ct.InverseTransformPoint(t.position); lq = Quaternion.Inverse(ct.rotation) * q;
             CarriedSent++;
@@ -35,7 +36,7 @@ namespace TLDRevamp.Net
 
         /// Copy, a state just read: in the car's frame, the interpolator runs on car-frame poses (a fresh one when the
         /// frame changes: the two kinds of positions never mix on one curve). True when it became ours (see below).
-        private static bool TakeCarried(Ent e, ref PoseInterpolator.Sample s, Vector3d global, Quaternion globalRot, bool held, bool stored)
+        internal static bool TakeCarried(Ent e, ref PoseInterpolator.Sample s, Vector3d global, Quaternion globalRot, bool held, bool stored)
         {
             uint cb = EntityCodec.ReadCarriedBy;
             // let go in a car this machine drives: loose cargo in our car — ours at once, from where it is shown (in
@@ -43,10 +44,10 @@ namespace TLDRevamp.Net
             // the claim then made a still item of it in a car at 50 km/h: the car rammed it (stopped dead, 3 parts off,
             // the lamp thrown 50 m; heldincar B2, 2026-10-08). Let go into a car it now lies in (RidingFrames), its state
             // names that car instead of none (a holder outside it too): the same.
-            uint released = LooseRelease(e.CarriedBy, cb, held, stored) ? e.CarriedBy : RidingFrames && e.Held && cb != 0 && !held && !stored ? cb : 0;
-            if (!EntityCodec.ReadLockedState && released != 0 && ByNet.TryGetValue(released, out var car) && !car.Proxy && car.Root != null && CargoClaims && e.Root != null)
+            uint released = Entities.LooseCarriedRelease(e.CarriedBy, cb, held, stored) ? e.CarriedBy : RidingFrames && e.Held && cb != 0 && !held && !stored ? cb : 0;
+            if (!EntityCodec.ReadLockedState && released != 0 && Entities.TryGetEntity(released, out var car) && !car.Proxy && car.Root != null && Entities.CargoClaims && e.Root != null)
             {
-                if (ClaimCargo(e, released: true, reason: ClaimReason.CargoRelease)) { CarriedReleasedClaims++; return true; }
+                if (Entities.ClaimReleasedCarried(e)) { CarriedReleasedClaims++; return true; }
             }
             if (cb != e.CarriedBy) { e.CarriedBy = cb; if (e.Ip != null) e.Ip = new PoseInterpolator(); CarriedSwitches++; }
             if (cb == 0) return false;
@@ -58,9 +59,9 @@ namespace TLDRevamp.Net
 
         /// A carried copy becomes ours (a release claim, a pickup): it starts where it is shown, moving with the car it
         /// is in — the last state's velocity is the holder's view of it (a kinematic right hand: zero).
-        private static void TakeOverCarried(Ent e)
+        internal static void TakeOverCarried(Ent e)
         {
-            if (ByNet.TryGetValue(e.CarriedBy, out var car) && car.Root != null && e.Root != null)
+            if (Entities.TryGetEntity(e.CarriedBy, out var car) && car.Root != null && e.Root != null)
             {
                 // our car: its body's speed at that point; a copy car is kinematic and reads 0 km/h — its owner's
                 // velocity from the last state (a still item in a car at speed gets rammed)
@@ -72,18 +73,18 @@ namespace TLDRevamp.Net
         }
 
         /// The pose a copy is shown at (every mover): its interpolated state, a car-frame one put into this machine's car.
-        private static void EvalShown(Ent e, double now, float dt, out Vector3d pos, out Quaternion rot)
+        internal static void EvalShown(Ent e, double now, float dt, out Vector3d pos, out Quaternion rot)
         {
-            Coast(e); e.Ip.Evaluate(now, dt, out pos, out rot);
+            Entities.Coast(e); e.Ip.Evaluate(now, dt, out pos, out rot);
             if (e.CarriedBy == 0) return;
-            if (ByNet.TryGetValue(e.CarriedBy, out var c) && c.Root != null)
+            if (Entities.TryGetEntity(e.CarriedBy, out var c) && c.Root != null)
             {
                 var ct = c.Root.transform;
                 pos = mainscript.GlobalFromUnityPos(e.PoseLocked ? ct.position + ct.rotation * (Vector3)pos : ct.TransformPoint((Vector3)pos)); rot = ct.rotation * rot;
             }
             else
             {
-                if (!e.PoseLocked || !LockedWorld(e, out pos, out rot)) { pos = e.CarriedGlobal; rot = e.CarriedGlobalRot; }
+                if (!e.PoseLocked || !Entities.TryLockedHandWorld(e, out pos, out rot)) { pos = e.CarriedGlobal; rot = e.CarriedGlobalRot; }
                 CarriedNoCar++;
             }
         }

@@ -78,10 +78,10 @@ namespace TLDRevamp.Net
             EnsurePoseLock(cargo);
             cargo.CarriedBy = 40;
             cargo.Ip.Add(new PoseInterpolator.Sample { T = 1, Pos = new Vector3d(lp.x, lp.y, lp.z), Rot = lq }, 1);
-            EvalShown(cargo, 1.1, .05f, out var rendered, out var renderedRot);
+            EntityHands.EvalShown(cargo, 1.1, .05f, out var rendered, out var renderedRot);
             var expected = car.Root.transform.position + car.Root.transform.rotation * lp;
             Check((rendered - new Vector3d(expected.x, expected.y, expected.z)).sqrMagnitude < .0001 && Quaternion.Angle(renderedRot, car.Root.transform.rotation * lq) < .01, "receiver draws a quiet item in its current car frame");
-            TakeOverCarried(cargo);
+            EntityHands.TakeOverCarried(cargo);
             Check(cargo.CarriedBy == 0 && cargo.Root.P.physlock == mount, "ownership drops interpolation frame while retaining the actual game lock");
             cargo.Epoch++;
             SetProxy(cargo, false);
@@ -239,7 +239,7 @@ namespace TLDRevamp.Net
             Check(net == 41 && epoch == 2 && stamp == 5 && EntityCodec.ReadFinalState && EntityCodec.ReadLockedState && EntityCodec.ReadCarriedBy == 40 && EntityCodec.ReadLockItem == item && EntityCodec.ReadLockMount == index, "late join replays final lock, frame and container");
             Check((world - child.Pos).sqrMagnitude < .00001 && velocity.sqrMagnitude == 0 && r.U8() == 77 && !r.Bad, "replay refreshes stale world fallback and preserves visual state");
             var sample = new PoseInterpolator.Sample { T = stamp, Pos = world, Rot = child.Rot };
-            Check(!TakeCarried(cargo, ref sample, world, child.Rot, false, false) && cargo.CarriedBy == 40 &&
+            Check(!EntityHands.TakeCarried(cargo, ref sample, world, child.Rot, false, false) && cargo.CarriedBy == 40 &&
                   (sample.Pos - new Vector3d(lp.x, lp.y, lp.z)).sqrMagnitude < .0001, "late-join sample enters parent coordinates before interpolation");
             for (int n = 1; n < snapshot.Length - 1; n++)
             {

@@ -26,7 +26,7 @@ namespace TLDRevamp.Net
         static readonly System.Collections.Generic.List<(int Target, byte[] Bytes)> OwnerReplies = new System.Collections.Generic.List<(int, byte[])>();
         static byte[] CopyPacket(NetWriter w) { var bytes = new byte[w.Len]; Array.Copy(w.Buf, bytes, w.Len); return bytes; }
         static void ServerSendAll(NetWriter w, bool reliable, int except) { OwnerPackets.Add(CopyPacket(w)); }
-        static long ClaimsRefused, RefusedCrash, RefusedHeld, RefusedStored, RefusedDriven, WornRefused;
+        static long ClaimsRefused, RefusedCrash, RefusedHeld, RefusedStored, RefusedDriven;
         static readonly System.Collections.Generic.Dictionary<uint, int> _refuseLogged = new System.Collections.Generic.Dictionary<uint, int>();
         internal static bool InSession = true;
         static tosaveitemscript ForceHeld = null;
@@ -132,10 +132,10 @@ namespace TLDRevamp.Net
             item = new Ent { NetId = 8, Proxy = true, OwnerId = 0, CarriedBy = 7, Held = true }; item.Root.P = new TestPickup(); ByNet[8] = item;
             EntityCodec.ReadCarriedBy = 0; EntityCodec.ReadLockedState = true;
             var sample = new PoseInterpolator.Sample(); Uploaded = null;
-            IdleTrafficTest.Check(!TakeCarried(item, ref sample, default, Quaternion.identity, false, false) && Uploaded == null,
+            IdleTrafficTest.Check(!EntityHands.TakeCarried(item, ref sample, default, Quaternion.identity, false, false) && Uploaded == null,
                 "physlocked state cannot be mistaken for loose cargo release");
             item.CarriedBy = 7; EntityCodec.ReadLockedState = false;
-            IdleTrafficTest.Check(TakeCarried(item, ref sample, default, Quaternion.identity, false, false) && !item.Proxy && Uploaded.Length == 6,
+            IdleTrafficTest.Check(EntityHands.TakeCarried(item, ref sample, default, Quaternion.identity, false, false) && !item.Proxy && Uploaded.Length == 6,
                 "loose release in our car claims cargo without explicit release bit or central held guard");
             // a holder standing outside lets go in our car's box (or touching it): ours at once, cooldown or not
             IdleTrafficTest.Check(LetGoInCar(false, false, 0, true, false) && LetGoInCar(false, false, 0, false, true),

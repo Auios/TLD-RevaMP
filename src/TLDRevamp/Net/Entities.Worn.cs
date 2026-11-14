@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -19,9 +20,9 @@ namespace TLDRevamp.Net
     ///    head target, no collisions. Not parented: a seated body goes with the car model it sits in (RemotePlayers) and
     ///    would take the hat with it. No body shown here (far away, hidden with its car): the states place it as before;
     ///  - records from the network never carry a wearer (RecordCodec.StripWorn).
-    public static partial class Entities
+    internal static partial class EntityHands
     {
-        public const byte Worn = 85;   // c→s: u32 net, u32 epoch, u8 slot (255 = off), [3×f32 pos, rot].  s→c: u32 net, varuint wearer, u8 slot, [pos, rot]
+        private static readonly NetWriter W = new NetWriter();
         public static bool WornSync = true;   // A/B: false = before v0.68.2 (worn items drawn at their owner's states)
         public static long WornSent, WornRelayed, WornApplied, WornCleared, WornRefused, WornPlaced;
         private static float _wornCheckAt;
@@ -49,7 +50,7 @@ namespace TLDRevamp.Net
 
         /// Owner, 10 Hz: what the local player put on or took off since (any way the game does it: the wear key, a
         /// cigarette lit from its pack, death, a restored player save).
-        private static void WornTick()
+        internal static void WornTick()
         {
             if (!WornSync || Time.unscaledTime < _wornCheckAt) return;
             _wornCheckAt = Time.unscaledTime + 0.1f;
@@ -60,7 +61,7 @@ namespace TLDRevamp.Net
             {
                 int s = e.Proxy || e.Root == null ? -1 : LocalWornSlot(e.Root);
                 if (s >= 0) continue;
-                if (!e.Proxy && e.SentWornSlot >= 0 && ByNet.ContainsKey(e.NetId)) SendWorn(e, -1);
+                if (!e.Proxy && e.SentWornSlot >= 0 && Entities.HasEntity(e.NetId)) SendWorn(e, -1);
                 Plugin.Log.LogInfo("worn: " + (e.Root != null ? e.Root.name : "?") + " net " + e.NetId + " off the local player" + (e.Proxy ? " (another machine's now)" : ""));
                 e.SentWornSlot = -1;
                 _wornOwn.Remove(e);
@@ -72,9 +73,9 @@ namespace TLDRevamp.Net
                 if (p == null) continue;
                 var ts = p.tosave != null ? p.tosave : p.GetComponent<tosaveitemscript>();
                 if (ts == null) continue;
-                if (!_wornEnt.TryGetValue(ts, out var e) || e.Root != ts || !ByNet.ContainsKey(e.NetId))
+                if (!_wornEnt.TryGetValue(ts, out var e) || e.Root != ts || !Entities.HasEntity(e.NetId))
                 {
-                    e = OwnEntity(ts);   // not shared yet (a cigarette just lit): next time
+                    e = Entities.OwnEntity(ts);   // not shared yet (a cigarette just lit): next time
                     if (e == null) continue;
                     _wornEnt[ts] = e;
                 }
@@ -106,8 +107,7 @@ namespace TLDRevamp.Net
                     pl.TakeOff(p, true);
                     return true;
                 }
-                SetProxy(e, false); e.OwnerId = MyId; e.SentWornSlot = -1;
-                W.Reset(); WriteClaim(W, e.NetId, ClaimReason.Wear); ToServer(W, true); ClaimsSent++;
+                Entities.ClaimWorn(e);
                 WornClaimedBack++;
                 return false;
             }
@@ -122,11 +122,11 @@ namespace TLDRevamp.Net
             return false;
         }
 
-        private static void SendWorn(Ent e, int slot)
+        internal static void SendWorn(Ent e, int slot)
         {
-            W.Reset(); W.U8(Worn); W.U32(e.NetId); W.U32(e.Epoch); W.U8((byte)(slot < 0 ? 255 : slot));
+            W.Reset(); W.U8(Entities.Worn); W.U32(e.NetId); W.U32(e.Epoch); W.U8((byte)(slot < 0 ? 255 : slot));
             if (slot >= 0) WriteWornPose(W, e.Root);
-            ToServer(W, true);
+            Entities.SendToServer(W, true);
             e.SentWornSlot = slot;
             WornSent++;
         }
@@ -139,7 +139,7 @@ namespace TLDRevamp.Net
             var iq = h != null ? Quaternion.Inverse(h.rotation) : Quaternion.identity;
             Vector3 lp = h != null ? iq * (t.position - h.position) : Vector3.zero;
             Quaternion lq = iq * t.rotation;
-            w.F32(lp.x); w.F32(lp.y); w.F32(lp.z); WriteRot(w, lq);
+            w.F32(lp.x); w.F32(lp.y); w.F32(lp.z); EntityCodec.WriteRot(w, lq);
         }
 
         /// A share of something the local player already wears (a player save's hat put back on at a rejoin, a cigarette
@@ -148,7 +148,7 @@ namespace TLDRevamp.Net
         /// (its contents claim) — on the joiner's screen the hat then sat on its head as the host's copy, 0.7 m below and
         /// 1 m beside it, and nobody else saw it on them (wearsync.py D, 2026-10-17).
         public static bool WornInShare = true;   // A/B: false = before v0.68.5 (the Worn message after the network id only)
-        private static void WriteShareWorn(NetWriter w, tosaveitemscript root)
+        internal static void WriteShareWorn(NetWriter w, tosaveitemscript root)
         {
             int slot = WornSync && WornInShare ? LocalWornSlot(root) : -1;
             if (slot < 0) return;
@@ -157,89 +157,66 @@ namespace TLDRevamp.Net
 
         /// The server side: a share that came worn is on its sharer's head from the start (claims refused, SendObject
         /// tells everyone it reaches).
-        private static void ReadShareWorn(NetReader r, SEnt se, int from)
-        {
-            if (r.Remaining <= 0) return;   // an older client, or not worn
-            byte slot = r.U8(); var lp = new Vector3(r.F32(), r.F32(), r.F32()); var lq = ReadRot(r);
-            if (r.Bad || slot > 15 || !Finite(lp) || lp.sqrMagnitude > 4f) return;
-            se.WornBy = from; se.WornSlot = slot; se.WornLp = lp; se.WornLq = lq;
-            SharedWorn++;
-        }
+
         public static long SharedWorn;
 
         // ------------------------------------------------------------------ server
-
-        /// Worn by its owner right now (an owner change since ends it: the new owner's game has it loose).
-        private static bool ServerWornNow(SEnt se) => se.WornBy >= 0 && se.WornBy == se.OwnerId;
-
-        private static void ServerWorn(int from, NetReader r)
-        {
-            uint net = r.U32(), epoch = r.U32(); byte slot = r.U8();
-            Vector3 lp = default; Quaternion lq = Quaternion.identity;
-            if (slot != 255) { lp = new Vector3(r.F32(), r.F32(), r.F32()); lq = ReadRot(r); }
-            if (r.Bad || !Server.TryGetValue(net, out var se)) return;
-            if (slot != 255 && (slot > 15 || !Finite(lp) || lp.sqrMagnitude > 4f)) return;   // on the head: within 2 m of it
-            if (se.OwnerId != from && !WornTakesBack(se, from, slot)) return;
-            if (!WornLateOk && !ClaimEpochOk(se, from, epoch)) return;
-            se.WornBy = slot == 255 ? -1 : from; se.WornSlot = slot == 255 ? -1 : slot; se.WornLp = lp; se.WornLq = lq;
-            WriteWornOut(W, se);
-            ServerSendAll(W, true, from);
-            WornRelayed++;
-        }
 
         /// A player put it on while someone's claim on it (walking past is enough) was on its way: on their head for good,
         /// loose for everyone else, and no one can do it for them as an owner can bolt a part. A deliberate act beats a claim
         /// that overtook it: it goes back to them, unless the new owner has it in hand or on their own head.
         public static bool WornLateOk = true;   // A/B: false = a Worn from a player who just lost the object is dropped, a copy stays in the wear slot (before)
         public static long WornTakenBack, WornTooLate;
-        private static bool WornTakesBack(SEnt se, int from, byte slot)
+
+        internal static void ServerWorn(int from, NetReader r)
         {
-            if (!WornLateOk) return false;
-            if (slot == 255) return false;   // taken off: the new owner's game has it off already
-            if (se.PrevOwnerId != from || Time.realtimeSinceStartup - se.PrevOwnerAt > HandoverAcceptS || se.Held || se.Stored || ServerWornNow(se) || se.HitchCar != 0)
-            {
-                WornTooLate++;
-                SessionLog.Event("worn-refused", se.NetId, from: from, to: se.OwnerId, result: "no longer theirs");
-                return false;
-            }
-            se.ClaimedBy = from; se.ClaimedAt = Time.realtimeSinceStartup; se.ClaimedFromEpoch = se.Epoch;
-            OwnerLog(se, from, "on their head before the claim got here");
-            se.OwnerId = from; se.Epoch++;
-            W.Reset(); W.U8(Owner); W.U32(se.NetId); W.VarU32((uint)from); W.U32(se.Epoch);
-            ServerSendAll(W, true, -1);
-            CascadeOwner(se);
-            WornTakenBack++;
-            return true;
+            uint net = r.U32(), epoch = r.U32(); byte slot = r.U8();
+            Vector3 lp = default; Quaternion lq = Quaternion.identity;
+            if (slot != 255) { lp = new Vector3(r.F32(), r.F32(), r.F32()); lq = EntityCodec.ReadRot(r); }
+            if (r.Bad) return;
+            Entities.KeepWornRequest(from, net, epoch, slot, lp, lq);
         }
 
-        private static void WriteWornOut(NetWriter w, SEnt se)
+        internal static bool ReadShareWorn(NetReader r, out byte slot, out Vector3 lp, out Quaternion lq)
         {
-            bool on = ServerWornNow(se);
-            w.Reset(); w.U8(Worn); w.U32(se.NetId); w.VarU32((uint)(on ? se.WornBy : 0)); w.U8((byte)(on ? se.WornSlot : 255));
-            if (on) { w.F32(se.WornLp.x); w.F32(se.WornLp.y); w.F32(se.WornLp.z); WriteRot(w, se.WornLq); }
+            slot = 255; lp = default; lq = Quaternion.identity;
+            if (r.Remaining <= 0) return false;   // an older client, or not worn
+            slot = r.U8(); lp = new Vector3(r.F32(), r.F32(), r.F32()); lq = EntityCodec.ReadRot(r);
+            return !r.Bad && slot <= 15 && Entities.IsFinite(lp) && lp.sqrMagnitude <= 4f;
         }
 
-        /// A player the object reaches now (join, interest): it is on its wearer's head.
-        private static void SendWornTo(int playerId, SEnt se)
+        internal static void WriteWornOut(NetWriter w, uint net, bool on, int wearer, int slot, Vector3 lp, Quaternion lq)
         {
-            if (!ServerWornNow(se)) return;
-            WriteWornOut(W, se); ServerSendTo(playerId, W, true);
+            w.Reset(); w.U8(Entities.Worn); w.U32(net); w.VarU32((uint)(on ? wearer : 0)); w.U8((byte)(on ? slot : 255));
+            if (on) { w.F32(lp.x); w.F32(lp.y); w.F32(lp.z); EntityCodec.WriteRot(w, lq); }
+        }
+
+        internal static void RelayWorn(int from, uint net, bool on, int wearer, int slot, Vector3 lp, Quaternion lq)
+        {
+            WriteWornOut(W, net, on, wearer, slot, lp, lq);
+            Entities.SendToPeers(W, true, from);
+            WornRelayed++;
+        }
+
+        internal static void SendWornTo(int playerId, uint net, int wearer, int slot, Vector3 lp, Quaternion lq)
+        {
+            WriteWornOut(W, net, true, wearer, slot, lp, lq); Entities.SendToPeer(playerId, W, true);
         }
 
         // ------------------------------------------------------------------ copies
 
-        private static void ApplyWorn(NetReader r)
+        internal static void ApplyWorn(NetReader r)
         {
             uint net = r.U32(); int wearer = (int)r.VarU32(); byte slot = r.U8();
             Vector3 lp = default; Quaternion lq = Quaternion.identity;
-            if (slot != 255) { lp = new Vector3(r.F32(), r.F32(), r.F32()); lq = ReadRot(r); }
-            if (r.Bad || !ByNet.TryGetValue(net, out var e)) return;
+            if (slot != 255) { lp = new Vector3(r.F32(), r.F32(), r.F32()); lq = EntityCodec.ReadRot(r); }
+            if (r.Bad || !Entities.TryGetEntity(net, out var e)) return;
             WornApplied++;
             if (slot == 255 || !WornSync) { ClearWorn(e); return; }
-            if (!e.Proxy || wearer == MyId || !Finite(lp)) return;   // ours: the game's own wear rules it
+            if (!e.Proxy || wearer == Entities.MyId || !Entities.IsFinite(lp)) return;   // ours: the game's own wear rules it
             e.WornBy = wearer; e.WornSlot = slot; e.WornLp = lp; e.WornLq = lq;
             _wornCopies.Add(e);
-            if (e.MovedByBody) StopBodyMotion(e);
+            if (e.MovedByBody) Entities.StopBodyMotion(e);
         }
 
         /// A copy on someone's head collides with nothing (as the worn item does on its wearer's machine).
@@ -256,7 +233,7 @@ namespace TLDRevamp.Net
             e.WornOffFor = worn ? e.Root : null;
         }
 
-        private static void ClearWorn(Ent e)
+        internal static void ClearWorn(Ent e)
         {
             if (e.WornBy < 0) return;
             e.WornBy = -1; e.WornSlot = -1;
@@ -279,12 +256,12 @@ namespace TLDRevamp.Net
             _wornTmp.Clear(); _wornTmp.AddRange(_wornCopies);
             foreach (var e in _wornTmp)
             {
-                if (!e.Proxy || !ByNet.ContainsKey(e.NetId)) { ClearWorn(e); continue; }
+                if (!e.Proxy || !Entities.HasEntity(e.NetId)) { ClearWorn(e); continue; }
                 if (e.Root == null) continue;   // in the far store here: placed again when it comes back
                 var head = WornAnchor(e);
                 if (head == null) continue;
                 if (e.WornOffFor != e.Root) WornBodies(e, true);   // (placed again by the game's streaming: a new object)
-                if (e.MovedByBody) StopBodyMotion(e);
+                if (e.MovedByBody) Entities.StopBodyMotion(e);
                 var q = head.rotation;
                 e.Root.transform.SetPositionAndRotation(head.position + q * e.WornLp, q * e.WornLq);
                 WornPlaced++;
@@ -314,7 +291,7 @@ namespace TLDRevamp.Net
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>();
             var lh = LocalHead();
-            foreach (var e in ByNet.Values)
+            foreach (var e in Entities.WornEntities())
             {
                 if (e.Root == null || e.Root.P == null || e.Root.P.wear == null) continue;
                 var t = e.Root.transform;

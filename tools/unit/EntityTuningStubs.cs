@@ -85,7 +85,7 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
-        public sealed partial class Ent { public uint RootId, Epoch; public int OwnerId; public List<uint> ItemIds; public HashSet<int> Split; public Dictionary<int, float> EditHoldUntil; public bool Hand; }
+        public sealed partial class Ent { public uint RootId, Epoch; public int OwnerId; public List<uint> ItemIds; public HashSet<int> Split; public Dictionary<int, float> EditHoldUntil; }
         private sealed partial class SEnt { public uint NetId; }
         internal static void TestServer(uint net, int owner) => Server[net] = new SEnt { NetId = net, OwnerId = owner };
         internal static void ClearServer() => Server.Clear();
@@ -121,7 +121,6 @@ namespace TLDRevamp.Net
         internal static Ent SharedGroupOf(tosaveitemscript it) => ByNet.Values.FirstOrDefault(e => e.Items.Contains(it));
         internal static Ent OwnEntity(tosaveitemscript it) => SharedGroupOf(it);
         internal static usablescript[] ItemUsables(tosaveitemscript it) => it.Children.OfType<usablescript>().ToArray();
-        internal static bool HandManaged(Ent e) => e.Hand;
         internal static long AttachPosesBad;
         internal static long AttachPosesSent;
         internal static Transform AttachFrame(attachablescript at) => at.point == null ? null : at.point.parent ?? at.point;
@@ -135,5 +134,5 @@ namespace TLDRevamp.Net
         internal static string RabbitJson(Ent e) => "{}";
     }
     internal static class ItemSnapshot { internal static object Capture(tosaveitemscript it) => it; }
-    internal static class Protocol { internal const byte LiveUsable = 93; }
+    internal static class Protocol { internal const byte LiveUsable = 93; internal const int StateHz = 20; }
 }

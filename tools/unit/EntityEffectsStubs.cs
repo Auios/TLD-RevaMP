@@ -125,10 +125,10 @@ public class stepSoundScript : Component
     public void Step(float modifier) { }
 }
 public partial class fpscontroller : Component { public stepSoundScript stepScript; public AudioSource SBurp, SFart; public pickupable pickedUp; public void Burp() { } public void Fart() { } public void Shit() { } }
-public class mpplayerscript : Component { }
+public partial class mpplayerscript : Component { }
 public enum soundenum { burp, fart, shit }
 public class soundMainScript { public static soundMainScript s = new soundMainScript(); public int GetLength(soundenum e) => 400; public AudioClip GetClip(soundenum e, int i) => new AudioClip(); }
-public class pickupable { public sprayscript spray; public bool inRightHand; }
+public partial class pickupable { public sprayscript spray; public bool inRightHand; }
 public class sprayscript : Component { public float valve, valveSpeed = 4; public bool hasPaint, firing; public pickupable P; public ParticleSystem particle; public AudioSource Saudio; }
 public class fluid : mainscript.fluidcontainer { public bool isExplosive() => true; }
 public partial class tankscript : Component
@@ -162,7 +162,7 @@ namespace TLDRevamp
 namespace TLDRevamp.Net
 {
     internal static class PlayerCombat { internal static int LastN, LastPlayerHit = -1; internal static float LastPlayerT; internal static Vector3 LastOrigin, LastDir; }
-    internal static partial class RemotePlayers
+    public static partial class RemotePlayers
     {
         internal static Transform Bone;
         internal static Transform BodyPart(int id, int part) => Bone;

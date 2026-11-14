@@ -8,7 +8,7 @@ namespace UnityEngine
     public class CharacterController : Collider { }
     public class CapsuleCollider : Collider { }
     public enum RigidbodyInterpolation { None, Interpolate }
-    public class Rigidbody : Component { public bool isKinematic; public RigidbodyInterpolation interpolation; public Vector3 position; public Quaternion rotation = Quaternion.identity; }
+    public partial class Rigidbody : Component { public bool isKinematic; public RigidbodyInterpolation interpolation; public Vector3 position; public Quaternion rotation = Quaternion.identity; }
     public struct Pose { public Vector3 position; public Quaternion rotation; public Pose(Vector3 p, Quaternion q) { position = p; rotation = q; } }
     public partial class Transform
     {
@@ -60,7 +60,7 @@ namespace TLDRevamp.Net
             internal void SeatedIn(uint net, List<KeyValuePair<int, int>> into) { into.Clear(); into.AddRange(Seats); }
         }
     }
-    internal static partial class RemotePlayers
+    public static partial class RemotePlayers
     {
         internal static bool Occupied;
         internal static readonly List<(int, string, int)> Players = new List<(int, string, int)>();
@@ -85,13 +85,12 @@ namespace TLDRevamp.Net
         internal enum ClaimReason : byte { Driver = 1, DriverRetry, Pickup, CargoNear, CargoContact, CargoRelease, Contents, ContentsPlaced, CarCargo, RabbitNear, RabbitContact, RabbitObjectNear, RabbitObjectContact, PushGrip, Wear, BodyNear, BodyContact, Debug, ItemNear, ItemContact }
         public const byte Claim = 24, Owner = 25;
         private static float _lastDriveClaimTry;
-        internal static bool DriveClaimRootOnly = true, WornSync, TestWorn;
+        internal static bool DriveClaimRootOnly = true;
         internal static float RabbitHoldS = 2;
         internal static int Cascades, Shares;
         internal static string ClaimLog;
-        internal static long ClaimsSent, ClaimsRefused, RefusedCrash, RefusedHeld, RefusedStored, WornRefused, RefusedDriven;
+        internal static long ClaimsSent, ClaimsRefused, RefusedCrash, RefusedHeld, RefusedStored, RefusedDriven;
         private static readonly Dictionary<uint, int> _refuseLogged = new Dictionary<uint, int>();
-        private static bool ServerWornNow(SEnt se) => TestWorn;
         private static string ClaimName(ClaimReason reason) => "claim: " + reason;
         private static void OwnerLog(SEnt se, int from, string why) { ClaimLog = why; }
         private static void CascadeOwner(SEnt se) { Cascades++; }

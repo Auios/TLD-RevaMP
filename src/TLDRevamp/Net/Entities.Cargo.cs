@@ -466,7 +466,7 @@ namespace TLDRevamp.Net
         private static uint RidingCar(Ent e, Transform t, Quaternion q, out Vector3 lp, out Quaternion lq, bool resting = false)
         {
             lp = default; lq = Quaternion.identity;
-            if (resting) { if (e.RideCar != 0) { LogRidingSwitch(e, 0, t, "at rest"); e.RideCar = 0; RidingSwitches++; } return 0; }
+            if (resting) { if (e.RideCar != 0) { LogRidingSwitch(e, 0, t, "at rest"); e.RideCar = 0; EntityHands.RidingSwitches++; } return 0; }
             if (!RidingFrames || e.Root == null || e.Root.car != null || e.Root.P == null || !LooseItem(e)) { e.RideCar = 0; return 0; }
             Ent car = null;
             if (e.RideCar != 0 && ByNet.TryGetValue(e.RideCar, out var was) && was.Root != null && was.Root.car != null &&
@@ -479,11 +479,11 @@ namespace TLDRevamp.Net
                 if (car != null && (car.Root == null || !RidingBox(cs).Contains(car.Root.transform.InverseTransformPoint(t.position)))) car = null;
             }
             uint id = car != null ? car.NetId : 0;
-            if (id != e.RideCar) { LogRidingSwitch(e, id, t, car == null ? RidingWhyNot(e, t) : "car under it"); e.RideCar = id; RidingSwitches++; }
+            if (id != e.RideCar) { LogRidingSwitch(e, id, t, car == null ? RidingWhyNot(e, t) : "car under it"); e.RideCar = id; EntityHands.RidingSwitches++; }
             if (car == null) return 0;
             var ct = car.Root.transform;
             lp = ct.InverseTransformPoint(t.position); lq = Quaternion.Inverse(ct.rotation) * q;
-            RidingSent++;
+            EntityHands.RidingSent++;
             return id;
         }
         public static float RidingRoomM = 0.2f, RidingHeadroomM = 0.6f;

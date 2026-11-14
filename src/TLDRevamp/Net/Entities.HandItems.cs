@@ -1,4 +1,5 @@
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -7,12 +8,12 @@ namespace TLDRevamp.Net
     [DefaultExecutionOrder(-9999)]
     internal sealed class HandItemRender : MonoBehaviour
     {
-        private void LateUpdate() => Entities.HandItemsLate();
+        private void LateUpdate() => EntityHands.HandItemsLate();
     }
 
-    public static partial class Entities
+    internal static partial class EntityHands
     {
-        private static bool LocalHandPose(Ent e, bool held, bool stored, bool locked, out Vector3 lp, out Quaternion lq)
+        internal static bool LocalHandPose(Ent e, bool held, bool stored, bool locked, out Vector3 lp, out Quaternion lq)
         {
             lp = default; lq = Quaternion.identity;
             var pl = mainscript.s != null ? mainscript.s.player : null;
@@ -21,7 +22,7 @@ namespace TLDRevamp.Net
             if (!held || stored || locked || p == null || pl == null || a == null || a.RHTarget == null ||
                 (pl.inHandP != p && pl.pickedUp != p)) return false;
             HandItemPose.Relative(a.RHTarget, e.Root.transform.position, e.Root.transform.rotation, out lp, out lq);
-            return Finite(lp) && Finite(lq) && Mathf.Abs(lp.x) <= 2f && Mathf.Abs(lp.y) <= 2f && Mathf.Abs(lp.z) <= 2f;
+            return Entities.IsFinite(lp) && Entities.IsFinite(lq) && Mathf.Abs(lp.x) <= 2f && Mathf.Abs(lp.y) <= 2f && Mathf.Abs(lp.z) <= 2f;
         }
 
         /// A/B: the owner's state rate for an item in its player's hands and for FastAfterReleaseS after letting go
@@ -36,7 +37,7 @@ namespace TLDRevamp.Net
         // its world/car samples keep running for drops, server records and machines without the holder model.
         internal static bool HandManaged(Ent e) => e.Proxy && (ItemHand(e) != null || e.HandDraw.Source != null || e.HandDraw.Blending(Time.timeAsDouble));
 
-        private static void TakeHandPose(Ent e, Vector3d global, Quaternion globalRot)
+        internal static void TakeHandPose(Ent e, Vector3d global, Quaternion globalRot)
         {
             e.HandWorld = global; e.HandWorldRot = globalRot;
             if (!e.HandDraw.HasShown && e.Root != null)
@@ -62,9 +63,9 @@ namespace TLDRevamp.Net
 
         internal static void HandItemsLate()
         {
-            if (!InSession) return;
+            if (!Entities.InSession) return;
             double now = Time.timeAsDouble;
-            foreach (var e in Placed())
+            foreach (var e in Entities.PlacedHandItems())
             {
                 if (e.Root == null || !HandManaged(e)) continue;
                 var hand = ItemHand(e);
@@ -91,12 +92,12 @@ namespace TLDRevamp.Net
                 if (e.HandDraw.Source == null && !e.HandDraw.Blending(now))
                     e.HandDraw.Seed(mainscript.GlobalFromUnityPos(e.Root.transform.position), e.Root.transform.rotation);
                 e.HandDraw.Apply(hand, now, pos, rot, out pos, out rot);
-                if (e.MovedByBody) StopBodyMotion(e);
+                if (e.MovedByBody) Entities.StopBodyMotion(e);
                 var rb = e.Root.GetComponent<Rigidbody>();
                 var up = mainscript.UnityPosFromGlobal(pos);
                 if (rb != null)
                 {
-                    if (e.Physical) ExitPhysical(e, rb);
+                    if (e.Physical) Entities.ExitHandPhysical(e, rb);
                     rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None;
                     rb.position = up; rb.rotation = rot;
                 }
@@ -112,9 +113,8 @@ namespace TLDRevamp.Net
             string F(float f) => f.ToString("F4", ic);
             string V(Vector3 v) => "[" + F(v.x) + "," + F(v.y) + "," + F(v.z) + "]";
             string Q(Quaternion q) => "[" + F(q.x) + "," + F(q.y) + "," + F(q.z) + "," + F(q.w) + "]";
-            foreach (var e in ByNet.Values)
+            foreach (var e in Entities.HeldHandCopies(owner))
             {
-                if (!e.Proxy || e.OwnerId != owner || !e.Held) continue;
                 string distance = hand != null && e.Root != null && e.HandPose ? F((e.Root.transform.position - hand.TransformPoint(e.HandPos)).magnitude) : "null";
                 rows.Add("{\"net\":" + e.NetId + ",\"active\":" + (ItemHand(e) != null && ReferenceEquals(e.HandDraw.Source, hand) ? "true" : "false") +
                     ",\"distance\":" + distance + ",\"lp\":" + (e.HandPose ? V(e.HandPos) : "null") + ",\"lq\":" + (e.HandPose ? Q(e.HandRot) : "null") + "}");

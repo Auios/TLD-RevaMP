@@ -4,6 +4,93 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        public const byte Worn = 85;   // c to s: net, epoch, slot and pose; s to c: net, wearer, slot and pose
+        public static float HeldStateHz { get => EntityHands.HeldStateHz; set => EntityHands.HeldStateHz = value; }
+        public static float FastAfterReleaseS { get => EntityHands.FastAfterReleaseS; set => EntityHands.FastAfterReleaseS = value; }
+        public static float HandItemPullM { get => EntityHands.HandItemPullM; set => EntityHands.HandItemPullM = value; }
+        public static float HandItemPullDeg { get => EntityHands.HandItemPullDeg; set => EntityHands.HandItemPullDeg = value; }
+        public static float WornClaimEveryS { get => EntityHands.WornClaimEveryS; set => EntityHands.WornClaimEveryS = value; }
+        public static float WornOffHeadM { get => EntityHands.WornOffHeadM; set => EntityHands.WornOffHeadM = value; }
+        public static bool HandItemDraw { get => EntityHands.HandItemDraw; set => EntityHands.HandItemDraw = value; }
+        public static bool RidingFrames { get => EntityHands.RidingFrames; set => EntityHands.RidingFrames = value; }
+        public static bool WornSync { get => EntityHands.WornSync; set => EntityHands.WornSync = value; }
+        public static bool WornInShare { get => EntityHands.WornInShare; set => EntityHands.WornInShare = value; }
+        public static bool WornLateOk { get => EntityHands.WornLateOk; set => EntityHands.WornLateOk = value; }
+        public static int WornClaimTries { get => EntityHands.WornClaimTries; set => EntityHands.WornClaimTries = value; }
+        public static void WornLate() => EntityHands.WornLate();
+        public static string Wearables() => EntityHands.Wearables();
+        public static string WornStatus() => EntityHands.WornStatus();
+        internal static int LocalWornSlot(tosaveitemscript it) => EntityHands.LocalWornSlot(it);
+        internal static bool WornRides(Ent e) => EntityHands.WornRides(e);
+        internal static bool HandManaged(Ent e) => EntityHands.HandManaged(e);
+        internal static Transform ItemHand(Ent e) => EntityHands.ItemHand(e);
+        internal static string HandItemsJson(int owner, Transform hand) => EntityHands.HandItemsJson(owner, hand);
+
+        internal static bool HasEntity(uint net) => ByNet.ContainsKey(net);
+        internal static System.Collections.Generic.IEnumerable<Ent> PlacedHandItems()
+        {
+            foreach (var e in Placed()) yield return e;
+        }
+        internal static System.Collections.Generic.IEnumerable<Ent> HeldHandCopies(int owner)
+        {
+            foreach (var e in ByNet.Values) if (e.Proxy && e.OwnerId == owner && e.Held) yield return e;
+        }
+        internal static System.Collections.Generic.IEnumerable<Ent> WornEntities()
+        {
+            foreach (var e in ByNet.Values) if (e.Root != null && e.Root.P != null && e.Root.P.wear != null) yield return e;
+        }
+        internal static bool LooseCarriedRelease(uint previousCar, uint car, bool held, bool stored) => LooseRelease(previousCar, car, held, stored);
+        internal static bool ClaimReleasedCarried(Ent e) => ClaimCargo(e, released: true, reason: ClaimReason.CargoRelease);
+        internal static bool TryLockedHandWorld(Ent e, out Vector3d pos, out Quaternion rot) => LockedWorld(e, out pos, out rot);
+        internal static void ExitHandPhysical(Ent e, Rigidbody body) => ExitPhysical(e, body);
+        internal static void ClaimWorn(Ent e)
+        {
+            SetProxy(e, false); e.OwnerId = MyId; e.SentWornSlot = -1;
+            W.Reset(); WriteClaim(W, e.NetId, ClaimReason.Wear); ToServer(W, true); ClaimsSent++;
+        }
+
+        private static void ReadShareWorn(NetReader r, SEnt se, int from)
+        {
+            if (!EntityHands.ReadShareWorn(r, out var slot, out var lp, out var lq)) return;
+            se.WornBy = from; se.WornSlot = slot; se.WornLp = lp; se.WornLq = lq;
+            EntityHands.SharedWorn++;
+        }
+        private static bool ServerWornNow(SEnt se) => se.WornBy >= 0 && se.WornBy == se.OwnerId;
+        internal static void KeepWornRequest(int from, uint net, uint epoch, byte slot, Vector3 lp, Quaternion lq)
+        {
+            if (!Server.TryGetValue(net, out var se)) return;
+            if (slot != 255 && (slot > 15 || !Finite(lp) || lp.sqrMagnitude > 4f)) return;   // on the head: within 2 m of it
+            if (se.OwnerId != from && !WornTakesBack(se, from, slot)) return;
+            if (!EntityHands.WornLateOk && !ClaimEpochOk(se, from, epoch)) return;
+            se.WornBy = slot == 255 ? -1 : from; se.WornSlot = slot == 255 ? -1 : slot; se.WornLp = lp; se.WornLq = lq;
+            EntityHands.RelayWorn(from, se.NetId, ServerWornNow(se), se.WornBy, se.WornSlot, se.WornLp, se.WornLq);
+        }
+        private static bool WornTakesBack(SEnt se, int from, byte slot)
+        {
+            if (!EntityHands.WornLateOk) return false;
+            if (slot == 255) return false;   // taken off: the new owner's game has it off already
+            if (se.PrevOwnerId != from || Time.realtimeSinceStartup - se.PrevOwnerAt > HandoverAcceptS || se.Held || se.Stored || ServerWornNow(se) || se.HitchCar != 0)
+            {
+                EntityHands.WornTooLate++;
+                SessionLog.Event("worn-refused", se.NetId, from: from, to: se.OwnerId, result: "no longer theirs");
+                return false;
+            }
+            se.ClaimedBy = from; se.ClaimedAt = Time.realtimeSinceStartup; se.ClaimedFromEpoch = se.Epoch;
+            OwnerLog(se, from, "on their head before the claim got here");
+            se.OwnerId = from; se.Epoch++;
+            W.Reset(); W.U8(Owner); W.U32(se.NetId); W.VarU32((uint)from); W.U32(se.Epoch);
+            ServerSendAll(W, true, -1);
+            CascadeOwner(se);
+            EntityHands.WornTakenBack++;
+            return true;
+        }
+
+        private static void SendWornTo(int playerId, SEnt se)
+        {
+            if (!ServerWornNow(se)) return;
+            EntityHands.SendWornTo(playerId, se.NetId, se.WornBy, se.WornSlot, se.WornLp, se.WornLq);
+        }
+
         public const byte IgnitionKey = 96;   // u32 net, u8 held: a non-owner holding a car's key (reliable)
         public const byte ShotgunIn = 39;
         public static int ServerObjects => Server.Count;   // the admin console's status

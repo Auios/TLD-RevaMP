@@ -24,8 +24,14 @@ namespace TLDRevamp.Net
 {
     internal static class EntitySeats
     {
+        internal static void LocalSeat(out uint net, out int seat) => Entities.LocalSeat(out net, out seat);
         internal static long DriverSeatRefused;
         internal static void SeatCollisionIgnore(TestPlayer player, TestSeat seat) => Entities.SeatCollisionIgnore(player, seat);
+    }
+    internal static partial class EntityHands
+    {
+        internal static long WornRefused;
+        internal static void ClearWorn(Entities.Ent e) { e.WornBy = -1; }
     }
     internal static class EntityCarTuning { internal static void CopyTanksOnOwnerChange(Entities.Ent e, bool proxy) { } }
     public static partial class Entities
@@ -37,7 +43,10 @@ namespace TLDRevamp.Net
         static readonly Dictionary<object, Ent> ProxyEngineOwner = new Dictionary<object, Ent>();
         static int MarkersStaleCalls;
         static void MarkersStale() => MarkersStaleCalls++;   // the real one only flags a later prune (Entities.Placed)
-        static void ClearWorn(Ent e) { e.WornBy = -1; }
+        internal static bool TryGetEntity(uint net, out Ent e) => ByNet.TryGetValue(net, out e);
+        internal static bool LooseCarriedRelease(uint previous, uint car, bool held, bool stored) => LooseRelease(previous, car, held, stored);
+        internal static bool ClaimReleasedCarried(Ent e) => ClaimCargo(e, released: true, reason: ClaimReason.CargoRelease);
+        internal static bool TryLockedHandWorld(Ent e, out Vector3d pos, out Quaternion rot) => LockedWorld(e, out pos, out rot);
         static void ShowStored(Ent e, bool show) { }
         static void ShowHeld(Ent e, bool show) { e.Held = show; }
         public static bool GhostEndsOnOwn = true;

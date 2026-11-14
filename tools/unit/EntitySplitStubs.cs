@@ -22,7 +22,7 @@ namespace UnityEngine
         }
         public static void Destroy(GameObject go) { go.Destroyed = true; napszakvaltakozas.s.sandStorms.Remove(go.Storm); }
     }
-    public class GameObject : Object { public Component Part; public Transform transform = new Transform(); public string name; public int layer; public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Part as T ?? Storm as T; }
+    public class GameObject : Object { public Component Part; public Transform transform = new Transform(); public string name; public int layer; public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Part as T ?? Storm as T; public T GetComponentInChildren<T>(bool all) where T : class => GetComponent<T>(); }
     public partial class Transform : Component { public Vector3 position, eulerAngles, localEulerAngles; }
     public class Light { public bool enabled; public float intensity; public GameObject gameObject = new GameObject(); }
     public class AudioSource : Component { public bool isPlaying; public float volume, pitch; public int priority; public AudioClip clip; }
@@ -34,7 +34,7 @@ namespace UnityEngine
         public static Quaternion identity => new Quaternion(0, 0, 0, 1);
         public static Quaternion Euler(float x, float y, float z) => identity;
     }
-    public struct Vector3d { public double x, y, z; public Vector3d(double x, double y, double z) { this.x = x; this.y = y; this.z = z; } }
+    public partial struct Vector3d { public double x, y, z; public Vector3d(double x, double y, double z) { this.x = x; this.y = y; this.z = z; } }
     public partial struct Vector3
     {
         public float x, y, z;
@@ -60,7 +60,7 @@ namespace UnityEngine
     public static class Time
     {
         public static float time, unscaledTime, realtimeSinceStartup, timeScale = 1, deltaTime;
-        public static double timeAsDouble, timeSinceLevelLoadAsDouble;
+        public static double timeAsDouble, timeSinceLevelLoadAsDouble, realtimeSinceStartupAsDouble;
     }
 }
 
@@ -93,7 +93,7 @@ public class sandstormscript
     public Transform transform = new Transform(); public GameObject gameObject;
     public int prefabid; public float size, xdir, ydir, speed, life; public bool started;
 }
-public class itemdatabase { public static itemdatabase s; public GameObject[] storms; public GameObject Prefab; public GameObject Item(int id) => Prefab; }
+public partial class itemdatabase { public static itemdatabase s; public GameObject[] storms; public GameObject Prefab; public GameObject Item(int id) => Prefab; }
 public partial class tosaveitemscript : Component
 {
     public carscript car;
@@ -146,7 +146,7 @@ namespace TLDRevamp.Fixes
 
 namespace TLDRevamp.Net
 {
-    internal static partial class RemotePlayers
+    public static partial class RemotePlayers
     {
         internal const float ReachS = .25f;
         internal static int Reaches;

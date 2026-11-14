@@ -43,3 +43,13 @@ with target.open('a', encoding='utf-8', newline='\n') as output:
                  + '\n'.join(method(part, name, True) for part, name in (
                      ('Pickup', 'WriteClaim'), ('Pickup', 'ServerClaim'), ('', 'RefuseClaim'),
                      ('', 'DriveClaimTick'), ('', 'CheckDriverSeat'))) + '\n} }\n')
+
+# Compile the held send cadence and release extension directly from the scheduler too.
+source = (root / 'src/TLDRevamp/Net/Entities.cs').read_text(encoding='utf-8')
+interval = source.split('float sendEvery = ', 1)[1].split(';', 1)[0]
+release = next(line.strip() for line in source.splitlines() if 'if (released && e.SentHeld) e.FastSendUntil =' in line)
+with target.open('a', encoding='utf-8', newline='\n') as output:
+    output.write('namespace TLDRevamp.Net { public static partial class Entities {\n'
+                 + 'internal static float TestHeldInterval(Ent e, double now) => ' + interval + ';\n'
+                 + 'internal static void TestHeldRelease(Ent e, double now, bool released) { ' + release + ' }\n'
+                 + '} }\n')

@@ -77,7 +77,7 @@ static class MessageTableTest
         var toServer = Routed(mp.Substring(serverAt, serverEnd - serverAt), "Entities.ServerReceive(", server, consts);
         var toClient = Routed(mp.Substring(clientAt), "Entities.ClientReceive(", client, consts);
         Check("the dispatchers route messages", toServer.Count > 10 && toClient.Count > 10);
-        foreach (var handler in new[] { ("IgnitionKey", "EntitySeats", "ApplyKey"), ("ShotgunIn", "EntitySeats", "ApplyShotgun"), ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms"), ("ShotFx", "EntityEffects", "ApplyShotFx"), ("PlayerSound", "EntityEffects", "ApplyPlayerSound"), ("ExplodeReq", "EntityExplosions", "ApplyExplodeReq"), ("ExplosionFx", "EntityExplosions", "ApplyExplosionFx") })
+        foreach (var handler in new[] { ("Worn", "EntityHands", "ApplyWorn"), ("IgnitionKey", "EntitySeats", "ApplyKey"), ("ShotgunIn", "EntitySeats", "ApplyShotgun"), ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms"), ("ShotFx", "EntityEffects", "ApplyShotFx"), ("PlayerSound", "EntityEffects", "ApplyPlayerSound"), ("ExplodeReq", "EntityExplosions", "ApplyExplodeReq"), ("ExplosionFx", "EntityExplosions", "ApplyExplosionFx") })
         {
             Check(handler.Item1 + ": routed to its feature owner", client.Contains("case " + handler.Item1 + ": " + handler.Item2 + "." + handler.Item3 + "(r);"));
             Check(handler.Item1 + ": handler reads the message at its new owner", Method(handler.Item2, handler.Item3).Contains("r."));
@@ -89,6 +89,8 @@ static class MessageTableTest
             Check(handler.Item1 + ": server owner reads payload", Method("EntitySeats", handler.Item2).Contains("r.U32()"));
         }
 
+        Check("Worn: server routes to hands", server.Contains("case Worn: EntityHands.ServerWorn(from, r);"));
+        Check("Worn: hands reads request payload", Method("EntityHands", "ServerWorn").Contains("r.U32()"));
         Check("CarTune: routes to its owner", client.Contains("case CarTune: EntityCarTuning.ApplyCarTune(r);"));
         Check("CarTune: owner reads its payload", Method("EntityCarTuning", "ApplyCarTune").Contains("r.U32()"));
         Check("CarTune: keep before reliable forward", server.Contains("case CarTune: if (EntityCarTuning.ServerKeepTune(from, r)) ServerFwdAll(from, r, true); break;"));

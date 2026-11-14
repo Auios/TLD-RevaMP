@@ -218,8 +218,8 @@ namespace TLDRevamp.Net
         static bool RidesBolted(Ent e) => RidesParent(e);
         static bool WornRides(Ent e) => false;
         static void StopBodyMotion(Ent e) { e.MovedByBody = false; }
-        static void Coast(Ent e) { }
-        static bool CargoClaims;
+        internal static void Coast(Ent e) { }
+        internal static bool CargoClaims;
         static float CargoClaimCooldownS = 2;
         static long CargoClaimed;
         internal static void LocalSeat(out uint car, out int seat) { car = TestMain.s?.player?.SeatNet ?? 0; seat = 0; }

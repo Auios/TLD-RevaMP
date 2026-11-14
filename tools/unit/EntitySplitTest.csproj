@@ -2,6 +2,12 @@
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
     <Compile Include="EntitySplitTest.cs" />
+    <Compile Include="EntityHandsStubs.cs" />
+    <Compile Include="EntityHandsChecks.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Carried.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.HandItems.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Worn.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/HandItemPose.cs" />
     <Compile Include="EntitySeatsStubs.cs" />
     <Compile Include="EntitySeatsChecks.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Seat.cs" />

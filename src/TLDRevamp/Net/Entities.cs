@@ -270,7 +270,7 @@ namespace TLDRevamp.Net
             RabbitReset();
             PoiUsablesReset(); LiveUsablesReset();
             InterestReset(); EditCheckReset();
-            WornReset();
+            EntityHands.WornReset();
             _playerDeleted.Clear();
             EntityWorldClock.ClockReset();
             _hitchOps.Clear(); _hitchTransfers.Clear(); _hitchCommands.Clear(); _hitchDeparted.Clear();
@@ -323,7 +323,7 @@ namespace TLDRevamp.Net
             var ent = new Ent { Root = root, Items = items, OwnerId = MyId, ResyncHashes = StateHashes(items, perItem) };
             PendingShare[root.idInSave] = ent;
             W.Reset(); W.U8(Share); W.U32(root.idInSave); W.VarU32((uint)rec.Length); W.Bytes(rec, 0, rec.Length);
-            WriteShareWorn(W, root);   // [u8 slot, pose]: already on the local player's head (Entities.Worn)
+            EntityHands.WriteShareWorn(W, root);   // [u8 slot, pose]: already on the local player's head (Entities.Worn)
             ToServer(W, true);
             if (contents != null) foreach (var c in contents) { ShareItem(c, null); StoredContentsShared++; }
             return "{\"shared\":true,\"items\":" + items.Count + ",\"bytes\":" + rec.Length + "}";
@@ -466,7 +466,7 @@ namespace TLDRevamp.Net
             if (IsHost) ShareQuotaTick();
             AiTick();
             RabbitTick();
-            WornTick();
+            EntityHands.WornTick();
             GentleTick();
             ClaimTraceTick();
             ResyncFrameTick(dt);
@@ -515,7 +515,7 @@ namespace TLDRevamp.Net
                     var q = t.rotation;
                     bool stored = IsStored(e.Root), wStored = stored != e.SentStored;
                     bool held = IsHeld(e.Root), wHeld = held != e.SentHeld;
-                    bool handPose = LocalHandPose(e, held, stored, locked, out var handPos, out var handRot);
+                    bool handPose = EntityHands.LocalHandPose(e, held, stored, locked, out var handPos, out var handRot);
                     bool wHand = handPose != e.SentHandPose || handPose && ((handPos - e.SentHandPos).sqrMagnitude > .001f * .001f || Quaternion.Angle(handRot, e.SentHandRot) > .1f);
                     bool spraying = IsSpraying(e.Root);
                     bool ground = CompactGround(e) && !held && !stored && !spraying;
@@ -589,7 +589,7 @@ namespace TLDRevamp.Net
                     stamp = PoseStamp(stamp, e.LastPoseStamp, first);
                     e.LastPoseStamp = stamp;
                     Vector3 lp = default; Quaternion lq = Quaternion.identity;
-                    uint carriedBy = held ? CarriedBy(e, t, q, out lp, out lq) : !stored && !locked && !compact ? RidingCar(e, t, q, out lp, out lq, resting: final || !moving) : 0;
+                    uint carriedBy = held ? EntityHands.CarriedBy(e, t, q, out lp, out lq) : !stored && !locked && !compact ? RidingCar(e, t, q, out lp, out lq, resting: final || !moving) : 0;
                     if (locked && lockFrame != 0) { carriedBy = lockFrame; lp = lockPos; lq = lockRot; }
                     else if (lockContainer != 0) { lp = lockPos; lq = lockRot; }
                     WS.Reset();
@@ -632,7 +632,7 @@ namespace TLDRevamp.Net
                 else if (RidesOwnersContainer(e)) StoredRides++;   // in its owner's car's container: it rides that car's copy
                 else if (e.Ip != null && e.Ip.Ready && !(CopyLockByContainer && LockedAway(e)))   // held in a container here, its owner's far: it rides that
                 {
-                    EvalShown(e, now, dt, out var pos, out var rot);
+                    EntityHands.EvalShown(e, now, dt, out var pos, out var rot);
                     e.ShownPos = pos;
                     e.Observe(pos, dt);
                     if (e.Ip.Extrapolating) e.ExtrapFrames++;
@@ -824,7 +824,7 @@ namespace TLDRevamp.Net
                 case HitchResult: ServerHitchResult(from, r); break;
                 case CensusAsk: ServerCensusAsk(from, r); break;
                 case PoiCensus: ServerPoiCensus(from, r); break;
-                case Worn: ServerWorn(from, r); break;
+                case Worn: EntityHands.ServerWorn(from, r); break;
                 case MemberGone: ServerMemberGone(from, r); break;
                 case CensusReply: ServerCensusReply(from, r); break;
                 case CensusRepair: ServerCensusRepair(from, r); break;
@@ -846,7 +846,7 @@ namespace TLDRevamp.Net
         {
             SessionLog.Event("claim-refused", se.NetId, from: from, to: se.OwnerId, result: why, epoch: se.Epoch, count: (int)reason);
             ClaimsRefused++;
-            if (why.StartsWith("crash")) RefusedCrash++; else if (why == "held") RefusedHeld++; else if (why == "stored") RefusedStored++; else if (why == "worn") WornRefused++; else RefusedDriven++;
+            if (why.StartsWith("crash")) RefusedCrash++; else if (why == "held") RefusedHeld++; else if (why == "stored") RefusedStored++; else if (why == "worn") EntityHands.WornRefused++; else RefusedDriven++;
             // playtest 2026-10-09: 90 refusals in 7 minutes on the host, "parts locked for both players" — which, and why
             _refuseLogged.TryGetValue(se.NetId, out int n);
             if (n < 3 && _refuseLogged.Count < 60)
@@ -1079,11 +1079,11 @@ namespace TLDRevamp.Net
                     if (!NewerState(st, epoch, ref e.ReceivedStateAt, ref e.ReceivedStateEpoch)) { if (type == State) KeepLateKey(r, msgAt, e, epoch); StatesStale++; return; }
                     e.SettledState = FinalSnapshot(r, final);
                     e.Recv++;
-                    TakeHandPose(e, sp, sq);
+                    EntityHands.TakeHandPose(e, sp, sq);
                     var s = new PoseInterpolator.Sample { T = st, Pos = sp, Rot = sq, Vel = sv };
                     e.LockLocalPos = EntityCodec.ReadLocalPos; e.LockLocalRot = EntityCodec.ReadLocalRot;
                     ApplyPoseLock(e, EntityCodec.ReadLockedState, EntityCodec.ReadLockedState ? EntityCodec.ReadCarriedBy : 0, EntityCodec.ReadLockItem, EntityCodec.ReadLockMount, EntityCodec.ReadLockContainer);
-                    if (TakeCarried(e, ref s, sp, sq, held, stored)) return;   // let go in our car: ours now
+                    if (EntityHands.TakeCarried(e, ref s, sp, sq, held, stored)) return;   // let go in our car: ours now
                     e.Driven = driven;
                     if (stored != e.Stored) ShowStored(e, stored);
                     e.ReceivedAtRest = EntityCodec.ReadFinalState || stored;
@@ -1279,7 +1279,7 @@ namespace TLDRevamp.Net
                     break;
                 }
                 case HandoverState: ApplyHandover(r); break;
-                case Worn: ApplyWorn(r); break;
+                case Worn: EntityHands.ApplyWorn(r); break;
                 case Owner:
                 {
                     uint net = r.U32(); int owner = (int)r.VarU32(); uint epoch = r.U32();
@@ -1288,7 +1288,7 @@ namespace TLDRevamp.Net
                     // ours until now, someone else's from this epoch on: our last word on its state goes to them
                     if (!e.Proxy && e.OwnerId == MyId && owner != MyId && epoch != e.Epoch) { SendRabbitHandover(e, epoch); SendHandover(e, epoch); }
                     if (owner == MyId) { e.SentAtRest = false; e.SentWornSlot = -1; e.SentStateLength = 0; e.LastStateEpoch = 0; e.CompactStamp = 0; }   // ours (again, or confirmed after a refused claim): one fresh state out (and what it is worn as)
-                    if (e.WornBy >= 0 && owner != e.WornBy) ClearWorn(e);   // someone else's now: off the head it was on
+                    if (e.WornBy >= 0 && owner != e.WornBy) EntityHands.ClearWorn(e);   // someone else's now: off the head it was on
                     // Lost a grab race (both players picked it up at once; the server gave it to the other — it never takes
                     // an item out of its owner's hands): let go, the game's way, while the body is still ours to drop. Kept,
                     // our player held a copy the owner moves — in two hands, 1.5 m apart on the two screens (contested.py).
@@ -1340,7 +1340,7 @@ namespace TLDRevamp.Net
                 if (pl != null && pl.Bsitting && pl.seat != null && pl.seat.transform.root == e.Root.transform.root) EntitySeats.SeatCollisionIgnore(pl, pl.seat);
             }
             EntityCarTuning.CopyTanksOnOwnerChange(e, proxy);
-            if (!proxy && e.WornBy >= 0) ClearWorn(e);   // ours now: loose where it was shown (on the head), the game's again
+            if (!proxy && e.WornBy >= 0) EntityHands.ClearWorn(e);   // ours now: loose where it was shown (on the head), the game's again
             if (!proxy && e.PoseLocked) { EnsurePoseLock(e); RecoverWorldLock(e); }
             if (!proxy)
             {
@@ -1348,7 +1348,7 @@ namespace TLDRevamp.Net
                 e.LockLocalPos = default; e.LockLocalRot = default;
             }
             if (!proxy) { e.LockPose = default; e.QuietTail = default; e.SentAtRest = false; }
-            if (!proxy && e.CarriedBy != 0) TakeOverCarried(e);
+            if (!proxy && e.CarriedBy != 0) EntityHands.TakeOverCarried(e);
             if (!proxy && e.Stored) ShowStored(e, false);   // ours now: the game's own state rules its model again
             if (!proxy && e.Held) ShowHeld(e, false);
             if (!proxy && e.ReleaseGhost && GhostEndsOnOwn) EndGhostOnOwn(e);

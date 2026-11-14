@@ -93,9 +93,9 @@ static partial class EntitySplitTest
         SeatValue(se, "CrashReturnTo", -1); SeatValue(se, "HitchCar", 10u); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, "HitchCar", 0u);
         foreach (string flag in new[] { "Held", "Stored" })
         { SeatValue(se, flag, true); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, flag, false); }
-        Entities.WornSync = Entities.TestWorn = true; KernelSeatCall("ServerClaim", 1, Reader(claim)); Entities.WornSync = Entities.TestWorn = false;
+        Entities.WornSync = true; SeatValue(se, "WornBy", 2); KernelSeatCall("ServerClaim", 1, Reader(claim)); Entities.WornSync = false; SeatValue(se, "WornBy", -1);
         SeatValue(se, "Driven", true); SeatValue(se, "DrivenAt", Time.realtimeSinceStartup); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, "Driven", false);
-        Check(EntitySeats.DriverSeatRefused == refused && Entities.RefusedHeld == 1 && Entities.RefusedStored == 1 && Entities.WornRefused == 1, "authority guards retain their own counters before seat arbitration");
+        Check(EntitySeats.DriverSeatRefused == refused && Entities.RefusedHeld == 1 && Entities.RefusedStored == 1 && EntityHands.WornRefused == 1, "authority guards retain their own counters before seat arbitration");
         KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatVector("driver refusal owner reply", "192D0100000200000000");
         Check(EntitySeats.DriverSeatRefused == refused + 1 && Entities.Packets[^2].Peer == 1 && Entities.Packets.Last().Peer == 2 && (int)SeatValue(se, "OwnerId") == 2, "hold refusal replies current owner to claimer: " + EntitySeats.DriverSeatRefused + "/" + refused + " peer=" + Entities.Packets.Last().Peer + " owner=" + SeatValue(se, "OwnerId"));
         Time.realtimeSinceStartup = 33; KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatVector("driver grant owner broadcast", "192D0100000101000000");

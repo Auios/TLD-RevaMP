@@ -237,7 +237,7 @@ namespace TLDRevamp.Net
                 // from the physics step it was a step or two behind the car: 0.5 m at 50 km/h (heldincar.py)
                 if (e.CarriedBy != 0) { if (rb.interpolation != RigidbodyInterpolation.None) rb.interpolation = RigidbodyInterpolation.None; continue; }
                 e.RidingPreviousClock = e.Ip.RenderTime;
-                EvalShown(e, now, dt, out var pos, out var rot);
+                EntityHands.EvalShown(e, now, dt, out var pos, out var rot);
                 e.ShownPos = pos;
                 if (e.Ip.Extrapolating) e.ExtrapFrames++;
                 var up = mainscript.UnityPosFromGlobal(pos);
@@ -430,7 +430,7 @@ namespace TLDRevamp.Net
         private static void Servo(Ent e, Rigidbody rb, float dt)
         {
             double now = Time.realtimeSinceStartupAsDouble;
-            EvalShown(e, now, dt, out var pos, out var rot);
+            EntityHands.EvalShown(e, now, dt, out var pos, out var rot);
             e.ShownPos = pos;
             if (e.Ip.TakeSnap())   // the owner's object teleported: so does the simulated copy (a servo would fling it)
             {

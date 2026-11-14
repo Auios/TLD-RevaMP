@@ -65,7 +65,7 @@ namespace TLDRevamp.Net
             // Receive the actual wire frame sample, then drive without another cargo state.
             EntityCodec.ReadCarriedBy = 40; EntityCodec.ReadLocalPos = new Vector3(1, 2, 3); EntityCodec.ReadLocalRot = Quaternion.Euler(0, 15, 0); EntityCodec.ReadLockedState = true;
             var sample = new PoseInterpolator.Sample { T = 1, Rot = Quaternion.identity };
-            TakeCarried(cargo, ref sample, default, Quaternion.identity, false, false);
+            EntityHands.TakeCarried(cargo, ref sample, default, Quaternion.identity, false, false);
             cargo.LockLocalPos = EntityCodec.ReadLocalPos; cargo.LockLocalRot = EntityCodec.ReadLocalRot;
             ApplyPoseLock(cargo, true, 40, 0, 0);
             cargo.Ip.Add(sample, 1.1);
@@ -73,7 +73,7 @@ namespace TLDRevamp.Net
             for (int i = 0; i < 3; i++)
             {
                 car.Root.transform.position = new Vector3(100 * i, 0, 0); car.Root.transform.rotation = Quaternion.Euler(5, 45 * i, 3);
-                EvalShown(cargo, 1.2 + i, .02f, out var shown, out var rotation);
+                EntityHands.EvalShown(cargo, 1.2 + i, .02f, out var shown, out var rotation);
                 cargo.Root.transform.SetPositionAndRotation((Vector3)shown, rotation);
                 OverlayCheck(OverlaySample(cargo, out var reference, out var q) && OverlayNear(reference, shown) && Quaternion.Angle(q, rotation) < .01f,
                     "locked reference follows translating and rotating car without keepalive");
