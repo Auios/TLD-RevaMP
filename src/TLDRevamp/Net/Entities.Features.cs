@@ -4,6 +4,25 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        internal static ReproRow ReproBinding(uint net) => EntityReproHooks.ReproBinding(net);
+        internal static void ReproAttach(uint net, uint other, int item, int slot) => EntityReproHooks.ReproAttach(net, other, item, slot);
+        internal static void ReproClear() => EntityReproHooks.ReproClear();
+        internal static void ReproReset() => EntityReproHooks.ReproReset();
+        internal static void ReproFlush() => EntityReproHooks.ReproFlush();
+        internal static void ReproFinish() => EntityReproHooks.ReproFinish();
+        internal static void ResetDriveSample() => EntityReproHooks.ResetDriveSample();
+        internal static Ent ReproEntityOf(tosaveitemscript it) => EditEntityOf(it);
+        internal static bool ReproOwns(Ent e) => e != null && !e.Proxy && e.OwnerId == MyId;
+        internal static Ent ReproAttachEntity(uint net)
+        {
+            if (!PlayerActing || !ByNet.TryGetValue(net, out var e) || e.Root == null || e.Root.attachable == null || _hitchApplying) return null;
+            return e;
+        }
+        internal static bool ReproUsableAllowed => PlayerActing && !_applyingLive && !_applyingState && !_applyingPoi;
+        internal static bool ReproDetachAllowed => PlayerActing && !_applyingDetach && !_applyingState && !_hitchApplying;
+        internal static tosaveitemscript ReproUsableItem(usablescript u) => ItemOf(u, u.tosaveid, u.setid);
+        internal static void SampleReproCar(carscript car) => StuckWatch(car);
+
         public const byte RabbitState = 90, RabbitFx = 91;
         private static readonly bool _rabbitLookupsReady = EntityRabbits.InitializeRabbitLookups();
         internal sealed class RabCharge { public Vector3d At; public float Speed, Until, OwnSpeed; }

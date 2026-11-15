@@ -14,7 +14,7 @@ public partial class carscript
 }
 namespace UnityEngine
 {
-    public class WheelCollider : Component { public float suspensionDistance, motorTorque; public Vector3 center; }
+    public class WheelCollider : Component { public bool isGrounded; public float brakeTorque; public float suspensionDistance, motorTorque; public Vector3 center; }
     public partial class Transform
     {
         public Vector3 localPosition; public Quaternion localRotation = Quaternion.identity;
@@ -68,7 +68,7 @@ public class inputconnect : Component { public Component Sdoor_rot, Sdoor_move; 
 public class partconditionscript : Component { }
 public class ediblescript : Component { public GameObject[] parts; public int index; public float hp; public bool continous, moreParts, destroyOnEnd; }
 public partial class aiscript : Component { public bool fleeing; public float flightFight; public Senses senses; public class Senses { public List<int> stimuls = new List<int>(); } }
-public class attachablescript : Component
+public partial class attachablescript : Component
 {
     public tosaveitemscript tosave, Target; public Component Poi; public object slot; public Transform point; public bool parentAtAttach, attached;
     public tosaveitemscript AttachedToTosave() => Target;

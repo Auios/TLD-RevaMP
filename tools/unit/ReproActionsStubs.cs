@@ -55,7 +55,7 @@ namespace UnityEngine
 namespace HarmonyLib
 {
     [AttributeUsage(AttributeTargets.Method)] class HarmonyPriority : Attribute { internal HarmonyPriority(int n) { } }
-    static class Priority { internal const int First = 800; }
+    static class Priority { internal const int First = 800, Normal = 400; }
     [AttributeUsage(AttributeTargets.Class)] class HarmonyPatch : Attribute { internal HarmonyPatch() { } internal HarmonyPatch(Type t, string s) { } internal HarmonyPatch(Type t, string s, Type[] a) { } }
     static class AccessTools { internal static System.Reflection.MethodInfo Method(Type t, string n, Type[] a = null) => null; }
 }
@@ -169,6 +169,7 @@ namespace TLDRevamp.Net
         internal static bool InSession = true, TestAsPlayer, PlayerActing = true, _hitchApplying, _applyingLive, _applyingState, _applyingPoi, _applyingDetach;
         internal static int MyId = 1, DetachRequests; internal static tosaveitemscript ForceHeld; private static float _keyTestUntil; private static carscript _keyTestCar;
         internal static IReadOnlyDictionary<uint, Ent> ObservedEntities => ByNet;
+        internal static bool TryGetEntity(uint net, out Ent e) => ByNet.TryGetValue(net, out e);
         internal static bool Resolve(Ent e) => e.Root != null;
         private static Ent EditEntityOf(tosaveitemscript it)
         {
@@ -176,8 +177,8 @@ namespace TLDRevamp.Net
             foreach (var e in ByNet.Values) if (e.Items.Contains(it)) return e;
             return null;
         }
-        private static uint TelemetryNet(tosaveitemscript it) => EditEntityOf(it)?.NetId ?? 0;
-        private static uint TelemetryNet(carscript car) { foreach (var e in ByNet.Values) if (e.Root.car == car) return e.NetId; return 0; }
+        internal static uint TelemetryNet(tosaveitemscript it) => EditEntityOf(it)?.NetId ?? 0;
+        internal static uint TelemetryNet(carscript car) { foreach (var e in ByNet.Values) if (e.Root.car == car) return e.NetId; return 0; }
         internal static void LocalSeat(out uint net, out int seat) { net = 0; seat = -1; }
         internal static void EndKeyTest(bool expire = false) { if (expire) _keyTestUntil = Time.time - 1; _keyTestCar = null; }
         private static tosaveitemscript ItemOf(usablescript u, int a, int b) => null;

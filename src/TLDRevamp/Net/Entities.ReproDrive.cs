@@ -3,13 +3,16 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityReproHooks
     {
         private static float _reproDriveNext;
         internal static void ResetDriveSample() { _reproDriveNext = 0; }
         [HarmonyPatch(typeof(carscript), nameof(carscript.GetPlayerInput))]
         private static class ReproDriveInput
         {
+            // Ahead of ShotgunCapture, which merges the remote passenger's input into the car: the row keeps the driver's own
+            // input, as when this hook was declared inside Entities and so patched first.
+            [HarmonyPriority(Priority.Normal + 1)]
             private static void Postfix(carscript __instance)
             {
                 if (DevHooks.Playing)
@@ -18,13 +21,13 @@ namespace TLDRevamp.Net
                 }
                 if (!ReproRecorder.Recording || !__instance.isPlayerDriving) return;
                 var car = __instance;
-                StuckWatch(car);
+                Entities.SampleReproCar(car);
                 int mask = (car.ihandbrakeBDown ? 1 : 0) | (car.igrDown ? 2 : 0) | (car.ignDown ? 4 : 0) | (car.ig1Down ? 8 : 0) |
                     (car.ig2Down ? 16 : 0) | (car.ig3Down ? 32 : 0) | (car.ig4Down ? 64 : 0) | (car.ig5Down ? 128 : 0) | (car.ig6Down ? 256 : 0) |
                     (car.iupshiftDown ? 512 : 0) | (car.idownshiftDown ? 1024 : 0) | (car.iignitionDown ? 2048 : 0) | (car.iLightsBDown ? 4096 : 0);
                 if (mask == 0 && Time.realtimeSinceStartup < _reproDriveNext) return;
                 _reproDriveNext = Time.realtimeSinceStartup + 0.1f;
-                ReproRecorder.Add(new ReproRow { Kind = ReproKind.Drive, Net = TelemetryNet(car), X = car.ithrottle, Y = car.ibrake, Z = car.isteer,
+                ReproRecorder.Add(new ReproRow { Kind = ReproKind.Drive, Net = Entities.TelemetryNet(car), X = car.ithrottle, Y = car.ibrake, Z = car.isteer,
                     A = car.iclutch, B = car.ihandbrake, C = mask, D = car.iignition ? 1 : 0, E = car.ihorn ? 1 : 0 }.WithCar(ReproCarRead(car)));
             }
         }

@@ -21,4 +21,12 @@
     <Compile Include="../../src/TLDRevamp/DevHooks.cs" />
     <Compile Include="../../src/TLDRevamp.Dev/Net/Entities.Cargo.cs" />
   </ItemGroup>
+  <Target Name="ExtractReproBoundary" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
+      <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
+    </PropertyGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractReproBoundary.py&quot; &quot;$(IntermediateOutputPath)ReproBoundary.g.cs&quot;" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)ReproBoundary.g.cs" /></ItemGroup>
+  </Target>
 </Project>

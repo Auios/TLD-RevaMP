@@ -10,7 +10,7 @@ static class ReproActionsTest
 {
     private static int _checks;
     private static void Check(bool ok, string why) { _checks++; if (!ok) throw new Exception(why); }
-    private static object Hook(string name, string method, params object[] args) => typeof(Entities).GetNestedType(name, BindingFlags.NonPublic)
+    private static object Hook(string name, string method, params object[] args) => typeof(EntityReproHooks).GetNestedType(name, BindingFlags.NonPublic)
         .GetMethod(method, BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, args);
     private static JsonElement Snapshot()
     {
@@ -123,6 +123,10 @@ static class ReproActionsTest
         Check(Snapshot().GetProperty("skipped").GetInt32() == skipped + 1, "one failed binding counts one skipped action");
         Entities.Make(99); ReproRecorder.Add(new ReproRow { Kind = ReproKind.Pickup, Net = 99 });
         Check(Count(ReproKind.Pickup) == 1, "binding retried after target loads");
+        string recorded = Snapshot().GetProperty("rows").GetRawText();
+        const string rowsPath = "tools/unit/ReproRecorderRows.json";
+        if (Environment.GetEnvironmentVariable("CAPTURE_REPRO_HEAD") == "1") File.WriteAllText(rowsPath, recorded + "\n");
+        Check(recorded == File.ReadAllText(rowsPath).Trim(), "full recorder rows match frozen cb10491 capture (plus the e76d0b2 store-lock row)");
         ReproRecorder.Stop();
         Check(Plugin.Instance.Overlay.Last.Contains("skipped") && Plugin.Instance.Overlay.Last.Contains("dropped"), "stop toast includes both counts");
         var save = (System.Threading.Tasks.Task)typeof(ReproRecorder).GetField("_save", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null); save.GetAwaiter().GetResult();

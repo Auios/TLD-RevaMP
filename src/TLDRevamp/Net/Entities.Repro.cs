@@ -6,12 +6,12 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityReproHooks
     {
         internal static ReproRow ReproBinding(uint net)
         {
             var r = new ReproRow { Kind = ReproKind.Bind, Net = net, A = -1 };
-            if (ByNet.TryGetValue(net, out var e) && e.Root != null)
+            if (Entities.TryGetEntity(net, out var e) && e.Root != null)
             {
                 var g = mainscript.GlobalFromUnityPos(e.Root.transform.position);
                 r.X = g.x; r.Y = g.y; r.Z = g.z; r.A = e.Root.id;
@@ -20,16 +20,16 @@ namespace TLDRevamp.Net
         }
         private static ReproRow ReproItem(ReproKind kind, tosaveitemscript it)
         {
-            var e = it != null ? EditEntityOf(it) : null;
+            var e = it != null ? Entities.ReproEntityOf(it) : null;
             return new ReproRow { Kind = kind, Net = e != null ? e.NetId : 0, Item = e != null ? e.Items.IndexOf(it) : -1 };
         }
         internal static void ReproAttach(uint net, uint other, int item, int slot)
         {
-            if (!PlayerActing || !ByNet.TryGetValue(net, out var e) || e.Root == null || e.Root.attachable == null || _hitchApplying) return;
+            var e = Entities.ReproAttachEntity(net); if (e == null) return;
             var at = e.Root.attachable; if (at.utanfuto != null) return;
             var rec = new save_attachable(at, 0);
             var g = mainscript.GlobalFromUnityPos(at.transform.position); var q = at.transform.eulerAngles;
-            if (!e.Proxy && e.OwnerId == MyId) ReproRecorder.Add(new ReproRow { Kind = ReproKind.EntityPose, Net = net, X = g.x, Y = g.y, Z = g.z, A = q.x, B = q.y, C = q.z });
+            if (Entities.ReproOwns(e)) ReproRecorder.Add(new ReproRow { Kind = ReproKind.EntityPose, Net = net, X = g.x, Y = g.y, Z = g.z, A = q.x, B = q.y, C = q.z });
             ReproRecorder.Add(new ReproRow { Kind = ReproKind.Attach, Net = net, Other = other, Item = item, Slot = slot,
                 X = rec.gpos.x, Y = rec.gpos.y, Z = rec.gpos.z, A = rec.indexType, B = rec.attachType,
                 C = rec.lpos.x, D = rec.lpos.y, E = rec.lpos.z, F = rec.poigenid, G = rec.poiid.x, H = rec.poiid.z });
@@ -91,15 +91,15 @@ namespace TLDRevamp.Net
         {
             private static void Postfix(usablescript __instance, bool syncinmulti)
             {
-                if (!ReproRecorder.Recording || DevHooks.Playing || !syncinmulti || !PlayerActing || _applyingLive || _applyingState || _applyingPoi) return;
+                if (!ReproRecorder.Recording || DevHooks.Playing || !syncinmulti || !Entities.ReproUsableAllowed) return;
                 var u = __instance;
-                var it = ItemOf(u, u.tosaveid, u.setid); var r = ReproItem(ReproKind.Usable, it);
+                var it = Entities.ReproUsableItem(u); var r = ReproItem(ReproKind.Usable, it);
                 if (u.setidPoi)
                 {
                     r.Kind = ReproKind.PoiUsable; r.Net = 0; r.Item = u.poigenid; r.Slot = u.usableid;
                     r.E = u.poiid.x; r.F = u.poiid.y; r.G = u.poiid.z;
                 }
-                else r.Slot = it != null ? Array.IndexOf(ItemUsables(it), u) : -1;
+                else r.Slot = it != null ? Array.IndexOf(Entities.ItemUsables(it), u) : -1;
                 QueueReproUsable(u, r);
             }
         }
@@ -144,7 +144,7 @@ namespace TLDRevamp.Net
                 if (u != null && u.lastHoldTime == Time.time)
                 {
                     var it = u.GetComponentInParent<tosaveitemscript>();
-                    if (it != null && it.car != null && it.car.ignitionUsable == u) held = TelemetryNet(it);
+                    if (it != null && it.car != null && it.car.ignitionUsable == u) held = Entities.TelemetryNet(it);
                 }
                 if (held == _reproKey) return;
                 if (_reproKey != 0) ReproRecorder.Add(new ReproRow { Kind = ReproKind.Ignition, Net = _reproKey });
@@ -156,7 +156,7 @@ namespace TLDRevamp.Net
         private static uint _reproDetachNet;
         private static ReproRow? ReproDetaching(attachablescript at)
         {
-            if (!ReproRecorder.Recording || DevHooks.Playing || !PlayerActing || _applyingDetach || _applyingState || _hitchApplying || at == null || at.utanfuto != null) return null;
+            if (!ReproRecorder.Recording || DevHooks.Playing || !Entities.ReproDetachAllowed || at == null || at.utanfuto != null) return null;
             return ReproItem(ReproKind.Detach, at.tosave);
         }
         private static void ReproDetached(ReproRow? row)
@@ -198,10 +198,10 @@ namespace TLDRevamp.Net
                 if (!__runOriginal || __state || !ReproRecorder.Recording || DevHooks.Playing || _p == null || _p.physlock != __instance) return;
                 try
                 {
-                    var e = EditEntityOf(_p.tosave); if (e == null || e.Proxy || e.OwnerId != MyId) return;
+                    var e = Entities.ReproEntityOf(_p.tosave); if (!Entities.ReproOwns(e)) return;
                     if (__instance.parentTosave == null) { ReproRecorder.Skip(); return; }
-                    var r = ReproItem(ReproKind.PhysLock, _p.tosave); var c = EditEntityOf(__instance.parentTosave);
-                    r.Other = c != null ? c.NetId : 0; r.Slot = Array.IndexOf(LockMounts(__instance.parentTosave), __instance);
+                    var r = ReproItem(ReproKind.PhysLock, _p.tosave); var c = Entities.ReproEntityOf(__instance.parentTosave);
+                    r.Other = c != null ? c.NetId : 0; r.Slot = Array.IndexOf(Entities.LockMounts(__instance.parentTosave), __instance);
                     r.A = c != null ? c.Items.IndexOf(__instance.parentTosave) : -1; ReproRecorder.Add(r);
                 }
                 catch { ReproRecorder.Skip(); }
@@ -213,7 +213,7 @@ namespace TLDRevamp.Net
             private static void Prefix(pickupable __instance)
             {
                 if (!ReproRecorder.Recording || DevHooks.Playing || __instance.physlock == null) return;
-                var e = EditEntityOf(__instance.tosave); if (e != null && !e.Proxy && e.OwnerId == MyId) ReproRecorder.Add(ReproItem(ReproKind.PhysUnlock, __instance.tosave));
+                var e = Entities.ReproEntityOf(__instance.tosave); if (e != null && Entities.ReproOwns(e)) ReproRecorder.Add(ReproItem(ReproKind.PhysUnlock, __instance.tosave));
             }
         }
     }

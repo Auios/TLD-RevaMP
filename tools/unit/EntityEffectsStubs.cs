@@ -9,7 +9,7 @@ namespace HarmonyLib
 {
     public class HarmonyFinalizer : Attribute { }
     public class HarmonyPriority : Attribute { public int priority; public HarmonyPriority(int value) { priority = value; } }
-    public static class Priority { public const int First = 800; }
+    public static class Priority { public const int First = 800, Normal = 400; }
     public static class AccessTools { public delegate ref F FieldRef<T, F>(T instance); }
 }
 namespace UnityEngine
@@ -157,7 +157,7 @@ namespace TLDRevamp
         }
     }
     internal static class Plugin { internal static LogSink Log = new LogSink(); internal class LogSink { public void LogInfo(string message) { } public void LogWarning(string message) { } } }
-    internal static class DevHooks { internal static Action SprayTick, EntityLateSample; internal static Func<float, float> PassengerSteer; internal static Func<bool> PassengerLights; }
+    internal static partial class DevHooks { internal static Action SprayTick, EntityLateSample; internal static Func<float, float> PassengerSteer; internal static Func<bool> PassengerLights; }
 }
 namespace TLDRevamp.Net
 {

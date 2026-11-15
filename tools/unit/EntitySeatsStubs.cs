@@ -21,7 +21,7 @@ public class seatscript : Component
     public carscript Car; public bool driverSeat0, driverSeat1, Free = true; public seatscript mainseat; public Transform sitPos;
     public bool FreeCanSit() => Free;
 }
-public class mountStuff : Component { }
+public partial class mountStuff : Component { }
 public partial class tosaveitemscript { public Component[] partslotscripts; }
 public partial class fpscontroller
 {
