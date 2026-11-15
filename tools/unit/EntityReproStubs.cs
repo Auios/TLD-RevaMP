@@ -66,7 +66,6 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         internal static bool PlayerActing = true, _hitchApplying, _applyingLive, _applyingPoi;
-        private static void StuckWatch(carscript c) { }
         internal static uint TelemetryNet(Component c) => ByNet.Values.FirstOrDefault(e => e.Root == c || e.Root == c.ParentComponent || e.Root.car == c)?.NetId ?? 0;
         private static tosaveitemscript ItemOf(Component c, uint id, bool hasId) => c.ParentComponent as tosaveitemscript;
         internal static mountStuff[] LockMounts(tosaveitemscript it) => it.Children.OfType<mountStuff>().ToArray();

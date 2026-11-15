@@ -157,7 +157,6 @@ namespace TLDRevamp.Net
     static class Session { internal struct Player { internal bool Me; internal string Name; } internal static Player[] Players() => Array.Empty<Player>(); internal static bool Say(string s) => true; }
     public static partial class Entities
     {
-        private static void StuckWatch(carscript car) { }
         internal sealed class Ent
         {
             internal uint NetId, ParentNet; internal int OwnerId; internal bool Proxy, Stored, Held, EngRunning;
@@ -217,3 +216,5 @@ namespace TLDRevamp.Net
 namespace TLDRevamp.Net { static class EntityProxyTools { internal static bool TestAsPlayer { get => Entities.TestAsPlayer; set => Entities.TestAsPlayer = value; } } }
 
 namespace TLDRevamp { static class GameLookups { internal static System.Reflection.MethodInfo Method(Type type, string name, Type[] args = null) => HarmonyLib.AccessTools.Method(type, name, args); } }
+
+namespace TLDRevamp.Net { internal static class EntityDiag { internal static void StuckWatch(carscript car) { } } }

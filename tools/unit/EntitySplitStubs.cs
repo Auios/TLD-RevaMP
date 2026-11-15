@@ -107,7 +107,7 @@ public partial class tosaveitemscript : Component
 public class headlightscript { public usablescript usableSet; public int currentState; public Light[] Lights = Array.Empty<Light>(); public T[] GetComponentsInChildren<T>(bool all) => (T[])(object)Lights; }
 public class rearlights { public GameObject[] FLight; public void Upd() { } }
 public partial class usablescript : Component { public int currentTurnState; }
-public class enginescript { public bool running, start; public gearstickscript gearstick; }
+public partial class enginescript { public bool running, start; public gearstickscript gearstick; }
 public class gearstickscript { public Transform TransmissionHandPos; }
 public partial class carscript : Component
 {
@@ -121,7 +121,7 @@ public partial class carscript : Component
     public void ShiftTo(int value) { gear = value; Shifts++; }
     public void UpdMultiHandbrake(float value) { handbrake = value; Handbrakes++; }
 }
-public class settingsscript { public static settingsscript s; public Settings S = new Settings(); public class Settings { public bool BDevMode, CBenableHandBrake; } }
+public partial class settingsscript { public static settingsscript s; public Settings S = new Settings(); public class Settings { public bool BDevMode, CBenableHandBrake; public int IPhysicsLock; } }
 public class kaposztaleves { public static kaposztaleves s; public Settings settings = new Settings(); public class Settings { public bool daynight = true; } } // test stub, not game code
 
 namespace TLDRevamp

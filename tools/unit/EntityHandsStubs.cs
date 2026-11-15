@@ -36,7 +36,7 @@ public partial class fpscontroller
 public class HandAnim { public Transform RHTarget, HHTarget; }
 public partial class mpplayerscript { public HandAnim anim; }
 public partial class itemdatabase { public GameObject[] items; }
-public class PoseInterpolator
+public partial class PoseInterpolator
 {
     public struct Sample { public Vector3d Pos; public Quaternion Rot; public Vector3 Vel; }
     public bool Ready; public Sample Value;

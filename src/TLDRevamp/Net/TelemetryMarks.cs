@@ -69,7 +69,7 @@ namespace TLDRevamp.Net
             SessionLog.Mark(Note(note), self == 1 ? "me" : origin == 0 ? "host" : "player", st, origin, nets);
         }
     }
-    public static partial class Entities
+    internal static class EntityTelemetry
     {
         internal static MarkFocus CaptureMarkFocus(TelemetryState state)
         {
@@ -82,12 +82,12 @@ namespace TLDRevamp.Net
                 var item = hit.collider.GetComponentInParent<tosaveitemscript>();
                 focus.Crosshair = FocusTarget(item, hit.collider.name, hit.distance);
             }
-            LocalSeat(out uint net, out int seat);
+            Entities.LocalSeat(out uint net, out int seat);
             if (pl.Bsitting && pl.seat != null)
             {
                 var car = pl.seat.Car != null ? pl.seat.Car.GetComponent<tosaveitemscript>() : null;
                 focus.Car = FocusTarget(car, pl.seat.name, 0);
-                focus.Seat = car != null ? Array.IndexOf(VehicleSeats(car), pl.seat) : net != 0 ? seat : -1;
+                focus.Seat = car != null ? Array.IndexOf(Entities.VehicleSeats(car), pl.seat) : net != 0 ? seat : -1;
             }
             if (focus.Car.HasValue) { var car = focus.Car.Value; car.Net = net; focus.Car = car; }
             if (pl.inHandP != null) focus.Held = FocusTarget(pl.inHandP.tosave != null ? pl.inHandP.tosave : pl.inHandP.GetComponentInParent<tosaveitemscript>(), pl.inHandP.name, 0);
@@ -95,7 +95,7 @@ namespace TLDRevamp.Net
             double nearest = double.MaxValue;
             for (int i = 0; state != null && i < state.PlayerCount; i++)
             {
-                var p = state.Players[i]; if (p.Id == MyId || !p.HasPos) continue;
+                var p = state.Players[i]; if (Entities.MarkIsLocal(p.Id) || !p.HasPos) continue;
                 double dx = p.X - state.X, dy = p.Y - state.Y, dz = p.Z - state.Z, distance = Math.Sqrt(dx * dx + dy * dy + dz * dz);
                 if (distance < nearest) { nearest = distance; focus.ClosestPlayer = p.Id; focus.PlayerDistance = distance; }
             }
@@ -103,15 +103,15 @@ namespace TLDRevamp.Net
         }
         private static MarkFocus.Target FocusTarget(tosaveitemscript item, string name, double distance)
         {
-            var entity = item != null ? SharedGroupOf(item) : null;
-            return new MarkFocus.Target { Net = entity != null ? entity.NetId : 0, Prefab = item != null ? item.id : -1,
+            uint net = Entities.MarkItemNet(item);
+            return new MarkFocus.Target { Net = net, Prefab = item != null ? item.id : -1,
                 Name = TelemetryPrivacy.ObjectName(item != null ? item.name : name), Distance = distance };
         }
         /// `subject`: the object an automatic mark is about, first (it was only the crosshair's, the held item's and the car's:
         /// an object under the ground far off wasn't even in the capture).
         internal static uint[] MarkNets(uint subject = 0)
         {
-            TelemetryFocusTick(Time.realtimeSinceStartupAsDouble, true);
+            Entities.RefreshMarkFocus();
             var f = CaptureMarkFocus(null);
             var nets = new System.Collections.Generic.List<uint>(MarkWire.Limit);
             Action<uint> add = net => { if (net != 0 && nets.Count < MarkWire.Limit && !nets.Contains(net)) nets.Add(net); };
@@ -120,6 +120,9 @@ namespace TLDRevamp.Net
             for (int i = 0; i < MotionTrace.FocusLimit; i++) add(SessionLog.History.Trace.Focus(i));
             return nets.ToArray();
         }
+    }
+    public static partial class Entities
+    {
         private const int TelemetryRecordLimit = 32768;
         private static readonly System.Collections.Generic.Dictionary<uint, save_item> TelemetryRecords = new System.Collections.Generic.Dictionary<uint, save_item>(TelemetryRecordLimit);
         /// Capture observed copies as well as owners: resolving/spawning here would hide the desync.

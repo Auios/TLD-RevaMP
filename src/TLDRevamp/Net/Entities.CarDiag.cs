@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityDiag
     {
         /// Colliders currently enabled on an active object.
         internal static int CountActive(List<BoxCollider> l) { int n = 0; if (l != null) foreach (var c in l) if (c != null && c.gameObject.activeInHierarchy && c.enabled) n++; return n; }
@@ -35,7 +35,7 @@ namespace TLDRevamp.Net
         /// whenever the key is pressed. Replaced at most every 10 s; the newest wins.
         internal static string StuckCarJson;
         private static float _stuckSince = -1f, _stuckTaken = -100f;
-        private static void StuckWatch(carscript car)
+        internal static void StuckWatch(carscript car)
         {
             if (car.ithrottle > 0.5f && car.speed < 0.5f) { if (_stuckSince < 0f) _stuckSince = Time.realtimeSinceStartup; }
             else { _stuckSince = -1f; return; }
@@ -55,7 +55,7 @@ namespace TLDRevamp.Net
             string B(bool v) => v ? "true" : "false";
             var root = car.transform.root;
             var sb = new StringBuilder(4096);
-            sb.Append("{\"car\":").Append(Json.Str(root.name)).Append(",\"net\":").Append(TelemetryNet(car)).Append(",\"seated\":").Append(B(car.isPlayerDriving));
+            sb.Append("{\"car\":").Append(Json.Str(root.name)).Append(",\"net\":").Append(Entities.DiagnosticNet(car)).Append(",\"seated\":").Append(B(car.isPlayerDriving));
 
             sb.Append(",\"script\":{\"gear\":").Append(car.gear).Append(",\"selectedRatio\":").Append(F(car.selectedgr)).Append(",\"differential\":").Append(F(car.differentialRatio))
               .Append(",\"throttle\":").Append(F(car.throttle)).Append(",\"brake\":").Append(F(car.brake)).Append(",\"handbrake\":").Append(F(car.handbrake)).Append(",\"clutch\":").Append(F(car.clutch))
@@ -127,8 +127,8 @@ namespace TLDRevamp.Net
             sb.Append(",\"overlapping\":[").Append(string.Join(",", inside)).Append(']');
 
             sb.Append(",\"mod\":");
-            if (ByNet.TryGetValue(TelemetryNet(car), out var e))
-                sb.Append("{\"owner\":").Append(e.OwnerId).Append(",\"mine\":").Append(B(e.OwnerId == MyId)).Append(",\"proxy\":").Append(B(e.Proxy)).Append(",\"physicalCopy\":").Append(B(e.Physical))
+            if (Entities.TryGetEntity(Entities.DiagnosticNet(car), out var e))
+                sb.Append("{\"owner\":").Append(e.OwnerId).Append(",\"mine\":").Append(B(Entities.DiagnosticMine(e))).Append(",\"proxy\":").Append(B(e.Proxy)).Append(",\"physicalCopy\":").Append(B(e.Physical))
                   .Append(",\"movedByBody\":").Append(B(e.MovedByBody)).Append(",\"madeKinematic\":").Append(e.MadeKinematic.Count).Append('}');
             else sb.Append("null");
             return sb.Append('}').ToString();

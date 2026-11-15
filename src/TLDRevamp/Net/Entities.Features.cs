@@ -4,6 +4,25 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        internal static int CountActive(System.Collections.Generic.List<BoxCollider> colliders) => EntityDiag.CountActive(colliders);
+        internal static string CarDiagnostics() => EntityDiag.CarDiagnostics();
+        internal static string LockDiagnostics() => EntityDiag.LockDiagnostics();
+        internal static string WhyNotLock(tosaveitemscript item) => EntityDiag.WhyNotLock(item);
+        internal static string StuckCarJson { get => EntityDiag.StuckCarJson; set => EntityDiag.StuckCarJson = value; }
+        internal static uint DiagnosticNet(Component component) => TelemetryNet(component);
+        internal static bool DiagnosticMine(Ent entity) => entity.OwnerId == MyId;
+        internal static bool DiagnosticProxy(mountStuff mount) => IsProxy(mount);
+        internal static long DiagnosticStoreRefusals(bool attached) => attached ? AttachedStoresRefused : ContainerStoresRefused;
+        internal static MarkFocus CaptureMarkFocus(TelemetryState state) => EntityTelemetry.CaptureMarkFocus(state);
+        internal static uint[] MarkNets(uint subject = 0) => EntityTelemetry.MarkNets(subject);
+        internal static void RefreshMarkFocus() => TelemetryFocusTick(Time.realtimeSinceStartupAsDouble, true);
+        internal static bool MarkIsLocal(int player) => player == MyId;
+        internal static uint MarkItemNet(tosaveitemscript item)
+        {
+            var entity = item != null ? SharedGroupOf(item) : null;
+            return entity != null ? entity.NetId : 0;
+        }
+
         internal static ReproRow ReproBinding(uint net) => EntityReproHooks.ReproBinding(net);
         internal static void ReproAttach(uint net, uint other, int item, int slot) => EntityReproHooks.ReproAttach(net, other, item, slot);
         internal static void ReproClear() => EntityReproHooks.ReproClear();
@@ -21,7 +40,7 @@ namespace TLDRevamp.Net
         internal static bool ReproUsableAllowed => PlayerActing && !_applyingLive && !_applyingState && !_applyingPoi;
         internal static bool ReproDetachAllowed => PlayerActing && !_applyingDetach && !_applyingState && !_hitchApplying;
         internal static tosaveitemscript ReproUsableItem(usablescript u) => ItemOf(u, u.tosaveid, u.setid);
-        internal static void SampleReproCar(carscript car) => StuckWatch(car);
+        internal static void SampleReproCar(carscript car) => EntityDiag.StuckWatch(car);
 
         public const byte RabbitState = 90, RabbitFx = 91;
         private static readonly bool _rabbitLookupsReady = EntityRabbits.InitializeRabbitLookups();

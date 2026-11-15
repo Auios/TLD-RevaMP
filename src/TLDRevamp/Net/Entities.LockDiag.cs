@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityDiag
     {
         private static readonly System.Globalization.CultureInfo ic = System.Globalization.CultureInfo.InvariantCulture;
 
@@ -79,7 +79,7 @@ namespace TLDRevamp.Net
                     rows.Add("{\"name\":" + Json.Str(m.name + " of " + m.transform.root.name) + ",\"type\":" + Json.Str(m.sType.ToString()) + ",\"centreInBox\":" + (inBox ? "true" : "false") +
                              ",\"inScan\":" + (In(m.cols) ? "true" : "false") + ",\"inLastScan\":" + (In(m.lastcols) ? "true" : "false") + ",\"canStore\":" + (m.CanStore() ? "true" : "false") +
                              ",\"started\":" + (started ? "true" : "false") + ",\"manual\":" + (m.onlyManual ? "true" : "false") + ",\"noLock\":" + (m.noPhysicsLock ? "true" : "false") +
-                             ",\"proxyCar\":" + (IsProxy(m) ? "true" : "false") + "}");
+                             ",\"proxyCar\":" + (Entities.DiagnosticProxy(m) ? "true" : "false") + "}");
                 }
                 var lm = mainscript.s.mountLayerMask; var layers = new List<string>();
                 foreach (var c in it.GetComponentsInChildren<Collider>()) if (c.enabled && !c.isTrigger) layers.Add(Json.Str(c.name + ":" + LayerMask.LayerToName(c.gameObject.layer) + ((lm & (1 << c.gameObject.layer)) != 0 ? "" : " (not in the mount mask)")));
@@ -93,15 +93,15 @@ namespace TLDRevamp.Net
         private static string LockFacts(tosaveitemscript it)
         {
             string B(bool v) => v ? "true" : "false";
-            uint net = TelemetryNet(it);
+            uint net = Entities.DiagnosticNet(it);
             var p = it.P; var at = it.attachable;
             int links = 0, unlinked = 0;
             if (p != null && p.cols != null) foreach (var l in p.cols) { if (l == null) continue; links++; if (l.p == null) unlinked++; }
             string owner = "null";
-            if (net != 0 && ByNet.TryGetValue(net, out var e)) owner = "{\"net\":" + net + ",\"owner\":" + e.OwnerId + ",\"mine\":" + B(e.OwnerId == MyId) + ",\"proxy\":" + B(e.Proxy) + ",\"held\":" + B(e.Held) + "}";
+            if (net != 0 && Entities.TryGetEntity(net, out var e)) owner = "{\"net\":" + net + ",\"owner\":" + e.OwnerId + ",\"mine\":" + B(Entities.DiagnosticMine(e)) + ",\"proxy\":" + B(e.Proxy) + ",\"held\":" + B(e.Held) + "}";
             return ",\"mod\":{\"entity\":" + owner + ",\"attachable\":" + (at == null ? "null" : "{\"attached\":" + B(at.attached) + ",\"crafted\":" + B(p != null && p.crafted) + ",\"slot\":" + B(at.slot != null) + "}") +
                    ",\"started\":" + B(it.started) + ",\"pickupStarted\":" + B(p != null && GameLookups.FieldValue<bool>(typeof(pickupable), "started", p)) + ",\"colliderLinks\":" + links + ",\"unlinked\":" + unlinked +
-                   ",\"storesRefused\":" + ContainerStoresRefused + ",\"attachedStoresRefused\":" + AttachedStoresRefused + ",\"insideBox\":" + (it.transform.parent != null ? Json.Str(it.transform.parent.name) : "null") + "}";
+                   ",\"storesRefused\":" + Entities.DiagnosticStoreRefusals(false) + ",\"attachedStoresRefused\":" + Entities.DiagnosticStoreRefusals(true) + ",\"insideBox\":" + (it.transform.parent != null ? Json.Str(it.transform.parent.name) : "null") + "}";
         }
     }
 }
