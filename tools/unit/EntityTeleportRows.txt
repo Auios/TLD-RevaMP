@@ -1,0 +1,1645 @@
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+object 1 3000 True False
+object 1 4000 True False
+object 1 3000 False False
+object 1 2000 True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  True False
+peer 1 True  False False
+peer 1 True 1F False False
+peer 1 True  False False
+object 1 5000 True True
+object 1 5000 True False
+peer 1 True  True False
+peer 1 True 1B True False
+peer 1 True 1B True True
+peer 1 True 1F True True
+peer 1 True 1B True False
+peer 1 True 1B True False
+peer 1 True 1B True False
+peer 1 True 1F True False
+peer 1 True 1B True False
+peer 1 True 1B True False
+peer 1 True 1F True False
+request True 3A88130000
+apply 23 882701
+apply 98 882701
+request True 3A88130000
+apply 23 882701
+apply 23 882701
+request True 3A8F170000
+request True 3ACA170000
+apply 97 09
+apply 25 09
+apply 22 07
+apply 27 08
+apply 23 09
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 22 01
+apply 65 2A000000
+apply 22 2A000000
+apply 25 2A000000
+apply 27 2A000000022B000000
+apply 25 2B000000
+apply 101 2B000000
+apply 102 2B000000

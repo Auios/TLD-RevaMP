@@ -987,8 +987,8 @@ namespace TLDRevamp.Net
 
         public static void ClientReceive(byte type, NetReader r)
         {
-            if (DeferTpa(type, r)) return;
-            TpaCopyMessage(type, r);
+            if (EntityTeleportRefresh.DeferTpa(type, r)) return;
+            EntityTeleportRefresh.TpaCopyMessage(type, r);
             switch (type)
             {
                 case Assigned:

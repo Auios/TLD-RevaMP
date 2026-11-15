@@ -1,3 +1,7 @@
+using UsableKey = TLDRevamp.Net.Entities.UsableKey;
+using UsableValue = TLDRevamp.Net.Entities.UsableValue;
+using PoiKey = TLDRevamp.Net.Entities.PoiKey;
+using PoiState = TLDRevamp.Net.Entities.PoiState;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -6,6 +10,72 @@ using UnityEngine;
 namespace TLDRevamp.Net
 {
     /// Motion takes the short path to nearby viewers; the owner's reliable record still settles and saves it.
+    internal static partial class EntityUsables
+    {
+        private sealed class UsableHierarchy { public usablescript[] Usables; }
+        private static ConditionalWeakTable<tosaveitemscript, UsableHierarchy> _usableHierarchy = new ConditionalWeakTable<tosaveitemscript, UsableHierarchy>();
+        /// The save's registered order includes linked controls outside the item's transform hierarchy.
+        internal static usablescript[] ItemUsables(tosaveitemscript it)
+        {
+            if (_usableHierarchy.TryGetValue(it, out var h))
+            {
+                bool same = h.Usables.Length == (it.usables != null ? it.usables.Count : 0);
+                for (int i = 0; same && i < h.Usables.Length; i++) same = h.Usables[i] == it.usables[i];
+                if (same) return h.Usables;
+                _usableHierarchy.Remove(it);
+            }
+            var list = new List<usablescript>();
+            if (it.usables != null) list.AddRange(it.usables);
+            h = new UsableHierarchy { Usables = list.ToArray() }; _usableHierarchy.Add(it, h);
+            return h.Usables;
+        }
+        private static ushort QuantizeUsable(float v, float min, float max) => (ushort)Mathf.RoundToInt(Mathf.InverseLerp(min, max, v) * 65535f);
+        internal static UsableValue UsableBits(usablescript u) => new UsableValue {
+            X = QuantizeUsable(u.xRot, u.minX, u.maxX), Y = QuantizeUsable(u.yRot, u.minY, u.maxY),
+            Slide = QuantizeUsable(u.slideValue, 0f, 1f), Tuned = QuantizeUsable(u.tunedFloat, u.tunedFloatMin, u.tunedFloatMax), Turn = u.currentTurnState };
+        internal static PoiState UsableState(usablescript u) => new PoiState { XRot = u.xRot, YRot = u.yRot, Slide = u.slideValue, Tuned = u.tunedFloat, Turn = u.currentTurnState };
+        internal static bool SameUsable(PoiState a, PoiState b) => a.XRot == b.XRot && a.YRot == b.YRot && a.Slide == b.Slide && a.Tuned == b.Tuned && a.Turn == b.Turn;
+        internal static PoiState UsableState(usablescript u, UsableValue v) => new PoiState {
+            XRot = Mathf.Lerp(u.minX, u.maxX, v.X / 65535f), YRot = Mathf.Lerp(u.minY, u.maxY, v.Y / 65535f),
+            Slide = v.Slide / 65535f, Tuned = Mathf.Lerp(u.tunedFloatMin, u.tunedFloatMax, v.Tuned / 65535f), Turn = v.Turn };
+
+        internal static void WriteLiveUsable(NetWriter w, UsableKey k, ushort seq, double stamp, UsableValue v, PoiState poi = default)
+        {
+            if (k.Building)
+            {
+                w.Reset(); w.U8(Protocol.LiveUsable); w.U32(0); WritePoi(w, k.Poi, poi); w.U16(seq); w.F64(stamp); return;
+            }
+            w.Reset(); w.U8(Protocol.LiveUsable); w.U32(k.Net); w.U32(k.Epoch); w.VarU32((uint)k.Item); w.VarU32((uint)k.Usable);
+            w.U16(seq); w.F64(stamp); w.U16(v.X); w.U16(v.Y); w.U16(v.Slide); w.VarI32(v.Turn); w.U16(v.Tuned);
+        }
+        internal static void ReadLiveUsable(NetReader r, out UsableKey k, out ushort seq, out double stamp, out UsableValue v)
+            => ReadLiveUsable(r, out k, out seq, out stamp, out v, out _);
+        internal static void ReadLiveUsable(NetReader r, out UsableKey k, out ushort seq, out double stamp, out UsableValue v, out PoiState poi)
+        {
+            k = new UsableKey { Net = r.U32() }; poi = default;
+            if (k.Net == 0)
+            {
+                k.Building = true; ReadPoi(r, out k.Poi, out poi); seq = r.U16(); stamp = r.F64(); v = default; return;
+            }
+            k.Epoch = r.U32(); k.Item = (int)r.VarU32(); k.Usable = (int)r.VarU32();
+            seq = r.U16(); stamp = r.F64(); v = new UsableValue { X = r.U16(), Y = r.U16(), Slide = r.U16(), Turn = r.VarI32(), Tuned = r.U16() };
+        }
+        internal static string UN(double n) => n.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
+        internal static string UsableValuesJson(PoiState v) => "[" + UN(v.XRot) + "," + UN(v.YRot) + "," + UN(v.Slide) + "," + v.Turn + "," + UN(v.Tuned) + "]";
+        internal static void InvalidateHierarchy(tosaveitemscript item) => _usableHierarchy.Remove(item);
+        internal static void ResetHierarchy() => _usableHierarchy = new ConditionalWeakTable<tosaveitemscript, UsableHierarchy>();
+    }
+
+    public static partial class Entities
+    {
+        internal static usablescript[] ItemUsables(tosaveitemscript it) => EntityUsables.ItemUsables(it);
+        internal static UsableValue UsableBits(usablescript u) => EntityUsables.UsableBits(u);
+        internal static PoiState UsableState(usablescript u) => EntityUsables.UsableState(u);
+        internal static PoiState UsableState(usablescript u, UsableValue v) => EntityUsables.UsableState(u, v);
+        internal static string UN(double n) => EntityUsables.UN(n);
+        internal static string UsableValuesJson(PoiState v) => EntityUsables.UsableValuesJson(v);
+    }
+
     public static partial class Entities
     {
         public static long LiveUsablesSent, LiveUsablesRelayed, LiveUsablesApplied, LiveUsablesStale, LiveUsablesRefused;
@@ -36,9 +106,7 @@ namespace TLDRevamp.Net
             public readonly UsableMotion<PoiState> Motion = new UsableMotion<PoiState>();
         }
         private struct LiveOrder { public ushort Seq; public double Stamp; }
-        private sealed class UsableHierarchy { public usablescript[] Usables; }
         private sealed class UsableBefore { public UsableValue Value; public PoiState Raw; }
-        private static ConditionalWeakTable<tosaveitemscript, UsableHierarchy> _usableHierarchy = new ConditionalWeakTable<tosaveitemscript, UsableHierarchy>();
         private static ConditionalWeakTable<usablescript, UsableBefore> _usableBefore = new ConditionalWeakTable<usablescript, UsableBefore>();
         private static readonly Dictionary<usablescript, LocalUsable> _localUsables = new Dictionary<usablescript, LocalUsable>();
         private static readonly Dictionary<UsableKey, RemoteUsable> _remoteUsables = new Dictionary<UsableKey, RemoteUsable>();
@@ -52,28 +120,13 @@ namespace TLDRevamp.Net
         private static readonly List<UsableKey> _doneUsables = new List<UsableKey>();
         private static readonly NetWriter WL = new NetWriter();
 
-        /// The save's registered order includes linked controls outside the item's transform hierarchy.
-        internal static usablescript[] ItemUsables(tosaveitemscript it)
-        {
-            if (_usableHierarchy.TryGetValue(it, out var h))
-            {
-                bool same = h.Usables.Length == (it.usables != null ? it.usables.Count : 0);
-                for (int i = 0; same && i < h.Usables.Length; i++) same = h.Usables[i] == it.usables[i];
-                if (same) return h.Usables;
-                _usableHierarchy.Remove(it);
-            }
-            var list = new List<usablescript>();
-            if (it.usables != null) list.AddRange(it.usables);
-            h = new UsableHierarchy { Usables = list.ToArray() }; _usableHierarchy.Add(it, h);
-            return h.Usables;
-        }
         /// A part keeps its own entity after re-bolting. Retire motion from its previous mounting/owner, but keep
         /// sequence numbers: resetting them would make the next drag look older to viewers of the same entity.
         private static void LiveUsablesChanged(tosaveitemscript it)
         {
             if (it == null) return;
             foreach (var u in ItemUsables(it)) if (u != null) _usableBefore.Remove(u);
-            _usableHierarchy.Remove(it);
+            EntityUsables.InvalidateHierarchy(it);
             _deadUsables.Clear();
             foreach (var kv in _localUsables) if (kv.Value.Item == it) _deadUsables.Add(kv.Key);
             foreach (var u in _deadUsables) { _localUsables.Remove(u); _usableBefore.Remove(u); }
@@ -106,16 +159,6 @@ namespace TLDRevamp.Net
         }
         internal static usablescript UsableAt(uint net, int item, int usable) =>
             ByNet.TryGetValue(net, out var e) ? LiveUsableOf(new UsableKey { Net = net, Epoch = e.Epoch, Item = item, Usable = usable }, out _) : null;
-        private static ushort QuantizeUsable(float v, float min, float max) => (ushort)Mathf.RoundToInt(Mathf.InverseLerp(min, max, v) * 65535f);
-        internal static UsableValue UsableBits(usablescript u) => new UsableValue {
-            X = QuantizeUsable(u.xRot, u.minX, u.maxX), Y = QuantizeUsable(u.yRot, u.minY, u.maxY),
-            Slide = QuantizeUsable(u.slideValue, 0f, 1f), Tuned = QuantizeUsable(u.tunedFloat, u.tunedFloatMin, u.tunedFloatMax), Turn = u.currentTurnState };
-        internal static PoiState UsableState(usablescript u) => new PoiState { XRot = u.xRot, YRot = u.yRot, Slide = u.slideValue, Tuned = u.tunedFloat, Turn = u.currentTurnState };
-        private static bool SameUsable(PoiState a, PoiState b) => a.XRot == b.XRot && a.YRot == b.YRot && a.Slide == b.Slide && a.Tuned == b.Tuned && a.Turn == b.Turn;
-        internal static PoiState UsableState(usablescript u, UsableValue v) => new PoiState {
-            XRot = Mathf.Lerp(u.minX, u.maxX, v.X / 65535f), YRot = Mathf.Lerp(u.minY, u.maxY, v.Y / 65535f),
-            Slide = v.Slide / 65535f, Tuned = Mathf.Lerp(u.tunedFloatMin, u.tunedFloatMax, v.Tuned / 65535f), Turn = v.Turn };
-
         /// Remember the first input's starting value so even its first zero-delta call stays silent.
         [HarmonyLib.HarmonyPatch]
         private static class LiveUsableInput
@@ -130,7 +173,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static void Prefix(usablescript __instance, bool syncinmulti)
             {
-                if (syncinmulti && InSession && !_applyingState && !_applyingLive && !_applyingPoi &&
+                if (syncinmulti && InSession && !_applyingState && !_applyingLive && !EntityUsables.ApplyingPoi &&
                     !_localUsables.ContainsKey(__instance) && !_usableBefore.TryGetValue(__instance, out _))
                     _usableBefore.Add(__instance, new UsableBefore { Value = UsableBits(__instance), Raw = UsableState(__instance) });
             }
@@ -140,7 +183,7 @@ namespace TLDRevamp.Net
         private static bool MarkLiveUsable(usablescript u)
         {
             if (!InSession) return false;
-            if (_applyingState || _applyingLive || _applyingPoi) return true;
+            if (_applyingState || _applyingLive || EntityUsables.ApplyingPoi) return true;
             tosaveitemscript it = null; Ent e = null; int idx = 0;
             UsableKey key;
             if (u.setidPoi) key = PoiLiveKey(u);
@@ -166,8 +209,8 @@ namespace TLDRevamp.Net
             }
             s.HookAt = Time.realtimeSinceStartup;
             var v = UsableBits(u); var raw = UsableState(u);
-            if (!s.Dirty && SameUsable(s.Raw, raw)) return true;
-            if (!SameUsable(s.Raw, raw) || !s.Final) s.ChangedAt = s.HookAt;
+            if (!s.Dirty && EntityUsables.SameUsable(s.Raw, raw)) return true;
+            if (!EntityUsables.SameUsable(s.Raw, raw) || !s.Final) s.ChangedAt = s.HookAt;
             s.Value = v; s.Raw = raw; s.Final = true; s.Dirty = !s.HasSent || !s.Sent.Equals(v);
             if (key.Building) { KnownPoiUsables[key.Poi] = raw; PoiObserved(key.Poi).ChangedAt = s.HookAt; }
             if (e != null && e.Proxy)
@@ -186,27 +229,6 @@ namespace TLDRevamp.Net
             foreach (var s in _localUsables.Values) if (s.Item == it && s.Final && now - s.ChangedAt < LiveQuietS) return true;
             foreach (var s in _remoteUsables.Values) if (s.U != null && s.Entity != null && s.Entity.Items.Contains(it) && ItemOf(s.U, s.U.tosaveid, s.U.setid) == it && now - s.At < LiveQuietS) return true;
             return false;
-        }
-        private static void WriteLiveUsable(NetWriter w, UsableKey k, ushort seq, double stamp, UsableValue v, PoiState poi = default)
-        {
-            if (k.Building)
-            {
-                w.Reset(); w.U8(Protocol.LiveUsable); w.U32(0); WritePoi(w, k.Poi, poi); w.U16(seq); w.F64(stamp); return;
-            }
-            w.Reset(); w.U8(Protocol.LiveUsable); w.U32(k.Net); w.U32(k.Epoch); w.VarU32((uint)k.Item); w.VarU32((uint)k.Usable);
-            w.U16(seq); w.F64(stamp); w.U16(v.X); w.U16(v.Y); w.U16(v.Slide); w.VarI32(v.Turn); w.U16(v.Tuned);
-        }
-        private static void ReadLiveUsable(NetReader r, out UsableKey k, out ushort seq, out double stamp, out UsableValue v)
-            => ReadLiveUsable(r, out k, out seq, out stamp, out v, out _);
-        private static void ReadLiveUsable(NetReader r, out UsableKey k, out ushort seq, out double stamp, out UsableValue v, out PoiState poi)
-        {
-            k = new UsableKey { Net = r.U32() }; poi = default;
-            if (k.Net == 0)
-            {
-                k.Building = true; ReadPoi(r, out k.Poi, out poi); seq = r.U16(); stamp = r.F64(); v = default; return;
-            }
-            k.Epoch = r.U32(); k.Item = (int)r.VarU32(); k.Usable = (int)r.VarU32();
-            seq = r.U16(); stamp = r.F64(); v = new UsableValue { X = r.U16(), Y = r.U16(), Slide = r.U16(), Turn = r.VarI32(), Tuned = r.U16() };
         }
         private static bool LiveNewer(Dictionary<UsableKey, LiveOrder> orders, UsableKey k, ushort seq, double stamp)
         {
@@ -239,7 +261,7 @@ namespace TLDRevamp.Net
         { LiveUsablesRefused++; Refuse(ref counter, reason, $"live usable from player {from}, net {net}: {reason}"); }
         private static void ServerLiveUsable(int from, NetReader r)
         {
-            ReadLiveUsable(r, out var k, out ushort seq, out double stamp, out var v, out var poi);
+            EntityUsables.ReadLiveUsable(r, out var k, out ushort seq, out double stamp, out var v, out var poi);
             if (k.Building) { ServerPoiMotion(from, r, k, seq, stamp, poi, false); return; }
             if (r.Bad || r.Remaining != 0 || !Finite(stamp) || Math.Abs(SessionLog.St - stamp) > 10 || !Server.TryGetValue(k.Net, out var se) || k.Epoch != se.Epoch)
             { RefuseLive(ref EditRefusedValues, "live address/clock", from, k.Net); return; }
@@ -252,7 +274,7 @@ namespace TLDRevamp.Net
             if (!_liveServerIn.TryGetValue(from, out var orders)) _liveServerIn[from] = orders = new Dictionary<UsableKey, LiveOrder>();
             if (!LiveNewer(orders, k, seq, stamp)) return;
             _liveRelaySeq.TryGetValue(k, out ushort relaySeq); _liveRelaySeq[k] = ++relaySeq;
-            WriteLiveUsable(WL, k, relaySeq, stamp, v);
+            EntityUsables.WriteLiveUsable(WL, k, relaySeq, stamp, v);
             Mp.Server.ReadySpots(_spots);
             var where = EditReachEntity(se).Where;
             foreach (var s in _spots)
@@ -268,7 +290,7 @@ namespace TLDRevamp.Net
         }
         private static void ApplyLiveUsable(NetReader r)
         {
-            ReadLiveUsable(r, out var k, out ushort seq, out double stamp, out var v, out var poi);
+            EntityUsables.ReadLiveUsable(r, out var k, out ushort seq, out double stamp, out var v, out var poi);
             if (k.Building) { ReceivePoiMotion(r, k, seq, stamp, poi, false); return; }
             if (r.Bad || !Finite(stamp) || !LiveAfterRecord(k, stamp)) { LiveUsablesStale++; return; }
             if (!LiveNewer(_liveIn, k, seq, stamp)) return;
@@ -340,7 +362,7 @@ namespace TLDRevamp.Net
                     s.SendAt = Math.Max(now, s.SendAt + LiveStepS); s.Dirty = false;
                     s.Sent = s.Value; s.HasSent = true;
                     _liveOut[s.Key] = ++s.Seq;
-                    WriteLiveUsable(WL, s.Key, s.Seq, SessionLog.St, s.Value, s.Key.Building ? UsableState(s.U, s.Value) : default); ToServer(WL, false); LiveUsablesSent++;
+                    EntityUsables.WriteLiveUsable(WL, s.Key, s.Seq, SessionLog.St, s.Value, s.Key.Building ? UsableState(s.U, s.Value) : default); ToServer(WL, false); LiveUsablesSent++;
                     if (s.Key.Building) { PoiObserved(s.Key.Poi).Sent.Add(now); PoiUsablesSent++; }
                     SessionLog.Event("live-sent", s.Key.Net, item: s.Key.Item, slot: s.Key.Usable, from: MyId, epoch: s.Key.Epoch, sample: true);
                 }
@@ -394,13 +416,11 @@ namespace TLDRevamp.Net
                 foreach (var k in _liveOut.Keys) if (!k.Building) _doneUsables.Add(k);
                 foreach (var k in _doneUsables) _liveOut.Remove(k);
             }
-            _usableHierarchy = new ConditionalWeakTable<tosaveitemscript, UsableHierarchy>(); DevHooks.UsableReset?.Invoke();
+            EntityUsables.ResetHierarchy(); DevHooks.UsableReset?.Invoke();
             _usableBefore = new ConditionalWeakTable<usablescript, UsableBefore>();
             EditDirty.Clear(); EditKinds.Clear(); _editFlushAt = 0; _resyncFirst = 0;
         }
         public static string LiveUsableStats() => "{\"sent\":" + LiveUsablesSent + ",\"relayed\":" + LiveUsablesRelayed +
             ",\"applied\":" + LiveUsablesApplied + ",\"stale\":" + LiveUsablesStale + ",\"refused\":" + LiveUsablesRefused + "}";
-        internal static string UN(double n) => n.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
-        internal static string UsableValuesJson(PoiState v) => "[" + UN(v.XRot) + "," + UN(v.YRot) + "," + UN(v.Slide) + "," + v.Turn + "," + UN(v.Tuned) + "]";
     }
 }

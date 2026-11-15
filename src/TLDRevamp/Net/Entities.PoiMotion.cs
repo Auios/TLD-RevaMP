@@ -1,9 +1,28 @@
+using UsableKey = TLDRevamp.Net.Entities.UsableKey;
+using UsableValue = TLDRevamp.Net.Entities.UsableValue;
+using PoiKey = TLDRevamp.Net.Entities.PoiKey;
+using PoiState = TLDRevamp.Net.Entities.PoiState;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace TLDRevamp.Net
 {
+    internal static partial class EntityUsables
+    {
+        internal static void WritePoi(NetWriter w, PoiKey k, PoiState st)
+        {
+            w.VarU32((uint)k.Gen); w.F64(k.X); w.F64(k.Y); w.F64(k.Z); w.VarU32((uint)k.U);
+            w.F32(st.XRot); w.F32(st.YRot); w.F32(st.Slide); w.VarI32(st.Turn); w.F32(st.Tuned);
+        }
+        internal static bool ReadPoi(NetReader r, out PoiKey k, out PoiState st)
+        {
+            k = new PoiKey { Gen = (int)r.VarU32(), X = r.F64(), Y = r.F64(), Z = r.F64(), U = (int)r.VarU32() };
+            st = new PoiState { XRot = r.F32(), YRot = r.F32(), Slide = r.F32(), Turn = r.VarI32(), Tuned = r.F32() };
+            return !r.Bad && Entities.IsFinite(st.XRot) && Entities.IsFinite(st.YRot) && Entities.IsFinite(st.Slide) && Entities.IsFinite(st.Tuned);
+        }
+    }
+
     public static partial class Entities
     {
         internal struct PoiKey : IEquatable<PoiKey>
@@ -47,17 +66,7 @@ namespace TLDRevamp.Net
         internal static UsableKey PoiLiveKey(usablescript u) => new UsableKey { Building = true,
             Poi = new PoiKey { Gen = u.poigenid, X = u.poiid.x, Y = u.poiid.y, Z = u.poiid.z, U = u.usableid } };
 
-        internal static void WritePoi(NetWriter w, PoiKey k, PoiState st)
-        {
-            w.VarU32((uint)k.Gen); w.F64(k.X); w.F64(k.Y); w.F64(k.Z); w.VarU32((uint)k.U);
-            w.F32(st.XRot); w.F32(st.YRot); w.F32(st.Slide); w.VarI32(st.Turn); w.F32(st.Tuned);
-        }
-        private static bool ReadPoi(NetReader r, out PoiKey k, out PoiState st)
-        {
-            k = new PoiKey { Gen = (int)r.VarU32(), X = r.F64(), Y = r.F64(), Z = r.F64(), U = (int)r.VarU32() };
-            st = new PoiState { XRot = r.F32(), YRot = r.F32(), Slide = r.F32(), Turn = r.VarI32(), Tuned = r.F32() };
-            return !r.Bad && Finite(st.XRot) && Finite(st.YRot) && Finite(st.Slide) && Finite(st.Tuned);
-        }
+        internal static void WritePoi(NetWriter w, PoiKey k, PoiState st) => EntityUsables.WritePoi(w, k, st);
         private static void WritePoiFinal(NetWriter w, UsableKey k, ushort seq, double stamp, PoiState st)
         { w.Reset(); w.U8(PoiUsable); WritePoi(w, k.Poi, st); w.U16(seq); w.F64(stamp); }
         private static void SendPoiFinal(LocalUsable s)
@@ -69,12 +78,12 @@ namespace TLDRevamp.Net
         }
         private static void ServerPoiUsable(int from, NetReader r)
         {
-            ReadPoi(r, out var k, out var st); ushort seq = r.U16(); double stamp = r.F64();
+            EntityUsables.ReadPoi(r, out var k, out var st); ushort seq = r.U16(); double stamp = r.F64();
             ServerPoiMotion(from, r, new UsableKey { Building = true, Poi = k }, seq, stamp, st, true);
         }
         private static void ApplyPoiUsable(NetReader r)
         {
-            ReadPoi(r, out var k, out var st); ushort seq = r.U16(); double stamp = r.F64();
+            EntityUsables.ReadPoi(r, out var k, out var st); ushort seq = r.U16(); double stamp = r.F64();
             ReceivePoiMotion(r, new UsableKey { Building = true, Poi = k }, seq, stamp, st, true);
         }
         private static bool PoiPacketValid(NetReader r, UsableKey k, double stamp, PoiState st) =>
@@ -96,7 +105,7 @@ namespace TLDRevamp.Net
             if (!ServerPoiUsables.TryGetValue(k.Poi, out var bytes) || bytes.Length != WL.Len) bytes = new byte[WL.Len];
             Buffer.BlockCopy(WL.Buf, 0, bytes, 0, WL.Len);
             ServerPoiUsables[k.Poi] = bytes;
-            if (!final) WriteLiveUsable(WL, k, relaySeq, stamp, default, st);
+            if (!final) EntityUsables.WriteLiveUsable(WL, k, relaySeq, stamp, default, st);
             RelayPoi(k.Poi, WL, from, final);
         }
         /// A/B: the sender of a refused building usable hears how it is (false: its door stayed moved on its screen alone, for good).
@@ -125,7 +134,7 @@ namespace TLDRevamp.Net
         {
             if (!PoiPacketValid(r, k, stamp, st) || !LiveNewer(_liveIn, k, seq, stamp)) return;
             var observation = PoiObserved(k.Poi);
-            if (!KnownPoiUsables.TryGetValue(k.Poi, out var was) || !SameUsable(was, st)) observation.ChangedAt = Time.realtimeSinceStartup;
+            if (!KnownPoiUsables.TryGetValue(k.Poi, out var was) || !EntityUsables.SameUsable(was, st)) observation.ChangedAt = Time.realtimeSinceStartup;
             KnownPoiUsables[k.Poi] = st;
             if (!final) { observation.Received.Add(Time.realtimeSinceStartup); observation.ReceivedTotal++; }
             var u = PoiUsableOf(k.Poi);

@@ -32,11 +32,11 @@ namespace TLDRevamp.Net
             for (int length = 1; length < packets[1].Length; length++)
             {
                 var r = new NetReader { Buf = packets[1], Pos = 1, End = length };
-                ReadLiveUsable(r, out var cutKey, out _, out double cutStamp, out _, out var cutState);
+                EntityUsables.ReadLiveUsable(r, out var cutKey, out _, out double cutStamp, out _, out var cutState);
                 Check(!PoiPacketValid(r, cutKey, cutStamp, cutState), "truncated building live protocol refused");
             }
             var extra = new byte[packets[1].Length + 1]; Array.Copy(packets[1], extra, packets[1].Length);
-            var trailing = Reader(extra); ReadLiveUsable(trailing, out var trailingKey, out _, out double trailingStamp, out _, out var trailingState);
+            var trailing = Reader(extra); EntityUsables.ReadLiveUsable(trailing, out var trailingKey, out _, out double trailingStamp, out _, out var trailingState);
             Check(!PoiPacketValid(trailing, trailingKey, trailingStamp, trailingState), "trailing building protocol bytes refused");
             _localUsables.Clear();
             foreach (var packet in packets)
@@ -44,13 +44,13 @@ namespace TLDRevamp.Net
                 if (packet[0] == PoiUsable) { SessionLog.St = 11.9; ServerPoiUsable(1, Reader(packet)); }
                 else
                 {
-                    ReadLiveUsable(Reader(packet), out var key, out _, out double stamp, out _, out var st);
+                    EntityUsables.ReadLiveUsable(Reader(packet), out var key, out _, out double stamp, out _, out var st);
                     Check(key.Equals(k) && st.XRot >= 0 && st.XRot <= 90, "building live protocol address/value round trip");
                     SessionLog.St = stamp; ServerLiveUsable(1, Reader(packet));
                 }
             }
             Check(Relayed.Count == count && RelayReliable[RelayReliable.Count - 1], "server relays live and final with their delivery modes");
-            ReadPoi(Reader(ServerPoiUsables[k.Poi]), out var recordKey, out var record);
+            EntityUsables.ReadPoi(Reader(ServerPoiUsables[k.Poi]), out var recordKey, out var record);
             Check(recordKey.Equals(k.Poi) && record.XRot == final, "server exact reliable record survives for joiners");
             long stale = LiveUsablesStale;
             ServerLiveUsable(1, Reader(packets[1]));
@@ -65,8 +65,8 @@ namespace TLDRevamp.Net
                 while (next < Relayed.Count)
                 {
                     var packet = Relayed[next]; double stamp;
-                    if (packet[0] == PoiUsable) { var r = Reader(packet); ReadPoi(r, out _, out _); r.U16(); stamp = r.F64(); }
-                    else ReadLiveUsable(Reader(packet), out _, out _, out stamp, out _);
+                    if (packet[0] == PoiUsable) { var r = Reader(packet); EntityUsables.ReadPoi(r, out _, out _); r.U16(); stamp = r.F64(); }
+                    else EntityUsables.ReadLiveUsable(Reader(packet), out _, out _, out stamp, out _);
                     if (stamp + .02 + next % 4 * .003 > now) break;
                     next++;
                     if (packet[0] == PoiUsable) ApplyPoiUsable(Reader(packet));
@@ -107,7 +107,7 @@ namespace TLDRevamp.Net
             Time.realtimeSinceStartup = 16.4f; SessionLog.St = 16.4; LiveUsableTick();
             Check(Sent.Count == 0, "sub-quantum change postpones reliable settlement");
             Time.realtimeSinceStartup = 16.6f; SessionLog.St = 16.6; LiveUsableTick();
-            ReadPoi(Reader(Sent[0]), out _, out var exact);
+            EntityUsables.ReadPoi(Reader(Sent[0]), out _, out var exact);
             Check(Sent.Count == 1 && Reliable[0] && exact.XRot == 45.0002f, "sub-quantum final keeps exact raw value");
             ushort beforeReload = _liveOut[k];
             _liveOut[new UsableKey { Net = 44 }] = 123;
@@ -130,11 +130,11 @@ namespace TLDRevamp.Net
                 : "building rate reads allocate " + warmed + " bytes in the warmed window (first window: " + firstWindow + ")");
             // Truncated/trailing/nonfinite/stale input is not admitted, and the existing authority check is used.
             int relays = Relayed.Count; PoiAllowed = false; SessionLog.St = 20;
-            WriteLiveUsable(WL, k, 400, 20, default, new PoiState { XRot = 12 }); ServerLiveUsable(2, Reader(WL.Buf.AsSpan(0, WL.Len).ToArray()));
+            EntityUsables.WriteLiveUsable(WL, k, 400, 20, default, new PoiState { XRot = 12 }); ServerLiveUsable(2, Reader(WL.Buf.AsSpan(0, WL.Len).ToArray()));
             Check(Relayed.Count == relays, "building motion obeys CheckPoiUsable authority"); PoiAllowed = true;
-            WriteLiveUsable(WL, k, 400, double.NaN, default, default); ServerLiveUsable(2, Reader(WL.Buf.AsSpan(0, WL.Len).ToArray()));
+            EntityUsables.WriteLiveUsable(WL, k, 400, double.NaN, default, default); ServerLiveUsable(2, Reader(WL.Buf.AsSpan(0, WL.Len).ToArray()));
             Check(Relayed.Count == relays, "building nonfinite clock refused");
-            WriteLiveUsable(WL, k, 400, 20, default, new PoiState { XRot = float.NaN }); ServerLiveUsable(2, Reader(WL.Buf.AsSpan(0, WL.Len).ToArray()));
+            EntityUsables.WriteLiveUsable(WL, k, 400, 20, default, new PoiState { XRot = float.NaN }); ServerLiveUsable(2, Reader(WL.Buf.AsSpan(0, WL.Len).ToArray()));
             Check(Relayed.Count == relays, "building nonfinite motion refused");
             // Reordered sender sequence, source change and wrap all share the live ordering logic.
             var orders = new System.Collections.Generic.Dictionary<UsableKey, LiveOrder>();

@@ -53,10 +53,13 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        internal static bool HasTpaCopy(uint net) => ByNet.ContainsKey(net);
+        internal static void RequestTpaCopy(uint net) { W.Reset(); W.U8(Refetch); W.U32(net); WriteLostPart(W, net); ToServer(W, true); }
+        internal static void ReplayTpaMessage(byte type, NetReader r) => ClientReceive(type, r);
         internal static int MyId = 1;
         sealed class SEnt { internal uint NetId, ParentNet; internal int PartIndex = -1; internal Vector3d Where;
             internal List<uint> Parts = new List<uint>(); internal List<int> ItemState = new List<int>(); }
-        const byte Add = 22, State = 23, CompactState = 98, Resync = 31, PartDetached = 27, AttachSync = 41, DetachSync = 42,
+        internal const byte Add = 22, State = 23, CompactState = 98, Resync = 31, PartDetached = 27, AttachSync = 41, DetachSync = 42,
             PhysLockSync = 55, MemberGone = 86, RemoveItem = 35, Worn = 85, RabbitState = 90, AiState = 50, Owner = 25, HandoverState = 59, Edit = 32,
             HitchCommand = 100, HitchFreeze = 101, HitchFrozen = 102, Refetch = 58, RadioSync = 54, IgnitionKey = 96;
         static readonly Dictionary<int, HashSet<uint>> _staleEnts = new Dictionary<int, HashSet<uint>>();
@@ -64,6 +67,7 @@ namespace TLDRevamp.Net
         static readonly List<uint> States = new List<uint>();
         static int Resyncs, Refetched;
         static byte FailType;
+        static readonly List<string> Frozen = new List<string>();
         static HashSet<uint> KnownBy(int player) => Known;
         static void SendSettledState(int player, SEnt se) { States.Add(se.NetId); ServerSendTo(player, W, true); }
         static void SendRabbitSnapshot(int player, SEnt se) { }
@@ -71,7 +75,7 @@ namespace TLDRevamp.Net
         static void WritePartDetached(NetWriter w, SEnt se) { w.Reset(); w.U8(PartDetached); }
         static void WriteResyncAll(NetWriter w, SEnt se) { Resyncs++; w.Reset(); w.U8(Resync); }
         static void ServerSendTo(int player, NetWriter w, bool reliable)
-        { if (_tpaSending && (FailNext || (FailType != 0 && w.Len > 0 && w.Buf[0] == FailType)))
+        { Frozen.Add("peer " + player + " " + reliable + " " + Convert.ToHexString(w.Buf.AsSpan(0, w.Len)) + " " + _tpaSending + " " + _tpaSendFailed); if (_tpaSending && (FailNext || (FailType != 0 && w.Len > 0 && w.Buf[0] == FailType)))
             { _tpaSendFailed = true; FailNext = false; FailType = 0; } }
         static void InterestGotAll(int player, uint net) { _staleEnts[player].Remove(net); }
         static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
@@ -82,6 +86,7 @@ namespace TLDRevamp.Net
         static void AddReject(uint net, string why) { }
         static void ToServer(NetWriter w, bool reliable)
         {
+            Frozen.Add("request " + reliable + " " + Convert.ToHexString(w.Buf.AsSpan(0, w.Len)));
             var r = new NetReader { Buf = w.Buf, End = w.Len };
             if (r.U8() == Refetch) Refetches.Add(r.U32());
         }
@@ -94,13 +99,15 @@ namespace TLDRevamp.Net
         static void WriteLostPart(NetWriter w, uint net) { }
         static void SendObject(int player, SEnt se)
         {
+            Frozen.Add("object " + player + " " + se.NetId + " " + _tpaSending + " " + FailNext);
             Sent.Add(se.NetId); Known.Add(se.NetId);
             if (FailNext && _tpaSending) { _tpaSendFailed = true; FailNext = false; }
         }
         static void ClientReceive(byte type, NetReader r)
         {
-            if (DeferTpa(type, r)) return;
-            TpaCopyMessage(type, r);
+            if (EntityTeleportRefresh.DeferTpa(type, r)) return;
+            EntityTeleportRefresh.TpaCopyMessage(type, r);
+            Frozen.Add("apply " + type + " " + Convert.ToHexString(r.Buf.AsSpan(r.Pos, r.Remaining)));
             Applied.Add(type * 1000 + r.U8());
         }
         static void At(float now) { Time.realtimeSinceStartup = now; ServerTpaTick(); }
@@ -182,7 +189,7 @@ namespace TLDRevamp.Net
             foreach (byte type in new[] { Resync, RabbitState })
             {
                 var w = new NetWriter(); w.U32((uint)(6000 + type));
-                var r = new NetReader { Buf = w.Buf, End = w.Len }; TpaCopyMessage(type, r); TpaCopyMessage(type, r);
+                var r = new NetReader { Buf = w.Buf, End = w.Len }; EntityTeleportRefresh.TpaCopyMessage(type, r); EntityTeleportRefresh.TpaCopyMessage(type, r);
             }
             check(Refetches.Count == 4, "missing Resync and RabbitState nets each refetch once");
             Tpa.RefreshingObjects = false; Applied.Clear();
@@ -227,6 +234,10 @@ namespace TLDRevamp.Net
             check(Applied[before] == 27042 && Applied[before + 1] == 25043 && Applied[before + 2] == 101043 && Applied[before + 3] == 102043,
                 "part, ownership, hitch freeze and frozen pose keep wire order");
             ResetTpaSync();
+            string rows = string.Join("\n", Frozen) + "\n";
+            const string capture = "tools/unit/EntityTeleportRows.txt";
+            if (Environment.GetEnvironmentVariable("CAPTURE_BATCH12_HEAD") == "1") System.IO.File.WriteAllText(capture, rows);
+            check(rows == System.IO.File.ReadAllText(capture).Replace("\r\n", "\n"), "TPA sends, failure guards, refetch bytes and replay order match frozen eaa5f6c rows");
         }
     }
     public static class Protocol { public const byte LiveUsable = 93; }

@@ -48,10 +48,11 @@ static partial class EntitySplitTest
         }
         ReproPatch("ReproGrip", "Prefix", p); ReproPatch("ReproRelease", "Prefix", p);
         var u = new usablescript { ParentComponent = it, slideValue = .5f, xRot = 1, yRot = 2, currentTurnState = 3, tunedFloat = .25f };
-        it.Children.Add(u); n = ReproRecorder.Rows.Count;
+        it.Children.Add(u); it.usables.Add(u); n = ReproRecorder.Rows.Count;
         foreach (string guard in new[] { "_applyingLive", "_applyingState", "_applyingPoi" })
         {
-            Set(typeof(Entities), guard, true); ReproPatch("ReproUsable", "Postfix", u, true); Set(typeof(Entities), guard, false);
+            var owner = guard == "_applyingPoi" ? typeof(EntityUsables) : typeof(Entities);
+            Set(owner, guard, true); ReproPatch("ReproUsable", "Postfix", u, true); Set(owner, guard, false);
         }
         ReproPatch("ReproUsable", "Postfix", u, false); ReproCall("ReproFlush");
         Check(ReproRecorder.Rows.Count == n, "usable replay and sync false guards");

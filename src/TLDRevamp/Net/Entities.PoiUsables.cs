@@ -1,3 +1,7 @@
+using UsableKey = TLDRevamp.Net.Entities.UsableKey;
+using UsableValue = TLDRevamp.Net.Entities.UsableValue;
+using PoiKey = TLDRevamp.Net.Entities.PoiKey;
+using PoiState = TLDRevamp.Net.Entities.PoiState;
 using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
@@ -5,12 +9,12 @@ using UnityEngine;
 namespace TLDRevamp.Net
 {
     /// Building addresses, game lookup, respawn restoration and bridge controls.
-    public static partial class Entities
+    internal static partial class EntityUsables
     {
-        public const byte PoiUsable = 52;
         public static long PoiUsablesSent, PoiUsablesApplied, PoiUsablesOnSpawn, PoiUsablesUnplaced;
 
         private static bool _applyingPoi;
+        internal static bool ApplyingPoi => _applyingPoi;
 
         [HarmonyPatch(typeof(usablescript), nameof(usablescript.SyncMulti), new[] { typeof(bool) })]
         private static class PoiUsableChanged
@@ -18,18 +22,7 @@ namespace TLDRevamp.Net
             [HarmonyPostfix]
             private static void Postfix(usablescript __instance, bool syncinmulti)
             {
-                if (syncinmulti && InSession && !_applyingPoi && __instance.setidPoi) MarkLiveUsable(__instance);
-            }
-        }
-
-        /// A joiner: every building usable changed this session (with InterestRelay: as they come near each building).
-        private static void ServerPoiUsablesTo(int playerId)
-        {
-            if (InterestRelay) { PoiAllStale(playerId); return; }
-            foreach (var b in ServerPoiUsables.Values)
-            {
-                WS.Reset(); WS.Bytes(b, 0, b.Length);
-                ServerSendTo(playerId, WS, true);
+                if (syncinmulti && Entities.InSession && !_applyingPoi && __instance.setidPoi) Entities.MarkPoiUsable(__instance);
             }
         }
 
@@ -57,13 +50,13 @@ namespace TLDRevamp.Net
 
         private static void ApplyKnown(poiScript p)
         {
-            if (!InSession || KnownPoiUsables.Count == 0 || p == null || p.usables == null) return;
+            if (!Entities.InSession || !Entities.HasKnownPoiUsables || p == null || p.usables == null) return;
             for (int i = 0; i < p.usables.Count; i++)
             {
                 var u = p.usables[i];
                 if (u == null) continue;
                 var k = new PoiKey { Gen = p.poigenid, X = p.posID.x, Y = p.posID.y, Z = p.posID.z, U = i };
-                if (!KnownPoiUsables.TryGetValue(k, out var st)) continue;
+                if (!Entities.TryKnownPoiUsable(k, out var st)) continue;
                 _applyingPoi = true;
                 try { u.tunedFloat = st.Tuned; u.Refresh(st.Slide, st.XRot, st.YRot, st.Turn); PoiUsablesOnSpawn++; }
                 finally { _applyingPoi = false; }
@@ -74,25 +67,6 @@ namespace TLDRevamp.Net
         internal static string D(double v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
         internal static string F(float v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
 
-        internal static usablescript PoiFocusUsable()
-        {
-            if (!InSession || _telemetryLook == null) return null;
-            var u = _telemetryLook.GetComponentInParent<usablescript>();
-            return u != null && u.setidPoi ? u : null;
-        }
-        // ObjectPanels calls this only at its half-second text refresh, never from GUI repaint.
-        internal static string PoiFocusDescription(double now)
-        {
-            var u = PoiFocusUsable(); if (u == null) return null;
-            var k = PoiLiveKey(u); _poiObserved.TryGetValue(k.Poi, out var s);
-            string name = TelemetryPrivacy.ObjectName(u.gameObject.name);
-            return name + " / building part\nPoiKey: generator " + k.Poi.Gen + " / position " + D(k.Poi.X) + ", " + D(k.Poi.Y) + ", " + D(k.Poi.Z) +
-                " / usable " + k.Poi.U + "\nxRot " + F(u.xRot) + " / yRot " + F(u.yRot) + " / slide " + F(u.slideValue) + " / turn " + u.currentTurnState +
-                "\nlast change " + (s != null ? F((float)now - s.ChangedAt) + " s ago" : "unknown") +
-                "\nlive send " + (s != null ? s.Sent.Hz((float)now) : 0) + " Hz / receive " + (s != null ? s.Received.Hz((float)now) : 0) +
-                " Hz / interpolating " + (_remoteUsables.ContainsKey(k) ? "yes" : "no");
-        }
-
         /// The building's own snapshot loaded on respawn (poiGenScript: FStart, then save.Load): the session's newer state wins.
         [HarmonyPatch(typeof(save_poi), nameof(save_poi.Load), new[] { typeof(poiScript) })]
         private static class PoiSnapshotLoaded
@@ -101,12 +75,7 @@ namespace TLDRevamp.Net
             private static void Postfix(poiScript _poi) => ApplyKnown(_poi);
         }
 
-        private static void PoiUsablesReset() { ServerPoiUsables.Clear(); KnownPoiUsables.Clear(); _poiObserved.Clear(); _poiServerOrder.Clear(); }
-
-        public static string PoiUsableStats() => "{\"sent\":" + PoiUsablesSent + ",\"applied\":" + PoiUsablesApplied + ",\"onSpawn\":" + PoiUsablesOnSpawn +
-                                                 ",\"unplaced\":" + PoiUsablesUnplaced + ",\"known\":" + KnownPoiUsables.Count + ",\"serverKnown\":" + ServerPoiUsables.Count + ",\"removeDist\":[" + RemoveDists() + "]}";
-
-        private static string RemoveDists()
+        internal static string RemoveDists()
         {
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
             var r = new List<string>();
@@ -152,6 +121,56 @@ namespace TLDRevamp.Net
             var k = new PoiKey { Gen = int.Parse(a[at]), X = double.Parse(a[at + 1], ci), Y = double.Parse(a[at + 2], ci), Z = double.Parse(a[at + 3], ci), U = int.Parse(a[at + 4]) };
             return PoiUsableOf(k);
         }
+
+    }
+
+    public static partial class Entities
+    {
+        public const byte PoiUsable = 52;
+        public static long PoiUsablesSent { get => EntityUsables.PoiUsablesSent; set => EntityUsables.PoiUsablesSent = value; }
+        public static long PoiUsablesApplied { get => EntityUsables.PoiUsablesApplied; set => EntityUsables.PoiUsablesApplied = value; }
+        public static long PoiUsablesOnSpawn { get => EntityUsables.PoiUsablesOnSpawn; set => EntityUsables.PoiUsablesOnSpawn = value; }
+        public static long PoiUsablesUnplaced { get => EntityUsables.PoiUsablesUnplaced; set => EntityUsables.PoiUsablesUnplaced = value; }
+        internal static usablescript PoiUsableOf(PoiKey k) => EntityUsables.PoiUsableOf(k);
+        internal static string D(double v) => EntityUsables.D(v);
+        internal static string F(float v) => EntityUsables.F(v);
+        internal static string PoiStateJson(usablescript u) => EntityUsables.PoiStateJson(u);
+        internal static usablescript PoiArg(string[] a, int at) => EntityUsables.PoiArg(a, at);
+        public static string PoiList(float radius) => EntityUsables.PoiList(radius);
+        /// A joiner: every building usable changed this session (with InterestRelay: as they come near each building).
+        private static void ServerPoiUsablesTo(int playerId)
+        {
+            if (InterestRelay) { PoiAllStale(playerId); return; }
+            foreach (var b in ServerPoiUsables.Values)
+            {
+                WS.Reset(); WS.Bytes(b, 0, b.Length);
+                ServerSendTo(playerId, WS, true);
+            }
+        }
+
+        internal static usablescript PoiFocusUsable()
+        {
+            if (!InSession || _telemetryLook == null) return null;
+            var u = _telemetryLook.GetComponentInParent<usablescript>();
+            return u != null && u.setidPoi ? u : null;
+        }
+        // ObjectPanels calls this only at its half-second text refresh, never from GUI repaint.
+        internal static string PoiFocusDescription(double now)
+        {
+            var u = PoiFocusUsable(); if (u == null) return null;
+            var k = PoiLiveKey(u); _poiObserved.TryGetValue(k.Poi, out var s);
+            string name = TelemetryPrivacy.ObjectName(u.gameObject.name);
+            return name + " / building part\nPoiKey: generator " + k.Poi.Gen + " / position " + D(k.Poi.X) + ", " + D(k.Poi.Y) + ", " + D(k.Poi.Z) +
+                " / usable " + k.Poi.U + "\nxRot " + F(u.xRot) + " / yRot " + F(u.yRot) + " / slide " + F(u.slideValue) + " / turn " + u.currentTurnState +
+                "\nlast change " + (s != null ? F((float)now - s.ChangedAt) + " s ago" : "unknown") +
+                "\nlive send " + (s != null ? s.Sent.Hz((float)now) : 0) + " Hz / receive " + (s != null ? s.Received.Hz((float)now) : 0) +
+                " Hz / interpolating " + (_remoteUsables.ContainsKey(k) ? "yes" : "no");
+        }
+
+        private static void PoiUsablesReset() { ServerPoiUsables.Clear(); KnownPoiUsables.Clear(); _poiObserved.Clear(); _poiServerOrder.Clear(); }
+
+        public static string PoiUsableStats() => "{\"sent\":" + PoiUsablesSent + ",\"applied\":" + PoiUsablesApplied + ",\"onSpawn\":" + PoiUsablesOnSpawn +
+                                                 ",\"unplaced\":" + PoiUsablesUnplaced + ",\"known\":" + KnownPoiUsables.Count + ",\"serverKnown\":" + ServerPoiUsables.Count + ",\"removeDist\":[" + EntityUsables.RemoveDists() + "]}";
 
         /// One building usable's state here: `mp poiu gen x y z u`.
         public static string PoiGet(string[] a)

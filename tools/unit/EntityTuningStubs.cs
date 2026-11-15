@@ -120,14 +120,9 @@ namespace TLDRevamp.Net
         internal static void MarkEdit(tosaveitemscript it, bool fromTank = false, string kind = "") => LastEdit = kind;
         internal static Ent SharedGroupOf(tosaveitemscript it) => ByNet.Values.FirstOrDefault(e => e.Items.Contains(it));
         internal static Ent OwnEntity(tosaveitemscript it) => SharedGroupOf(it);
-        internal static usablescript[] ItemUsables(tosaveitemscript it) => it.Children.OfType<usablescript>().ToArray();
         internal static long AttachPosesBad;
         internal static long AttachPosesSent;
         internal static Transform AttachFrame(attachablescript at) => at.point == null ? null : at.point.parent ?? at.point;
-        internal struct PoiState { }
-        internal struct UsableKey { public uint Net, Epoch; public int Item, Usable; public bool Building; public int Poi; }
-        internal struct UsableValue { public ushort X, Y, Slide, Tuned; public int Turn; }
-        internal static void WritePoi(NetWriter w, int poi, PoiState state) => throw new NotSupportedException();
         internal static void ApplyAttachPose(Ent e, attachablescript at, Vector3 p, Quaternion q) { at.transform.localPosition = p; at.transform.localRotation = q; }
         internal static void TelemetryRender() { }
     }

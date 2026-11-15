@@ -7,4 +7,5 @@ source = (root / 'src/TLDRevamp/Net/Entities.Features.cs').read_text(encoding='u
 start = source.index('        internal static ReproRow ReproBinding(')
 end = source.index('        public const byte RabbitState', start)
 Path(sys.argv[1]).write_text('namespace TLDRevamp.Net { public static partial class Entities {\n'
+    + next(line for line in source.splitlines() if 'internal static bool UsablePoiApplying =>' in line) + '\n'
     + source[start:end] + '\n} }', encoding='utf-8')

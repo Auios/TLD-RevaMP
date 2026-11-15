@@ -15,6 +15,7 @@ static class LiveUsablesTest
 
 namespace TLDRevamp.Net
 {
+    internal static partial class EntityUsables { internal static bool ApplyingPoi => Entities.TestApplyingPoi; }
     internal static class EntityDoors
     {
         internal static bool BusControl(tosaveitemscript it, usablescript u) => false;
@@ -36,7 +37,7 @@ namespace TLDRevamp.Net
         internal class Group { internal List<save_item> items = new List<save_item>(); }
         private static List<Ent> LookupSet() => new List<Ent>(ByNet.Values);   // Entities.Placed: every object here is placed
         const byte PoiUsable = 52;
-        static bool _applyingPoi;
+        internal static bool TestApplyingPoi;
         static long PoiUsablesSent, PoiUsablesApplied, PoiUsablesUnplaced, PoiRefusedValues;
         static readonly Dictionary<PoiKey, usablescript> Buildings = new Dictionary<PoiKey, usablescript>();
         static usablescript PoiUsableOf(PoiKey k) => Buildings.TryGetValue(k, out var u) ? u : null;
@@ -67,6 +68,8 @@ namespace TLDRevamp.Net
         static bool CarriedFar(attachablescript at, out Ent carrier) { carrier = null; return false; }
         static bool TakeToken(object b, int p, float r, float burst) => true;
         static void ServerSendTo(int id, NetWriter w, bool reliable) { }
+        internal static bool IsFinite(double n) => Finite(n);
+        internal static bool IsFinite(float n) => Finite(n);
         static bool Finite(double n) => !double.IsNaN(n) && !double.IsInfinity(n);
         static bool Sane(float n) => Finite(n);
         static void Refuse(ref long n, string why, string what) => n++;
@@ -88,8 +91,27 @@ namespace TLDRevamp.Net
                 .Invoke(null, new object[] { u, true });
         }
         static void Check(bool ok, string why) => LiveUsablesTest.Check(ok, why);
+        private static void FrozenUsableBytes()
+        {
+            var rows = new List<string>();
+            var w = new NetWriter();
+            var k = new UsableKey { Net = 401, Epoch = 3, Item = 2, Usable = 7 };
+            var v = new UsableValue { X = 1, Y = 65535, Slide = 32768, Turn = -17, Tuned = 513 };
+            EntityUsables.WriteLiveUsable(w, k, 65535, 123.5, v); rows.Add(Convert.ToHexString(w.Buf.AsSpan(0, w.Len)));
+            k = new UsableKey { Building = true, Poi = new PoiKey { Gen = 2, X = -8000000.125, Y = 50.5, Z = -6000000.25, U = 130 } };
+            var state = new PoiState { XRot = -45.25f, YRot = 17.5f, Slide = .375f, Turn = -3, Tuned = .625f };
+            EntityUsables.WriteLiveUsable(w, k, 0, 124.5, v, state); rows.Add(Convert.ToHexString(w.Buf.AsSpan(0, w.Len)));
+            WritePoiFinal(w, k, 1, 125.5, state); rows.Add(Convert.ToHexString(w.Buf.AsSpan(0, w.Len)));
+            var orders = new Dictionary<UsableKey, LiveOrder>();
+            foreach (var seq in new ushort[] { 65534, 65535, 0, 0, 65535, 1 }) rows.Add(seq + " " + LiveNewer(orders, k, seq, 125.5));
+            string text = string.Join("\n", rows) + "\n";
+            const string capture = "tools/unit/EntityUsablesRows.txt";
+            if (Environment.GetEnvironmentVariable("CAPTURE_BATCH12_HEAD") == "1") System.IO.File.WriteAllText(capture, text);
+            Check(text == System.IO.File.ReadAllText(capture).Replace("\r\n", "\n"), "live item, POI motion/final bytes and sequence wrap match frozen eaa5f6c rows");
+        }
         internal static void Tests()
         {
+            FrozenUsableBytes();
             PoiTests();
             foreach (int owner in new[] { 0, 1, 2 }) foreach (int attacher in new[] { 0, 1, 2 }) foreach (int actor in new[] { 0, 1, 2 })
             {
@@ -120,7 +142,7 @@ namespace TLDRevamp.Net
                 long originalApplied = LiveUsablesApplied;
                 foreach (var packet in Sent)
                 {
-                    ReadLiveUsable(Reader(packet), out _, out _, out double stamp, out _);
+                    EntityUsables.ReadLiveUsable(Reader(packet), out _, out _, out double stamp, out _);
                     SessionLog.St = stamp; ApplyLiveUsable(Reader(packet));
                 }
                 Check((LiveUsablesApplied - originalApplied) / 5.0 >= 25 && _remoteUsables.ContainsKey(new UsableKey { Net = 10, Epoch = 1, Item = 1, Usable = 0 }),
@@ -146,7 +168,7 @@ namespace TLDRevamp.Net
                 Input(u, 10); LiveUsableTick();
                 var oldKey = _localUsables[u].Key;
                 _localUsables.Clear();
-                WriteLiveUsable(WL, oldKey, 1, 10, UsableBits(u)); Deliver(WL);
+                EntityUsables.WriteLiveUsable(WL, oldKey, 1, 10, UsableBits(u)); Deliver(WL);
                 Check(_remoteUsables.ContainsKey(oldKey), "original remote interpolation exists");
                 var oldRemote = _remoteUsables[oldKey];
                 car.Split = new HashSet<int> { 1 }; LiveUsableTick();
@@ -191,7 +213,7 @@ namespace TLDRevamp.Net
                 _localUsables.Clear(); Mp.Server.Recipients.Clear();
                 for (int viewer = 0; viewer < 3; viewer++) Mp.Server.Spots.Add(new Spot { Id = viewer, Near = viewer != owner });
                 long refused = LiveUsablesRefused;
-                foreach (var b in Sent) { ReadLiveUsable(Reader(b), out _, out _, out double stamp, out _); SessionLog.St = stamp; ServerLiveUsable(actor, Reader(b)); }
+                foreach (var b in Sent) { EntityUsables.ReadLiveUsable(Reader(b), out _, out _, out double stamp, out _); SessionLog.St = stamp; ServerLiveUsable(actor, Reader(b)); }
                 Check(LiveUsablesRefused == refused && Mp.Server.Packets.Count >= 70, "server accepts part prefab fallback after reattach");
                 Check(!Mp.Server.Recipients.Contains(actor) && (owner == actor || Mp.Server.Recipients.Contains(owner)), "relay excludes actor and includes current owner");
                 foreach (int viewer in new[] { 0, 1, 2 })
@@ -204,7 +226,7 @@ namespace TLDRevamp.Net
                         double now = 11 + frame / 120.0; SessionLog.St = now; Time.realtimeSinceStartup = (float)now;
                         while (next < Sent.Count)
                         {
-                            ReadLiveUsable(Reader(Sent[next]), out _, out _, out double stamp, out _);
+                            EntityUsables.ReadLiveUsable(Reader(Sent[next]), out _, out _, out double stamp, out _);
                             if (stamp > now) break;
                             ApplyLiveUsable(Reader(Sent[next++]));
                         }
@@ -220,11 +242,11 @@ namespace TLDRevamp.Net
                 part.Split = new HashSet<int> { 0 }; int sent = Sent.Count; LiveUsableTick();
                 Check(!_localUsables.ContainsKey(u) && Sent.Count == sent, "tick cannot send stale split address");
                 part.Split = null; _localUsables.Clear(); SessionLog.St = Time.realtimeSinceStartup + 1;
-                WriteLiveUsable(WL, key, 500, SessionLog.St, UsableBits(u)); Deliver(WL);
+                EntityUsables.WriteLiveUsable(WL, key, 500, SessionLog.St, UsableBits(u)); Deliver(WL);
                 var remote = _remoteUsables[key]; LiveUsablesChanged(door);
-                WriteLiveUsable(WL, key, 501, SessionLog.St - .01, UsableBits(u)); Deliver(WL);
+                EntityUsables.WriteLiveUsable(WL, key, 501, SessionLog.St - .01, UsableBits(u)); Deliver(WL);
                 Check(!_remoteUsables.ContainsKey(key), "delayed pre-reattach packet cannot resurrect retired interpolation");
-                SessionLog.St += .1; WriteLiveUsable(WL, key, 501, SessionLog.St, UsableBits(u)); Deliver(WL);
+                SessionLog.St += .1; EntityUsables.WriteLiveUsable(WL, key, 501, SessionLog.St, UsableBits(u)); Deliver(WL);
                 Check(!ReferenceEquals(remote, _remoteUsables[key]), "reattach rebuilds interpolator for same net/epoch");
             }
         }

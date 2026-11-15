@@ -3,6 +3,72 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
+    internal static class EntityTeleportRefresh
+    {
+        private static readonly Queue<byte[]> TpaInbox = new Queue<byte[]>();
+        private static readonly HashSet<uint> TpaAdds = new HashSet<uint>();
+        private static bool _tpaReplaying;
+        private static readonly HashSet<uint> TpaRefetched = new HashSet<uint>();
+
+        internal static void BeginTpaRefresh() { TpaRefetched.Clear(); }
+        internal static void ResetTpaClient() { TpaInbox.Clear(); TpaAdds.Clear(); BeginTpaRefresh(); }
+
+        internal static void TpaCopyMessage(byte type, NetReader r)
+        {
+            if (Mp.Server != null || !Tpa.RefreshingObjects || r.Bad) return;
+            if (type != Entities.State && type != Entities.CompactState && type != Entities.Resync && type != Entities.RabbitState && type != Entities.AiState) return;
+            var head = new NetReader { Buf = r.Buf, Pos = r.Pos, End = r.End };
+            uint net = type == Entities.State || type == Entities.CompactState ? head.VarU32() : head.U32();
+            if (head.Bad) return;
+            if (Entities.HasTpaCopy(net)) { Tpa.ObjectApplied(net); return; }
+            // Known is lifetime knowledge. A second lost copy may no longer be in the client's registry.
+            if (!TpaRefetched.Add(net)) return;
+            Entities.RequestTpaCopy(net);
+        }
+
+        // Geometry-dependent updates keep their order. Control traffic continues; ownership of a queued Add
+        // waits for that Add too, so it cannot be discarded before its copy exists.
+        internal static bool DeferTpa(byte type, NetReader r)
+        {
+            if (Mp.Server != null || _tpaReplaying || (!Tpa.WaitingWorld && TpaInbox.Count == 0)) return false;
+            uint net = r.Remaining >= 4 ? System.BitConverter.ToUInt32(r.Buf, r.Pos) : 0;
+            bool depends = type == Entities.Add || type == Entities.State || type == Entities.CompactState || type == Entities.Resync || type == Entities.PartDetached
+                || type == Entities.AttachSync || type == Entities.DetachSync || type == Entities.PhysLockSync || type == Entities.MemberGone || type == Entities.RemoveItem
+                || type == Entities.Worn || type == Entities.RabbitState || type == Entities.AiState || type == Entities.HitchCommand
+                || ((type == Entities.Owner || type == Entities.HandoverState || type == Entities.Edit || type == Protocol.LiveUsable || type == Entities.RadioSync || type == Entities.IgnitionKey
+                    || type == Entities.HitchFreeze || type == Entities.HitchFrozen) && TpaAdds.Contains(net));
+            if (!depends) return false;
+            if (type == Entities.Add && r.Remaining >= 4) TpaAdds.Add(net);
+            if (type == Entities.PartDetached)
+            {
+                var part = new NetReader { Buf = r.Buf, Pos = r.Pos, End = r.End };
+                part.U32(); part.VarU32(); uint child = part.U32();
+                if (!part.Bad) TpaAdds.Add(child);
+            }
+            var bytes = new byte[r.Remaining + 1]; bytes[0] = type;
+            System.Buffer.BlockCopy(r.Buf, r.Pos, bytes, 1, r.Remaining);
+            TpaInbox.Enqueue(bytes);
+            return true;
+        }
+        internal static void DrainTpaInbox()
+        {
+            // Bounded work per frame; new messages join the tail while replay is pending.
+            int budget = 200;
+            _tpaReplaying = true;
+            try
+            {
+                while (!Tpa.WaitingWorld && budget-- > 0 && TpaInbox.Count > 0)
+                {
+                    var bytes = TpaInbox.Dequeue(); var r = new NetReader { Buf = bytes, Pos = 1, End = bytes.Length };
+                    Entities.ReplayTpaMessage(bytes[0], r);
+                }
+                if (TpaInbox.Count == 0) TpaAdds.Clear();
+            }
+            finally { _tpaReplaying = false; }
+        }
+        internal static bool TpaInboxEmpty => TpaInbox.Count == 0;
+    }
+
     public static partial class Entities
     {
         private sealed class TpaSync
@@ -14,14 +80,11 @@ namespace TLDRevamp.Net
         }
         private static readonly Dictionary<int, TpaSync> TpaSyncs = new Dictionary<int, TpaSync>();
         private static readonly List<int> TpaDone = new List<int>();
-        private static readonly Queue<byte[]> TpaInbox = new Queue<byte[]>();
-        private static readonly HashSet<uint> TpaAdds = new HashSet<uint>();
-        private static bool _tpaReplaying;
         private static bool _tpaSending, _tpaSendFailed;
-        private static readonly HashSet<uint> TpaRefetched = new HashSet<uint>();
-
-        internal static void BeginTpaRefresh() { TpaRefetched.Clear(); }
-        internal static void ResetTpaSync() { TpaSyncs.Clear(); TpaInbox.Clear(); TpaAdds.Clear(); BeginTpaRefresh(); }
+        internal static void BeginTpaRefresh() => EntityTeleportRefresh.BeginTpaRefresh();
+        internal static void ResetTpaSync() { TpaSyncs.Clear(); EntityTeleportRefresh.ResetTpaClient(); }
+        internal static void DrainTpaInbox() => EntityTeleportRefresh.DrainTpaInbox();
+        internal static bool TpaInboxEmpty => EntityTeleportRefresh.TpaInboxEmpty;
 
         /// A missing detached part needs its parent's record before the part can be replayed.
         internal static void ServerRefetch(int from, uint net, bool partItself = false)
@@ -31,19 +94,6 @@ namespace TLDRevamp.Net
             if (se.PartIndex >= 0 && !Server.TryGetValue(se.ParentNet, out se)) return;
             Refetched++;
             SendObject(from, se);
-        }
-
-        private static void TpaCopyMessage(byte type, NetReader r)
-        {
-            if (Mp.Server != null || !Tpa.RefreshingObjects || r.Bad) return;
-            if (type != State && type != CompactState && type != Resync && type != RabbitState && type != AiState) return;
-            var head = new NetReader { Buf = r.Buf, Pos = r.Pos, End = r.End };
-            uint net = type == State || type == CompactState ? head.VarU32() : head.U32();
-            if (head.Bad) return;
-            if (ByNet.ContainsKey(net)) { Tpa.ObjectApplied(net); return; }
-            // Known is lifetime knowledge. A second lost copy may no longer be in the client's registry.
-            if (!TpaRefetched.Add(net)) return;
-            W.Reset(); W.U8(Refetch); W.U32(net); WriteLostPart(W, net); ToServer(W, true);
         }
 
         private static bool TpaDuplicate(uint net)
@@ -124,46 +174,5 @@ namespace TLDRevamp.Net
             }
         }
 
-        // Geometry-dependent updates keep their order. Control traffic continues; ownership of a queued Add
-        // waits for that Add too, so it cannot be discarded before its copy exists.
-        private static bool DeferTpa(byte type, NetReader r)
-        {
-            if (Mp.Server != null || _tpaReplaying || (!Tpa.WaitingWorld && TpaInbox.Count == 0)) return false;
-            uint net = r.Remaining >= 4 ? System.BitConverter.ToUInt32(r.Buf, r.Pos) : 0;
-            bool depends = type == Add || type == State || type == CompactState || type == Resync || type == PartDetached
-                || type == AttachSync || type == DetachSync || type == PhysLockSync || type == MemberGone || type == RemoveItem
-                || type == Worn || type == RabbitState || type == AiState || type == HitchCommand
-                || ((type == Owner || type == HandoverState || type == Edit || type == Protocol.LiveUsable || type == RadioSync || type == IgnitionKey
-                    || type == HitchFreeze || type == HitchFrozen) && TpaAdds.Contains(net));
-            if (!depends) return false;
-            if (type == Add && r.Remaining >= 4) TpaAdds.Add(net);
-            if (type == PartDetached)
-            {
-                var part = new NetReader { Buf = r.Buf, Pos = r.Pos, End = r.End };
-                part.U32(); part.VarU32(); uint child = part.U32();
-                if (!part.Bad) TpaAdds.Add(child);
-            }
-            var bytes = new byte[r.Remaining + 1]; bytes[0] = type;
-            System.Buffer.BlockCopy(r.Buf, r.Pos, bytes, 1, r.Remaining);
-            TpaInbox.Enqueue(bytes);
-            return true;
-        }
-        internal static void DrainTpaInbox()
-        {
-            // Bounded work per frame; new messages join the tail while replay is pending.
-            int budget = 200;
-            _tpaReplaying = true;
-            try
-            {
-                while (!Tpa.WaitingWorld && budget-- > 0 && TpaInbox.Count > 0)
-                {
-                    var bytes = TpaInbox.Dequeue(); var r = new NetReader { Buf = bytes, Pos = 1, End = bytes.Length };
-                    ClientReceive(bytes[0], r);
-                }
-                if (TpaInbox.Count == 0) TpaAdds.Clear();
-            }
-            finally { _tpaReplaying = false; }
-        }
-        internal static bool TpaInboxEmpty => TpaInbox.Count == 0;
     }
 }

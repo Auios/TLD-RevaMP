@@ -12,7 +12,7 @@ static partial class EntitySplitTest
     {
         var car = new tosaveitemscript();
         var frame = new Transform { ParentComponent = car }; frame.SetParent(car.transform, true);
-        car.Children.Add(new usablescript { TDoor = frame, slideAble = true });
+        var usable = new usablescript { TDoor = frame, slideAble = true }; car.Children.Add(usable); car.usables.Add(usable);
         var item = new tosaveitemscript(); var at = new attachablescript { tosave = item, Target = car, attached = true, point = new Transform() };
         item.attachable = at; at.point.SetParent(frame, true); at.point.position = new Vector3(.25f, -.5f, .75f);
         at.transform.position = new Vector3(1.25f, -2.5f, 3.75f);
@@ -27,7 +27,7 @@ static partial class EntitySplitTest
     static byte[] LiveDoorWire()
     {
         var w = new NetWriter();
-        Invoke(typeof(Entities), "WriteLiveUsable", w, new Entities.UsableKey { Net = 401, Epoch = 3, Item = 2, Usable = 7 }, (ushort)513, 123.5d,
+        Invoke(typeof(EntityUsables), "WriteLiveUsable", w, new Entities.UsableKey { Net = 401, Epoch = 3, Item = 2, Usable = 7 }, (ushort)513, 123.5d,
             new Entities.UsableValue { X = 1, Y = 65535, Slide = 32768, Turn = -2, Tuned = 1234 }, default(Entities.PoiState));
         return w.Buf.Take(w.Len).ToArray();
     }

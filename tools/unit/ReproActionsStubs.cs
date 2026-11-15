@@ -218,3 +218,4 @@ namespace TLDRevamp.Net { static class EntityProxyTools { internal static bool T
 namespace TLDRevamp { static class GameLookups { internal static System.Reflection.MethodInfo Method(Type type, string name, Type[] args = null) => HarmonyLib.AccessTools.Method(type, name, args); } }
 
 namespace TLDRevamp.Net { internal static class EntityDiag { internal static void StuckWatch(carscript car) { } } }
+namespace TLDRevamp.Net { internal static class EntityUsables { internal static bool ApplyingPoi => Entities._applyingPoi; } }

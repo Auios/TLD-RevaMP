@@ -90,6 +90,11 @@ static class MessageTableTest
         }
 
         Check("RabbitState: authority stays on kernel", server.Contains("ServerRabbitState(from, r);") && Method("Entities", "ServerRabbitState").Contains("se.Epoch != s.Epoch") && Method("Entities", "ServerRabbitState").Contains("se.OwnerId != from"));
+        Check("LiveUsable: routing and authority stay on kernel", server.Contains("ServerLiveUsable(from, r);") && client.Contains("ApplyLiveUsable(r);") && Method("Entities", "ServerLiveUsable").Contains("k.Epoch != se.Epoch"));
+        Check("PoiUsable: handlers remain beside live sequence state", server.Contains("ServerPoiUsable(from, r);") && client.Contains("ApplyPoiUsable(r);") && Method("Entities", "ServerPoiMotion").Contains("_poiServerOrder"));
+        Check("LiveUsable: bytes read by usables owner", Method("EntityUsables", "ReadLiveUsable").Contains("r.U32()") && Method("EntityUsables", "ReadLiveUsable").Contains("r.U16()"));
+        Check("PoiUsable: payload codec at usables owner", src.Values.Any(s => s.Contains("class EntityUsables") && s.Contains("internal static bool ReadPoi(") && s.Contains("X = r.F64()")));
+        Check("TPA: refresh preprocessing owner keeps defer before copy", client.IndexOf("EntityTeleportRefresh.DeferTpa(type, r)") >= 0 && client.IndexOf("EntityTeleportRefresh.DeferTpa(type, r)") < client.IndexOf("EntityTeleportRefresh.TpaCopyMessage(type, r)"));
         Check("RabbitState: stale counter belongs to rabbits", Method("Entities", "ServerRabbitState").Contains("EntityRabbits.RabbitStatesStale++"));
         Check("RabbitState: host keeps durable snapshot before relaying", Method("Entities", "ServerRabbitState").IndexOf("se.RabbitSnapshot = FinalSnapshot(r, true);") < Method("Entities", "ServerRabbitState").IndexOf("WS.Reset();"));
         Check("RabbitFx: reliable generic relay stays on kernel", server.Contains("case RabbitFx: ServerFwdAll(from, r, true);"));

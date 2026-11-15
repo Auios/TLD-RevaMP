@@ -4,6 +4,14 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        internal static bool HasTpaCopy(uint net) => ByNet.ContainsKey(net);
+        internal static void RequestTpaCopy(uint net) { W.Reset(); W.U8(Refetch); W.U32(net); WriteLostPart(W, net); ToServer(W, true); }
+        internal static void ReplayTpaMessage(byte type, NetReader reader) => ClientReceive(type, reader);
+        internal static bool UsablePoiApplying => EntityUsables.ApplyingPoi;
+        internal static bool HasKnownPoiUsables => KnownPoiUsables.Count != 0;
+        internal static bool TryKnownPoiUsable(PoiKey key, out PoiState state) => KnownPoiUsables.TryGetValue(key, out state);
+        internal static bool MarkPoiUsable(usablescript usable) => MarkLiveUsable(usable);
+
         internal static int CountActive(System.Collections.Generic.List<BoxCollider> colliders) => EntityDiag.CountActive(colliders);
         internal static string CarDiagnostics() => EntityDiag.CarDiagnostics();
         internal static string LockDiagnostics() => EntityDiag.LockDiagnostics();
@@ -37,7 +45,7 @@ namespace TLDRevamp.Net
             if (!PlayerActing || !ByNet.TryGetValue(net, out var e) || e.Root == null || e.Root.attachable == null || _hitchApplying) return null;
             return e;
         }
-        internal static bool ReproUsableAllowed => PlayerActing && !_applyingLive && !_applyingState && !_applyingPoi;
+        internal static bool ReproUsableAllowed => PlayerActing && !_applyingLive && !_applyingState && !UsablePoiApplying;
         internal static bool ReproDetachAllowed => PlayerActing && !_applyingDetach && !_applyingState && !_hitchApplying;
         internal static tosaveitemscript ReproUsableItem(usablescript u) => ItemOf(u, u.tosaveid, u.setid);
         internal static void SampleReproCar(carscript car) => EntityDiag.StuckWatch(car);
