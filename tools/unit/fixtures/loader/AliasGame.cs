@@ -5,7 +5,7 @@ namespace UnityEngine
     public class GameObject { }
     public struct Vector3 { public float x, y, z; }
 }
-public class DataFromMenuScript { public static DataFromMenuScript s; }
+public class DataFromMenuScript { public static DataFromMenuScript s; }   // test stub, not game code
 public class settingsscript { public static settingsscript s; }
 public class gamemodesettingsscript
 {
@@ -37,7 +37,7 @@ public class radioscript
     public void UpdValues() { Updates++; }
 #endif
 }
-public class carscript
+public class carscript   // test stub, not game code
 {
 #if PUBLIC_GAME
     public int lampak;
@@ -47,7 +47,7 @@ public class carscript
     public UnityEngine.GameObject debugCanvas;
 #endif
 }
-public class mainscript
+public class mainscript   // test stub, not game code
 {
     public static mainscript s;
 #if PUBLIC_GAME
@@ -68,7 +68,7 @@ public class mainscript
     public void PressedEscape(bool screenshot, bool mainMenu) { Screenshot = screenshot; MainMenu = mainMenu; }
 #endif
 }
-public class kaposztaleves
+public class kaposztaleves   // test stub, not game code
 {
     public struct devSettings { public bool god, kmh; }
     public static kaposztaleves s;
@@ -80,7 +80,7 @@ public class kaposztaleves
     public void PressedPissCh(float value) { Piss = value; }
     public void PressedShitCh(float value) { Shit = value; }
 }
-public class menuhandler
+public class menuhandler   // test stub, not game code
 {
 #if PUBLIC_GAME
     public DataFromMenuScript DFMS;
