@@ -16,6 +16,7 @@ static class LiveUsablesTest
 namespace TLDRevamp.Net
 {
     internal static partial class EntityUsables { internal static bool ApplyingPoi => Entities.TestApplyingPoi; }
+    internal static class EntityEditCheck { internal static long EditRefusedValues, PoiRefusedValues; }
     internal static class EntityDoors
     {
         internal static bool BusControl(tosaveitemscript it, usablescript u) => false;
@@ -38,7 +39,7 @@ namespace TLDRevamp.Net
         private static List<Ent> LookupSet() => new List<Ent>(ByNet.Values);   // Entities.Placed: every object here is placed
         const byte PoiUsable = 52;
         internal static bool TestApplyingPoi;
-        static long PoiUsablesSent, PoiUsablesApplied, PoiUsablesUnplaced, PoiRefusedValues;
+        static long PoiUsablesSent, PoiUsablesApplied, PoiUsablesUnplaced;
         static readonly Dictionary<PoiKey, usablescript> Buildings = new Dictionary<PoiKey, usablescript>();
         static usablescript PoiUsableOf(PoiKey k) => Buildings.TryGetValue(k, out var u) ? u : null;
         static bool PoiAllowed = true;
@@ -53,7 +54,7 @@ namespace TLDRevamp.Net
         static float _editFlushAt; static int _resyncFirst;
         static bool InSession = true, _applyingState;
         static int MyId = 1; const float EditHold = 1.5f, StateInterestM = 300;
-        static long EditRefusedValues, EditsOutOfReach, DetachReqsSent;
+        static long EditsOutOfReach, DetachReqsSent;
         static readonly object _editBuckets = new object(); static float EditRatePerS, EditBurst;
         const byte DetachReq = 37; static readonly NetWriter W = new NetWriter();
         static readonly List<Spot> _spots = new List<Spot>();
@@ -66,7 +67,7 @@ namespace TLDRevamp.Net
         static bool AtObject(int from, SEnt se) => true;
         static bool CarriedPartsShared = true;
         static bool CarriedFar(attachablescript at, out Ent carrier) { carrier = null; return false; }
-        static bool TakeToken(object b, int p, float r, float burst) => true;
+        static bool TakeEditToken(int from) => true;
         static void ServerSendTo(int id, NetWriter w, bool reliable) { }
         internal static bool IsFinite(double n) => Finite(n);
         internal static bool IsFinite(float n) => Finite(n);

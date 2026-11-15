@@ -151,7 +151,7 @@ static partial class EntitySplitTest
             ("Entities.Status.cs", "BFBE9AC0C6D2EF1F6C19D3D45BE157800131E13BFEEC3388499552D82ADEB8C2") };
         foreach (var pair in hashes)
         {
-            string source = File.ReadAllText("src/TLDRevamp/Net/" + pair.Item1).Replace("\r\n", "\n");
+            string source = File.ReadAllText("src/TLDRevamp/Net/" + pair.Item1).Replace("\r\n", "\n").Replace("EntityResync.ResyncForeignAttachDropped", "ResyncForeignAttachDropped");
             if (pair.Item1 == "TelemetryMarks.cs")
             {
                 source = source.Replace("internal static class EntityTelemetry", "public static partial class Entities");

@@ -101,6 +101,7 @@ namespace TLDRevamp.Net
         static void NoteCarrier(attachablescript at) { }
         static bool SentCarriedOff(tosaveitemscript ts) => false;
         static bool TakeToken(object bucket, int from, float rate, float burst) => Token;
+        static bool TakeEditToken(int from) => TakeToken(_editBuckets, from, EditRatePerS, EditBurst);
         static void Refuse(ref long count, string reason, string what) => count++;
         static void ToServer(NetWriter w, bool reliable) => Sent++;
         static void ServerSendTo(int id, NetWriter w, bool reliable) { Target = id; Sent++; }

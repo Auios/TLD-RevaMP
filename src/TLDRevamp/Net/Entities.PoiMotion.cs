@@ -93,7 +93,7 @@ namespace TLDRevamp.Net
         private static void ServerPoiMotion(int from, NetReader r, UsableKey k, ushort seq, double stamp, PoiState st, bool final)
         {
             if (!PoiPacketValid(r, k, stamp, st) || Math.Abs(SessionLog.St - stamp) > 10)
-            { Refuse(ref PoiRefusedValues, "poi value", $"building usable from player {from}: unreadable value/clock"); return; }
+            { Refuse(ref EntityEditCheck.PoiRefusedValues, "poi value", $"building usable from player {from}: unreadable value/clock"); return; }
             if (!CheckPoiUsable(from, k.Poi, st)) { if (final) PoiTellBack(from, k); return; }
             if (_poiServerOrder.TryGetValue(k.Poi, out double last) && stamp < last) { LiveUsablesStale++; return; }
             if (!_liveServerIn.TryGetValue(from, out var orders)) _liveServerIn[from] = orders = new Dictionary<UsableKey, LiveOrder>();

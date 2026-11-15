@@ -264,12 +264,12 @@ namespace TLDRevamp.Net
             EntityUsables.ReadLiveUsable(r, out var k, out ushort seq, out double stamp, out var v, out var poi);
             if (k.Building) { ServerPoiMotion(from, r, k, seq, stamp, poi, false); return; }
             if (r.Bad || r.Remaining != 0 || !Finite(stamp) || Math.Abs(SessionLog.St - stamp) > 10 || !Server.TryGetValue(k.Net, out var se) || k.Epoch != se.Epoch)
-            { RefuseLive(ref EditRefusedValues, "live address/clock", from, k.Net); return; }
+            { RefuseLive(ref EntityEditCheck.EditRefusedValues, "live address/clock", from, k.Net); return; }
             if (from != 0 && !AtObject(from, se))
             { RefuseLive(ref EditsOutOfReach, "live reach", from, k.Net); return; }
             var u = ServerUsable(se, k);
             if (u == null || v.Turn < 0 || v.Turn > u.maxTurnState || !Sane(u.minX) || !Sane(u.maxX) || !Sane(u.minY) || !Sane(u.maxY) || !Sane(u.tunedFloatMin) || !Sane(u.tunedFloatMax))
-            { RefuseLive(ref EditRefusedValues, "live values", from, k.Net); return; }
+            { RefuseLive(ref EntityEditCheck.EditRefusedValues, "live values", from, k.Net); return; }
             if (!LiveAfterRecord(k, stamp)) { LiveUsablesStale++; return; }
             if (!_liveServerIn.TryGetValue(from, out var orders)) _liveServerIn[from] = orders = new Dictionary<UsableKey, LiveOrder>();
             if (!LiveNewer(orders, k, seq, stamp)) return;

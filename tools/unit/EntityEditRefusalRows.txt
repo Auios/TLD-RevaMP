@@ -1,0 +1,11 @@
+timestamp-first=edit-refused:timestamp:1:0:0:0:0:
+missing-before-rate=edit-refused:missing entity:1:0:0:0:0:
+already-owner-drop=edit-refused:already owner:1:0:0:0:0:
+already-owner-echo-before-payload=edit-returned:already owner:0:0:0:0:0:2:True:20070000000000000000E05E40
+rate-before-reach-and-malformed=edit-refused:edit rate:1:1:0:0:0:
+reach-before-malformed=edit-refused:edit reach:1:0:0:0:1:
+malformed-before-values=edit-refused:malformed record:1:0:0:0:0:
+kinds-before-bad-tail=edit-refused:kinds 65535:1:0:1:0:0:
+values-before-bad-tail=edit-refused:tank amount NaN:1:0:0:1:0:
+bad-tail=edit-refused:tank changes:1:0:0:1:0:
+accepted=:0:0:0:0:0:4:True:20070000000000000000E05E40000203010203

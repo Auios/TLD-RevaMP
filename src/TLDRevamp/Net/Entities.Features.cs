@@ -4,6 +4,27 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        internal static float EditBackHold => EditHold;
+        internal static bool RequestEditBack(uint net, uint item)
+        {
+            if (!Server.TryGetValue(net, out var se)) return false;
+            WS.Reset(); WS.U8(CensusRepair); WS.U32(se.NetId); WS.U32(se.Epoch); WS.U8(8);
+            WS.VarU32(1); WS.VarU32(item);
+            WS.VarU32(0);
+            ServerSendTo(se.OwnerId, WS, true);
+            return true;
+        }
+        internal static void RecordEditRefusal(string what, bool log)
+        {
+            if (log) Anomaly(what + " (refused)"); else Anomalies++;
+        }
+        internal static long EditReachRefusals => EditsOutOfReach;
+        internal static long EditAnomalyCount => Anomalies;
+        internal static bool TryEditPeerPosition(int player, out Vector3d position)
+        {
+            position = default;
+            return Mp.Server != null && Mp.Server.PeerPos(player, out position);
+        }
         internal static bool HasTpaCopy(uint net) => ByNet.ContainsKey(net);
         internal static void RequestTpaCopy(uint net) { W.Reset(); W.U8(Refetch); W.U32(net); WriteLostPart(W, net); ToServer(W, true); }
         internal static void ReplayTpaMessage(byte type, NetReader reader) => ClientReceive(type, reader);
@@ -486,7 +507,7 @@ namespace TLDRevamp.Net
             owner = se.OwnerId;
             return true;
         }
-        internal static bool TakeKeyToken(int from) => TakeToken(_editBuckets, from, EditRatePerS, EditBurst);
+        internal static bool TakeKeyToken(int from) => TakeEditToken(from);
         internal static bool KeyReachAllowed(int from, uint net) => AtObject(from, Server[net]);
         internal static void RefuseKeyReach(int from, uint net) => Refuse(ref EditsOutOfReach, "key reach", $"ignition key from player {from}: they aren't at net {net}");
         internal static bool TryPassengerControlOwner(int from, uint net, out int owner)
@@ -543,7 +564,7 @@ namespace TLDRevamp.Net
             se.Tune = new byte[len]; System.Buffer.BlockCopy(bytes, off, se.Tune, 0, len);
         }
         internal static void MarkFeatureEdit(tosaveitemscript it, bool fromTank = false, string kind = "") => MarkEdit(it, fromTank, kind);
-        internal static void ForgetTankEditTruth(uint id) => _tankTold.Remove(id);
+        internal static void ForgetTankEditTruth(uint id) => EntityEdits.ForgetTankEditTruth(id);
         internal static bool HasPendingItemEdit(tosaveitemscript it) => EditDirty.ContainsKey(it);
         internal static bool TryTankFilledAt(tankscript tank, out float at) => _tankFilledAt.TryGetValue(tank, out at);
         internal static void SetFluidApplyingState(bool value) => _applyingState = value;

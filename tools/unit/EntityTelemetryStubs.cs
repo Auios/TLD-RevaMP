@@ -214,7 +214,6 @@ namespace TLDRevamp.Net
         internal static double ResyncBytes;
         internal static double ResyncCaptureMsMax;
         internal static double ResyncCaptureMsTotal;
-        internal static double ResyncForeignAttachDropped;
         internal static double ResyncHeld;
         internal static double ResyncItemsLoaded;
         internal static double ResyncItemsSent;

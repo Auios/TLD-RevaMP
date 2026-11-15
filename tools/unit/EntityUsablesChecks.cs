@@ -149,7 +149,7 @@ static partial class EntitySplitTest
                 .Replace("EntityUsables.InvalidateHierarchy(it);", "_usableHierarchy.Remove(it);")
                 .Replace("EntityUsables.ResetHierarchy();", "_usableHierarchy = new ConditionalWeakTable<tosaveitemscript, UsableHierarchy>();")
                 .Replace("EntityUsables.ApplyingPoi", "_applyingPoi").Replace("Entities.MarkPoiUsable(", "MarkLiveUsable(")
-                .Replace("Entities.IsFinite(", "Finite(").Replace("EntityUsables.", "").Replace("Entities.", "");
+                .Replace("Entities.IsFinite(", "Finite(").Replace("EntityUsables.", "").Replace("EntityEditCheck.", "").Replace("Entities.", "");
             string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Regex.Replace(body, @"\s+", ""))));
             Check(hash == c[2], c[0] + "." + c[1] + " matches eaa5f6c after boundary substitutions");
         }

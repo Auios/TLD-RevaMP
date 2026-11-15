@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static class EntityEditBack
     {
         /// An edit the server refused is already on its sender's screen, and the owner's record hasn't changed, so its next
         /// resync skips it, and the census doesn't compare a knob's or a door's value: the two stayed different until the owner
@@ -18,16 +18,16 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<ulong, float> _editBack = new Dictionary<ulong, float>();
         private static readonly List<ulong> _editBackDue = new List<ulong>();
 
-        private static void EditBackLater(SEnt se, int idx, bool malformed)
+        internal static void EditBackLater(uint net, int idx, bool malformed)
         {
             if (!RefusedEditsComeBack || malformed || idx < 0) return;
-            EditBackAfterHold(se, idx);
+            EditBackAfterHold(net, idx);
         }
 
-        private static void EditBackAfterHold(SEnt se, int idx)
+        internal static void EditBackAfterHold(uint net, int idx)
         {
-            ulong key = (ulong)se.NetId << 32 | (uint)idx;
-            if (_editBack.Count < EditBackMax || _editBack.ContainsKey(key)) _editBack[key] = Time.realtimeSinceStartup + EditHold + 0.2f;
+            ulong key = (ulong)net << 32 | (uint)idx;
+            if (_editBack.Count < EditBackMax || _editBack.ContainsKey(key)) _editBack[key] = Time.realtimeSinceStartup + Entities.EditBackHold + 0.2f;
         }
 
         internal static void EditBackTick()
@@ -39,13 +39,18 @@ namespace TLDRevamp.Net
             foreach (ulong key in _editBackDue)
             {
                 _editBack.Remove(key);
-                if (!Server.TryGetValue((uint)(key >> 32), out var se)) continue;
-                WS.Reset(); WS.U8(CensusRepair); WS.U32(se.NetId); WS.U32(se.Epoch); WS.U8(8);
-                WS.VarU32(1); WS.VarU32((uint)key);
-                WS.VarU32(0);
-                ServerSendTo(se.OwnerId, WS, true);
+                if (!Entities.RequestEditBack((uint)(key >> 32), (uint)key)) continue;
                 RefusedEditsAsked++;
             }
         }
+    }
+
+    public static partial class Entities
+    {
+        public static bool RefusedEditsComeBack { get => EntityEditBack.RefusedEditsComeBack; set => EntityEditBack.RefusedEditsComeBack = value; }
+        public static bool HeldRecordsComeBack { get => EntityEditBack.HeldRecordsComeBack; set => EntityEditBack.HeldRecordsComeBack = value; }
+        private static void EditBackLater(SEnt se, int idx, bool malformed) => EntityEditBack.EditBackLater(se.NetId, idx, malformed);
+        private static void EditBackAfterHold(SEnt se, int idx) => EntityEditBack.EditBackAfterHold(se.NetId, idx);
+        internal static void EditBackTick() => EntityEditBack.EditBackTick();
     }
 }

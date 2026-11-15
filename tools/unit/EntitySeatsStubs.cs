@@ -60,6 +60,7 @@ namespace TLDRevamp.Net
         {
             internal readonly List<KeyValuePair<int, int>> Seats = new List<KeyValuePair<int, int>>();
             internal readonly List<KeyValuePair<int, Vector3d>> Peers = new List<KeyValuePair<int, Vector3d>>();
+            internal bool PeerPos(int player, out Vector3d position) { position = Entities.EditPeerPosition; return Entities.EditPeerKnown; }
             internal void ReadyPeers(List<KeyValuePair<int, Vector3d>> into) { into.Clear(); into.AddRange(Peers); }
             internal void SeatedIn(uint net, List<KeyValuePair<int, int>> into) { into.Clear(); into.AddRange(Seats); }
         }
@@ -99,13 +100,10 @@ namespace TLDRevamp.Net
         private static void CascadeOwner(SEnt se) { Cascades++; }
         private static void ShareItem(tosaveitemscript root, object value) { Shares++; }
         private static uint _claimedFor;
-        private static readonly object _editBuckets = new object();
-        private static float EditRatePerS = 20, EditBurst = 40;
         internal static bool SeatToken = true, SeatNear = true;
         internal static long EditsOutOfReach;
-        private static bool TakeToken(object bucket, int from, float rate, float burst) => SeatToken;
+        private static bool TakeEditToken(int from) => SeatToken;
         private static bool AtObject(int from, SEnt se) => SeatNear;
-        private static void Refuse(ref long counter, string why, string message) { counter++; }
         internal static void TestSeatClaim(uint net, int by, float at) { Server[net].ClaimedBy = by; Server[net].ClaimedAt = at; }
         internal static object TestSeatServer(uint net) => Server[net];
     }

@@ -44,7 +44,7 @@ public partial class PoseInterpolator
 }
 namespace TLDRevamp.Net
 {
-    internal static partial class RecordCodec { internal static byte[] Encode(itemDataClass record) => new byte[] { 1, 2, 3 }; internal static long WornStripped; }
+    internal static partial class RecordCodec { internal static byte[] Encode(itemDataClass record) { Entities.TestWithCar = record.car != null && record.car.Count > 0; return new byte[] { 1, 2, 3 }; } internal static long WornStripped; }
     public static partial class RemotePlayers
     {
         internal sealed class RemoteHand { public bool Has; public GameObject Go; public mpplayerscript Mp; }

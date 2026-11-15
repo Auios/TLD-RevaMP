@@ -21,6 +21,9 @@ namespace TLDRevamp.Net
             var b = new byte[w.Len]; Array.Copy(w.Buf, b, w.Len); Sent.Add((to, b, reliable));
         }
 
+        static int BackCount => ((Dictionary<ulong, float>)typeof(EntityEditBack).GetField("_editBack", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null)).Count;
+        static int BackMax => (int)typeof(EntityEditBack).GetField("EditBackMax", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetRawConstantValue();
+
         static NetReader Read(byte[] b) { var r = new NetReader(); r.Buf = b; r.Pos = 0; r.End = b.Length; return r; }
 
         internal static int Run()
@@ -43,7 +46,7 @@ namespace TLDRevamp.Net
             check(r.VarU32() == 1 && r.VarU32() == 18, "names the one refused item");
             check(r.VarU32() == 0 && !r.Bad && r.Remaining == 0, "the rest of the repair message: reads as the owner reads it");
             EditBackTick();
-            check(Sent.Count == 1 && RefusedEditsAsked == 1, "asked once");
+            check(Sent.Count == 1 && EntityEditBack.RefusedEditsAsked == 1, "asked once");
 
             // an edit that went through: the same one record after the sender's hold
             Sent.Clear(); t = 150; Time.realtimeSinceStartup = t;
@@ -74,17 +77,17 @@ namespace TLDRevamp.Net
             var gone = new SEnt { NetId = 9, Epoch = 1 }; Server[9] = gone;
             EditBackLater(gone, 1, false); Server.Remove(9);
             Time.realtimeSinceStartup = t + 2; EditBackTick();
-            check(Sent.Count == 0 && _editBack.Count == 0, "nothing for an object that went away, and nothing left waiting");
+            check(Sent.Count == 0 && BackCount == 0, "nothing for an object that went away, and nothing left waiting");
 
             // what mustn't be asked
             EditBackLater(car, -1, false); EditBackLater(car, 3, true);
-            check(_editBack.Count == 0, "no item, or a malformed message: nothing");
+            check(BackCount == 0, "no item, or a malformed message: nothing");
             RefusedEditsComeBack = false; EditBackLater(car, 3, false); RefusedEditsComeBack = true;
-            check(_editBack.Count == 0, "switched off: nothing (before)");
+            check(BackCount == 0, "switched off: nothing (before)");
 
             // a flood of refusals costs a bounded table
             for (int k = 0; k < 5000; k++) EditBackLater(car, k, false);
-            check(_editBack.Count == EditBackMax, "the table stays bounded");
+            check(BackCount == BackMax, "the table stays bounded");
 
             Console.WriteLine(fails == 0 ? $"ALL PASS ({checks} checks)" : $"{fails} of {checks} FAILED");
             return fails == 0 ? 0 : 1;

@@ -5,4 +5,12 @@
     <Compile Include="../../src/TLDRevamp/Net/Entities.EditBack.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
   </ItemGroup>
+  <Target Name="ExtractEditBackBoundary" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
+      <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
+    </PropertyGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractResyncEditsBoundary.py&quot; &quot;$(IntermediateOutputPath)EditBackBoundary.g.cs&quot; --back-only" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)EditBackBoundary.g.cs" /></ItemGroup>
+  </Target>
 </Project>

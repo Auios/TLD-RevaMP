@@ -11,6 +11,74 @@ namespace TLDRevamp.Net
     /// tankscript.SyncMulti, partconditionscript.Refresh(multiUpd), colorscript.SColor, …): those run whether or not
     /// the official MP is connected, so they're hooked here. On one's own objects the same hooks bring the resync pass
     /// forward, so a door opened by its owner is seen at once, not up to 3 s later.
+    internal static class EntityEdits
+    {
+        public static bool TankAddEdits = true;
+        public static long TankAddsApplied;
+        /// Per copy item being poured: its tanks as the owner has been told. Starts from the owner's latest record.
+        private static readonly Dictionary<uint, List<save_tankscript>> _tankTold = new Dictionary<uint, List<save_tankscript>>();
+
+        internal static bool TankChangesNow(tosaveitemscript it, List<TankAdds.Add> adds)
+        {
+            adds.Clear();
+            if (!TankAddEdits || it.tanks == null || !_tankTold.TryGetValue(it.idInSave, out var told)) return false;
+            var now = new List<save_tankscript>();
+            for (int i = 0; i < it.tanks.Count; i++)
+            {
+                var t = it.tanks[i];
+                if (t == null || t.F == null) continue;
+                var rec = new save_tankscript(t, it.idInSave, i);
+                now.Add(rec);
+                save_tankscript before = null;
+                foreach (var b in told) if (b != null && b.ind == i) { before = b; break; }
+                TankAdds.Diff(i, before?.type, before?.amount, rec.type, rec.amount, adds);
+            }
+            _tankTold[it.idInSave] = now;
+            return true;
+        }
+
+        internal static void ApplyTankAdds(tosaveitemscript it, List<TankAdds.Add> adds)
+        {
+            if (it.tanks == null) return;
+            Entities.SetFluidApplyingState(true);
+            try
+            {
+                foreach (var a in adds)
+                {
+                    if (a.Tank >= it.tanks.Count || it.tanks[a.Tank] == null) continue;
+                    var t = it.tanks[a.Tank];
+                    t.FStart();
+                    if (t.F == null) continue;
+                    float have = 0f;
+                    foreach (var fl in t.F.fluids) if (fl != null && (int)fl.type == a.Type) have += fl.amount;
+                    float l = TankAdds.Allowed(a.Litres, have, t.F.maxC - t.F.GetAmount());
+                    if (l != 0f) t.F.ChangeOne(l, (mainscript.fluidenum)a.Type);
+                    t.Upd();
+                    TankAddsApplied++;
+                }
+            }
+            finally { Entities.SetFluidApplyingState(false); }
+        }
+
+        internal static int KindBit(string kind)
+        {
+            switch (kind)
+            {
+                case "usable": return Entities.KindUsable; case "tank": return Entities.KindTank; case "part": return Entities.KindPart; case "color": return Entities.KindColor;
+                case "food": return Entities.KindFood; case "ammo": return Entities.KindAmmo; case "plate": return Entities.KindPlate; case "busdoor": return Entities.KindBusDoor;
+                case "blood": return Entities.KindBlood;
+                default: return Entities.KindAll;
+            }
+        }
+
+        internal static void RememberTankTruth(tosaveitemscript it)
+        {
+            if (TankAddEdits && it != null && !_tankTold.ContainsKey(it.idInSave) && EntityCarTuning.TryCopyTankTruth(it.idInSave, out var truth)) _tankTold[it.idInSave] = truth;
+        }
+        internal static void ResetTankEditTruth() => _tankTold.Clear();
+        internal static void ForgetTankEditTruth(uint id) => _tankTold.Remove(id);
+    }
+
     public static partial class Entities
     {
         public const byte Edit = 32;
@@ -40,66 +108,11 @@ namespace TLDRevamp.Net
         /// saw it: two players at one barrel each sent theirs and the owner took the last, one pour was gone (aud-two-pour:
         /// the cans lost 16.2 L, the barrel gained 8.2 L). The level still counts when the edit comes back to its sender,
         /// who has become the owner and has the fluid here already. A/B: false = the level only (before).
-        public static bool TankAddEdits = true;
-        public static long TankAddsSent, TankAddsApplied, TankAddsRefused;
-        /// Per copy item being poured: its tanks as the owner has been told. Starts from the owner's latest record.
-        private static readonly Dictionary<uint, List<save_tankscript>> _tankTold = new Dictionary<uint, List<save_tankscript>>();
+        public static bool TankAddEdits { get => EntityEdits.TankAddEdits; set => EntityEdits.TankAddEdits = value; }
+        public static long TankAddsSent, TankAddsRefused;
         /// Edits with changes on their way: one that comes back is ours (ServerEdit, EditsComeBack).
         private static readonly HashSet<(uint, int, double)> _tankAddsOut = new HashSet<(uint, int, double)>();
         private static readonly List<TankAdds.Add> _tankAdds = new List<TankAdds.Add>();
-
-        private static bool TankChangesNow(tosaveitemscript it, List<TankAdds.Add> adds)
-        {
-            adds.Clear();
-            if (!TankAddEdits || it.tanks == null || !_tankTold.TryGetValue(it.idInSave, out var told)) return false;
-            var now = new List<save_tankscript>();
-            for (int i = 0; i < it.tanks.Count; i++)
-            {
-                var t = it.tanks[i];
-                if (t == null || t.F == null) continue;
-                var rec = new save_tankscript(t, it.idInSave, i);
-                now.Add(rec);
-                save_tankscript before = null;
-                foreach (var b in told) if (b != null && b.ind == i) { before = b; break; }
-                TankAdds.Diff(i, before?.type, before?.amount, rec.type, rec.amount, adds);
-            }
-            _tankTold[it.idInSave] = now;
-            return true;
-        }
-
-        private static void ApplyTankAdds(tosaveitemscript it, List<TankAdds.Add> adds)
-        {
-            if (it.tanks == null) return;
-            _applyingState = true;
-            try
-            {
-                foreach (var a in adds)
-                {
-                    if (a.Tank >= it.tanks.Count || it.tanks[a.Tank] == null) continue;
-                    var t = it.tanks[a.Tank];
-                    t.FStart();
-                    if (t.F == null) continue;
-                    float have = 0f;
-                    foreach (var fl in t.F.fluids) if (fl != null && (int)fl.type == a.Type) have += fl.amount;
-                    float l = TankAdds.Allowed(a.Litres, have, t.F.maxC - t.F.GetAmount());
-                    if (l != 0f) t.F.ChangeOne(l, (mainscript.fluidenum)a.Type);
-                    t.Upd();
-                    TankAddsApplied++;
-                }
-            }
-            finally { _applyingState = false; }
-        }
-
-        private static int KindBit(string kind)
-        {
-            switch (kind)
-            {
-                case "usable": return KindUsable; case "tank": return KindTank; case "part": return KindPart; case "color": return KindColor;
-                case "food": return KindFood; case "ammo": return KindAmmo; case "plate": return KindPlate; case "busdoor": return KindBusDoor;
-                case "blood": return KindBlood;
-                default: return KindAll;
-            }
-        }
 
         private static void MarkEdit(tosaveitemscript it, bool fromTank = false, string kind = "")
         {
@@ -195,10 +208,10 @@ namespace TLDRevamp.Net
                 return;
             }
             int idx = (int)r.VarU32(), kinds = (int)r.VarU32(), len = (int)r.VarU32();
-            if (from != 0 && !TakeToken(_editBuckets, from, EditRatePerS, EditBurst))
+            if (from != 0 && !TakeEditToken(from))
             {
                 EditsRejected++;
-                Refuse(ref EditRefusedRate, "edit rate", $"edit from player {from}: over {EditRatePerS:F0} a second");
+                Refuse(ref EntityEditCheck.EditRefusedRate, "edit rate", $"edit from player {from}: over {EditRatePerS:F0} a second");
                 SessionLog.Event("edit-refused", net, from: from, to: se.OwnerId, result: "edit rate");
                 EditBackLater(se, idx, r.Bad);
                 return;
@@ -225,8 +238,8 @@ namespace TLDRevamp.Net
                 {
                     SessionLog.Event("edit-refused", net, item: idx, from: from, to: se.OwnerId, result: why, count: kinds);
                     EditsRejected++;
-                    if (why.StartsWith("kinds")) Refuse(ref EditRefusedKinds, "edit kinds", $"edit from player {from} of net {net} item {idx}: {why}");
-                    else Refuse(ref EditRefusedValues, "edit values", $"edit from player {from} of net {net} item {idx} (kinds {kinds}): {why}");
+                    if (why.StartsWith("kinds")) Refuse(ref EntityEditCheck.EditRefusedKinds, "edit kinds", $"edit from player {from} of net {net} item {idx}: {why}");
+                    else Refuse(ref EntityEditCheck.EditRefusedValues, "edit values", $"edit from player {from} of net {net} item {idx} (kinds {kinds}): {why}");
                     EditBackLater(se, idx, false);
                     return;
                 }
@@ -320,7 +333,7 @@ namespace TLDRevamp.Net
             _tankFilledAt[t] = Time.realtimeSinceStartup;
             if (t.setpoi || !IsProxy(t)) return;
             var it = ItemOf(t, t.tosaveid, t.setid);
-            if (TankAddEdits && it != null && !_tankTold.ContainsKey(it.idInSave) && EntityCarTuning.TryCopyTankTruth(it.idInSave, out var truth)) _tankTold[it.idInSave] = truth;
+            EntityEdits.RememberTankTruth(it);
             MarkEdit(it, fromTank: true, kind: "tank");
         }
 
@@ -401,5 +414,9 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static bool Prefix(busdoorscripts __instance) { if (!InSession) return true; MarkEdit(__instance.tosave, kind: "busdoor"); return false; }
         }
+
+        private static bool TankChangesNow(tosaveitemscript it, List<TankAdds.Add> adds) => EntityEdits.TankChangesNow(it, adds);
+        private static void ApplyTankAdds(tosaveitemscript it, List<TankAdds.Add> adds) => EntityEdits.ApplyTankAdds(it, adds);
+        private static int KindBit(string kind) => EntityEdits.KindBit(kind);
     }
 }

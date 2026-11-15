@@ -14,9 +14,8 @@ namespace TLDRevamp.Net
     /// its kinds don't cover, or when a value is out of range (non-finite, a tank over capacity, a part look index
     /// nobody has); and each player gets a rate limit for edits and for building usables. Refusals count as anomalies
     /// (Entities.Anomaly), the first 5 of each reason are logged. The host's own edits are trusted (its world is the save).
-    public static partial class Entities
+    internal static class EntityEditCheck
     {
-        public const int KindsKnown = KindUsable | KindTank | KindPart | KindColor | KindFood | KindAmmo | KindPlate | KindBusDoor | KindBlood;
         /// An item's edits leave at most every 0.15 s (EditTick): a door dragged is ~7 a second, pouring the same.
         public static float EditRatePerS = 20f, EditBurst = 40f;
         /// Live building controls send up to 60/s each; allow linked gates and reliable settling records.
@@ -31,8 +30,6 @@ namespace TLDRevamp.Net
         private struct RateBucket { public float Tokens, At; }
         private static readonly Dictionary<int, RateBucket> _editBuckets = new Dictionary<int, RateBucket>(), _poiBuckets = new Dictionary<int, RateBucket>();
         private static readonly Dictionary<string, int> _refusalsLogged = new Dictionary<string, int>();
-        private static readonly Dictionary<uint, KeyValuePair<byte[], itemDataClass>> _groupRecords = new Dictionary<uint, KeyValuePair<byte[], itemDataClass>>();
-        private static readonly int FluidKinds = Enum.GetValues(typeof(mainscript.fluidenum)).Length;
 
         private static bool TakeToken(Dictionary<int, RateBucket> d, int player, float rate, float burst)
         {
@@ -46,17 +43,63 @@ namespace TLDRevamp.Net
         }
 
         /// One refusal: its own counter and the anomaly count; the first 5 of each reason logged as [anomaly] lines.
-        private static void Refuse(ref long counter, string reason, string what)
+        internal static void Refuse(ref long counter, string reason, string what)
         {
             counter++;
             EditRefusedLast = what;
             _refusalsLogged.TryGetValue(reason, out int n);
             _refusalsLogged[reason] = n + 1;
-            if (n < 5) Anomaly(what + " (refused)"); else Anomalies++;
+            Entities.RecordEditRefusal(what, n < 5);
         }
 
-        private static void EditCheckForget(int player) { _editBuckets.Remove(player); _liveServerIn.Remove(player); _poiBuckets.Remove(player); }
-        private static void EditCheckReset() { _editBuckets.Clear(); _poiBuckets.Clear(); _refusalsLogged.Clear(); _groupRecords.Clear(); }
+        internal static bool Sane(float v) => Entities.IsFinite(v) && Math.Abs(v) <= 1e5f;
+
+        internal static bool SaneColor(save_color c) => c == null || (Sane(c.r) && Sane(c.g) && Sane(c.b) && Sane(c.a) && Math.Abs(c.r) <= 100 && Math.Abs(c.g) <= 100 && Math.Abs(c.b) <= 100 && Math.Abs(c.a) <= 100);
+
+        internal static bool Ind(int i) => i >= 0 && i < 1024;
+
+        /// Server: a building usable change — from a player at that building, within the rate, with sane values.
+        internal static bool CheckPoiUsable(int from, Entities.PoiKey k, Entities.PoiState st)
+        {
+            if (from == 0) return true;
+            if (!TakeToken(_poiBuckets, from, PoiRatePerS, PoiBurst)) { Refuse(ref PoiRefusedRate, "poi rate", $"building usable from player {from}: over {PoiRatePerS:F0} a second"); return false; }
+            if (k.Gen < 0 || k.Gen > 255 || k.U < 0 || k.U > 4096 || !Entities.IsFinite(k.X) || !Entities.IsFinite(k.Y) || !Entities.IsFinite(k.Z) ||
+                !Sane(st.XRot) || !Sane(st.YRot) || !Sane(st.Slide) || !Sane(st.Tuned) || st.Turn < -1 || st.Turn > 1024)
+            { Refuse(ref PoiRefusedValues, "poi value", $"building usable from player {from}: values out of range (gen {k.Gen} u {k.U})"); return false; }
+            if (!Entities.TryEditPeerPosition(from, out var p)) { Refuse(ref PoiRefusedReach, "poi reach", $"building usable from player {from}: their position isn't known"); return false; }
+            double dx = p.x - k.X, dz = p.z - k.Z;
+            if (dx * dx + dz * dz > (double)PoiReachM * PoiReachM)
+            {
+                Refuse(ref PoiRefusedReach, "poi reach", $"building usable from player {from}: {Math.Sqrt(dx * dx + dz * dz):F0} m from the building (gen {k.Gen} at {k.X:F0},{k.Z:F0})");
+                return false;
+            }
+            return true;
+        }
+
+        public static string EditCheckJson() =>
+            "{\"refused\":{\"outOfReach\":" + Entities.EditReachRefusals + ",\"rate\":" + EditRefusedRate + ",\"kinds\":" + EditRefusedKinds +
+            ",\"values\":" + EditRefusedValues + ",\"poiReach\":" + PoiRefusedReach + ",\"poiRate\":" + PoiRefusedRate + ",\"poiValues\":" + PoiRefusedValues + "},\"last\":" + Json.Str(EditRefusedLast) +
+            ",\"anomalies\":" + Entities.EditAnomalyCount + "}";
+        internal static bool TakeEditToken(int player) => TakeToken(_editBuckets, player, EditRatePerS, EditBurst);
+        internal static void ForgetEditRate(int player) => _editBuckets.Remove(player);
+        internal static void ForgetPoiRate(int player) => _poiBuckets.Remove(player);
+        internal static void ResetRates() { _editBuckets.Clear(); _poiBuckets.Clear(); _refusalsLogged.Clear(); }
+    }
+
+    public static partial class Entities
+    {
+        public const int KindsKnown = KindUsable | KindTank | KindPart | KindColor | KindFood | KindAmmo | KindPlate | KindBusDoor | KindBlood;
+        public static float EditRatePerS { get => EntityEditCheck.EditRatePerS; set => EntityEditCheck.EditRatePerS = value; }
+        public static float EditBurst { get => EntityEditCheck.EditBurst; set => EntityEditCheck.EditBurst = value; }
+        public static float PoiRatePerS { get => EntityEditCheck.PoiRatePerS; set => EntityEditCheck.PoiRatePerS = value; }
+        public static float PoiBurst { get => EntityEditCheck.PoiBurst; set => EntityEditCheck.PoiBurst = value; }
+        public static float PoiReachM { get => EntityEditCheck.PoiReachM; set => EntityEditCheck.PoiReachM = value; }
+        public static float UnknownTankL { get => EntityEditCheck.UnknownTankL; set => EntityEditCheck.UnknownTankL = value; }
+        private static readonly Dictionary<uint, KeyValuePair<byte[], itemDataClass>> _groupRecords = new Dictionary<uint, KeyValuePair<byte[], itemDataClass>>();
+        private static readonly int FluidKinds = Enum.GetValues(typeof(mainscript.fluidenum)).Length;
+
+        private static void EditCheckForget(int player) { EntityEditCheck.ForgetEditRate(player); _liveServerIn.Remove(player); EntityEditCheck.ForgetPoiRate(player); }
+        private static void EditCheckReset() { EntityEditCheck.ResetRates(); _groupRecords.Clear(); }
 
         /// The object's record as shared (decoded once per object and record).
         private static itemDataClass GroupRecord(SEnt se)
@@ -113,10 +156,6 @@ namespace TLDRevamp.Net
             if (it == null || it.tanks == null || ind < 0 || ind >= it.tanks.Count || it.tanks[ind] == null || it.tanks[ind].F == null) return 0f;
             return it.tanks[ind].F.maxC;
         }
-
-        private static bool Sane(float v) => Finite(v) && Math.Abs(v) <= 1e5f;
-        private static bool SaneColor(save_color c) => c == null || (Sane(c.r) && Sane(c.g) && Sane(c.b) && Sane(c.a) && Math.Abs(c.r) <= 100 && Math.Abs(c.g) <= 100 && Math.Abs(c.b) <= 100 && Math.Abs(c.a) <= 100);
-        private static bool Ind(int i) => i >= 0 && i < 1024;
 
         /// Server: is this edit's record something its kinds may do? null = yes, else why not.
         private static string CheckTankAdds(SEnt se, int idx, List<TankAdds.Add> adds)
@@ -199,27 +238,12 @@ namespace TLDRevamp.Net
             return null;
         }
 
-        /// Server: a building usable change — from a player at that building, within the rate, with sane values.
-        private static bool CheckPoiUsable(int from, PoiKey k, PoiState st)
-        {
-            if (from == 0) return true;
-            if (!TakeToken(_poiBuckets, from, PoiRatePerS, PoiBurst)) { Refuse(ref PoiRefusedRate, "poi rate", $"building usable from player {from}: over {PoiRatePerS:F0} a second"); return false; }
-            if (k.Gen < 0 || k.Gen > 255 || k.U < 0 || k.U > 4096 || !Finite(k.X) || !Finite(k.Y) || !Finite(k.Z) ||
-                !Sane(st.XRot) || !Sane(st.YRot) || !Sane(st.Slide) || !Sane(st.Tuned) || st.Turn < -1 || st.Turn > 1024)
-            { Refuse(ref PoiRefusedValues, "poi value", $"building usable from player {from}: values out of range (gen {k.Gen} u {k.U})"); return false; }
-            if (Mp.Server == null || !Mp.Server.PeerPos(from, out var p)) { Refuse(ref PoiRefusedReach, "poi reach", $"building usable from player {from}: their position isn't known"); return false; }
-            double dx = p.x - k.X, dz = p.z - k.Z;
-            if (dx * dx + dz * dz > (double)PoiReachM * PoiReachM)
-            {
-                Refuse(ref PoiRefusedReach, "poi reach", $"building usable from player {from}: {Math.Sqrt(dx * dx + dz * dz):F0} m from the building (gen {k.Gen} at {k.X:F0},{k.Z:F0})");
-                return false;
-            }
-            return true;
-        }
-
-        public static string EditCheckJson() =>
-            "{\"refused\":{\"outOfReach\":" + EditsOutOfReach + ",\"rate\":" + EditRefusedRate + ",\"kinds\":" + EditRefusedKinds +
-            ",\"values\":" + EditRefusedValues + ",\"poiReach\":" + PoiRefusedReach + ",\"poiRate\":" + PoiRefusedRate + ",\"poiValues\":" + PoiRefusedValues + "},\"last\":" + Json.Str(EditRefusedLast) +
-            ",\"anomalies\":" + Anomalies + "}";
+        private static bool TakeEditToken(int player) => EntityEditCheck.TakeEditToken(player);
+        private static void Refuse(ref long counter, string reason, string what) => EntityEditCheck.Refuse(ref counter, reason, what);
+        private static bool Sane(float value) => EntityEditCheck.Sane(value);
+        private static bool SaneColor(save_color color) => EntityEditCheck.SaneColor(color);
+        private static bool Ind(int index) => EntityEditCheck.Ind(index);
+        private static bool CheckPoiUsable(int from, PoiKey key, PoiState state) => EntityEditCheck.CheckPoiUsable(from, key, state);
+        public static string EditCheckJson() => EntityEditCheck.EditCheckJson();
     }
 }

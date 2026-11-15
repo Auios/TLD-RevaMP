@@ -11,6 +11,78 @@ namespace TLDRevamp.Net
     /// moves, so records carry canonical group-index ids (0xF0000000 + index: no real id gets there); each machine maps
     /// them onto its own items by position in the group, like parts. The server keeps the latest record of every item
     /// for players who join later.
+    internal static class EntityResync
+    {
+        public static long ResyncForeignAttachDropped;
+        internal static Dictionary<uint, uint> CanonMap(List<tosaveitemscript> items)
+        {
+            var map = new Dictionary<uint, uint>();
+            for (int i = 0; i < items.Count; i++) if (items[i] != null) map[items[i].idInSave] = Entities.CanonBase + (uint)i;
+            return map;
+        }
+
+        internal static byte[] StateRecord(itemDataClass captured, Dictionary<uint, uint> map, out ulong hash, bool withCar = true)
+        {
+            var d = StateOnly(captured);
+            if (!withCar) d.car = new List<save_carscript>();   // the driver's controls: never someone else's edit
+            // attached to an item OUTSIDE this group (a part bolted into another entity's car): its parentid is this
+            // machine's id and would name a stranger elsewhere — a re-bolted hubcap's own record re-attached it to the
+            // TYRE on the other machine (buglist2m step 3). Where such a part sits travels in AttachSync (net + index).
+            if (d.attachable != null)
+                ResyncForeignAttachDropped += d.attachable.RemoveAll(a => a != null && a.attachType == (int)save_attachable.attachTypeEmu.toItem && !map.ContainsKey(a.parentid));
+            ItemSnapshot.Remap(d, map);
+            byte[] rec = RecordCodec.Encode(d);
+            ulong h = 14695981039346656037UL;
+            foreach (var bt in rec) { h ^= bt; h *= 1099511628211UL; }
+            hash = h;
+            return rec;
+        }
+
+        /// The owner's baseline at share time: the state everyone gets with the share itself (no resend 3 s later).
+        internal static ulong[] StateHashes(List<tosaveitemscript> items, List<itemDataClass> perItem)
+        {
+            var map = CanonMap(items);
+            var hs = new ulong[items.Count];
+            for (int i = 0; i < items.Count; i++) if (perItem[i] != null) StateRecord(perItem[i], map, out hs[i]);
+            return hs;
+        }
+
+        /// Receiving side of the same rule: an attachment to an item must name a group index, never a raw id.
+        internal static void DropUncanonAttach(itemDataClass d)
+        {
+            if (d.attachable != null)
+                ResyncForeignAttachDropped += d.attachable.RemoveAll(a => a != null && a.attachType == (int)save_attachable.attachTypeEmu.toItem && a.parentid < Entities.CanonBase);
+        }
+
+        /// Only the lists ApplyState uses. The rest would make every item look changed on every tick while its car
+        /// moves — attached parts' local positions jitter by micrometres on their joints, dashboard needles move — and
+        /// none of it is applied (poses and wheels stream on their own).
+        internal static itemDataClass StateOnly(itemDataClass d)
+        {
+            var o = new itemDataClass();
+            o.partconditions = d.partconditions; o.tanks = d.tanks; o.usable = d.usable; o.colors = d.colors; o.door_rots = d.door_rots;
+            o.car = d.car; o.ammo = d.ammo; o.ginlamp = d.ginlamp; o.busdoorscript = d.busdoorscript; o.painting = d.painting;
+            o.food = d.food; o.rendszam = d.rendszam;
+            // re-attaching a detached part must reach the other machines — but only WHERE it's attached: lpos jitters by
+            // micrometres on joints and gpos (the attach point in the world) moves with the car, and carrying them made
+            // every attached part "change" every pass while driving: the receivers re-attached the whole dashboard
+            // every 3 s (visible re-insert + hitch). gpos dropped, lpos to the centimetre.
+            o.attachable = new List<save_attachable>();
+            if (d.attachable != null)
+                foreach (var a in d.attachable)
+                {
+                    if (a == null) continue;
+                    var c = new save_attachable(a);
+                    c.gpos = new Vector3d(0, 0, 0);
+                    // in a slot (indexType 2) the slot IS the position; stuck on a collider, the spot counts (to 5 cm)
+                    c.lpos = a.indexType == 2 ? new Vector3d(0, 0, 0)
+                        : new Vector3d(Math.Round(a.lpos.x * 20) / 20, Math.Round(a.lpos.y * 20) / 20, Math.Round(a.lpos.z * 20) / 20);
+                    o.attachable.Add(c);
+                }
+            return o;
+        }
+    }
+
     public static partial class Entities
     {
         public const byte Resync = 31;
@@ -87,39 +159,6 @@ namespace TLDRevamp.Net
             ToServer(WR, true);
             ResyncsSent++; ResyncItemsSent += changed; ResyncBytes += WR.Len;
             SessionLog.Event("resync-sent", e.NetId, from: MyId, count: changed, epoch: e.Epoch);
-        }
-
-        internal static Dictionary<uint, uint> CanonMap(List<tosaveitemscript> items)
-        {
-            var map = new Dictionary<uint, uint>();
-            for (int i = 0; i < items.Count; i++) if (items[i] != null) map[items[i].idInSave] = CanonBase + (uint)i;
-            return map;
-        }
-
-        internal static byte[] StateRecord(itemDataClass captured, Dictionary<uint, uint> map, out ulong hash, bool withCar = true)
-        {
-            var d = StateOnly(captured);
-            if (!withCar) d.car = new List<save_carscript>();   // the driver's controls: never someone else's edit
-            // attached to an item OUTSIDE this group (a part bolted into another entity's car): its parentid is this
-            // machine's id and would name a stranger elsewhere — a re-bolted hubcap's own record re-attached it to the
-            // TYRE on the other machine (buglist2m step 3). Where such a part sits travels in AttachSync (net + index).
-            if (d.attachable != null)
-                ResyncForeignAttachDropped += d.attachable.RemoveAll(a => a != null && a.attachType == (int)save_attachable.attachTypeEmu.toItem && !map.ContainsKey(a.parentid));
-            ItemSnapshot.Remap(d, map);
-            byte[] rec = RecordCodec.Encode(d);
-            ulong h = 14695981039346656037UL;
-            foreach (var bt in rec) { h ^= bt; h *= 1099511628211UL; }
-            hash = h;
-            return rec;
-        }
-
-        /// The owner's baseline at share time: the state everyone gets with the share itself (no resend 3 s later).
-        private static ulong[] StateHashes(List<tosaveitemscript> items, List<itemDataClass> perItem)
-        {
-            var map = CanonMap(items);
-            var hs = new ulong[items.Count];
-            for (int i = 0; i < items.Count; i++) if (perItem[i] != null) StateRecord(perItem[i], map, out hs[i]);
-            return hs;
         }
 
         /// Server: keep each item's latest record, pass the message on.
@@ -244,7 +283,7 @@ namespace TLDRevamp.Net
                 if (idx < 0 || idx >= e.Items.Count || e.Items[idx] == null || (e.Split != null && e.Split.Contains(idx))) continue;
                 var d = RecordCodec.Decode(rec);
                 if (d == null) continue;
-                DropUncanonAttach(d);
+                EntityResync.DropUncanonAttach(d);
                 ItemSnapshot.Remap(d, map);
                 ApplyState(e.Items[idx], d);
             }
@@ -252,13 +291,6 @@ namespace TLDRevamp.Net
             SessionLog.Event("handover-applied", net, to: MyId, epoch: epoch, count: count);
         }
 
-        public static long ResyncForeignAttachDropped;
-        /// Receiving side of the same rule: an attachment to an item must name a group index, never a raw id.
-        private static void DropUncanonAttach(itemDataClass d)
-        {
-            if (d.attachable != null)
-                ResyncForeignAttachDropped += d.attachable.RemoveAll(a => a != null && a.attachType == (int)save_attachable.attachTypeEmu.toItem && a.parentid < CanonBase);
-        }
         private static void ApplyResync(NetReader r)
         {
             uint net = r.U32(); uint epoch = r.U32(); double stamp = r.F64();
@@ -278,7 +310,7 @@ namespace TLDRevamp.Net
                     if (e.Split != null && e.Split.Contains(idx)) continue;
                     var fd = RecordCodec.Decode(rec);
                     if (fd == null) continue;
-                    DropUncanonAttach(fd);
+                    EntityResync.DropUncanonAttach(fd);
                     ItemSnapshot.Remap(fd, fmap);
                     if (idx >= 0 && idx < e.ItemIds.Count) EntityCarTuning.CopyTanksAre(e.ItemIds[idx], fd.tanks);
                     FarResync(e, idx, fd);
@@ -301,7 +333,7 @@ namespace TLDRevamp.Net
                 if (held) { ResyncHeld++; CensusAfterHold(e.NetId); if (!TankAddEdits) continue; }
                 var d = RecordCodec.Decode(rec);
                 if (d == null) continue;
-                DropUncanonAttach(d);
+                EntityResync.DropUncanonAttach(d);
                 ItemSnapshot.Remap(d, map);
                 if (held) { EntityCarTuning.CopyTanksAre(e.Items[idx].idInSave, d.tanks); continue; }   // what the tank comes to when the hold ends
                 bool useUsables = LiveRecordUsables(e, idx, stamp);
@@ -312,34 +344,6 @@ namespace TLDRevamp.Net
             }
             ResyncsApplied++;
             SessionLog.Event("resync-applied", net, to: MyId, count: count, epoch: e.Epoch);
-        }
-
-        /// Only the lists ApplyState uses. The rest would make every item look changed on every tick while its car
-        /// moves — attached parts' local positions jitter by micrometres on their joints, dashboard needles move — and
-        /// none of it is applied (poses and wheels stream on their own).
-        internal static itemDataClass StateOnly(itemDataClass d)
-        {
-            var o = new itemDataClass();
-            o.partconditions = d.partconditions; o.tanks = d.tanks; o.usable = d.usable; o.colors = d.colors; o.door_rots = d.door_rots;
-            o.car = d.car; o.ammo = d.ammo; o.ginlamp = d.ginlamp; o.busdoorscript = d.busdoorscript; o.painting = d.painting;
-            o.food = d.food; o.rendszam = d.rendszam;
-            // re-attaching a detached part must reach the other machines — but only WHERE it's attached: lpos jitters by
-            // micrometres on joints and gpos (the attach point in the world) moves with the car, and carrying them made
-            // every attached part "change" every pass while driving: the receivers re-attached the whole dashboard
-            // every 3 s (visible re-insert + hitch). gpos dropped, lpos to the centimetre.
-            o.attachable = new List<save_attachable>();
-            if (d.attachable != null)
-                foreach (var a in d.attachable)
-                {
-                    if (a == null) continue;
-                    var c = new save_attachable(a);
-                    c.gpos = new Vector3d(0, 0, 0);
-                    // in a slot (indexType 2) the slot IS the position; stuck on a collider, the spot counts (to 5 cm)
-                    c.lpos = a.indexType == 2 ? new Vector3d(0, 0, 0)
-                        : new Vector3d(Math.Round(a.lpos.x * 20) / 20, Math.Round(a.lpos.y * 20) / 20, Math.Round(a.lpos.z * 20) / 20);
-                    o.attachable.Add(c);
-                }
-            return o;
         }
 
         /// The part of the game's LoadStuff that is state, applied to a live object. Not the rest: physLocks (would
@@ -453,5 +457,9 @@ namespace TLDRevamp.Net
                     }
                 }
         }
+        internal static Dictionary<uint, uint> CanonMap(List<tosaveitemscript> items) => EntityResync.CanonMap(items);
+        internal static byte[] StateRecord(itemDataClass captured, Dictionary<uint, uint> map, out ulong hash, bool withCar = true) => EntityResync.StateRecord(captured, map, out hash, withCar);
+        internal static itemDataClass StateOnly(itemDataClass data) => EntityResync.StateOnly(data);
+        private static ulong[] StateHashes(List<tosaveitemscript> items, List<itemDataClass> perItem) => EntityResync.StateHashes(items, perItem);
     }
 }

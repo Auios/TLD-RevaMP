@@ -32,7 +32,7 @@ public partial class pickupable
 public partial class mountStuff { public tosaveitemscript parentTosave; }
 public partial class attachablescript { public object utanfuto; }
 public class partslotscript : Component { public attachablescript Part; public attachablescript part() => Part; public bool UnCraft(bool b) => true; }
-public class save_attachable
+public partial class save_attachable
 {
     public Vector3d gpos = new Vector3d(1, 2, 3), lpos = new Vector3d(4, 5, 6), poiid = new Vector3d(7, 8, 9);
     public int indexType = 2, attachType = 3, poigenid = 4;

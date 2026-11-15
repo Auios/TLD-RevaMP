@@ -25,7 +25,7 @@ namespace UnityEngine
 }
 public partial class mainscript
 {
-    public class fluidcontainer
+    public partial class fluidcontainer
     {
         public List<FluidValue> fluids = new List<FluidValue>();
         public float GetAmount() => fluids.Sum(f => f.amount);
@@ -49,7 +49,7 @@ public class save_tankscript
     public save_tankscript(tankscript t, uint root, int index) { id = root; ind = index; type = t.F.fluids.Select(f => f.type).ToArray(); amount = t.F.fluids.Select(f => f.amount).ToArray(); }
     public void Load(tankscript t) { t.F.fluids = type.Select((v, i) => new mainscript.FluidValue { type = v, amount = amount[i] }).ToList(); }
 }
-public class itemDataClass { public List<int> items = new List<int> { 1 }; public List<save_carscript> car; }
+public partial class itemDataClass { public List<int> items = new List<int> { 1 }; public List<save_carscript> car; }
 public class save_carscript { public bool blood; }
 public class washtriggerscript : Component { public bool ON, destroyOnRepair; public void GotClean() { ON = false; } }
 public class busdoorscripts : Component
@@ -78,7 +78,7 @@ public partial class attachablescript : Component
 }
 namespace TLDRevamp
 {
-    internal static partial class SessionLog { internal static double St = 123.5; internal static void Event(string what, uint net = 0, int item = 0, int slot = 0, int to = 0, uint epoch = 0, int count = 0, int from = 0, string result = "") { } }
+    internal static partial class SessionLog { internal static readonly List<string> Events = new List<string>(); internal static double St = 123.5; internal static void Event(string what, uint net = 0, int item = 0, int slot = 0, int to = 0, uint epoch = 0, int count = 0, int from = 0, string result = "") { Events.Add(what + ":" + result); } }
     internal static partial class GameLookups { internal static MethodInfo Method(Type t, string n, Type[] args = null) => args == null ? t.GetMethod(n) : t.GetMethod(n, args); }
 }
 namespace TLDRevamp.Net
@@ -93,7 +93,6 @@ namespace TLDRevamp.Net
         internal static int MyId;
         internal static bool _applyingState, _applyingAttach, _applyingDetach;
         internal static bool ApplyingState => _applyingState;
-        internal static readonly Dictionary<uint, List<save_tankscript>> _tankTold = new Dictionary<uint, List<save_tankscript>>();
         internal static readonly Dictionary<tankscript, float> _tankFilledAt = new Dictionary<tankscript, float>();
         internal static readonly Dictionary<tosaveitemscript, float> EditDirty = new Dictionary<tosaveitemscript, float>();
         internal const byte Edit = 32;
@@ -107,11 +106,8 @@ namespace TLDRevamp.Net
         private sealed class OneGroup { internal Ent[] Set(Ent e) => new[] { e }; }
         private static readonly OneGroup _oneGroup = new OneGroup();
         internal static bool TestTankChanges, TestWithCar;
-        private static bool LiveItemMoving(tosaveitemscript it) => false;
+        private static bool LiveItemMoving(tosaveitemscript it) => LiveMoving;
         private static Ent EditEntityOf(tosaveitemscript it) => SharedGroupOf(it);
-        private static object CanonMap(List<tosaveitemscript> items) => null;
-        private static byte[] StateRecord(object item, object map, out int count, bool withCar)
-        { TestWithCar = withCar; count = 0; return new byte[] { 1, 2, 3 }; }
         private static bool TankChangesNow(tosaveitemscript it, List<TankAdds.Add> into)
         {
             into.Clear(); if (TestTankChanges) into.Add(new TankAdds.Add { Tank = 0, Type = 2, Litres = -1.25f }); return TestTankChanges;
@@ -126,6 +122,6 @@ namespace TLDRevamp.Net
         internal static void ApplyAttachPose(Ent e, attachablescript at, Vector3 p, Quaternion q) { at.transform.localPosition = p; at.transform.localRotation = q; }
         internal static void TelemetryRender() { }
     }
-    internal static partial class ItemSnapshot { internal static object Capture(tosaveitemscript it) => it; }
+    internal static partial class ItemSnapshot { internal static itemDataClass Capture(tosaveitemscript it) => new itemDataClass { car = new List<save_carscript> { new save_carscript() } }; }
     internal static partial class Protocol { internal const byte LiveUsable = 93; internal const int StateHz = 20; }
 }

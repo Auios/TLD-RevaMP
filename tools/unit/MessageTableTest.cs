@@ -94,6 +94,13 @@ static class MessageTableTest
         Check("PoiUsable: handlers remain beside live sequence state", server.Contains("ServerPoiUsable(from, r);") && client.Contains("ApplyPoiUsable(r);") && Method("Entities", "ServerPoiMotion").Contains("_poiServerOrder"));
         Check("LiveUsable: bytes read by usables owner", Method("EntityUsables", "ReadLiveUsable").Contains("r.U32()") && Method("EntityUsables", "ReadLiveUsable").Contains("r.U16()"));
         Check("PoiUsable: payload codec at usables owner", src.Values.Any(s => s.Contains("class EntityUsables") && s.Contains("internal static bool ReadPoi(") && s.Contains("X = r.F64()")));
+        foreach (var handler in new[] { ("Edit", "ServerEdit", "ApplyEdit"), ("Resync", "ServerResync", "ApplyResync"), ("HandoverState", "ServerHandover", "ApplyHandover") })
+        {
+            Check(handler.Item1 + ": authority and routing remain on kernel", server.Contains("case " + handler.Item1 + ": " + handler.Item2 + "(from, r);") && client.Contains("case " + handler.Item1 + ": " + handler.Item3 + "(r);"));
+            Check(handler.Item1 + ": retained handlers read their payload", Method("Entities", handler.Item2).Contains("r.U32()") && Method("Entities", handler.Item3).Contains("r.U32()"));
+        }
+        Check("Resync: record normalization has its own owner", src.Values.Any(s => s.Contains("class EntityResync") && s.Contains("internal static byte[] StateRecord(") && s.Contains("hash = h;")));
+        Check("Edit: POI validation and rate state have their own owner", src.Values.Any(s => s.Contains("class EntityEditCheck") && s.Contains("internal static bool CheckPoiUsable(") && s.Contains("private static readonly Dictionary<int, RateBucket>")));
         Check("TPA: refresh preprocessing owner keeps defer before copy", client.IndexOf("EntityTeleportRefresh.DeferTpa(type, r)") >= 0 && client.IndexOf("EntityTeleportRefresh.DeferTpa(type, r)") < client.IndexOf("EntityTeleportRefresh.TpaCopyMessage(type, r)"));
         Check("RabbitState: stale counter belongs to rabbits", Method("Entities", "ServerRabbitState").Contains("EntityRabbits.RabbitStatesStale++"));
         Check("RabbitState: host keeps durable snapshot before relaying", Method("Entities", "ServerRabbitState").IndexOf("se.RabbitSnapshot = FinalSnapshot(r, true);") < Method("Entities", "ServerRabbitState").IndexOf("WS.Reset();"));
