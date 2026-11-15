@@ -60,10 +60,26 @@ static class ReproActionsTest
         Hook("ReproDrop", "Prefix", p, false);
         Check(Count(ReproKind.Throw) == 1, "full-force throw recorded");
         foreach (var row in Snapshot().GetProperty("rows").EnumerateArray()) if (row[2].GetInt32() == (int)ReproKind.Throw) Check(row[10].GetDouble() == 1, "crossing-frame throw clamped");
-        Hook("ReproLock", "Postfix", part.Root.P, new mountStuff());
+        var bare = new mountStuff(); bare.Store(part.Root.P, false); Hook("ReproLock", "Postfix", bare, part.Root.P, false, true);
         Check(Snapshot().GetProperty("skipped").GetInt32() == 1, "null mount parent skipped without throwing");
-        parent.Root.ThrowMounts = true; Hook("ReproLock", "Postfix", part.Root.P, parent.Root.Mounts[0]); parent.Root.ThrowMounts = false;
+        part.Root.P.UnPhysicsLock(); parent.Root.Mounts[0].Store(part.Root.P, false);
+        parent.Root.ThrowMounts = true; Hook("ReproLock", "Postfix", parent.Root.Mounts[0], part.Root.P, false, true); parent.Root.ThrowMounts = false;
         Check(Snapshot().GetProperty("skipped").GetInt32() == 2, "mount hook exceptions contained");
+        // The game stores through mountStuff.Store (PhysLock itself is inlined): a lock is recorded only when Store locked it.
+        part.Root.P.UnPhysicsLock();
+        object[] store = { parent.Root.Mounts[0], part.Root.P, false };
+        Hook("ReproLock", "Prefix", store); Hook("ReproLock", "Postfix", parent.Root.Mounts[0], part.Root.P, store[2], true);
+        Check(Count(ReproKind.PhysLock) == 0, "store that locked nothing not recorded");
+        Hook("ReproLock", "Prefix", store); parent.Root.Mounts[0].Store(part.Root.P, false); Hook("ReproLock", "Postfix", parent.Root.Mounts[0], part.Root.P, store[2], false);
+        Check(Count(ReproKind.PhysLock) == 0, "store skipped by another prefix not recorded");
+        part.Root.P.UnPhysicsLock();
+        Hook("ReproLock", "Prefix", store); parent.Root.Mounts[0].Store(part.Root.P, false); Hook("ReproLock", "Postfix", parent.Root.Mounts[0], part.Root.P, store[2], true);
+        Check(Count(ReproKind.PhysLock) == 1, "game store records the lock");
+        foreach (var row in Snapshot().GetProperty("rows").EnumerateArray())
+            if (row[2].GetInt32() == (int)ReproKind.PhysLock) Check(row[3].GetUInt32() == 7 && row[4].GetUInt32() == 8 && row[5].GetInt32() == 0 && row[6].GetInt32() == 0 && row[10].GetDouble() == 0, "lock row names item, container, mount and member");
+        Hook("ReproLock", "Prefix", store); parent.Root.Mounts[0].Store(part.Root.P, false); Hook("ReproLock", "Postfix", parent.Root.Mounts[0], part.Root.P, store[2], true);
+        Check(Count(ReproKind.PhysLock) == 1, "store of an item already locked there not recorded again");
+        part.Root.P.UnPhysicsLock();
         object[] uncraft = { new partslotscript { Part = part.Root.attachable }, null };
         Hook("ReproUncraft", "Prefix", uncraft);
         Hook("ReproUncraft", "Postfix", uncraft[1], false); Check(Count(ReproKind.Detach) == 0, "refused uncraft not recorded");

@@ -184,19 +184,25 @@ namespace TLDRevamp.Net
             private static void Postfix(ReproRow? __state, bool __result)
             { if (__result) ReproDetached(__state); }
         }
-        [HarmonyPatch(typeof(pickupable), nameof(pickupable.PhysLock))]
+        /// The game locks an item in one place, mountStuff.Store. It sets the item's lock through pickupable.PhysLock, a bare
+        /// field setter that Mono inlines into Store, so a hook on PhysLock never ran and recordings had no lock rows
+        /// (reprocheck, 2026-11-15). A Store that returns early, is refused, or stores an item already locked to this mount
+        /// records nothing.
+        [HarmonyPatch(typeof(mountStuff), nameof(mountStuff.Store))]
         private static class ReproLock
         {
-            private static void Postfix(pickupable __instance, mountStuff _physlock)
+            private static void Prefix(mountStuff __instance, pickupable _p, out bool __state)
+            { __state = ReproRecorder.Recording && _p != null && _p.physlock == __instance; }
+            private static void Postfix(mountStuff __instance, pickupable _p, bool __state, bool __runOriginal)
             {
-                if (!ReproRecorder.Recording || ReproPlayback.Active || _physlock == null) return;
+                if (!__runOriginal || __state || !ReproRecorder.Recording || ReproPlayback.Active || _p == null || _p.physlock != __instance) return;
                 try
                 {
-                    var e = EditEntityOf(__instance.tosave); if (e == null || e.Proxy || e.OwnerId != MyId) return;
-                    if (_physlock.parentTosave == null) { ReproRecorder.Skip(); return; }
-                    var r = ReproItem(ReproKind.PhysLock, __instance.tosave); var c = EditEntityOf(_physlock.parentTosave);
-                    r.Other = c != null ? c.NetId : 0; r.Slot = Array.IndexOf(LockMounts(_physlock.parentTosave), _physlock);
-                    r.A = c != null ? c.Items.IndexOf(_physlock.parentTosave) : -1; ReproRecorder.Add(r);
+                    var e = EditEntityOf(_p.tosave); if (e == null || e.Proxy || e.OwnerId != MyId) return;
+                    if (__instance.parentTosave == null) { ReproRecorder.Skip(); return; }
+                    var r = ReproItem(ReproKind.PhysLock, _p.tosave); var c = EditEntityOf(__instance.parentTosave);
+                    r.Other = c != null ? c.NetId : 0; r.Slot = Array.IndexOf(LockMounts(__instance.parentTosave), __instance);
+                    r.A = c != null ? c.Items.IndexOf(__instance.parentTosave) : -1; ReproRecorder.Add(r);
                 }
                 catch { ReproRecorder.Skip(); }
             }
