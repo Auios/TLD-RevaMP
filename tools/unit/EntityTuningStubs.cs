@@ -70,7 +70,7 @@ public class ediblescript : Component { public GameObject[] parts; public int in
 public partial class aiscript : Component { public bool fleeing; public float flightFight; public Senses senses; public class Senses { public List<int> stimuls = new List<int>(); } }
 public partial class attachablescript : Component
 {
-    public tosaveitemscript tosave, Target; public Component Poi; public object slot; public Transform point; public bool parentAtAttach, attached;
+    public tosaveitemscript tosave, Target; public Component Poi; public partslotscript slot; public Transform point; public bool parentAtAttach, attached;
     public tosaveitemscript AttachedToTosave() => Target;
     public Component AttachedToPOI() => Poi;
     public void Attach(Transform p) { point = p; attached = true; }

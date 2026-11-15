@@ -78,8 +78,8 @@ static partial class EntitySplitTest
         Time.frameCount++; ReproPatch("ReproUncraft", "Postfix", uncraft[1], true);
         foreach (string guard in new[] { "_applyingDetach", "_applyingState", "_hitchApplying" })
         {
-            Set(typeof(Entities), guard, true); object[] guarded = { at, null }; ReproPatch("ReproDetach", "Prefix", guarded);
-            Check(guarded[1] == null, "detach guard " + guard); Set(typeof(Entities), guard, false);
+            Set(guard == "_hitchApplying" ? typeof(EntityHitches) : typeof(Entities), guard, true); object[] guarded = { at, null }; ReproPatch("ReproDetach", "Prefix", guarded);
+            Check(guarded[1] == null, "detach guard " + guard); Set(guard == "_hitchApplying" ? typeof(EntityHitches) : typeof(Entities), guard, false);
         }
         pick.physlock = mount; ReproPatch("ReproLock", "Postfix", mount, pick, false, true); ReproPatch("ReproUnlock", "Prefix", pick);
         n = ReproRecorder.Rows.Count; e.Proxy = true; ReproPatch("ReproLock", "Postfix", mount, pick, false, true); ReproPatch("ReproUnlock", "Prefix", pick);
@@ -106,9 +106,9 @@ static partial class EntitySplitTest
         ReproCall("ReproAttach", 7u, 8u, 0, 1); ReproPatch("ReproUsable", "Postfix", u, true);
         object[] inactive = { at, null }; ReproPatch("ReproDetach", "Prefix", inactive);
         Check(inactive[1] == null && ReproRecorder.Rows.Count == n, "attach usable and detach require player action");
-        Entities.PlayerActing = true; Entities._hitchApplying = true;
-        ReproCall("ReproAttach", 7u, 8u, 0, 1); Entities._hitchApplying = false;
-        at.utanfuto = new object(); ReproCall("ReproAttach", 7u, 8u, 0, 1);
+        Entities.PlayerActing = true; Set(typeof(EntityHitches), "_hitchApplying", true);
+        ReproCall("ReproAttach", 7u, 8u, 0, 1); Set(typeof(EntityHitches), "_hitchApplying", false);
+        at.utanfuto = new HitchTrailerBody(); ReproCall("ReproAttach", 7u, 8u, 0, 1);
         inactive = new object[] { at, null }; ReproPatch("ReproDetach", "Prefix", inactive); at.utanfuto = null;
         Check(inactive[1] == null && ReproRecorder.Rows.Count == n, "hitch apply and trailer attach guards remain");
         ReproPatch("ReproPickup", "Postfix", new fpscontroller { pickedUp = pick }, pick);

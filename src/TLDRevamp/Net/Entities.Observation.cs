@@ -7,7 +7,7 @@ namespace TLDRevamp.Net
         internal static System.Collections.Generic.IReadOnlyDictionary<uint, Ent> ObservedEntities => ByNet;
         internal static uint ObservedFocus(int index) => TelemetryFocus[index];
         internal static uint ObservedFooting => _telemetryFooting;
-        internal static bool ObservedHitchPending(uint net) => _hitchTransfers.ContainsKey(net) || _hitchCommands.ContainsKey(net);
+        internal static bool ObservedHitchPending(uint net) => _hitchTransfers.ContainsKey(net) || EntityHitches.HasCommand(net);
         internal static uint ObservedParent(uint net) => Server.TryGetValue(net, out var e) ? e.AttachParent : 0;
         internal static bool ObservedHitch(uint net) => Server.TryGetValue(net, out var e) && e.Hitch;
         internal static bool ObservedServerEntity(uint net) => Server.ContainsKey(net);

@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><NoWarn>CS0649;CS8981</NoWarn><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <PropertyGroup><DefineConstants>$(DefineConstants);HITCH_RUNTIME</DefineConstants><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><NoWarn>CS0649;CS8981</NoWarn><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
     <Compile Include="HitchTest.cs" />
+    <Compile Include="EntityHitchChecks.cs" />
+    <Compile Include="EntityHitchStubs.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Hitch.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.DetachCodec.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.RotCodec.cs" />
@@ -9,4 +11,12 @@
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
     <Compile Include="../../src/TLDRevamp.Dev/Net/Entities.Hitch.cs" />
   </ItemGroup>
+  <Target Name="ExtractHitchBoundary" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
+      <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
+    </PropertyGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractHitchBoundary.py&quot; &quot;$(IntermediateOutputPath)HitchBoundary.g.cs&quot;" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)HitchBoundary.g.cs" /></ItemGroup>
+  </Target>
 </Project>

@@ -209,7 +209,7 @@ static partial class EntitySplitTest
         object[] aim = { pl, null }; SeatHook("SeatAimRays", "Pre", aim); camera.transform.localPosition = Vector3.zero; SeatHook("SeatAimRays", "After", pl, aim[1]); Check(camera.transform.localPosition == new Vector3(1, 2, 3) && EntitySeats.SeatAimFrames == 1, "aim finalizer restores captured camera local pose");
         body.isKinematic = false; Check(!EntitySeats.SeatAimFrame(out _, out _), "owned physics seat needs no aim frame"); body.isKinematic = true; body.interpolation = RigidbodyInterpolation.None; Check(!EntitySeats.SeatAimFrame(out _, out _), "uninterpolated seat needs no aim frame");
         SeatMap("_seats").Clear(); SeatMap("_seatsOwn").Clear();
-        var rear = new Transform { name = "rear" }; var rearSeat = new seatscript { sitPos = new Transform() }; rearSeat.transform.parent = rear; rear.Children.Add(rearSeat); e.Root.partslotscripts = new Component[] { rear };
+        var rear = new partslotscript { name = "rear" }; var rearSeat = new seatscript { sitPos = new Transform() }; rearSeat.transform.parent = rear.transform; rear.transform.Children.Add(rearSeat); e.Root.partslotscripts = new System.Collections.Generic.List<partslotscript> { rear };
         Check(EntitySeats.VehicleSeats(e.Root).Contains(rearSeat), "rear slot body seats appended");
         EntitySeats.RearSeats = false; Check(!EntitySeats.VehicleSeats(e.Root).Contains(rearSeat) && EntitySeats.VehicleSeats(e.Root, true).Contains(rearSeat), "rear switch keeps separate caches and always override"); EntitySeats.RearSeats = true;
         var stool = new tosaveitemscript(); stool.transform.ChildComponent = stool;

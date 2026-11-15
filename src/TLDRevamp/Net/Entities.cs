@@ -273,7 +273,7 @@ namespace TLDRevamp.Net
             EntityHands.WornReset();
             _playerDeleted.Clear();
             EntityWorldClock.ClockReset();
-            _hitchOps.Clear(); _hitchTransfers.Clear(); _hitchCommands.Clear(); _hitchDeparted.Clear();
+            _hitchOps.Clear(); _hitchTransfers.Clear(); EntityHitches.ClearCommands(); _hitchDeparted.Clear();
         }
 
         // ------------------------------------------------------------------ local side
@@ -1233,10 +1233,10 @@ namespace TLDRevamp.Net
                 case StormSync: EntityWeather.ApplyStorms(r); break;
                 case AttachSync: ApplyAttachSync(r); break;
                 case AttachReq: ApplyAttachReq(r); break;
-                case HitchCommand: ApplyHitchCommand(r); break;
-                case HitchFreeze: ApplyHitchFreeze(r); break;
-                case HitchFrozen: ApplyHitchFrozen(r); break;
-                case HitchResult: ApplyHitchResult(r); break;
+                case HitchCommand: EntityHitches.ApplyHitchCommand(r); break;
+                case HitchFreeze: EntityHitches.ApplyHitchFreeze(r); break;
+                case HitchFrozen: EntityHitches.ApplyHitchFrozen(r); break;
+                case HitchResult: EntityHitches.ApplyHitchResult(r); break;
                 case CensusAsk: ApplyCensusAsk(r); break;
                 case CensusReply: ApplyCensusReply(r); break;
                 case CensusRepair: ApplyCensusRepair(r); break;
@@ -1310,7 +1310,7 @@ namespace TLDRevamp.Net
                     if (e.Proxy && owner != MyId && owner != e.OwnerId && e.Ip != null) { e.Ip = new PoseInterpolator(); OwnerClockResets++; }
                     e.OwnerId = owner; e.HitchAuthorityOwner = owner; e.Epoch = epoch; OwnerChanges++; e.OwnerAt = Time.realtimeSinceStartup;
                     SetProxy(e, owner != MyId);
-                    if (HitchTrailer(e) && e.HitchWaiting) HitchFreezeBodies(e);
+                    if (HitchTrailer(e) && e.HitchWaiting) EntityHitches.HitchFreezeBodies(e);
                     // our car now: what it holds and carries comes with it (Entities.Cargo)
                     if (owner == MyId && e.Root != null && e.Root.car != null && e.PartIndex < 0) ContentsOnOwner += ClaimContents(e.Root.car, true);
                     break;

@@ -91,3 +91,5 @@ namespace TLDRevamp.Net
 }
 
 namespace TLDRevamp { static class DevHooks { internal static System.Func<tosaveitemscript, bool> HeldItem; } }
+
+namespace TLDRevamp.Net { internal static class EntityHitches { internal static bool HasCommand(uint net) => false; internal static void HitchFreezeBodies(Entities.Ent e) { } } }

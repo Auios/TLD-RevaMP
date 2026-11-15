@@ -27,6 +27,7 @@ static partial class EntitySplitTest
 
     static void Main()
     {
+        HitchChecks();
         UsablesChecks();
         TelemetryChecks();
         ReproChecks();

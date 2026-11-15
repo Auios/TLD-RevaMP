@@ -4,27 +4,330 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static class EntityHitches
     {
-        public const byte HitchRequest = 99, HitchCommand = 100, HitchFreeze = 101, HitchFrozen = 102, HitchResult = 103;
-        public static bool HitchTransferTimeout = true;   // A/B: false = wait indefinitely for the old simulator/result
-        public static bool HitchEnsureKnown = true;       // A/B: false = rely on ordinary distance-based Add delivery
-        public static bool HitchReleaseOnRemove = true;   // A/B: false = keep the deleted car's hitch record
         public static long ProxyGripsMoved;
-        private const float HitchTimeoutS = 5f;
+
         private static bool _hitchApplying;
-        private static readonly HashSet<int> _hitchDeparted = new HashSet<int>();
-        private static uint _hitchToken;
-        private sealed class HitchOp
+        internal static bool HasCommand(uint net) => _hitchCommands.ContainsKey(net);
+        internal static bool Applying => _hitchApplying;
+        internal static void ClearCommands() => _hitchCommands.Clear();
+        internal static void RemoveCommand(uint net) => _hitchCommands.Remove(net);
+
+        internal sealed class HitchOp
         {
             internal uint Car, Trailer, CarEpoch, TrailerEpoch;
             internal int Slot, From;
             internal bool Connect, ReleaseBrake;
             internal float Until;
         }
-        private static readonly Dictionary<uint, HitchOp> _hitchOps = new Dictionary<uint, HitchOp>();
-        private static readonly Dictionary<uint, HitchAuthority.Transfer> _hitchTransfers = new Dictionary<uint, HitchAuthority.Transfer>();
+
         private static readonly Dictionary<uint, HitchOp> _hitchCommands = new Dictionary<uint, HitchOp>();
+
+        internal static void WriteHitch(NetWriter w, HitchOp op)
+        {
+            w.U32(op.Trailer); w.U32(op.Car); w.U32(op.TrailerEpoch); w.U32(op.CarEpoch);
+            w.VarI32(op.Slot); w.VarI32(op.From); w.Bool(op.Connect); w.Bool(op.ReleaseBrake);
+        }
+
+        internal static HitchOp ReadHitch(NetReader r) => new HitchOp { Trailer = r.U32(), Car = r.U32(), TrailerEpoch = r.U32(), CarEpoch = r.U32(),
+            Slot = r.VarI32(), From = r.VarI32(), Connect = r.Bool(), ReleaseBrake = r.Bool() };
+
+        internal static void RequestHitch(Entities.Ent tr, Entities.Ent car, partslotscript slot, bool connect, bool releaseBrake = false)
+        {
+            var op = new HitchOp { Trailer = tr.NetId, Car = car.NetId, TrailerEpoch = tr.Epoch, CarEpoch = car.Epoch,
+                Slot = car.Root.partslotscripts.IndexOf(slot), From = Entities.HitchLocalId, Connect = connect, ReleaseBrake = releaseBrake };
+            SessionLog.Event("hitch-request", op.Trailer, op.Car, from: Entities.HitchLocalId, to: car.OwnerId, slot: op.Slot, epoch: tr.Epoch, result: connect ? "connect" : "disconnect");
+            var w = new NetWriter(); w.U8(Entities.HitchRequest); WriteHitch(w, op); Entities.SendHitchRequest(w, true);
+        }
+
+        private static bool HitchAttach(attachablescript at, partslotscript slot)
+        {
+            if (!Entities.HitchInSession || _hitchApplying || Entities.HitchApplyingAttach || at == null || at.utanfuto == null) return true;
+            if (!Entities.HitchPlayerActing) return true;
+            var tr = Entities.HitchRootEntity(at.tosave); var car = slot != null ? Entities.HitchGroupEntity(slot.tosaveitem) : null;
+            if (tr != null && car != null && Entities.HitchPlayerActing) RequestHitch(tr, car, slot, true);
+            else SessionLog.Event("hitch-refused", tr != null ? tr.NetId : 0, result: "unshared target or automatic attach");
+            return false;
+        }
+
+        [HarmonyPatch(typeof(partslotscript), nameof(partslotscript.Craft))]
+        private static class HitchCraftHook
+        {
+            private static bool Prefix(partslotscript __instance, attachablescript p) => HitchAttach(p, __instance);
+        }
+
+        [HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(partslotscript) })]
+        private static class HitchSlotHook
+        {
+            private static bool Prefix(attachablescript __instance, partslotscript _slot) => HitchAttach(__instance, _slot);
+        }
+
+        [HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(Transform) })]
+        private static class HitchJointHook
+        {
+            [HarmonyPriority(Priority.First)]
+            private static bool Prefix(attachablescript __instance, Transform Ppoint)
+            {
+                if (!Entities.HitchInSession || __instance.utanfuto == null) return true;
+                if (!Entities.HitchApplyingAttach && !_hitchApplying && Entities.HitchPlayerActing) return HitchAttach(__instance, __instance.slot ?? Ppoint.GetComponentInParent<partslotscript>());
+                var tr = Entities.HitchRootEntity(__instance.tosave); var car = Entities.HitchTowEntity(__instance);
+                // Display copies keep the game's attachment record and lights, but never a physics joint.
+                if (tr != null && car != null && Entities.HitchMayJoin(tr, car)) return true;
+                __instance.attached = true; __instance.point = Ppoint;
+                if (__instance.slot != null && !__instance.slot.parts.Contains(__instance)) __instance.slot.parts.Add(__instance);
+                __instance.utanfuto.RefreshCenterOffMass(true, Ppoint.GetComponentInParent<rearlights>());
+                HitchRemoveJoint(__instance);
+                if (tr != null && tr.Proxy) Entities.FreezeHitchProxy(tr);
+                return false;
+            }
+        }
+
+        internal static bool HitchDetach(attachablescript at)
+        {
+            if (!Entities.HitchInSession || _hitchApplying || Entities.HitchApplyingDetach || at == null || at.utanfuto == null) return true;
+            var tr = Entities.HitchRootEntity(at.tosave); var car = Entities.HitchTowEntity(at);
+            if (tr == null || car == null) return true;
+            if (Entities.HitchPlayerActing) { RequestHitch(tr, car, at.slot, false); return false; }
+            return Entities.HitchMayJoin(tr, car);
+        }
+
+        internal static void ApplyHitchFreeze(NetReader r)
+        {
+            uint net = r.U32(), epoch = r.U32(), token = r.U32();
+            if (!r.Bad && token == 0 && Entities.TryHitchEntity(net, out var preparing) && epoch >= preparing.Epoch)
+            {
+                preparing.HitchWaiting = true;
+                HitchRemoveJoint(preparing.Root != null ? preparing.Root.attachable : null);
+                HitchFreezeBodies(preparing);
+                return;
+            }
+            if (r.Bad || !Entities.TryHitchFreezeTarget(net, epoch, out var tr)) return;
+            Entities.ResolveHitch(tr);
+            var at = tr.Root != null ? tr.Root.attachable : null;
+            var rb = tr.Root != null ? tr.Root.GetComponent<Rigidbody>() : null;
+            var vel = rb != null && !rb.isKinematic ? rb.velocity : tr.LastVel;
+            var pl = mainscript.s != null ? mainscript.s.player : null;
+            if (pl != null && tr.Root != null && pl.pickedUp == tr.Root.P) pl.Drop();
+            var w = new NetWriter(); w.U8(Entities.HitchFrozen); w.U32(net); w.U32(epoch); w.U32(token); w.Bool(tr.Root != null);
+            if (tr.Root != null)
+            {
+                var p = mainscript.GlobalFromUnityPos(tr.Root.transform.position); var q = tr.Root.transform.rotation;
+                w.F64(p.x); w.F64(p.y); w.F64(p.z); EntityCodec.WriteRot(w, q);
+                w.F32(vel.x); w.F32(vel.y); w.F32(vel.z);
+                w.Bool(at != null);
+                var lp = at != null ? tr.Root.transform.InverseTransformPoint(at.transform.position) : Vector3.zero;
+                w.F32(lp.x); w.F32(lp.y); w.F32(lp.z);
+                EntityCodec.WriteRot(w, at != null ? Quaternion.Inverse(q) * at.transform.rotation : Quaternion.identity);
+            }
+            tr.HitchWaiting = true; tr.HitchUntil = Time.time + 1f;
+            HitchRemoveJoint(at); HitchFreezeBodies(tr);
+            SessionLog.Event("hitch-frozen", net, from: Entities.HitchLocalId, epoch: epoch);
+            Entities.SendHitchRequest(w, true);
+        }
+
+        internal static void ApplyHitchFrozen(NetReader r)
+        {
+            uint net = r.U32(), epoch = r.U32(); r.U32(); bool loaded = r.Bool();
+            var p = loaded ? new Vector3d(r.F64(), r.F64(), r.F64()) : default;
+            var q = loaded ? EntityCodec.ReadRot(r) : Quaternion.identity;
+            var v = loaded ? new Vector3(r.F32(), r.F32(), r.F32()) : Vector3.zero;
+            bool hasGrip = loaded && r.Bool();
+            var gripPos = loaded ? new Vector3(r.F32(), r.F32(), r.F32()) : Vector3.zero;
+            var gripRot = loaded ? EntityCodec.ReadRot(r) : Quaternion.identity;
+            if (r.Bad || !Entities.TryHitchFrozenTarget(net, epoch, out var tr) || !Entities.IsFinite(p) || !Entities.IsFinite(q) || !Entities.IsFinite(v) || !Entities.IsFinite(gripPos) || !Entities.IsFinite(gripRot)) return;
+            if (Entities.ResolveHitch(tr) && tr.Root != null && loaded)
+            {
+                var bodies = new List<Rigidbody>(HitchBodies(tr));
+                var poses = new List<Vector3>(); var rotations = new List<Quaternion>();
+                var origin = tr.Root.transform.position; var turn = q * Quaternion.Inverse(tr.Root.transform.rotation);
+                var destination = mainscript.UnityPosFromGlobal(p);
+                var grip = tr.Root.GetComponent<attachgripscript>();
+                if (!hasGrip && grip != null && grip.GripPos != null)
+                {
+                    // Timeout/unloaded acknowledgements have no drawbar pose: move the prefab's grip with the root too.
+                    hasGrip = true; gripPos = tr.Root.transform.InverseTransformPoint(grip.GripPos.position);
+                    gripRot = Quaternion.Inverse(tr.Root.transform.rotation) * grip.GripPos.rotation;
+                }
+                var gripDestination = destination + turn * (tr.Root.transform.TransformPoint(gripPos) - origin);
+                foreach (var rb in bodies) { poses.Add(destination + turn * (rb.position - origin)); rotations.Add(turn * rb.rotation); }
+                for (int i = 0; i < bodies.Count; i++) { bodies[i].position = poses[i]; bodies[i].rotation = rotations[i]; }
+                // Rigidbody.position need not update Transform immediately. Compute from the received root pose.
+                if (hasGrip && tr.Root.attachable != null) tr.Root.attachable.transform.SetPositionAndRotation(
+                    gripDestination, q * gripRot);
+            }
+            var g = tr.Root != null ? tr.Root.GetComponent<attachgripscript>() : null;
+            if (!hasGrip && g != null && g.GripPos != null && tr.Root.attachable != null)
+                tr.Root.attachable.transform.SetPositionAndRotation(g.GripPos.position, g.GripPos.rotation);
+            tr.LastVel = v; tr.HitchWaiting = false;
+            HitchThaw(tr);
+            HitchRestore(tr);
+            SessionLog.Event("hitch-ownership-claim", net, from: Entities.HitchLocalId, epoch: epoch, result: "reliable pose");
+        }
+
+        internal static void ApplyHitchCommand(NetReader r)
+        {
+            var op = ReadHitch(r); op.Until = Time.realtimeSinceStartup + Entities.HitchCommandTimeoutS;
+            if (!r.Bad) _hitchCommands[op.Trailer] = op;
+        }
+
+        internal static void HitchCommandTick()
+        {
+            foreach (var kv in new List<KeyValuePair<uint, HitchOp>>(_hitchCommands))
+            {
+                var op = kv.Value;
+                if (Entities.HitchCommandExpires && Time.realtimeSinceStartup >= op.Until) { _hitchCommands.Remove(kv.Key); continue; }
+                if (!Entities.TryHitchEntity(op.Trailer, out var tr) || !Entities.TryHitchEntity(op.Car, out var car)) continue;
+                if (tr.HitchWaiting) continue;
+                _hitchCommands.Remove(kv.Key);
+                string why = null;
+                if (tr.Epoch != op.TrailerEpoch || car.Epoch != op.CarEpoch || !Entities.HitchMayJoin(tr, car)) why = "owner changed";
+                else if (!Entities.ResolveHitch(tr) || !Entities.ResolveHitch(car) || !Entities.IsHitchTrailer(tr) || car.Root == null) why = "not loaded";
+                else if (op.Slot < 0 || op.Slot >= car.Root.partslotscripts.Count) why = "slot index";
+                try
+                {
+                    if (why == null)
+                    {
+                        var at = tr.Root.attachable; var slot = car.Root.partslotscripts[op.Slot];
+                        if (op.Connect && (slot == null || at.attached && at.slot != slot || !at.attached && (slot.hasPart() || !slot.CanCraft(at)))) why = "slot taken or incompatible";
+                        else if (!op.Connect && (!at.attached || at.slot != slot)) why = "not hitched to car";
+                        else
+                        {
+                            _hitchApplying = true;
+                            try
+                            {
+                                if (op.Connect) { if (at.attached) HitchRestore(tr); else { HitchAlign(tr, slot); at.Attach(slot); } }
+                                else Entities.UnmountHitch(at, false);
+                            }
+                            finally { _hitchApplying = false; }
+                            if (at.attached != op.Connect) why = "joint change failed";
+                            if (why == null && op.Connect && op.ReleaseBrake && at.utanfuto.brake != null) at.utanfuto.brake.currentTurnState = 0;
+                        }
+                    }
+                }
+                catch (System.Exception) { why = "joint change failed"; }
+                if (why == "joint change failed" && op.Connect && tr.Root != null)
+                {
+                    var at = tr.Root.attachable;
+                    HitchRemoveJoint(at);
+                    if (at != null)
+                    {
+                        _hitchApplying = true; Entities.HitchApplyingDetach = true;
+                        try { if (at.attached) Entities.UnmountHitch(at, true); }
+                        catch (System.Exception) { }
+                        finally { _hitchApplying = false; Entities.HitchApplyingDetach = false; }
+                        if (at.slot != null) at.slot.parts.Remove(at);
+                        at.slot = null; at.attached = false;
+                        Entities.SyncHitchDetach(tr);
+                    }
+                }
+                var w = new NetWriter(); w.U8(Entities.HitchResult); WriteHitch(w, op); w.Str(why ?? "accepted"); Entities.SendHitchRequest(w, true);
+            }
+        }
+
+        internal static void ApplyHitchResult(NetReader r)
+        {
+            var op = ReadHitch(r); string why = r.Str();
+            if (!r.Bad) SessionLog.Event(why == "accepted" ? "hitch-accept" : "hitch-refuse", op.Trailer, op.Car, from: op.From, to: Entities.HitchLocalId,
+                slot: op.Slot, epoch: op.TrailerEpoch, count: op.Connect ? 1 : 0, result: why);
+        }
+
+        /// A loose trailer's copy: its drawbar where the trailer's joint holds it on the owner's machine (attachgripscript:
+        /// the drawbar's origin on GripPos).
+        internal static void ProxyGripToTrailer(Entities.Ent tr)
+        {
+            var g = tr.Root.GetComponent<attachgripscript>();
+            var at = tr.Root.attachable;
+            var pl = mainscript.s != null ? mainscript.s.player : null;
+            if (g == null || g.GripPos == null || at == null || pl != null && pl.pickedUp == tr.Root.P) return;
+            var t = at.transform;
+            if ((t.position - g.GripPos.position).sqrMagnitude < 0.0025f) return;
+            t.SetPositionAndRotation(g.GripPos.position, g.GripPos.rotation);
+            var rb = at.GetComponent<Rigidbody>();
+            if (rb != null) { rb.position = t.position; rb.rotation = t.rotation; }
+            ProxyGripsMoved++;
+        }
+
+        internal static void HitchRemoveJoint(attachablescript at)
+        {
+            if (at == null || at.J == null) return;
+            // Destroy is deferred until the end of the frame; the old constraint must be gone before roles change.
+            Object.DestroyImmediate(at.J); at.J = null;
+        }
+
+        internal static IEnumerable<Rigidbody> HitchBodies(Entities.Ent tr)
+        {
+            var seen = new HashSet<Rigidbody>();
+            for (int i = 0; i < tr.Items.Count; i++)
+            {
+                if (tr.Split != null && tr.Split.Contains(i)) continue;
+                var it = tr.Items[i];
+                if (it != null) foreach (var rb in it.GetComponentsInChildren<Rigidbody>(true)) if (seen.Add(rb)) yield return rb;
+            }
+            var at = tr.Root != null ? tr.Root.attachable : null;
+            var grip = at != null ? at.GetComponent<Rigidbody>() : null;
+            if (grip != null && seen.Add(grip)) yield return grip;
+        }
+
+        internal static void HitchFreezeBodies(Entities.Ent tr)
+        {
+            var root = tr.Root != null ? tr.Root.GetComponent<Rigidbody>() : null;
+            if (root != null && !root.isKinematic) tr.LastVel = root.velocity;
+            foreach (var rb in HitchBodies(tr))
+                if (!rb.isKinematic) { tr.HitchBodies.Add(rb); rb.isKinematic = true; }
+        }
+
+        internal static void HitchThaw(Entities.Ent tr)
+        {
+            if (tr.Proxy || tr.HitchWaiting) return;
+            foreach (var rb in tr.HitchBodies) if (rb != null) { rb.isKinematic = false; rb.velocity = tr.LastVel; }
+            tr.HitchBodies.Clear(); tr.SentAtRest = false;
+        }
+
+        private static void HitchMove(Entities.Ent tr, Vector3 offset, Vector3 velocity)
+        {
+            var bodies = new List<Rigidbody>(HitchBodies(tr)); var positions = new List<Vector3>();
+            foreach (var rb in bodies) positions.Add(rb.position + offset);
+            for (int i = 0; i < bodies.Count; i++)
+            {
+                var rb = bodies[i]; rb.position = positions[i];
+                if (!rb.isKinematic) { rb.velocity = velocity; rb.angularVelocity = Vector3.zero; }
+            }
+        }
+
+        private static void HitchAlign(Entities.Ent tr, partslotscript slot)
+        {
+            var car = Entities.HitchGroupEntity(slot.tosaveitem); var rb = car != null && car.Root != null ? car.Root.GetComponent<Rigidbody>() : null;
+            var velocity = rb != null ? rb.GetPointVelocity(slot.T.position) : Vector3.zero;
+            HitchMove(tr, slot.T.position - tr.Root.attachable.transform.position, velocity);
+            tr.LastVel = velocity; tr.HitchHasVelocity = false; tr.HitchUntil = Time.time + 1f;
+            if (car != null) { car.HitchUntil = tr.HitchUntil; if (car.Root.car != null) Entities.HitchDamageGrace(car, tr.HitchUntil); }
+        }
+
+        internal static void HitchRestore(Entities.Ent tr)
+        {
+            if (!Entities.IsHitchTrailer(tr) || tr.HitchWaiting || tr.Proxy) return;
+            var at = tr.Root.attachable; var car = Entities.HitchTowEntity(at);
+            if (!at.attached || at.J != null || car == null || !Entities.HitchMayJoin(tr, car)) return;
+            _hitchApplying = true; Entities.HitchApplyingAttach = true;
+            try { HitchAlign(tr, at.slot); at.Attach(at.point); }
+            finally { Entities.HitchApplyingAttach = false; _hitchApplying = false; }
+        }
+    }
+
+    public static partial class Entities
+    {
+        public static bool HitchTransferTimeout = true;   // A/B: false = wait indefinitely for the old simulator/result
+        public static bool HitchEnsureKnown = true;       // A/B: false = rely on ordinary distance-based Add delivery
+        public static bool HitchReleaseOnRemove = true;   // A/B: false = keep the deleted car's hitch record
+
+        private const float HitchTimeoutS = 5f;
+
+        private static readonly HashSet<int> _hitchDeparted = new HashSet<int>();
+        private static uint _hitchToken;
+
+        private static readonly Dictionary<uint, EntityHitches.HitchOp> _hitchOps = new Dictionary<uint, EntityHitches.HitchOp>();
+        private static readonly Dictionary<uint, HitchAuthority.Transfer> _hitchTransfers = new Dictionary<uint, HitchAuthority.Transfer>();
 
         internal static bool HitchTrailer(Ent e) => e != null && e.Root != null && e.Root.attachable != null && e.Root.attachable.utanfuto != null;
         private static bool HitchTrailer(SEnt e)
@@ -38,79 +341,15 @@ namespace TLDRevamp.Net
             HitchAuthority.CanJoin(car.OwnerId, tr.OwnerId, MyId, tr.HitchWaiting, car.Proxy, tr.Proxy);
         internal static Ent HitchCar(attachablescript at) => at != null && at.slot != null ? EditEntityOf(at.slot.tosaveitem) : null;
 
-        private static void HitchEvent(HitchOp op, string reason)
+        private static void HitchEvent(EntityHitches.HitchOp op, string reason)
         {
-            var w = new NetWriter(); w.U8(HitchResult); WriteHitch(w, op); w.Str(reason ?? "accepted");
+            var w = new NetWriter(); w.U8(HitchResult); EntityHitches.WriteHitch(w, op); w.Str(reason ?? "accepted");
             ServerSendAll(w, true, -1);
-        }
-        private static void WriteHitch(NetWriter w, HitchOp op)
-        {
-            w.U32(op.Trailer); w.U32(op.Car); w.U32(op.TrailerEpoch); w.U32(op.CarEpoch);
-            w.VarI32(op.Slot); w.VarI32(op.From); w.Bool(op.Connect); w.Bool(op.ReleaseBrake);
-        }
-        private static HitchOp ReadHitch(NetReader r) => new HitchOp { Trailer = r.U32(), Car = r.U32(), TrailerEpoch = r.U32(), CarEpoch = r.U32(),
-            Slot = r.VarI32(), From = r.VarI32(), Connect = r.Bool(), ReleaseBrake = r.Bool() };
-
-        internal static void RequestHitch(Ent tr, Ent car, partslotscript slot, bool connect, bool releaseBrake = false)
-        {
-            var op = new HitchOp { Trailer = tr.NetId, Car = car.NetId, TrailerEpoch = tr.Epoch, CarEpoch = car.Epoch,
-                Slot = car.Root.partslotscripts.IndexOf(slot), From = MyId, Connect = connect, ReleaseBrake = releaseBrake };
-            SessionLog.Event("hitch-request", op.Trailer, op.Car, from: MyId, to: car.OwnerId, slot: op.Slot, epoch: tr.Epoch, result: connect ? "connect" : "disconnect");
-            var w = new NetWriter(); w.U8(HitchRequest); WriteHitch(w, op); ToServer(w, true);
-        }
-
-        private static bool HitchAttach(attachablescript at, partslotscript slot)
-        {
-            if (!InSession || _hitchApplying || _applyingAttach || at == null || at.utanfuto == null) return true;
-            if (!PlayerActing) return true;
-            var tr = OwnEntity(at.tosave); var car = slot != null ? EditEntityOf(slot.tosaveitem) : null;
-            if (tr != null && car != null && PlayerActing) RequestHitch(tr, car, slot, true);
-            else SessionLog.Event("hitch-refused", tr != null ? tr.NetId : 0, result: "unshared target or automatic attach");
-            return false;
-        }
-
-        [HarmonyPatch(typeof(partslotscript), nameof(partslotscript.Craft))]
-        private static class HitchCraftHook
-        {
-            private static bool Prefix(partslotscript __instance, attachablescript p) => HitchAttach(p, __instance);
-        }
-        [HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(partslotscript) })]
-        private static class HitchSlotHook
-        {
-            private static bool Prefix(attachablescript __instance, partslotscript _slot) => HitchAttach(__instance, _slot);
-        }
-        [HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(Transform) })]
-        private static class HitchJointHook
-        {
-            [HarmonyPriority(Priority.First)]
-            private static bool Prefix(attachablescript __instance, Transform Ppoint)
-            {
-                if (!InSession || __instance.utanfuto == null) return true;
-                if (!_applyingAttach && !_hitchApplying && PlayerActing) return HitchAttach(__instance, __instance.slot ?? Ppoint.GetComponentInParent<partslotscript>());
-                var tr = OwnEntity(__instance.tosave); var car = HitchCar(__instance);
-                // Display copies keep the game's attachment record and lights, but never a physics joint.
-                if (tr != null && car != null && HitchCanJoin(tr, car)) return true;
-                __instance.attached = true; __instance.point = Ppoint;
-                if (__instance.slot != null && !__instance.slot.parts.Contains(__instance)) __instance.slot.parts.Add(__instance);
-                __instance.utanfuto.RefreshCenterOffMass(true, Ppoint.GetComponentInParent<rearlights>());
-                HitchRemoveJoint(__instance);
-                if (tr != null && tr.Proxy) ApplyProxyBodies(tr);
-                return false;
-            }
-        }
-
-        private static bool HitchDetach(attachablescript at)
-        {
-            if (!InSession || _hitchApplying || _applyingDetach || at == null || at.utanfuto == null) return true;
-            var tr = OwnEntity(at.tosave); var car = HitchCar(at);
-            if (tr == null || car == null) return true;
-            if (PlayerActing) { RequestHitch(tr, car, at.slot, false); return false; }
-            return HitchCanJoin(tr, car);
         }
 
         private static void ServerHitchRequest(int from, NetReader r)
         {
-            var op = ReadHitch(r); op.From = from;
+            var op = EntityHitches.ReadHitch(r); op.From = from;
             if (r.Bad) return;
             bool known = Server.TryGetValue(op.Trailer, out var tr) && Server.ContainsKey(op.Car);
             Server.TryGetValue(op.Car, out var car);
@@ -136,7 +375,7 @@ namespace TLDRevamp.Net
             HitchOwnerKnows(tr, car.OwnerId);
             op.Until = Time.realtimeSinceStartup + HitchTimeoutS;
             op.CarEpoch = car.Epoch; op.TrailerEpoch = tr.Epoch;
-            var w = new NetWriter(); w.U8(HitchCommand); WriteHitch(w, op); ServerSendTo(car.OwnerId, w, true);
+            var w = new NetWriter(); w.U8(HitchCommand); EntityHitches.WriteHitch(w, op); ServerSendTo(car.OwnerId, w, true);
         }
 
         private static void BeginHitchTransfer(SEnt tr, int to)
@@ -154,40 +393,6 @@ namespace TLDRevamp.Net
                 return;
             }
             ServerSendTo(tr.OwnerId, w, true);
-        }
-
-        private static void ApplyHitchFreeze(NetReader r)
-        {
-            uint net = r.U32(), epoch = r.U32(), token = r.U32();
-            if (!r.Bad && token == 0 && ByNet.TryGetValue(net, out var preparing) && epoch >= preparing.Epoch)
-            {
-                preparing.HitchWaiting = true;
-                HitchRemoveJoint(preparing.Root != null ? preparing.Root.attachable : null);
-                HitchFreezeBodies(preparing);
-                return;
-            }
-            if (r.Bad || !ByNet.TryGetValue(net, out var tr) || tr.Epoch != epoch || tr.OwnerId != MyId) return;
-            Resolve(tr);
-            var at = tr.Root != null ? tr.Root.attachable : null;
-            var rb = tr.Root != null ? tr.Root.GetComponent<Rigidbody>() : null;
-            var vel = rb != null && !rb.isKinematic ? rb.velocity : tr.LastVel;
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl != null && tr.Root != null && pl.pickedUp == tr.Root.P) pl.Drop();
-            var w = new NetWriter(); w.U8(HitchFrozen); w.U32(net); w.U32(epoch); w.U32(token); w.Bool(tr.Root != null);
-            if (tr.Root != null)
-            {
-                var p = mainscript.GlobalFromUnityPos(tr.Root.transform.position); var q = tr.Root.transform.rotation;
-                w.F64(p.x); w.F64(p.y); w.F64(p.z); WriteRot(w, q);
-                w.F32(vel.x); w.F32(vel.y); w.F32(vel.z);
-                w.Bool(at != null);
-                var lp = at != null ? tr.Root.transform.InverseTransformPoint(at.transform.position) : Vector3.zero;
-                w.F32(lp.x); w.F32(lp.y); w.F32(lp.z);
-                WriteRot(w, at != null ? Quaternion.Inverse(q) * at.transform.rotation : Quaternion.identity);
-            }
-            tr.HitchWaiting = true; tr.HitchUntil = Time.time + 1f;
-            HitchRemoveJoint(at); HitchFreezeBodies(tr);
-            SessionLog.Event("hitch-frozen", net, from: MyId, epoch: epoch);
-            ToServer(w, true);
         }
 
         private static void ServerHitchFrozen(int from, NetReader r)
@@ -251,107 +456,9 @@ namespace TLDRevamp.Net
             else SendHitchCommand(tr);
         }
 
-        private static void ApplyHitchFrozen(NetReader r)
-        {
-            uint net = r.U32(), epoch = r.U32(); r.U32(); bool loaded = r.Bool();
-            var p = loaded ? new Vector3d(r.F64(), r.F64(), r.F64()) : default;
-            var q = loaded ? ReadRot(r) : Quaternion.identity;
-            var v = loaded ? new Vector3(r.F32(), r.F32(), r.F32()) : Vector3.zero;
-            bool hasGrip = loaded && r.Bool();
-            var gripPos = loaded ? new Vector3(r.F32(), r.F32(), r.F32()) : Vector3.zero;
-            var gripRot = loaded ? ReadRot(r) : Quaternion.identity;
-            if (r.Bad || !ByNet.TryGetValue(net, out var tr) || tr.Proxy || tr.Epoch != epoch || !Finite(p) || !Finite(q) || !Finite(v) || !Finite(gripPos) || !Finite(gripRot)) return;
-            if (Resolve(tr) && tr.Root != null && loaded)
-            {
-                var bodies = new List<Rigidbody>(HitchBodies(tr));
-                var poses = new List<Vector3>(); var rotations = new List<Quaternion>();
-                var origin = tr.Root.transform.position; var turn = q * Quaternion.Inverse(tr.Root.transform.rotation);
-                var destination = mainscript.UnityPosFromGlobal(p);
-                var grip = tr.Root.GetComponent<attachgripscript>();
-                if (!hasGrip && grip != null && grip.GripPos != null)
-                {
-                    // Timeout/unloaded acknowledgements have no drawbar pose: move the prefab's grip with the root too.
-                    hasGrip = true; gripPos = tr.Root.transform.InverseTransformPoint(grip.GripPos.position);
-                    gripRot = Quaternion.Inverse(tr.Root.transform.rotation) * grip.GripPos.rotation;
-                }
-                var gripDestination = destination + turn * (tr.Root.transform.TransformPoint(gripPos) - origin);
-                foreach (var rb in bodies) { poses.Add(destination + turn * (rb.position - origin)); rotations.Add(turn * rb.rotation); }
-                for (int i = 0; i < bodies.Count; i++) { bodies[i].position = poses[i]; bodies[i].rotation = rotations[i]; }
-                // Rigidbody.position need not update Transform immediately. Compute from the received root pose.
-                if (hasGrip && tr.Root.attachable != null) tr.Root.attachable.transform.SetPositionAndRotation(
-                    gripDestination, q * gripRot);
-            }
-            var g = tr.Root != null ? tr.Root.GetComponent<attachgripscript>() : null;
-            if (!hasGrip && g != null && g.GripPos != null && tr.Root.attachable != null)
-                tr.Root.attachable.transform.SetPositionAndRotation(g.GripPos.position, g.GripPos.rotation);
-            tr.LastVel = v; tr.HitchWaiting = false;
-            HitchThaw(tr);
-            HitchRestore(tr);
-            SessionLog.Event("hitch-ownership-claim", net, from: MyId, epoch: epoch, result: "reliable pose");
-        }
-
-        private static void ApplyHitchCommand(NetReader r)
-        {
-            var op = ReadHitch(r); op.Until = Time.realtimeSinceStartup + HitchTimeoutS;
-            if (!r.Bad) _hitchCommands[op.Trailer] = op;
-        }
-        internal static void HitchCommandTick()
-        {
-            foreach (var kv in new List<KeyValuePair<uint, HitchOp>>(_hitchCommands))
-            {
-                var op = kv.Value;
-                if (HitchTransferTimeout && Time.realtimeSinceStartup >= op.Until) { _hitchCommands.Remove(kv.Key); continue; }
-                if (!ByNet.TryGetValue(op.Trailer, out var tr) || !ByNet.TryGetValue(op.Car, out var car)) continue;
-                if (tr.HitchWaiting) continue;
-                _hitchCommands.Remove(kv.Key);
-                string why = null;
-                if (tr.Epoch != op.TrailerEpoch || car.Epoch != op.CarEpoch || !HitchCanJoin(tr, car)) why = "owner changed";
-                else if (!Resolve(tr) || !Resolve(car) || !HitchTrailer(tr) || car.Root == null) why = "not loaded";
-                else if (op.Slot < 0 || op.Slot >= car.Root.partslotscripts.Count) why = "slot index";
-                try
-                {
-                    if (why == null)
-                    {
-                        var at = tr.Root.attachable; var slot = car.Root.partslotscripts[op.Slot];
-                        if (op.Connect && (slot == null || at.attached && at.slot != slot || !at.attached && (slot.hasPart() || !slot.CanCraft(at)))) why = "slot taken or incompatible";
-                        else if (!op.Connect && (!at.attached || at.slot != slot)) why = "not hitched to car";
-                        else
-                        {
-                            _hitchApplying = true;
-                            try
-                            {
-                                if (op.Connect) { if (at.attached) HitchRestore(tr); else { HitchAlign(tr, slot); at.Attach(slot); } }
-                                else Unmount(at, false);
-                            }
-                            finally { _hitchApplying = false; }
-                            if (at.attached != op.Connect) why = "joint change failed";
-                            if (why == null && op.Connect && op.ReleaseBrake && at.utanfuto.brake != null) at.utanfuto.brake.currentTurnState = 0;
-                        }
-                    }
-                }
-                catch (System.Exception) { why = "joint change failed"; }
-                if (why == "joint change failed" && op.Connect && tr.Root != null)
-                {
-                    var at = tr.Root.attachable;
-                    HitchRemoveJoint(at);
-                    if (at != null)
-                    {
-                        _hitchApplying = true; _applyingDetach = true;
-                        try { if (at.attached) Unmount(at, true); }
-                        catch (System.Exception) { }
-                        finally { _hitchApplying = false; _applyingDetach = false; }
-                        if (at.slot != null) at.slot.parts.Remove(at);
-                        at.slot = null; at.attached = false;
-                        SendDetachSync(tr);
-                    }
-                }
-                var w = new NetWriter(); w.U8(HitchResult); WriteHitch(w, op); w.Str(why ?? "accepted"); ToServer(w, true);
-            }
-        }
-
         private static void ServerHitchResult(int from, NetReader r)
         {
-            var op = ReadHitch(r); string why = r.Str();
+            var op = EntityHitches.ReadHitch(r); string why = r.Str();
             if (r.Bad || !Server.TryGetValue(op.Trailer, out var tr) || !_hitchOps.TryGetValue(op.Trailer, out var pending) ||
                 tr.OwnerId != from || pending.Car != op.Car || pending.Slot != op.Slot || pending.Connect != op.Connect ||
                 pending.CarEpoch != op.CarEpoch || pending.TrailerEpoch != op.TrailerEpoch) return;
@@ -364,88 +471,6 @@ namespace TLDRevamp.Net
             HitchEvent(op, why == "accepted" ? null : why);
         }
 
-        private static void ApplyHitchResult(NetReader r)
-        {
-            var op = ReadHitch(r); string why = r.Str();
-            if (!r.Bad) SessionLog.Event(why == "accepted" ? "hitch-accept" : "hitch-refuse", op.Trailer, op.Car, from: op.From, to: MyId,
-                slot: op.Slot, epoch: op.TrailerEpoch, count: op.Connect ? 1 : 0, result: why);
-        }
-
-        /// A loose trailer's copy: its drawbar where the trailer's joint holds it on the owner's machine (attachgripscript:
-        /// the drawbar's origin on GripPos).
-        private static void ProxyGripToTrailer(Ent tr)
-        {
-            var g = tr.Root.GetComponent<attachgripscript>();
-            var at = tr.Root.attachable;
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (g == null || g.GripPos == null || at == null || pl != null && pl.pickedUp == tr.Root.P) return;
-            var t = at.transform;
-            if ((t.position - g.GripPos.position).sqrMagnitude < 0.0025f) return;
-            t.SetPositionAndRotation(g.GripPos.position, g.GripPos.rotation);
-            var rb = at.GetComponent<Rigidbody>();
-            if (rb != null) { rb.position = t.position; rb.rotation = t.rotation; }
-            ProxyGripsMoved++;
-        }
-
-        private static void HitchRemoveJoint(attachablescript at)
-        {
-            if (at == null || at.J == null) return;
-            // Destroy is deferred until the end of the frame; the old constraint must be gone before roles change.
-            Object.DestroyImmediate(at.J); at.J = null;
-        }
-        private static IEnumerable<Rigidbody> HitchBodies(Ent tr)
-        {
-            var seen = new HashSet<Rigidbody>();
-            for (int i = 0; i < tr.Items.Count; i++)
-            {
-                if (tr.Split != null && tr.Split.Contains(i)) continue;
-                var it = tr.Items[i];
-                if (it != null) foreach (var rb in it.GetComponentsInChildren<Rigidbody>(true)) if (seen.Add(rb)) yield return rb;
-            }
-            var at = tr.Root != null ? tr.Root.attachable : null;
-            var grip = at != null ? at.GetComponent<Rigidbody>() : null;
-            if (grip != null && seen.Add(grip)) yield return grip;
-        }
-        private static void HitchFreezeBodies(Ent tr)
-        {
-            var root = tr.Root != null ? tr.Root.GetComponent<Rigidbody>() : null;
-            if (root != null && !root.isKinematic) tr.LastVel = root.velocity;
-            foreach (var rb in HitchBodies(tr))
-                if (!rb.isKinematic) { tr.HitchBodies.Add(rb); rb.isKinematic = true; }
-        }
-        private static void HitchThaw(Ent tr)
-        {
-            if (tr.Proxy || tr.HitchWaiting) return;
-            foreach (var rb in tr.HitchBodies) if (rb != null) { rb.isKinematic = false; rb.velocity = tr.LastVel; }
-            tr.HitchBodies.Clear(); tr.SentAtRest = false;
-        }
-        private static void HitchMove(Ent tr, Vector3 offset, Vector3 velocity)
-        {
-            var bodies = new List<Rigidbody>(HitchBodies(tr)); var positions = new List<Vector3>();
-            foreach (var rb in bodies) positions.Add(rb.position + offset);
-            for (int i = 0; i < bodies.Count; i++)
-            {
-                var rb = bodies[i]; rb.position = positions[i];
-                if (!rb.isKinematic) { rb.velocity = velocity; rb.angularVelocity = Vector3.zero; }
-            }
-        }
-        private static void HitchAlign(Ent tr, partslotscript slot)
-        {
-            var car = EditEntityOf(slot.tosaveitem); var rb = car != null && car.Root != null ? car.Root.GetComponent<Rigidbody>() : null;
-            var velocity = rb != null ? rb.GetPointVelocity(slot.T.position) : Vector3.zero;
-            HitchMove(tr, slot.T.position - tr.Root.attachable.transform.position, velocity);
-            tr.LastVel = velocity; tr.HitchHasVelocity = false; tr.HitchUntil = Time.time + 1f;
-            if (car != null) { car.HitchUntil = tr.HitchUntil; if (car.Root.car != null) DamageGraceUntil[car.Root.car] = tr.HitchUntil; }
-        }
-        private static void HitchRestore(Ent tr)
-        {
-            if (!HitchTrailer(tr) || tr.HitchWaiting || tr.Proxy) return;
-            var at = tr.Root.attachable; var car = HitchCar(at);
-            if (!at.attached || at.J != null || car == null || !HitchCanJoin(tr, car)) return;
-            _hitchApplying = true; _applyingAttach = true;
-            try { HitchAlign(tr, at.slot); at.Attach(at.point); }
-            finally { _applyingAttach = false; _hitchApplying = false; }
-        }
         private static void HitchBeforeOwner(Ent e, int owner, uint epoch)
         {
             if (e.OwnerId == owner && e.Epoch == epoch) return;
@@ -454,10 +479,10 @@ namespace TLDRevamp.Net
             {
                 if (!HitchTrailer(tr)) continue;
                 if (tr != e && HitchCar(tr.Root.attachable) != e) continue;
-                HitchRemoveJoint(tr.Root.attachable);
+                EntityHitches.HitchRemoveJoint(tr.Root.attachable);
                 tr.HitchUntil = e.HitchUntil = Time.time + 1f;
                 if (e.Root != null && e.Root.car != null) DamageGraceUntil[e.Root.car] = e.HitchUntil;
-                if (tr != e && tr.OwnerId == MyId && owner != MyId) { tr.HitchWaiting = true; HitchFreezeBodies(tr); }
+                if (tr != e && tr.OwnerId == MyId && owner != MyId) { tr.HitchWaiting = true; EntityHitches.HitchFreezeBodies(tr); }
             }
         }
         private static void CascadeHitches(SEnt car)
@@ -472,13 +497,13 @@ namespace TLDRevamp.Net
             {
                 if (!HitchTrailer(tr)) continue;
                 tr.HitchWaiting = false;
-                if (wasHost) { HitchThaw(tr); HitchRestore(tr); }
+                if (wasHost) { EntityHitches.HitchThaw(tr); EntityHitches.HitchRestore(tr); }
             }
         }
         private static void HitchTick()
         {
             ServerHitchTick();
-            HitchCommandTick();
+            EntityHitches.HitchCommandTick();
             HitchInitialTick();
             foreach (var tr in Placed())
             {
@@ -486,11 +511,11 @@ namespace TLDRevamp.Net
                 var at = tr.Root.attachable;
                 if (tr.Proxy || tr.HitchWaiting)
                 {
-                    HitchRemoveJoint(at); HitchFreezeBodies(tr);
+                    EntityHitches.HitchRemoveJoint(at); EntityHitches.HitchFreezeBodies(tr);
                     if (tr.Proxy && at.attached && at.point != null) at.transform.position = at.point.position;
-                    else if (tr.Proxy && !at.attached) ProxyGripToTrailer(tr);
+                    else if (tr.Proxy && !at.attached) EntityHitches.ProxyGripToTrailer(tr);
                 }
-                else { HitchThaw(tr); HitchRestore(tr); }
+                else { EntityHitches.HitchThaw(tr); EntityHitches.HitchRestore(tr); }
             }
         }
 
@@ -505,7 +530,7 @@ namespace TLDRevamp.Net
                 // A silent or unloaded owner cannot acknowledge. Grant with a fresh epoch and the server's last pose.
                 CompleteHitchTransfer(tr, false, default, Quaternion.identity, Vector3.zero, false, Vector3.zero, Quaternion.identity);
             }
-            foreach (var op in new List<HitchOp>(_hitchOps.Values))
+            foreach (var op in new List<EntityHitches.HitchOp>(_hitchOps.Values))
                 if (!_hitchTransfers.ContainsKey(op.Trailer) && Time.realtimeSinceStartup >= op.Until && Server.TryGetValue(op.Trailer, out var tr))
                     ReleaseHitch(tr, "hitch command timeout");
         }
@@ -526,7 +551,7 @@ namespace TLDRevamp.Net
             if (!HitchReleaseOnRemove) return;
             foreach (var tr in new List<SEnt>(Server.Values))
                 if (tr.NetId != net && (tr.HitchCar == net || tr.Hitch && tr.AttachParent == net)) ReleaseHitch(tr, "tow car removed");
-            _hitchTransfers.Remove(net); _hitchOps.Remove(net); _hitchCommands.Remove(net);
+            _hitchTransfers.Remove(net); _hitchOps.Remove(net); EntityHitches.RemoveCommand(net);
         }
 
         private static void HitchInitialTick()

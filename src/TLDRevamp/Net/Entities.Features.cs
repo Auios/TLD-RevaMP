@@ -25,6 +25,37 @@ namespace TLDRevamp.Net
             position = default;
             return Mp.Server != null && Mp.Server.PeerPos(player, out position);
         }
+        // Hitch client boundary. Server records and map walks stay in the kernel.
+        public const byte HitchRequest = 99, HitchCommand = 100, HitchFreeze = 101, HitchFrozen = 102, HitchResult = 103;
+        internal static bool HitchCommandExpires => HitchTransferTimeout;
+        internal static bool HitchInSession => InSession;
+        internal static int HitchLocalId => MyId;
+        internal static bool HitchPlayerActing => PlayerActing;
+        internal static bool HitchApplyingAttach { get => _applyingAttach; set => _applyingAttach = value; }
+        internal static bool HitchApplyingDetach { get => _applyingDetach; set => _applyingDetach = value; }
+        private static bool _hitchApplying => EntityHitches.Applying;
+        internal static float HitchCommandTimeoutS => HitchTimeoutS;
+        internal static bool TryHitchEntity(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
+        internal static bool TryHitchFreezeTarget(uint net, uint epoch, out Ent entity) => ByNet.TryGetValue(net, out entity) && entity.Epoch == epoch && entity.OwnerId == MyId;
+        internal static bool TryHitchFrozenTarget(uint net, uint epoch, out Ent entity) => ByNet.TryGetValue(net, out entity) && !entity.Proxy && entity.Epoch == epoch;
+        internal static bool IsHitchTrailer(Ent entity) => HitchTrailer(entity);
+        internal static Ent HitchTowEntity(attachablescript at) => HitchCar(at);
+        internal static Ent HitchRootEntity(tosaveitemscript item) => OwnEntity(item);
+        internal static Ent HitchGroupEntity(tosaveitemscript item) => EditEntityOf(item);
+        internal static bool ResolveHitch(Ent entity) => Resolve(entity);
+        internal static bool HitchMayJoin(Ent trailer, Ent car) => HitchCanJoin(trailer, car);
+        internal static void FreezeHitchProxy(Ent entity) => ApplyProxyBodies(entity);
+        internal static bool UnmountHitch(attachablescript at, bool fallOff) => Unmount(at, fallOff);
+        internal static void SyncHitchDetach(Ent entity) => SendDetachSync(entity);
+        internal static void SendHitchRequest(NetWriter writer, bool reliable) => ToServer(writer, reliable);
+        internal static void HitchDamageGrace(Ent car, float until) => DamageGraceUntil[car.Root.car] = until;
+        internal static void RequestHitch(Ent tr, Ent car, partslotscript slot, bool connect, bool releaseBrake = false) => EntityHitches.RequestHitch(tr, car, slot, connect, releaseBrake);
+        internal static void HitchCommandTick() => EntityHitches.HitchCommandTick();
+        private static bool HitchDetach(attachablescript at) => EntityHitches.HitchDetach(at);
+        private static void HitchRemoveJoint(attachablescript at) => EntityHitches.HitchRemoveJoint(at);
+        private static System.Collections.Generic.IEnumerable<Rigidbody> HitchBodies(Ent tr) => EntityHitches.HitchBodies(tr);
+        // End hitch client boundary.
+
         internal static bool HasTpaCopy(uint net) => ByNet.ContainsKey(net);
         internal static void RequestTpaCopy(uint net) { W.Reset(); W.U8(Refetch); W.U32(net); WriteLostPart(W, net); ToServer(W, true); }
         internal static void ReplayTpaMessage(byte type, NetReader reader) => ClientReceive(type, reader);

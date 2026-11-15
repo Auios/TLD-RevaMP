@@ -74,6 +74,15 @@ static class MessageTableTest
             return Regex.Match(bodies, @"void " + name + @"\(.*?\n        \}\n", RegexOptions.Singleline).Value;
         }
         string server = Method("Entities", "ServerReceive"), client = Method("Entities", "ClientReceive");
+        foreach (string name in new[] { "Command", "Freeze", "Frozen", "Result" })
+        {
+            string handler = "ApplyHitch" + name;
+            Check("Hitch" + name + ": client routes to hitch owner", client.Contains("case Hitch" + name + ": EntityHitches." + handler + "(r);"));
+            string body = Method("EntityHitches", handler);
+            Check("Hitch" + name + ": owner reads payload", body.Contains("r.U32()") || body.Contains("ReadHitch(r)"));
+        }
+        foreach (string name in new[] { "Request", "Frozen", "Result" })
+            Check("Hitch" + name + ": authority remains on kernel", server.Contains("case Hitch" + name + ": ServerHitch" + name + "(from, r);") && Method("Entities", "ServerHitch" + name).Contains("Server.TryGetValue("));
         var toServer = Routed(mp.Substring(serverAt, serverEnd - serverAt), "Entities.ServerReceive(", server, consts);
         var toClient = Routed(mp.Substring(clientAt), "Entities.ClientReceive(", client, consts);
         Check("the dispatchers route messages", toServer.Count > 10 && toClient.Count > 10);

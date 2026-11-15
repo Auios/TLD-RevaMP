@@ -30,8 +30,8 @@ public partial class pickupable
     public void UnPhysicsLock() { physlock = null; }
 }
 public partial class mountStuff { public tosaveitemscript parentTosave; }
-public partial class attachablescript { public object utanfuto; }
-public class partslotscript : Component { public attachablescript Part; public attachablescript part() => Part; public bool UnCraft(bool b) => true; }
+public partial class attachablescript { public HitchTrailerBody utanfuto; }
+public partial class partslotscript : Component { public attachablescript Part; public attachablescript part() => Part; public bool UnCraft(bool b) => true; }
 public partial class save_attachable
 {
     public Vector3d gpos = new Vector3d(1, 2, 3), lpos = new Vector3d(4, 5, 6), poiid = new Vector3d(7, 8, 9);
@@ -65,7 +65,7 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
-        internal static bool PlayerActing = true, _hitchApplying, _applyingLive;
+        internal static bool PlayerActing = true, _applyingLive;
         internal static uint TelemetryNet(Component c) => ByNet.Values.FirstOrDefault(e => e.Root == c || e.Root == c.ParentComponent || e.Root.car == c)?.NetId ?? 0;
         private static tosaveitemscript ItemOf(Component c, uint id, bool hasId) => c.ParentComponent as tosaveitemscript;
         internal static mountStuff[] LockMounts(tosaveitemscript it) => it.Children.OfType<mountStuff>().ToArray();

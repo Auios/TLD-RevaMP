@@ -4,6 +4,9 @@
     <Compile Include="EntitySplitTest.cs" />
     <Compile Include="EntityResyncEditsStubs.cs" />
     <Compile Include="EntityResyncEditsChecks.cs" />
+    <Compile Include="EntityHitchChecks.cs" />
+    <Compile Include="EntityHitchStubs.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/HitchAuthority.cs" />
     <Compile Include="EntityTelemetryStubs.cs" />
     <Compile Include="EntityUsablesStubs.cs" />
     <Compile Include="EntityUsablesChecks.cs" />
@@ -96,6 +99,7 @@
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractTelemetryBoundary.py&quot; &quot;$(IntermediateOutputPath)TelemetryBoundary.g.cs&quot;" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractUsablesBoundary.py&quot; &quot;$(IntermediateOutputPath)UsablesBoundary.g.cs&quot;" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractResyncEditsBoundary.py&quot; &quot;$(IntermediateOutputPath)ResyncEditsBoundary.g.cs&quot; $(ResyncEditsBaseline)" />
-    <ItemGroup><Compile Include="$(IntermediateOutputPath)ResyncEditsBoundary.g*.cs" /><Compile Include="$(IntermediateOutputPath)UsablesBoundary.g*.cs" /><Compile Include="$(IntermediateOutputPath)TelemetryBoundary.g.cs" /><Compile Include="$(IntermediateOutputPath)RabbitWire.g.cs" /><Compile Include="$(IntermediateOutputPath)FeatureWire.g.cs" /><Compile Include="$(IntermediateOutputPath)AIWire.g.cs" /></ItemGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractHitchBoundary.py&quot; &quot;$(IntermediateOutputPath)HitchFeature.g.cs&quot; feature" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)HitchFeature.g.cs" /><Compile Include="$(IntermediateOutputPath)ResyncEditsBoundary.g*.cs" /><Compile Include="$(IntermediateOutputPath)UsablesBoundary.g*.cs" /><Compile Include="$(IntermediateOutputPath)TelemetryBoundary.g.cs" /><Compile Include="$(IntermediateOutputPath)RabbitWire.g.cs" /><Compile Include="$(IntermediateOutputPath)FeatureWire.g.cs" /><Compile Include="$(IntermediateOutputPath)AIWire.g.cs" /></ItemGroup>
   </Target>
 </Project>

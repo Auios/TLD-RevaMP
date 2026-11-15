@@ -22,7 +22,7 @@ public class seatscript : Component
     public bool FreeCanSit() => Free;
 }
 public partial class mountStuff : Component { }
-public partial class tosaveitemscript { public Component[] partslotscripts; }
+public partial class tosaveitemscript { public List<partslotscript> partslotscripts; }
 public partial class fpscontroller
 {
     public bool Bsitting; public seatscript seat; public Component Cam;

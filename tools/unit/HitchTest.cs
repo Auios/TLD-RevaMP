@@ -6,6 +6,7 @@ global using rearlights = HitchFakes.Lights;
 global using itemdatabase = HitchFakes.Database;
 global using mainscript = HitchFakes.Main;
 global using fpscontroller = HitchFakes.Player;
+using HitchOp = TLDRevamp.Net.EntityHitches.HitchOp;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,8 +16,8 @@ using UnityEngine;
 static class HitchTest
 {
     static int checks;
-    internal static void Check(bool ok, string why) { checks++; if (!ok) throw new Exception(why); }
-    static void Main() { Entities.Tests(); Console.WriteLine("ALL PASS (" + checks + " hitch checks)"); }
+    internal static void Check(bool ok, string why) { checks++; EntityHitchChecks.Capture(why); if (!ok) throw new Exception(why); }
+    static void Main() { Entities.Tests(); Entities.HitchFixedChecks(); EntityHitchChecks.Finish(); Console.WriteLine("ALL PASS (" + checks + " hitch checks)"); }
 }
 
 namespace TLDRevamp.Net
@@ -89,12 +90,12 @@ namespace TLDRevamp.Net
         }
         public static void GameAttach(attachablescript at, partslotscript slot)
         {
-            if (!(bool)typeof(HitchSlotHook).GetMethod("Prefix", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, new object[] { at, slot })) return;
+            if (!(bool)typeof(EntityHitches).GetNestedType("HitchSlotHook", System.Reflection.BindingFlags.NonPublic).GetMethod("Prefix", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, new object[] { at, slot })) return;
             at.slot = slot; GameAttach(at, slot.T);
         }
         public static void GameAttach(attachablescript at, Transform point)
         {
-            if (!(bool)typeof(HitchJointHook).GetMethod("Prefix", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, new object[] { at, point })) return;
+            if (!(bool)typeof(EntityHitches).GetNestedType("HitchJointHook", System.Reflection.BindingFlags.NonPublic).GetMethod("Prefix", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, new object[] { at, point })) return;
             at.attached = true; at.point = point; at.J = new Joint(); at.slot.parts.Add(at);
             var tr = OwnEntity(at.tosave); if (!_applyingAttach && tr != null) SendAttach(tr, at);
         }
@@ -121,7 +122,7 @@ namespace TLDRevamp.Net
         {
             HitchBeforeOwner(tr, target, epoch); tr.OwnerId = tr.HitchAuthorityOwner = target; tr.Epoch = epoch; tr.Proxy = target != MyId;
             foreach (var rb in HitchBodies(tr)) rb.isKinematic = tr.Proxy;
-            if (tr.HitchWaiting) HitchFreezeBodies(tr);
+            if (tr.HitchWaiting) EntityHitches.HitchFreezeBodies(tr);
         }
         internal static void Tests()
         {
@@ -153,7 +154,7 @@ namespace TLDRevamp.Net
                 check(Server[20].OwnerId == old, "no ownership grant before old owner freezes");
                 var freeze = Packets[0].data; Packets.Clear();
                 MyId = old; tr.Proxy = false; tr.Root.RB.isKinematic = tr.Root.attachable.RB.isKinematic = false;
-                ApplyHitchFreeze(Reader(freeze));
+                EntityHitches.ApplyHitchFreeze(Reader(freeze));
                 check(tr.HitchWaiting && tr.Root.RB.isKinematic && tr.Root.attachable.RB.isKinematic, "body and separate drawbar freeze together");
                 var ack = Requests[0]; Requests.Clear(); ServerPacket(ack, 1 - old);
                 check(Server[20].OwnerId == old, "forged acknowledgement cannot transfer authority");
@@ -168,10 +169,10 @@ namespace TLDRevamp.Net
                     var r = Reader(packet.data);
                     switch (packet.data[0])
                     {
-                        case HitchFreeze: ApplyHitchFreeze(r); check(tr.Root.RB.isKinematic, "new owner prepares frozen"); break;
+                        case HitchFreeze: EntityHitches.ApplyHitchFreeze(r); check(tr.Root.RB.isKinematic, "new owner prepares frozen"); break;
                         case Owner: r.U32(); int owner = (int)r.VarU32(); Grant(tr, owner, r.U32()); check(tr.HitchWaiting && tr.Root.RB.isKinematic, "grant alone does not unfreeze"); break;
-                        case HitchFrozen: ApplyHitchFrozen(r); check(!tr.HitchWaiting && !tr.Root.RB.isKinematic && !tr.Root.attachable.RB.isKinematic, "reliable motion releases both bodies"); break;
-                        case HitchCommand: ApplyHitchCommand(r); break;
+                        case HitchFrozen: EntityHitches.ApplyHitchFrozen(r); check(!tr.HitchWaiting && !tr.Root.RB.isKinematic && !tr.Root.attachable.RB.isKinematic, "reliable motion releases both bodies"); break;
+                        case HitchCommand: EntityHitches.ApplyHitchCommand(r); break;
                     }
                 }
                 Packets.Clear(); HitchCommandTick();
@@ -191,7 +192,7 @@ namespace TLDRevamp.Net
                 // trailercheck reads hitchstate, then entities in a separate bridge job. A handback can land between them.
                 car.Proxy = false; car.OwnerId = car.HitchAuthorityOwner = MyId;
                 tr.HitchWaiting = false; tr.Proxy = false; tr.OwnerId = tr.HitchAuthorityOwner = MyId;
-                HitchRestore(tr);
+                EntityHitches.HitchRestore(tr);
                 var beforeHandback = EntityHitchTools.TestHitchState(20);
                 check(beforeHandback.Contains("\"joint\":true") && beforeHandback.Contains("\"carProxy\":false") && beforeHandback.Contains("\"trailerProxy\":false"), "joint and both roles share one bridge snapshot");
                 HitchBeforeOwner(car, old, 3); car.OwnerId = car.HitchAuthorityOwner = old; car.Proxy = true;
@@ -204,10 +205,10 @@ namespace TLDRevamp.Net
                 _applyingAttach = true; tr.Root.attachable.Attach(slot); _applyingAttach = false;
                 check(tr.Root.attachable.attached && tr.Root.attachable.J == null, "proxy replay keeps hitch metadata with no joint");
                 Requests.Clear(); PlayerActing = true;
-                check(!HitchDetach(tr.Root.attachable) && Requests.Count == 1 && tr.Root.attachable.attached, "non-owner disconnect requests owner and leaves copy unchanged");
-                var disconnect = Reader(Requests[0]); var op = ReadHitch(disconnect);
+                check(!EntityHitches.HitchDetach(tr.Root.attachable) && Requests.Count == 1 && tr.Root.attachable.attached, "non-owner disconnect requests owner and leaves copy unchanged");
+                var disconnect = Reader(Requests[0]); var op = EntityHitches.ReadHitch(disconnect);
                 check(!op.Connect && op.Car == 10 && op.Trailer == 20, "disconnect addresses both entities");
-                PlayerActing = false; check(!HitchDetach(tr.Root.attachable), "automatic proxy detach is suppressed"); PlayerActing = true;
+                PlayerActing = false; check(!EntityHitches.HitchDetach(tr.Root.attachable), "automatic proxy detach is suppressed"); PlayerActing = true;
             }
             var transfer = new HitchAuthority.Transfer { From = 2, To = 1, Epoch = 8, Token = 9 };
             check(!transfer.Confirm(2, 7, 9) && !transfer.Confirm(2, 8, 8) && !transfer.Confirm(1, 8, 9), "stale epochs, tokens and wrong senders refuse freeze acknowledgement");
@@ -228,11 +229,11 @@ namespace TLDRevamp.Net
                 Packets.Clear(); _hitchOps.Clear(); _hitchTransfers.Clear();
                 Server[10].Epoch++;
                 ServerPacket(request, requester);
-                var refused = Reader(Packets[0].data); ReadHitch(refused);
+                var refused = Reader(Packets[0].data); EntityHitches.ReadHitch(refused);
                 check(refused.Str() == "stale epoch" && !_hitchTransfers.ContainsKey(20), "production server refuses stale epochs with a reason before any freeze");
                 Server[10].Epoch--; Packets.Clear(); Near = false;
                 ServerPacket(request, requester); Near = true;
-                refused = Reader(Packets[0].data); ReadHitch(refused);
+                refused = Reader(Packets[0].data); EntityHitches.ReadHitch(refused);
                 check(refused.Str() == "edit reach", "production server checks reach on both endpoints");
             }
             var player = new fpscontroller { RB = new Rigidbody { velocity = new Vector3(50, 0, 0) } };
@@ -249,15 +250,15 @@ namespace TLDRevamp.Net
             Server[20].HitchCar = 10; CascadeHitches(Server[10]);
             var pendingFreeze = Packets[0].data; Packets.Clear();
             Server[20].HitchCar = Server[20].AttachParent = 0;
-            ApplyHitchFreeze(Reader(pendingFreeze)); ServerPacket(Requests[0], 1);
+            EntityHitches.ApplyHitchFreeze(Reader(pendingFreeze)); ServerPacket(Requests[0], 1);
             check(Server[20].OwnerId == 1 && !_hitchTransfers.ContainsKey(20), "unhitch racing a freeze keeps the current owner and completes the transfer fence");
             foreach (var packet in Packets)
             {
                 if (packet.target != 1) continue;
                 var r = Reader(packet.data);
-                if (packet.data[0] == HitchFreeze) ApplyHitchFreeze(r);
+                if (packet.data[0] == HitchFreeze) EntityHitches.ApplyHitchFreeze(r);
                 else if (packet.data[0] == Owner) { r.U32(); int owner = (int)r.VarU32(); Grant(detached, owner, r.U32()); }
-                else if (packet.data[0] == HitchFrozen) ApplyHitchFrozen(r);
+                else if (packet.data[0] == HitchFrozen) EntityHitches.ApplyHitchFrozen(r);
             }
             check(!detached.HitchWaiting && !detached.Root.RB.isKinematic, "cancelled hitch transfer unfreezes the unchanged owner instead of stranding it");
             var loading = new attachablescript { tosave = new tosaveitemscript(), utanfuto = new HitchFakes.Trailer() };
@@ -268,9 +269,9 @@ namespace TLDRevamp.Net
             provisionalTrailer.HitchAuthorityOwner = 0;
             var provisionalSlot = new partslotscript { tosaveitem = provisionalCar.Root }; provisionalCar.Root.partslotscripts.Add(provisionalSlot);
             PlayerActing = false; provisionalTrailer.Root.attachable.Attach(provisionalSlot); PlayerActing = true;
-            HitchRestore(provisionalTrailer);
+            EntityHitches.HitchRestore(provisionalTrailer);
             check(provisionalTrailer.Root.attachable.J == null, "provisional pickup authority cannot create a hitch even when both local bodies are dynamic");
-            provisionalTrailer.HitchAuthorityOwner = 1; HitchRestore(provisionalTrailer);
+            provisionalTrailer.HitchAuthorityOwner = 1; EntityHitches.HitchRestore(provisionalTrailer);
             check(provisionalTrailer.Root.attachable.J != null, "server-confirmed authority permits restoration");
             RecoveryTests(check);
         }
@@ -302,10 +303,10 @@ namespace TLDRevamp.Net
                 var r = Reader(packet.data);
                 switch (packet.data[0])
                 {
-                    case HitchFreeze: ApplyHitchFreeze(r); break;
+                    case HitchFreeze: EntityHitches.ApplyHitchFreeze(r); break;
                     case Owner: { uint net = r.U32(); int owner = (int)r.VarU32(); Grant(ByNet[net], owner, r.U32()); break; }
-                    case HitchFrozen: ApplyHitchFrozen(r); break;
-                    case HitchCommand: ApplyHitchCommand(r); break;
+                    case HitchFrozen: EntityHitches.ApplyHitchFrozen(r); break;
+                    case HitchCommand: EntityHitches.ApplyHitchCommand(r); break;
                     case DetachSync:
                         // The receiver's own read of what ReleaseHitch wrote; what it then does: SyncControlsTest.
                         if (!ReadDetachSync(r, out uint detached, out _, out _) || r.Remaining != 0) throw new Exception("DetachSync doesn't read back as written");
@@ -353,7 +354,7 @@ namespace TLDRevamp.Net
             HitchEnsureKnown = false; Server[20].HitchCar = 10; HitchOwnerKnows(Server[20], 2); Server[20].HitchCar = 0;
             check(Packets.Count == 0 && KnownBy(2).Count == 0, "interest A/B switch leaves dependencies to ordinary offers"); HitchEnsureKnown = true;
             var op = new HitchOp { Trailer = 20, Car = 10, TrailerEpoch = 1, CarEpoch = 1, Slot = 0, Connect = true };
-            var request = new NetWriter(); request.U8(HitchRequest); WriteHitch(request, op); ServerPacket(Copy(request), 0);
+            var request = new NetWriter(); request.U8(HitchRequest); EntityHitches.WriteHitch(request, op); ServerPacket(Copy(request), 0);
             var pending = _hitchTransfers[20]; Packets.Clear();
             ack = new NetWriter(); ack.U8(HitchFrozen); ack.U32(20); ack.U32(1); ack.U32(pending.Token); ack.Bool(false);
             ServerPacket(Copy(ack), 1);
@@ -366,7 +367,7 @@ namespace TLDRevamp.Net
             check(Packets.Count == 0, "already-known hitch dependencies are not resent");
             // A distant destination can still have only stored copies and never run its command. Release on deadline.
             Server[20].AttachParent = 10; Server[20].LastAttach = new byte[] { 1 }; Server[10].AttachKids.Add(20);
-            ApplyHitchCommand(Reader(toOwner[toOwner.Count - 1].data));
+            EntityHitches.ApplyHitchCommand(Reader(toOwner[toOwner.Count - 1].data));
             ByNet.Remove(10); Time.realtimeSinceStartup = HitchTimeoutS; HitchCommandTick();
             check(_hitchCommands.Count == 0, "missing command dependencies cannot leave a permanent local queue");
             ServerHitchTick();
@@ -376,7 +377,7 @@ namespace TLDRevamp.Net
             foreach (bool transferring in new[] { false, true })
             {
                 RecoverySetup(transferring ? 0 : 1, 1, true);
-                var tr = ByNet[20]; MyId = 1; tr.Proxy = false; tr.HitchWaiting = true; HitchFreezeBodies(tr);
+                var tr = ByNet[20]; MyId = 1; tr.Proxy = false; tr.HitchWaiting = true; EntityHitches.HitchFreezeBodies(tr);
                 if (transferring) CascadeHitches(Server[10]);
                 _hitchOps[20] = new HitchOp { Trailer = 20, Car = 10, Connect = true };
                 Packets.Clear();
@@ -411,14 +412,14 @@ namespace TLDRevamp.Net
                 RecoverySetup(0, 0, false);
                 var tr = ByNet[20]; tr.Root.transform.position = new Vector3(10, 2, -8);
                 tr.Root.transform.rotation = new Quaternion(0, 0, 1, 0);
-                tr.Root.RB.DeferredTransform = deferred; tr.HitchWaiting = true; HitchFreezeBodies(tr);
+                tr.Root.RB.DeferredTransform = deferred; tr.HitchWaiting = true; EntityHitches.HitchFreezeBodies(tr);
                 var q = new Quaternion(0, 0, 0.70710677f, 0.70710677f); var lp = new Vector3(2, 1, -3);
                 tr.Root.gameObject.Extra = new attachgripscript { GripPos = new Transform {
                     position = tr.Root.transform.TransformPoint(lp), rotation = tr.Root.transform.rotation } };
                 var pose = new NetWriter(); pose.U8(HitchFrozen); pose.U32(20); pose.U32(1); pose.U32(0); pose.Bool(true);
                 pose.F64(100); pose.F64(30); pose.F64(-40); WriteRot(pose, q); pose.F32(0); pose.F32(0); pose.F32(0);
                 pose.Bool(receivedGrip); pose.F32(lp.x); pose.F32(lp.y); pose.F32(lp.z); WriteRot(pose, Quaternion.identity);
-                ApplyHitchFrozen(Reader(Copy(pose)));
+                EntityHitches.ApplyHitchFrozen(Reader(Copy(pose)));
                 var expected = new Vector3(100, 30, -40) + q * lp;
                 bool correct = (tr.Root.attachable.transform.position - expected).sqrMagnitude < 0.0001f;
                 check(correct, "drawbar uses destination pose with rotation; received=" + receivedGrip + ", deferred=" + deferred);

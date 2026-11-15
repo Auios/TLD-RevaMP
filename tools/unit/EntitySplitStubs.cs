@@ -12,7 +12,7 @@ namespace HarmonyLib
 
 namespace UnityEngine
 {
-    public class Object
+    public partial class Object
     {
         public string name;
         public static GameObject LastCreated;

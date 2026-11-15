@@ -42,7 +42,7 @@ static partial class EntitySplitTest
         var stored = (IDictionary)Field(typeof(EntityDoors), "_storedDoorAttaches");
         var restored = (IList)Field(typeof(EntityDoors), "_restoredDoorAttaches");
         Check(stored.Count == 1 && EntityDoors.DoorAttachFrame(d.Frame), "sending door frame remembers attachment");
-        d.At.slot = new object(); Check(Convert.ToHexString(DoorWire(d.At)) == "00", "slot attachment tail matches HEAD bytes"); d.At.slot = null;
+        d.At.slot = new partslotscript(); Check(Convert.ToHexString(DoorWire(d.At)) == "00", "slot attachment tail matches HEAD bytes"); d.At.slot = null;
         Check(Convert.ToHexString(LiveDoorWire()) == LiveDoorVector, "car door live usable message matches HEAD bytes");
         Check(EntityDoors.AttachFramePath(d.At, d.Frame).SequenceEqual(new[] { 0 }), "door path uses frame hierarchy indices");
         Check(EntityDoors.RestoreAttachFrame(d.At, null, default), "no stored frame preserves existing attach");
