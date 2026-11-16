@@ -4,6 +4,38 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        // Cargo boundary. Map walks and server authority stay in the kernel.
+        internal static bool CargoInSession => InSession;
+        internal static int CargoLocalId => MyId;
+        internal static bool CargoClaimsEnabled => CargoClaims;
+        internal static bool CargoItemClaims => ItemClaims;
+        internal static float CargoItemMinSpeed => ItemMinSpeed;
+        internal static byte PushMessage => PushIn;
+        internal static Ent CargoCopyOf(Transform root) => ProxyOf(root);
+        internal static bool IsCargoBody(Ent entity) => CargoBody(entity);
+        internal static bool CargoRidesParent(Ent entity) => RidesParent(entity);
+        internal static Transform[] CargoLimbs(Ent entity) => Limbs(entity);
+        internal static bool CargoLimp(Ent entity) => Limp(entity);
+        internal static void SetCargoProxy(Ent entity, bool proxy) => SetProxy(entity, proxy);
+        internal static void WriteCargoClaim(NetWriter writer, uint net, ClaimReason reason) => WriteClaim(writer, net, reason);
+        internal static void SendCargoRequest(NetWriter writer, bool reliable) => ToServer(writer, reliable);
+        internal static void CargoClaimSent() => ClaimsSent++;
+        internal static void CargoContactClaimed() => CargoClaimedOnContact++;
+        internal static void ItemContactClaimed() => ItemClaimedOnContact++;
+        internal static carscript CargoOverlappedCar(Ent entity) => OverlappedCar(entity);
+        internal static Bounds CargoCarBounds(carscript car) => CarLocalBounds(car);
+        internal static bool CargoLockedAway(Ent entity) => LockedAway(entity);
+        internal static bool IsPushCopy(Component pushable) => IsProxy(pushable);
+        internal static Ent PushEntityOf(tosaveitemscript item) => EditEntityOf(item);
+        internal static Ent GripEntityOf(Transform root) => PlacedOfTransform(root);
+        internal static nyulscript CargoRabbit(Ent entity) => NyOf(entity);
+        internal static Ent CargoCarEntity(carscript car) => CarEnt(car);
+        internal static bool CargoItemHeld(tosaveitemscript item) => IsHeld(item);
+        internal static bool TryCargoContactCar(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
+        internal static bool TryItemContactSource(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
+        internal static bool TryPushTarget(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
+        // End cargo boundary.
+
         // Lock boundary. Copy and ownership decisions stay in the kernel.
         internal static bool IsLockCopy(Component item) => IsProxy(item);
         internal static bool LockRidesParent(Ent entity) => RidesParent(entity);

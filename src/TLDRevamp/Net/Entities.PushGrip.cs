@@ -11,31 +11,31 @@ namespace TLDRevamp.Net
     /// Now taking the grip takes the vehicle, as picking up an item does (provisional at once, the server confirms):
     /// this machine moves it, the others see it walked. Not from its driver: a vehicle someone rides is let go at once
     /// (the server refuses that claim too); and if the vehicle goes to another machine while held, it is let go.
-    public static partial class Entities
+    internal static partial class EntityCargoInteraction
     {
         public static long GripClaims, GripRefused, GripLost;
         private static uint _gripNet;
 
-        private static void PushGripTick()
+        internal static void PushGripTick()
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var g = pl != null && pl.pushgripping ? pl.pushgrip : null;
             if (g == null) { _gripNet = 0; return; }
             var root = g.transform.root;
-            Ent e = null;
-            e = PlacedOfTransform(root); if (e != null && e.PartIndex >= 0) e = null;   // the car itself, not a can stored in it
+            Entities.Ent e = null;
+            e = Entities.GripEntityOf(root); if (e != null && e.PartIndex >= 0) e = null;   // the car itself, not a can stored in it
             if (e == null) return;
             if (!e.Proxy) { _gripNet = e.NetId; return; }
             if (_gripNet == e.NetId) { pl.StopPushGripping(); GripLost++; _gripNet = 0; return; }   // gone to another machine: not ours to hold
             if (e.Driven) { pl.StopPushGripping(); GripRefused++; return; }                        // someone rides it
-            SetProxy(e, false);
-            e.OwnerId = MyId;
-            W.Reset(); WriteClaim(W, e.NetId, ClaimReason.PushGrip); ToServer(W, true);
-            ClaimsSent++; GripClaims++;
+            Entities.SetCargoProxy(e, false);
+            e.OwnerId = Entities.CargoLocalId;
+            W.Reset(); Entities.WriteCargoClaim(W, e.NetId, Entities.ClaimReason.PushGrip); Entities.SendCargoRequest(W, true);
+            Entities.CargoClaimSent(); GripClaims++;
             _gripNet = e.NetId;
         }
 
-        public static string GripStatus()
+        internal static string GripStatus()
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
             return "{\"gripping\":" + (pl != null && pl.pushgripping ? "true" : "false") + ",\"grip\":" + Json.Str(pl != null && pl.pushgrip != null ? pl.pushgrip.name : "") +
@@ -45,7 +45,7 @@ namespace TLDRevamp.Net
         }
 
         /// Diagnostics (bridge `mp grips`): the item prefabs with grips: [index, name, grips].
-        public static string GripPrefabs()
+        internal static string GripPrefabs()
         {
             var rows = new List<string>();
             var db = itemdatabase.s != null ? itemdatabase.s.items : null;
@@ -58,4 +58,12 @@ namespace TLDRevamp.Net
             return "{\"grips\":[" + string.Join(",", rows) + "]}";
         }
     }
+    public static partial class Entities
+    {
+        private static void PushGripTick() => EntityCargoInteraction.PushGripTick();
+        public static string GripStatus() => EntityCargoInteraction.GripStatus();
+        public static string GripPrefabs() => EntityCargoInteraction.GripPrefabs();
+    }
+
+
 }

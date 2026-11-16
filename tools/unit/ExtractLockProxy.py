@@ -31,7 +31,9 @@ roles += '\n        static void ApplyOwner(NetReader r) {\n' + owner.replace('  
 control = source.split('                    bool control = ', 1)[1].split(';', 1)[0].replace('e.SentMoving', 'sentMoving')
 roles += '\n        private static bool SampleControl(bool lockChange, bool wStored, bool wHeld, bool wSig, bool wSpray, bool wDriver, bool velocityMoving, bool sentMoving, bool wHand = false) => ' + control + ';\n'
 source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Cargo.cs').read_text(encoding='utf-8')
-roles += '\n' + method('ClaimCargo', 'bool') + '\n' + method('IsHeld', 'bool')
+from runpy import run_path
+cargo = run_path(str(Path(__file__).with_name('ExtractCargoInteraction.py')))
+roles += '\n' + cargo['legacy_body'](method('ClaimCargo', 'bool')) + '\n' + method('IsHeld', 'bool')
 source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Leases.cs').read_text(encoding='utf-8')
 source = source[source.index('        private static class PickupClaim'):]
 roles += '\n' + method('Prefix').replace('Prefix(', 'PickupPrefix(')

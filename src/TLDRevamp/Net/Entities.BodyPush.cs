@@ -7,7 +7,7 @@ namespace TLDRevamp.Net
     /// machine's before the body touches it: a loose item within a margin ahead of the walking player is claimed (at once
     /// here, the server confirms or hands it back), and the game's own physics pushes it. Contact stays as the fallback.
     /// Items in hands or inventories, worn, attached or creatures are never claimed (ClaimCargo, and the server refuses).
-    public static partial class Entities
+    internal static partial class EntityCargoInteraction
     {
         public static bool BodyClaims = true;          // A/B: false = items stay frozen until their owner moves them
         public static float BodyNearM = 0.25f, BodyMinSpeed = 0.3f;
@@ -15,9 +15,9 @@ namespace TLDRevamp.Net
         private static readonly Collider[] _bodyNear = new Collider[32];
 
         /// Per physics step, before the copies move (Entities.Physical): loose copies ahead of the walking local player.
-        private static void BodyNearTick(float dt)
+        internal static void BodyNearTick(float dt)
         {
-            if (!BodyClaims || !InSession) return;
+            if (!BodyClaims || !Entities.CargoInSession) return;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || pl.Bsitting || pl.RB == null || pl.CBody == null) return;
             if (pl.GetComponent<BodyContactRelay>() == null) pl.gameObject.AddComponent<BodyContactRelay>();
@@ -33,15 +33,15 @@ namespace TLDRevamp.Net
             {
                 var rb = _bodyNear[i].attachedRigidbody;
                 if (rb == null || !rb.isKinematic || Vector3.Dot(v, rb.worldCenterOfMass - center) <= 0f) continue;   // only what the player walks into
-                var e = ProxyOf(rb.transform.root);
-                if (Pushable(e) && ClaimCargo(e, reason: ClaimReason.BodyNear)) BodyClaimedNear++;
+                var e = Entities.CargoCopyOf(rb.transform.root);
+                if (Pushable(e) && ClaimCargo(e, reason: Entities.ClaimReason.BodyNear)) BodyClaimedNear++;
             }
         }
 
         /// The fallback: the local player's body touched a loose copy (it moved there faster than the margin covered).
         internal static void BodyContact(Collision c)
         {
-            if (!BodyClaims || !InSession) return;
+            if (!BodyClaims || !Entities.CargoInSession) return;
             var rb = c.rigidbody;
             if (rb == null || !rb.isKinematic) return;
             // only a body walking into it: standing against a copy (or on it) every physics step took it from its owner
@@ -49,20 +49,25 @@ namespace TLDRevamp.Net
             if (pl == null || pl.Bsitting || pl.RB == null) return;
             var v = pl.RB.velocity; v.y = 0f;
             if (v.magnitude < BodyMinSpeed || Vector3.Dot(v, rb.worldCenterOfMass - pl.RB.worldCenterOfMass) <= 0f) return;
-            var e = ProxyOf(rb.transform.root);
-            if (Pushable(e) && ClaimCargo(e, reason: ClaimReason.BodyContact)) BodyClaimedOnContact++;
+            var e = Entities.CargoCopyOf(rb.transform.root);
+            if (Pushable(e) && ClaimCargo(e, reason: Entities.ClaimReason.BodyContact)) BodyClaimedOnContact++;
         }
 
         /// A loose copy a body may push: not a car or a car's part, nor held, stored, simulated here or being taken in a crash
         /// (the same items CargoNearTick claims).
-        private static bool Pushable(Ent e) => e != null && e.Proxy && e.Root != null && e.Root.car == null && LooseItem(e)
-            && !e.Held && !e.Stored && !e.Physical && !e.CrashTaking && CargoBody(e);
+        internal static bool Pushable(Entities.Ent e) => e != null && e.Proxy && e.Root != null && e.Root.car == null && LooseItem(e)
+            && !e.Held && !e.Stored && !e.Physical && !e.CrashTaking && Entities.IsCargoBody(e);
+    }
+    public static partial class Entities
+    {
+        private static void BodyNearTick(float dt) => EntityCargoInteraction.BodyNearTick(dt);
+        private static bool Pushable(Ent e) => EntityCargoInteraction.Pushable(e);
     }
 
     /// On the local player's body: its collisions with copies (Entities.BodyContact).
     internal sealed class BodyContactRelay : MonoBehaviour
     {
-        private void OnCollisionEnter(Collision c) => Entities.BodyContact(c);
-        private void OnCollisionStay(Collision c) => Entities.BodyContact(c);
+        private void OnCollisionEnter(Collision c) => EntityCargoInteraction.BodyContact(c);
+        private void OnCollisionStay(Collision c) => EntityCargoInteraction.BodyContact(c);
     }
 }

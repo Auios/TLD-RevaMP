@@ -74,6 +74,8 @@ static class MessageTableTest
             return Regex.Match(bodies, @"void " + name + @"\(.*?\n        \}\n", RegexOptions.Singleline).Value;
         }
         string server = Method("Entities", "ServerReceive"), client = Method("Entities", "ClientReceive");
+        Check("PushIn: retained client facade routes to cargo owner", client.Contains("case PushIn: ApplyPush(r);") && src.Values.Any(s => s.Contains("private static void ApplyPush(NetReader r) => EntityCargoInteraction.ApplyPush(r);")) && Method("EntityCargoInteraction", "ApplyPush").Contains("r.F32()"));
+        Check("PushIn: raw owner relay stays on kernel", server.Contains("case PushIn: ServerPush(from, r);") && Method("Entities", "ServerPush").Contains("Server.TryGetValue(net"));
         Check("PhysLockSync: client routes to lock owner", client.Contains("case PhysLockSync: EntityLocks.ApplyPhysLock(r);"));
         Check("PhysLockSync: owner reads payload", Method("EntityLocks", "ApplyPhysLock").Contains("r.U8()"));
         foreach (var route in new[] { ("LeaseReq", "ServerLeaseRequest"), ("LeaseDone", "ServerLeaseDoneRequest") })

@@ -12,6 +12,52 @@ namespace TLDRevamp.Net
     /// new owner saw ~0.1 s late). Cars keep their own rule (Entities.Cargo: a car takes what lands on it); creatures
     /// theirs (Entities.Rabbits). Contact stays as the fallback. Items in hands or inventories, worn, attached or bodies
     /// still alive are never claimed (Pushable, ClaimCargo, and the server refuses).
+    internal static partial class EntityCargoInteraction
+    {
+        /// The item's velocity relative to the car it lies on (a stack in it too), if any: a can riding in our car at
+        /// 20 m/s isn't moving (review 2026-10-22, #22: driving past someone's roadside items, our cargo took everything
+        /// within ~1.35 m of it, around the car's own approach rule). On the ground: its own velocity.
+        public static bool RideRelative = true;   // A/B: false = its own velocity (before #22)
+
+        /// From ContactRelay: a loose item simulated here touched a loose copy (it moved there faster than the margin covered).
+        internal static void ItemContact(uint net, Collision c)
+        {
+            if (!Entities.CargoItemClaims || !Entities.CargoInSession) return;
+            var orb = c.rigidbody;
+            if (orb == null || !orb.isKinematic || !Entities.TryItemContactSource(net, out var mine)) return;
+            var rb = MovingItemBody(mine);
+            if (rb == null) return;
+            var v = RideVelocity(mine, rb);
+            if (v.sqrMagnitude < Entities.CargoItemMinSpeed * Entities.CargoItemMinSpeed || Vector3.Dot(v, orb.worldCenterOfMass - rb.worldCenterOfMass) <= 0f) return;
+            var other = Entities.CargoCopyOf(orb.transform.root);
+            if (Pushable(other) && Entities.CargoRabbit(other) == null && ClaimCargo(other, reason: Entities.ClaimReason.ItemContact)) Entities.ItemContactClaimed();
+        }
+
+        internal static Vector3 RideVelocity(Entities.Ent e, Rigidbody rb)
+        {
+            if (!RideRelative) return rb.velocity;
+            var under = SurfaceUnder(e, out var body);
+            var car = under != null ? under.GetComponentInChildren<carscript>() : null;
+            var crb = car != null ? car.RB : body;
+            if (crb != null && !crb.isKinematic) return rb.velocity - crb.GetPointVelocity(rb.worldCenterOfMass);
+            // another player's car: its copy is kinematic here, its velocity the one its states carry (review batch 15:
+            // in their moving car, during the claim cooldown, our can counted as moving at the car's speed)
+            var ce = car != null ? Entities.CargoCarEntity(car) : null;
+            return ce != null ? rb.velocity - ce.LastVel : rb.velocity;
+        }
+
+        /// The body of a loose item simulated here that is moving (dropped, thrown, falling, knocked): not a car or a car's
+        /// part, not in this player's hands, not a creature; null otherwise. Resting items claim nothing (two touching
+        /// items at rest would otherwise take each other in turn).
+        internal static Rigidbody MovingItemBody(Entities.Ent e)
+        {
+            if (e == null || e.Proxy || e.Root == null || e.Root.car != null || !LooseItem(e) || e.Stored || e.Root.P == null || Entities.CargoRabbit(e) != null || Entities.CargoItemHeld(e.Root)) return null;
+            var rb = e.Root.GetComponent<Rigidbody>();
+            if (rb == null || rb.isKinematic || !rb.detectCollisions || rb.IsSleeping() || rb.velocity.sqrMagnitude < Entities.CargoItemMinSpeed * Entities.CargoItemMinSpeed) return null;
+            return rb;
+        }
+    }
+
     public static partial class Entities
     {
         public static bool ItemClaims = true;          // A/B: false = a moving item meets a frozen copy of the other
@@ -49,37 +95,6 @@ namespace TLDRevamp.Net
             }
         }
 
-        /// From ContactRelay: a loose item simulated here touched a loose copy (it moved there faster than the margin covered).
-        internal static void ItemContact(uint net, Collision c)
-        {
-            if (!ItemClaims || !InSession) return;
-            var orb = c.rigidbody;
-            if (orb == null || !orb.isKinematic || !ByNet.TryGetValue(net, out var mine)) return;
-            var rb = MovingItemBody(mine);
-            if (rb == null) return;
-            var v = RideVelocity(mine, rb);
-            if (v.sqrMagnitude < ItemMinSpeed * ItemMinSpeed || Vector3.Dot(v, orb.worldCenterOfMass - rb.worldCenterOfMass) <= 0f) return;
-            var other = ProxyOf(orb.transform.root);
-            if (Pushable(other) && NyOf(other) == null && ClaimCargo(other, reason: ClaimReason.ItemContact)) ItemClaimedOnContact++;
-        }
-
-        /// The item's velocity relative to the car it lies on (a stack in it too), if any: a can riding in our car at
-        /// 20 m/s isn't moving (review 2026-10-22, #22: driving past someone's roadside items, our cargo took everything
-        /// within ~1.35 m of it, around the car's own approach rule). On the ground: its own velocity.
-        public static bool RideRelative = true;   // A/B: false = its own velocity (before #22)
-        internal static Vector3 RideVelocity(Ent e, Rigidbody rb)
-        {
-            if (!RideRelative) return rb.velocity;
-            var under = SurfaceUnder(e, out var body);
-            var car = under != null ? under.GetComponentInChildren<carscript>() : null;
-            var crb = car != null ? car.RB : body;
-            if (crb != null && !crb.isKinematic) return rb.velocity - crb.GetPointVelocity(rb.worldCenterOfMass);
-            // another player's car: its copy is kinematic here, its velocity the one its states carry (review batch 15:
-            // in their moving car, during the claim cooldown, our can counted as moving at the car's speed)
-            var ce = car != null ? CarEnt(car) : null;
-            return ce != null ? rb.velocity - ce.LastVel : rb.velocity;
-        }
-
         private static readonly System.Collections.Generic.Dictionary<carscript, Ent> _rideCars = new System.Collections.Generic.Dictionary<carscript, Ent>();
         private static Ent CarEnt(carscript car)
         {
@@ -90,15 +105,8 @@ namespace TLDRevamp.Net
             return e;
         }
 
-        /// The body of a loose item simulated here that is moving (dropped, thrown, falling, knocked): not a car or a car's
-        /// part, not in this player's hands, not a creature; null otherwise. Resting items claim nothing (two touching
-        /// items at rest would otherwise take each other in turn).
-        internal static Rigidbody MovingItemBody(Ent e)
-        {
-            if (e == null || e.Proxy || e.Root == null || e.Root.car != null || !LooseItem(e) || e.Stored || e.Root.P == null || NyOf(e) != null || IsHeld(e.Root)) return null;
-            var rb = e.Root.GetComponent<Rigidbody>();
-            if (rb == null || rb.isKinematic || !rb.detectCollisions || rb.IsSleeping() || rb.velocity.sqrMagnitude < ItemMinSpeed * ItemMinSpeed) return null;
-            return rb;
-        }
+        internal static void ItemContact(uint net, Collision c) => EntityCargoInteraction.ItemContact(net, c);
+        internal static Vector3 RideVelocity(Ent e, Rigidbody rb) => EntityCargoInteraction.RideVelocity(e, rb);
+        internal static Rigidbody MovingItemBody(Ent e) => EntityCargoInteraction.MovingItemBody(e);
     }
 }

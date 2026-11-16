@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
+    <Compile Include="EntityCargoInteractionChecks.cs" />
+    <Compile Include="EntityCargoInteractionStubs.cs" />
     <Compile Include="EntityLeasesChecks.cs" />
     <Compile Include="EntityLeasesStubs.cs" />
     <Compile Include="EntitySplitTest.cs" />
@@ -100,6 +102,8 @@
       <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
     </PropertyGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractFeatureWire.py&quot; &quot;$(IntermediateOutputPath)FeatureWire.g.cs&quot; $(FeatureWireBaseline)" />
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractCargoInteraction.py&quot; &quot;$(IntermediateOutputPath)CargoInteraction.g.cs&quot; $(CargoInteractionBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)CargoInteraction.g*.cs" /></ItemGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractRabbitWire.py&quot; &quot;$(IntermediateOutputPath)RabbitWire.g.cs&quot; $(RabbitWireBaseline)" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractAIWire.py&quot; &quot;$(IntermediateOutputPath)AIWire.g.cs&quot; $(AIWireBaseline)" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractTelemetryBoundary.py&quot; &quot;$(IntermediateOutputPath)TelemetryBoundary.g.cs&quot;" />
