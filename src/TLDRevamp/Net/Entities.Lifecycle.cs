@@ -417,12 +417,13 @@ namespace TLDRevamp.Net
             // a server-policy question for later; the core syncs reality.
             RemoveHitches(net);   // trailers are independent entities: release them before their tow car disappears
             Server.Remove(net);
+            _serverLocked.Remove(se);   // gone: its pose no longer follows a container (relaycheck.py, 2026-11-16)
             if (se.Parts != null)
                 foreach (var pn in new List<uint>(se.Parts))
                 {
                     if (!Server.TryGetValue(pn, out var part)) continue;
                     if (KeepPartsOnRemove) OrphanPart(se, part);
-                    else Server.Remove(pn);
+                    else { Server.Remove(pn); _serverLocked.Remove(part); }
                 }
             W.Reset(); W.U8(RemoveItem); W.U32(net);
             ServerSendAll(W, true, from);   // everyone but the destroyer (already clean) — incl. the host's own copy (Deliver)

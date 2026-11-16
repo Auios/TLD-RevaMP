@@ -1619,6 +1619,11 @@ namespace TLDRevamp.Net
             }
             RestoreRabbitState(e);
             RebindPoseLocks(e);
+            // Simulated here: the new game object relays its contacts again, as Bind does. The relay sat on the old object,
+            // which the game destroyed when it streamed out (or replaced in the same frame), so an owned object that came
+            // back in no longer handed its collisions to the other machine or to the cargo/rabbit/item contact rules
+            // (relaycheck.py, 2026-11-16).
+            if (!e.Proxy) AttachContact(e);
             Rebound++;
             return true;
         }
