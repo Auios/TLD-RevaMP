@@ -5,6 +5,23 @@ using System.Reflection;
 namespace TLDRevamp.Net
 {
     /// What PlayerSave (per-player saves on the host) needs from the shared objects.
+    internal static class EntityPlayerSave
+    {
+        internal static int DropFromSave(itemDataClass d, HashSet<uint> ids)
+        {
+            int n = 0;
+            foreach (var f in ItemSnapshot.ListFields)
+            {
+                if (!(f.GetValue(d) is IList list) || list.Count == 0) continue;
+                var idf = GameLookups.SaveIdField(typeof(itemDataClass), "id", list[0]?.GetType());
+                if (idf == null || idf.FieldType != typeof(uint)) continue;
+                for (int i = list.Count - 1; i >= 0; i--)
+                    if (list[i] != null && ids.Contains((uint)idf.GetValue(list[i]))) { list.RemoveAt(i); n++; }
+            }
+            return n;
+        }
+    }
+
     public static partial class Entities
     {
         /// Local: the network id of the shared object this item is the root of.
@@ -32,18 +49,6 @@ namespace TLDRevamp.Net
         }
 
         /// Host save: every record of these ids out of the world save (items, and their rows in the other lists).
-        internal static int DropFromSave(itemDataClass d, HashSet<uint> ids)
-        {
-            int n = 0;
-            foreach (var f in ItemSnapshot.ListFields)
-            {
-                if (!(f.GetValue(d) is IList list) || list.Count == 0) continue;
-                var idf = GameLookups.SaveIdField(typeof(itemDataClass), "id", list[0]?.GetType());
-                if (idf == null || idf.FieldType != typeof(uint)) continue;
-                for (int i = list.Count - 1; i >= 0; i--)
-                    if (list[i] != null && ids.Contains((uint)idf.GetValue(list[i]))) { list.RemoveAt(i); n++; }
-            }
-            return n;
-        }
+        internal static int DropFromSave(itemDataClass d, HashSet<uint> ids) => EntityPlayerSave.DropFromSave(d, ids);
     }
 }

@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
+    <Compile Include="EntityKernelFactsChecks.cs" />
+    <Compile Include="EntityKernelFactsStubs.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.Ground.cs" Condition="'$(KernelFactsBaseline)' == ''" />
     <Compile Include="EntityPhysicsChecks.cs" />
     <Compile Include="EntityPhysicsStubs.cs" />
     <Compile Include="../../src/TLDRevamp/Net/CrashGuard.cs" />
@@ -114,6 +117,8 @@
       <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
       <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
     </PropertyGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractKernelFacts.py&quot; &quot;$(IntermediateOutputPath)KernelFacts.g.cs&quot; $(KernelFactsBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)KernelFacts.g.cs" /></ItemGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractPhysicsBoundary.py&quot; &quot;$(IntermediateOutputPath)PhysicsFeature.g.cs&quot; $(PhysicsBaseline)" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractProxyPresentationBoundary.py&quot; &quot;$(IntermediateOutputPath)ProxyPresentation.g.cs&quot; $(ProxyPresentationBaseline)" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractLifetimeStreaming.py&quot; &quot;$(IntermediateOutputPath)LifetimeStreaming.g.cs&quot; $(LifetimeStreamingBaseline)" />

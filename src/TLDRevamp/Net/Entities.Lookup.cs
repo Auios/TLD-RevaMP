@@ -3,6 +3,30 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
+    internal static class EntityLookup
+    {
+        internal static List<tankscript> TanksOf(List<tosaveitemscript> items)
+        {
+            var l = new List<tankscript>();
+            foreach (var it in items) if (it != null && it.tanks != null) foreach (var t in it.tanks) l.Add(t);
+            return l;
+        }
+
+        internal static tosaveitemscript NearestCar()
+        {
+            if (savedatascript.s == null || mainscript.s == null || mainscript.s.player == null) return null;
+            var p = mainscript.s.player.transform.position;
+            tosaveitemscript best = null; float bd = float.MaxValue;
+            foreach (var it in savedatascript.s.items.Values)
+                if (it != null && it.car != null && it.transform.parent == null)
+                {
+                    float d = (it.transform.position - p).sqrMagnitude;
+                    if (d < bd) { bd = d; best = it; }
+                }
+            return best;
+        }
+    }
+
     public static partial class Entities
     {
         /// The shared object whose group holds this item (diagnostics).
@@ -19,12 +43,7 @@ namespace TLDRevamp.Net
         }
 
         /// The entity's tanks in EntState order (its items in order, each item's tanks): amount per fluid, caps open.
-        internal static List<tankscript> TanksOf(Ent e)
-        {
-            var l = new List<tankscript>();
-            foreach (var it in e.Items) if (it != null && it.tanks != null) foreach (var t in it.tanks) l.Add(t);
-            return l;
-        }
+        internal static List<tankscript> TanksOf(Ent e) => EntityLookup.TanksOf(e.Items);
 
         /// For logs: which shared object a root is — net, owner, copy or own — or "local" if it isn't shared.
         internal static string DescribeRoot(Transform root)
@@ -46,19 +65,7 @@ namespace TLDRevamp.Net
         }
 
         /// Nearest car to the local player (for scenarios).
-        internal static tosaveitemscript NearestCar()
-        {
-            if (savedatascript.s == null || mainscript.s == null || mainscript.s.player == null) return null;
-            var p = mainscript.s.player.transform.position;
-            tosaveitemscript best = null; float bd = float.MaxValue;
-            foreach (var it in savedatascript.s.items.Values)
-                if (it != null && it.car != null && it.transform.parent == null)
-                {
-                    float d = (it.transform.position - p).sqrMagnitude;
-                    if (d < bd) { bd = d; best = it; }
-                }
-            return best;
-        }
+        internal static tosaveitemscript NearestCar() => EntityLookup.NearestCar();
         internal static tosaveitemscript RootOfNet(uint net) => ByNet.TryGetValue(net, out var e) && Resolve(e) ? e.Root : null;
 
     }

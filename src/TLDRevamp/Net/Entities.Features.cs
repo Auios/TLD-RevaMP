@@ -4,6 +4,20 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        // Game adapters ask for one identity fact; all table walks stay here.
+        internal static bool TryModRootNet(tosaveitemscript item, out uint net)
+        {
+            foreach (var e in ByNet.Values) if (e.Root == item) { net = e.NetId; return true; }
+            net = 0; return false;
+        }
+        internal static GameObject ModObject(uint net) => ByNet.TryGetValue(net, out var e) && e.Root != null ? e.Root.gameObject : null;
+        internal static string ModShareRoot(tosaveitemscript top) => top.car != null ? ShareCar(top) : ShareItem(top, null);
+        internal static uint MountRootNet(Transform root)
+        {
+            uint partNet = 0; foreach (var x in ByNet.Values) if (x.Root != null && x.Root.transform == root) { partNet = x.NetId; break; }
+            return partNet;
+        }
+
         // Physics boundary. Scheduling, map walks and server ownership stay in the kernel.
         internal static Ent PhysicsRoot(Transform root) => PlacedOfTransform(root);
         internal static bool PhysicsNetOf(Transform root, out uint net, out bool proxy) => NetOf(root, out net, out proxy);

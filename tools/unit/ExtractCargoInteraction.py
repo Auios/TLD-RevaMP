@@ -129,6 +129,9 @@ def source_rows(baseline):
             if '=' in m[0]:
                 continue
             name = m.group(1)
+            if part == 'Push' and name == 'Finite' and '=> EntityNumbers.Finite(' in member(s[m.start():], name):
+                # Slice 30 compares the original bodies on EntityNumbers, not the compatibility forwarders too.
+                continue
             if not baseline and name in METHODS.get(part, ()):
                 # The feature body occurs before its forwarding facade.
                 if any(row.startswith(part + '.' + name + '=') for row in rows):
@@ -156,6 +159,8 @@ def main():
     features = []
     for part in METHODS:
         s = baseline_feature(part) if baseline else read(part).split('    public static partial class Entities')[0]
+        if not baseline and part == 'Push':
+            s = s.split('    /// Numbers received by physics, clocks and health, independent of session identity.')[0]
         if not baseline:
             s = s.rstrip() + '\n}\n'
         features.append(s)

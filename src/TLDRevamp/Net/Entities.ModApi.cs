@@ -4,7 +4,7 @@ namespace TLDRevamp.Net
 {
     /// The game's shared objects as the modding API sees them (MpApi.WorldObjectId / FindWorldObject / ShareWorldObject):
     /// a mod points at a car or an item by its network id, which is the same on every machine.
-    public static partial class Entities
+    internal static class EntityModApi
     {
         /// The network id of a shared group root on or above go (a car, an item), or 0.
         internal static uint NetIdOf(GameObject go)
@@ -14,23 +14,30 @@ namespace TLDRevamp.Net
             {
                 var s = t.GetComponent<tosaveitemscript>();
                 if (s == null) continue;
-                foreach (var e in ByNet.Values) if (e.Root == s) return e.NetId;
+                if (Entities.TryModRootNet(s, out uint net)) return net;
             }
             return 0;
         }
 
         internal static GameObject GameObjectOf(uint net) =>
-            ByNet.TryGetValue(net, out var e) && e.Root != null ? e.Root.gameObject : null;
+            Entities.ModObject(net);
 
         /// Share the topmost saveable object on or above go, with its group. True if it is shared or on its way.
         internal static bool ShareGameObject(GameObject go)
         {
-            if (go == null || !InSession) return false;
+            if (go == null || !Entities.InSession) return false;
             tosaveitemscript top = null;
             for (var t = go.transform; t != null; t = t.parent) { var s = t.GetComponent<tosaveitemscript>(); if (s != null) top = s; }
             if (top == null) return false;
-            string res = top.car != null ? ShareCar(top) : ShareItem(top, null);
+            string res = Entities.ModShareRoot(top);
             return !res.Contains("\"error\"");
         }
+    }
+
+    public static partial class Entities
+    {
+        internal static uint NetIdOf(GameObject go) => EntityModApi.NetIdOf(go);
+        internal static GameObject GameObjectOf(uint net) => EntityModApi.GameObjectOf(net);
+        internal static bool ShareGameObject(GameObject go) => EntityModApi.ShareGameObject(go);
     }
 }

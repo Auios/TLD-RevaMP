@@ -27,6 +27,7 @@ static partial class EntitySplitTest
 
     static void Main()
     {
+        KernelFactsChecks();
         PhysicsChecks();
         ProxyPresentationChecks();
         LifetimeStreamingChecks();

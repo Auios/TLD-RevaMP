@@ -91,6 +91,16 @@ namespace TLDRevamp.Net
         }
     }
 
+    /// Numbers received by physics, clocks and health, independent of session identity.
+    internal static class EntityNumbers
+    {
+        internal static bool Finite(float f) => !float.IsNaN(f) && !float.IsInfinity(f);
+        internal static bool Finite(double d) => !double.IsNaN(d) && !double.IsInfinity(d);
+        internal static bool Finite(Vector3d v) => !(double.IsNaN(v.x) || double.IsNaN(v.y) || double.IsNaN(v.z) || double.IsInfinity(v.x) || double.IsInfinity(v.y) || double.IsInfinity(v.z));
+        internal static bool Finite(Quaternion q) => Finite(q.x) && Finite(q.y) && Finite(q.z) && Finite(q.w);
+        internal static bool Finite(Vector3 v) => !(float.IsNaN(v.x) || float.IsNaN(v.y) || float.IsNaN(v.z) || float.IsInfinity(v.x) || float.IsInfinity(v.y) || float.IsInfinity(v.z));
+    }
+
     public static partial class Entities
     {
         public const byte PushIn = 53;
@@ -106,11 +116,11 @@ namespace TLDRevamp.Net
         }
 
         /// Received numbers that go into physics, clocks or health: a NaN/infinity there doesn't fail, it spreads.
-        internal static bool Finite(float f) => !float.IsNaN(f) && !float.IsInfinity(f);
-        internal static bool Finite(double d) => !double.IsNaN(d) && !double.IsInfinity(d);
-        internal static bool Finite(Vector3d v) => !(double.IsNaN(v.x) || double.IsNaN(v.y) || double.IsNaN(v.z) || double.IsInfinity(v.x) || double.IsInfinity(v.y) || double.IsInfinity(v.z));
-        internal static bool Finite(Quaternion q) => Finite(q.x) && Finite(q.y) && Finite(q.z) && Finite(q.w);
-        internal static bool Finite(Vector3 v) => !(float.IsNaN(v.x) || float.IsNaN(v.y) || float.IsNaN(v.z) || float.IsInfinity(v.x) || float.IsInfinity(v.y) || float.IsInfinity(v.z));
+        internal static bool Finite(float f) => EntityNumbers.Finite(f);
+        internal static bool Finite(double d) => EntityNumbers.Finite(d);
+        internal static bool Finite(Vector3d v) => EntityNumbers.Finite(v);
+        internal static bool Finite(Quaternion q) => EntityNumbers.Finite(q);
+        internal static bool Finite(Vector3 v) => EntityNumbers.Finite(v);
 
         public static long PushesSent { get => EntityCargoInteraction.PushesSent; set => EntityCargoInteraction.PushesSent = value; }
         public static long PushesApplied { get => EntityCargoInteraction.PushesApplied; set => EntityCargoInteraction.PushesApplied = value; }

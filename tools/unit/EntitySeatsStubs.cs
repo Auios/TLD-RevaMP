@@ -100,7 +100,7 @@ namespace TLDRevamp.Net
         private static string ClaimName(ClaimReason reason) => "claim: " + reason;
         private static void OwnerLog(SEnt se, int from, string why) { ClaimLog = why; }
         private static void CascadeOwner(SEnt se) { Cascades++; }
-        private static void ShareItem(tosaveitemscript root, object value) { Shares++; }
+        private static string ShareItem(tosaveitemscript root, object value) { Shares++; return "{}"; }
         private static uint _claimedFor;
         internal static bool SeatToken = true, SeatNear = true;
         internal static long EditsOutOfReach;

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static class EntityMountFacts
     {
         /// A fitted part as the player's dismount sees it (fpscontroller.cs dismount branch): the game's conditions, its use
         /// ray cast at the part from five sides (the first hit and whether it counts) and its colliders with their layers.
@@ -12,7 +12,7 @@ namespace TLDRevamp.Net
         {
             bool sit = pl.CanPickupSit(P), canPick = P.CanPickup(), covered = part.cover_CantCraftIfCovered != null && part.cover_CantCraftIfCovered.hasPart();
             bool gameAllows = !ps.cantCraft && !ps.cantUnCraft && !ps.attachTarget && sit && canPick && !P.cantPickupWhileMount && !covered;
-            uint partNet = 0; foreach (var x in ByNet.Values) if (x.Root != null && x.Root.transform == part.transform) { partNet = x.NetId; break; }
+            uint partNet = Entities.MountRootNet(part.transform);
             b.Append(",\"part\":").Append(Json.Str(part.name)).Append(",\"net\":").Append(partNet).Append(",\"index\":").Append(index).Append(",\"canPickupSit\":").Append(sit ? "true" : "false")
              .Append(",\"canPickup\":").Append(canPick ? "true" : "false").Append(",\"cantPickup\":").Append(P.cantPickup ? "true" : "false")
              .Append(",\"cantPickupWhileMount\":").Append(P.cantPickupWhileMount ? "true" : "false").Append(",\"covered\":").Append(covered ? "true" : "false")
@@ -40,5 +40,10 @@ namespace TLDRevamp.Net
             b.Append(",\"rayCounts\":").Append(Json.Str(hitFrom)).Append(",\"firstHit\":").Append(Json.Str(firstHit))
              .Append(",\"colliders\":[").Append(string.Join(",", cols)).Append("]");
         }
+    }
+
+    public static partial class Entities
+    {
+        internal static void MountFacts(partslotscript ps, attachablescript part, pickupable P, fpscontroller pl, System.Text.StringBuilder b, int index) => EntityMountFacts.MountFacts(ps, part, P, pl, b, index);
     }
 }
