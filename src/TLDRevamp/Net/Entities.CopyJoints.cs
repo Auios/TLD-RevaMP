@@ -17,30 +17,18 @@ namespace TLDRevamp.Net
     /// game puts it there every frame (attachablescript.Update → SetOwnPosition), and the owner's poses say the same.
     /// Locked again as soon as the thing is simulated here or what it's on is a copy too. Trailers on a hitch have their
     /// own joint handling (Entities.Hitch) and are left alone. A/B: false = before (locked everywhere).
-    public static partial class Entities
+    internal static partial class EntityPhysics
     {
         public static bool CopyJointsFree = true;
         public static long CopyJointsFreed, CopyJointsLocked;
-
-        private static readonly Dictionary<ConfigurableJoint, Ent> _freedJoints = new Dictionary<ConfigurableJoint, Ent>();
+        private static readonly Dictionary<ConfigurableJoint, Entities.Ent> _freedJoints = new Dictionary<ConfigurableJoint, Entities.Ent>();
         internal static System.Collections.Generic.IReadOnlyDictionary<UnityEngine.ConfigurableJoint, TLDRevamp.Net.Entities.Ent> ObservedFreedJoints => _freedJoints;
-        private static readonly List<Ent> _jointed = new List<Ent>();
+        private static readonly List<Entities.Ent> _jointed = new List<Entities.Ent>();
         internal static System.Collections.Generic.IReadOnlyList<TLDRevamp.Net.Entities.Ent> ObservedJointed => _jointed;
         private static readonly List<ConfigurableJoint> _jointsDone = new List<ConfigurableJoint>();
 
-        /// Every 0.5 s (FixedTick): which shared objects hang on a joint of their own.
-        internal static void RefreshJointed()
-        {
-            _jointed.Clear();
-            foreach (var e in Placed())
-            {
-                var at = e.Root != null ? e.Root.attachable : null;
-                if (at != null && at.attached && !at.parentAtAttach && at.J is ConfigurableJoint && !HitchTrailer(e)) _jointed.Add(e);
-            }
-        }
-
         /// Every physics step: a copy's joint free while it would hold a body simulated here, locked otherwise.
-        private static void CopyJointTick()
+        internal static void CopyJointTick()
         {
             foreach (var e in _jointed)
             {
@@ -60,22 +48,45 @@ namespace TLDRevamp.Net
             }
         }
 
-        private static bool WantJointFree(Ent e, ConfigurableJoint j)
+        internal static bool WantJointFree(Entities.Ent e, ConfigurableJoint j)
         {
-            if (!CopyJointsFree || !InSession || e.Root == null || !e.Proxy) return false;
+            if (!CopyJointsFree || !Entities.InSession || e.Root == null || !e.Proxy) return false;
             var at = e.Root.attachable;
             if (at == null || !at.attached || at.parentAtAttach || at.J != j) return false;
             var own = j.GetComponent<Rigidbody>(); var on = j.connectedBody;
             return own != null && own.isKinematic && on != null && !on.isKinematic;
         }
 
-        private static void SetJointFree(ConfigurableJoint j, Ent e, bool free)
+        internal static void SetJointFree(ConfigurableJoint j, Entities.Ent e, bool free)
         {
             var m = free ? ConfigurableJointMotion.Free : ConfigurableJointMotion.Locked;
             j.xMotion = m; j.yMotion = m; j.zMotion = m;
             if (free) { _freedJoints[j] = e; CopyJointsFreed++; }
             else CopyJointsLocked++;
             Plugin.Log.LogInfo($"copy joint {(free ? "free" : "locked")}: {e.Root?.name} net {e.NetId} (owner {e.OwnerId}) on {(j.connectedBody != null ? j.connectedBody.name : "-")}");
+        }
+
+        // Session cleanup.
+        internal static void BeginJointRefresh() => _jointed.Clear();
+        internal static void AddJointed(Entities.Ent entity) => _jointed.Add(entity);
+        internal static void ResetFreedJoints()
+        {
+            foreach (var kv in _freedJoints) if (kv.Key != null) { try { SetJointFree(kv.Key, kv.Value, false); } catch { } }
+            _freedJoints.Clear();
+        }
+    }
+
+    public static partial class Entities
+    {
+        /// Every 0.5 s (FixedTick): which shared objects hang on a joint of their own.
+        internal static void RefreshJointed()
+        {
+            EntityPhysics.BeginJointRefresh();
+            foreach (var e in Placed())
+            {
+                var at = e.Root != null ? e.Root.attachable : null;
+                if (at != null && at.attached && !at.parentAtAttach && at.J is ConfigurableJoint && !HitchTrailer(e)) EntityPhysics.AddJointed(e);
+            }
         }
     }
 }

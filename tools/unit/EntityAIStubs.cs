@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace UnityEngine
 {
-    public class Collision { public Collider collider; public Rigidbody rigidbody; public Vector3 relativeVelocity; public int contactCount; public RaycastHit GetContact(int i) => new RaycastHit(); }
+    public partial class Collision { public Collider collider; public Rigidbody rigidbody; public Vector3 relativeVelocity; public int contactCount; public RaycastHit GetContact(int i) => new RaycastHit(); }
     public partial struct Vector3 { public static float Angle(Vector3 a, Vector3 b) => 0; }
     public partial class Transform { public void SetParent(Transform t) => SetParent(t, true); }
     public static partial class Physics

@@ -6,6 +6,54 @@ namespace TLDRevamp.Net
     /// the stander sends the object and where on it they stand, every machine puts the body there in its own view of it
     /// (RemotePlayers.Tick). Their world position came from their own, late view of the car and was late again on the
     /// others: 3 m behind the roof at 30 km/h (standride.py, 2026-10-08). Seated players have their seat instead.
+    internal static partial class EntityPhysics
+    {
+        public static long StandInterpFrames;
+        private static bool _standInterp;
+        /// The other way to draw both at one pose: the copy we stand on drawn at its physics
+        /// pose, like our player (AboardDrawnAtPhysics does it for a seat). Off: the world outside then moves in physics
+        /// steps (frame-to-frame speed p90 ~50% off its median, against 6-28% interpolated) and the camera still jumped
+        /// now and then (up to 410 mm along, 228 mm up; stand3.py).
+        public static bool StandCopyAtPhysics;
+
+        /// Runner.FixedUpdate (FixedTick), after the copies moved: the footing is LocalFooting's, from the last pose sent.
+        internal static void StandInterpTick()
+        {
+            DevHooks.StandSeriesStep?.Invoke();
+            var pl = mainscript.s != null ? mainscript.s.player : null;
+            var rb = pl != null ? pl.RB : null;
+            if (rb == null) { _standInterp = false; return; }
+            bool want = Entities.InSession && !pl.Bsitting && !rb.isKinematic && Entities.PhysicsFootingNet != 0 &&
+                        Entities.TryPhysicsStand(Entities.PhysicsFootingNet, out var e) && e.Proxy && e.MovedByBody && e.Root != null &&
+                        e.Root.RB != null && e.Root.RB.interpolation == RigidbodyInterpolation.Interpolate;
+            if (want)
+            {
+                if (rb.interpolation != RigidbodyInterpolation.Interpolate) rb.interpolation = RigidbodyInterpolation.Interpolate;
+                _standInterp = true; StandInterpFrames++;
+            }
+            else if (_standInterp) StandInterpOff(rb);
+        }
+
+        internal static void StandInterpOff(Rigidbody rb)
+        {
+            _standInterp = false;
+            if (rb != null) rb.interpolation = mainscript.RBI();
+        }
+
+        internal static bool StandsOnAtPhysics(Entities.Ent e)
+        {
+            if (!StandCopyAtPhysics || Entities.PhysicsFootingNet != e.NetId) return false;
+            var pl = mainscript.s != null ? mainscript.s.player : null;
+            return pl != null && !pl.Bsitting;
+        }
+
+        // Session cleanup.
+        internal static void ResetStandInterpolation()
+        {
+            if (_standInterp) StandInterpOff(mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.RB : null);
+        }
+    }
+
     public static partial class Entities
     {
         public static long FootingSent;
@@ -85,43 +133,5 @@ namespace TLDRevamp.Net
 
         /// The shared object `net`'s transform here (null when it isn't loaded).
         public static Transform FootRootOf(uint net) => ByNet.TryGetValue(net, out var e) && e.Root != null ? e.Root.transform : null;
-        public static long StandInterpFrames;
-        private static bool _standInterp;
-
-        /// Runner.FixedUpdate (FixedTick), after the copies moved: the footing is LocalFooting's, from the last pose sent.
-        private static void StandInterpTick()
-        {
-            DevHooks.StandSeriesStep?.Invoke();
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            var rb = pl != null ? pl.RB : null;
-            if (rb == null) { _standInterp = false; return; }
-            bool want = InSession && !pl.Bsitting && !rb.isKinematic && _telemetryFooting != 0 &&
-                        ByNet.TryGetValue(_telemetryFooting, out var e) && e.Proxy && e.MovedByBody && e.Root != null &&
-                        e.Root.RB != null && e.Root.RB.interpolation == RigidbodyInterpolation.Interpolate;
-            if (want)
-            {
-                if (rb.interpolation != RigidbodyInterpolation.Interpolate) rb.interpolation = RigidbodyInterpolation.Interpolate;
-                _standInterp = true; StandInterpFrames++;
-            }
-            else if (_standInterp) StandInterpOff(rb);
-        }
-
-        private static void StandInterpOff(Rigidbody rb)
-        {
-            _standInterp = false;
-            if (rb != null) rb.interpolation = mainscript.RBI();
-        }
-
-        /// The other way to draw both at one pose: the copy we stand on drawn at its physics
-        /// pose, like our player (AboardDrawnAtPhysics does it for a seat). Off: the world outside then moves in physics
-        /// steps (frame-to-frame speed p90 ~50% off its median, against 6-28% interpolated) and the camera still jumped
-        /// now and then (up to 410 mm along, 228 mm up; stand3.py).
-        public static bool StandCopyAtPhysics;
-        private static bool StandsOnAtPhysics(Ent e)
-        {
-            if (!StandCopyAtPhysics || _telemetryFooting != e.NetId) return false;
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            return pl != null && !pl.Bsitting;
-        }
     }
 }

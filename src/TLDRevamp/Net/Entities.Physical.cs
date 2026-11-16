@@ -16,7 +16,7 @@ namespace TLDRevamp.Net
     /// blending in, and the copy follows what the owner's car really did. Far from local cars, a copy is kinematic as
     /// before (cheap, exact). No impulses cross the network: every machine sees both cars, so every machine's own car
     /// gets its crash from its own physics (and the game's crash damage from its own change of speed).
-    public static partial class Entities
+    internal static partial class EntityPhysics
     {
         public static bool PhysicalCopies = true;      // A/B: false = kinematic copies everywhere (the old behaviour)
         public static bool ContactRelayOn;              // A/B: the old impulse relay (double counts; off)
@@ -27,6 +27,7 @@ namespace TLDRevamp.Net
         public static float GhostMaxS = 2.0f;          // longest a copy passes through the car it hit while it returns
         public static bool GhostOnReturn;              // off (v0.57.63): the user saw the T-bone rammer phase into the hit car
                                                        // and both get slingshotted when collisions came back while overlapping
+
         public static long Ghosted, Unghosted;
         /// A physical copy whose owner's car is at rest but that stays off its pose (the servo's push each step is bounded,
         /// and the owner's brakes on the copy's wheels hold it against the ground): put it there once it has been more than
@@ -37,9 +38,55 @@ namespace TLDRevamp.Net
         public static long RestSnaps;
         public static long PhysicalEnters, PhysicalExits, FreeWindows;
         public static string LastFree = "";
+        private static readonly Dictionary<carscript, Entities.Ent> PhysicalCars = new Dictionary<carscript, Entities.Ent>();
+        /// Copies move as one kinematic BODY in the physics step (MovePosition/MoveRotation + interpolation), the way the
+        /// game moves a real car — not by setting the transform every frame. A transform write makes the physics engine
+        /// re-sync every collider under it before the next query: 16 car01 copies = 3,619 colliders, and the player
+        /// controller's raycasts paid for it — the laptop went from 16 to 80 ms a frame (copycost, v0.57.70; colliders
+        /// off: 21 ms). Moved as a body, the colliders ride along like on the owner's car.
+        public static bool CopiesMoveByBody = true;   // A/B: false = transform writes every frame (before v0.57.71)
+        public static bool CopiesInterpolate = true;  // A/B (fpsdrill): rigidbody interpolation on body-moved copies
 
-        private static readonly List<carscript> _localCars = new List<carscript>();
-        private static readonly Dictionary<carscript, Ent> PhysicalCars = new Dictionary<carscript, Ent>();
+        /// The copy our player sits in: no interpolation, like every body in the game (mainscript.RBI() is
+        /// None). Interpolated, it is drawn up to a physics step behind its colliders — the camera rides the drawn car,
+        /// the look ray hits the colliders: a radio dial ~0.6 m off at 100 km/h, "hard to turn as a passenger at speed"
+        /// (playtest 2026-10-09/10 (d), radiodial.py). A/B: false = before v0.66.8.
+        /// Off by default now: physics-only drawing made the passenger's bus choppy. Riding poses follow its drawn frame.
+        public static bool AboardDrawnAtPhysics;
+        public static long AboardFrames;
+        public static long CopySweeps, CopyRebaseSeats, CopyTeleports;
+        public static bool DirectRebaseBodies = false;   // opt-in until tested in game. A/B: one absolute body teleport; no transform + relative body shift
+        public static long CopyRebaseDirect, CopyRebaseMaxUs;
+        public static int CopyBodiesHealed;
+        /// diagnostics: an item copy driven faster than this in a physics step is logged (carload.py)
+        public static float FastStepLogM = 15f; public static int FastStepLogs;
+        public static bool StoredByTransform = true;   // A/B (busstool.py K): a stored copy is placed by its transform
+
+        /// Collider LOD for copies: a car copy far from this machine's player and from every car simulated here keeps only its
+        /// own body's colliders; its parts' colliders (a car01 has ~180 of its ~226 on parts) come back within reach. At
+        /// 14 car copies near, the parts' colliders cost the laptop ~30 ms a frame (fpsdrill v0.57.73: body/part colliders
+        /// off → the frame's first physics query 37 → 6.8 ms) — and a slow machine then fell into the physics catch-up
+        /// spiral (the game lets a frame run up to 5 s of physics steps) and froze. Close up nothing changes: crashes,
+        /// shoving and shots at parts need them.
+        public static bool CopyColliderLod = true;
+        public static float PartCollidersOnM = 40f, PartCollidersOffM = 50f;
+        public static long PartCollidersOff, PartCollidersOn;
+        /// A member that came off (its own object since: PartDetached) or rides one that did keeps its place in the car's
+        /// item list, and the LOD switched its colliders off with the car's. The playtest of 2026-11-06: the host's rear
+        /// wheel came off in a crash and lay in the sand, the host's own and simulated there; the host died, the car went
+        /// to the client, and the host respawned over 50 m from that car — the wheel fell through the desert floor in
+        /// front of the host. A/B: false = before (every member's colliders go with the car's).
+        public static bool LodKeepsPartsOff = true;
+        public static long LodPartsOffKept;
+        /// A vehicle's limbs (Bus01's back section, BusBack: its own body on a ConfigurableJoint to the front, 33 of its
+        /// seats) are synced like a ragdoll's (save_ragdollpos; RagdollTick: the owner's poses relative to the root).
+        /// RagdollTick set them each frame by transform — the right place, no velocity: a player standing in the back of
+        /// another player's bus wasn't carried by its floor, slid to the rear wall and fell out of the bus (busrear
+        /// --stand; the user, watching: "He fell off"; "players should be able to stand in the bus as they can in vanilla").
+        /// On a copy moved as a body they move as bodies too, in the same physics step as the root, to the same synced
+        /// pose: the floor has the bus's velocity, as on the owner's machine.
+        public static bool VehicleLimbsByBody = true;   // A/B: false = before v0.65.53
+        public static long LimbBodyMoves;
 
         /// A physical copy's wheels get the owner's torques: carscript.Update sets them every frame from this machine's
         /// (empty) inputs through Throttle → SetWheel; overridden right after.
@@ -50,7 +97,7 @@ namespace TLDRevamp.Net
             private static void Postfix(carscript __instance)
             {
                 if (PhysicalCars.Count == 0 || !PhysicalCars.TryGetValue(__instance, out var e) || !(e.Physical || e.CrashTaking) || e.WBrake == null || (!e.HasTorques && !e.CrashTaking)) return;
-                var ws = WheelsOf(e);
+                var ws = Entities.PhysicsWheels(e);
                 for (int i = 0; i < ws.Length && i < e.WBrake.Length; i++)
                 {
                     if (ws[i].W != null) { ws[i].W.brakeTorque = e.WBrake[i]; ws[i].W.motorTorque = e.WMotor[i]; }
@@ -58,6 +105,269 @@ namespace TLDRevamp.Net
                 }
             }
         }
+
+        /// On a copy's root while it's physical: contact with a body simulated here starts the free window.
+        internal sealed class CopyContact : MonoBehaviour
+        {
+            [System.NonSerialized] public Entities.Ent E;
+            private void OnCollisionEnter(Collision c) => Touch(c);
+            private void OnCollisionStay(Collision c) => Touch(c);
+            private void Touch(Collision c)
+            {
+                var e = E;
+                if (e == null || !e.Physical || c.rigidbody == null || c.rigidbody.isKinematic) return;
+                if (Entities.PhysicsIsProxy(c.rigidbody)) return;                       // another copy: its owner handles it
+                if (c.rigidbody.transform.root == transform.root) return;
+                float t = Time.time;
+                if (t < e.FreeUntil) return;                            // already free
+                if (t - e.FreeFrom < FreeMaxS + ServoRampS) return;    // one window per crash; sustained shoving is steered
+                if (c.relativeVelocity.magnitude < 0.5f) return;
+                if (TryTakeCrash(e, c.rigidbody, c.relativeVelocity.magnitude)) return;   // approach B: this machine simulates the crash
+                e.FreeFrom = t; e.FreeUntil = t + FreeSeconds(e); e.FreeHit = c.rigidbody.transform.root;
+                FreeWindows++;
+                LastFree = "net " + e.NetId + " free " + (e.FreeUntil - t).ToString("F2") + " s, hit " + c.rigidbody.transform.root.name + " at " + c.relativeVelocity.magnitude.ToString("F1") + " m/s";
+            }
+        }
+
+        internal static bool LocalAboard(Entities.Ent e)
+        {
+            var pl = mainscript.s != null ? mainscript.s.player : null;
+            if (pl == null || e.Root == null) return false;
+            var root = e.Root.transform.root;
+            // seated only: a player standing on the copy (Entities.Footing) rides it from its drawn pose — without
+            // interpolation the standing player slid off at the start (standride.py: fell off once in three runs)
+            bool on = pl.Bsitting && pl.seat != null && pl.seat.transform.root == root;
+            if (on) AboardFrames++;
+            return on;
+        }
+
+        /// A copy is moved by its owner's states, its bodies kinematic. One the game made dynamic on this machine alone (its
+        /// pickup of an unclaimed car copy: the playtest bike) was skipped by BodyMotionTick for good — it lay where it was
+        /// dropped, its shown time frozen. Not while this player holds it: the game's Drop runs first.
+        internal static void HealCopyBody(Entities.Ent e)
+        {
+            var held = mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.pickedUp : null;
+            if (held != null && held.transform.root == e.Root.transform.root) return;
+            int n = 0;
+            foreach (var rb in e.Root.GetComponentsInChildren<Rigidbody>(true))
+                if (!rb.isKinematic) { rb.isKinematic = true; if (!e.MadeKinematic.Contains(rb)) e.MadeKinematic.Add(rb); n++; }
+            StopBodyMotion(e);   // the next move places it where it is shown: driven there, a kinematic body sweeps the world
+            CopyBodiesHealed++;
+            SessionLog.Event("copy-dynamic", e.NetId, epoch: e.Epoch, count: n, result: "made kinematic again");
+            if (CopyBodiesHealed <= 20) Plugin.Log.LogInfo($"copy body dynamic: {e.Root.name} net {e.NetId}, {n} bodies made kinematic again");
+        }
+
+        internal static void SetPartColliders(Entities.Ent e, bool on)
+        {
+            if (!on && e.PartCols == null)
+            {
+                // the parts' colliders: under the group's other items (bolted parts, things in it), not the car body's own
+                e.PartCols = new List<Collider>();
+                for (int i = 0; i < e.Items.Count; i++)
+                {
+                    var it = e.Items[i];
+                    if (it == null || it == e.Root) continue;
+                    if (LodKeepsPartsOff && Entities.PhysicsPartCameOff(e, i)) { LodPartsOffKept++; continue; }
+                    foreach (var c in it.GetComponentsInChildren<Collider>(true)) if (c.enabled && !(c is WheelCollider)) e.PartCols.Add(c);
+                }
+            }
+            if (e.PartCols == null) { e.PartsColOff = false; return; }
+            foreach (var c in e.PartCols) if (c != null) c.enabled = on;
+            if (on) { e.PartCols = null; PartCollidersOn++; } else PartCollidersOff++;
+            e.PartsColOff = !on;
+        }
+
+        internal static bool LimbsByBody(Entities.Ent e) => VehicleLimbsByBody && e.MovedByBody && e.Root != null && e.Root.car != null;
+
+        internal static void MoveLimbs(Entities.Ent e, Rigidbody rb, Vector3 up, Quaternion rot, bool snap)
+        {
+            if (!LimbsByBody(e) || e.Rag == null || !e.Rag.Has || !EntityRagdolls.Following(e)) return;
+            var ls = Entities.PhysicsLimbs(e); var g = e.Rag;
+            if (ls == null || ls.Length != g.TPos.Length) return;
+            for (int i = 0; i < ls.Length; i++)
+            {
+                var l = ls[i]; var lrb = l != null ? l.GetComponent<Rigidbody>() : null;
+                if (lrb == null || lrb == rb || !lrb.isKinematic) continue;
+                var p = up + rot * g.Pos[i]; var q = rot * g.Rot[i];
+                if (snap) { lrb.interpolation = RigidbodyInterpolation.None; l.SetPositionAndRotation(p, q); lrb.position = p; lrb.rotation = q; }
+                else
+                {
+                    if (lrb.interpolation != rb.interpolation) lrb.interpolation = rb.interpolation;
+                    lrb.MovePosition(p); lrb.MoveRotation(q);
+                }
+                LimbBodyMoves++;
+            }
+        }
+
+        internal static void StopBodyMotion(Entities.Ent e)
+        {
+            if (!e.MovedByBody) return;
+            e.MovedByBody = false;
+            var rb = e.Root != null ? e.Root.GetComponent<Rigidbody>() : null;
+            if (rb != null) rb.interpolation = e.OrigInterp;
+        }
+
+        internal static void EnterPhysical(Entities.Ent e, Rigidbody rb)
+        {
+            if (e.PartsColOff) SetPartColliders(e, true);
+            e.Physical = true;
+            e.PhysInterp = e.MovedByBody ? e.OrigInterp : rb.interpolation;
+            e.MovedByBody = false;
+            e.JointBodies.Clear();
+            // parts hung on joints (doors, lids: attachablescript without parentAtAttach) — a kinematic part holds the
+            // car body where the part was put last frame; they move as on the owner's machine while the copy is physical
+            foreach (var j in e.Root.GetComponents<Joint>())
+                if (j.connectedBody != null && j.connectedBody.isKinematic && e.MadeKinematic.Contains(j.connectedBody)) e.JointBodies.Add(j.connectedBody);
+            foreach (var b in e.MadeKinematic)
+                if (b != null && b != rb && b.isKinematic)
+                    foreach (var j in b.GetComponents<Joint>())
+                        if (j.connectedBody == rb) { e.JointBodies.Add(b); break; }
+            rb.isKinematic = false;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.velocity = e.LastVel; rb.angularVelocity = Vector3.zero;
+            foreach (var b in e.JointBodies) { b.isKinematic = false; b.velocity = e.LastVel; }
+            e.HasServoPrev = false; e.FreeUntil = -10f; e.FreeFrom = -10f;
+            PhysicalCars[e.Root.car] = e;
+            if (e.Root.GetComponent<CopyContact>() == null) e.Root.gameObject.AddComponent<CopyContact>().E = e;
+            else e.Root.GetComponent<CopyContact>().E = e;
+            PhysicalEnters++;
+        }
+
+        internal static void ExitPhysical(Entities.Ent e, Rigidbody rb)
+        {
+            if (e.GhostOn) Ghost(e, false);
+            e.Physical = false;
+            if (e.Root.car != null) PhysicalCars.Remove(e.Root.car);
+            // the display takes over where the body is: the difference to the owner's path blends out (no snap)
+            e.Ip.Absorb(mainscript.GlobalFromUnityPos(rb.position), rb.rotation);
+            if (e.Ip.CorrCm > 200) SessionLog.Event("proxy-correction", e.NetId, epoch: e.Epoch, value: e.Ip.CorrCm / 100f, result: "servo release blend", sample: true);
+            rb.interpolation = e.PhysInterp;
+            rb.isKinematic = true;
+            foreach (var b in e.JointBodies) if (b != null) b.isKinematic = true;
+            e.JointBodies.Clear();
+            PhysicalExits++;
+        }
+
+        /// Undo physical mode without the blend (ownership flips: SetProxy handles the bodies).
+        internal static void DropPhysical(Entities.Ent e)
+        {
+            if (e.GhostOn) Ghost(e, false);
+            if (!e.Physical) return;
+            e.Physical = false;
+            if (e.Root != null && e.Root.car != null) PhysicalCars.Remove(e.Root.car);
+            var rb = e.Root != null ? e.Root.GetComponent<Rigidbody>() : null;
+            if (rb != null) rb.interpolation = e.PhysInterp;
+            e.JointBodies.Clear();
+        }
+
+        internal static void Servo(Entities.Ent e, Rigidbody rb, float dt)
+        {
+            double now = Time.realtimeSinceStartupAsDouble;
+            EntityHands.EvalShown(e, now, dt, out var pos, out var rot);
+            e.ShownPos = pos;
+            if (e.Ip.TakeSnap())   // the owner's object teleported: so does the simulated copy (a servo would fling it)
+            {
+                CopyTeleports++;
+                Entities.PhysicsSnap(e, mainscript.UnityPosFromGlobal(pos), rb.position);
+                rb.position = mainscript.UnityPosFromGlobal(pos); rb.rotation = rot;
+                rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
+                e.HasServoPrev = false;
+                return;
+            }
+            Vector3 vT = e.HasServoPrev ? (Vector3)(pos - e.ServoPrevPos) / dt : e.LastVel;
+            Vector3 wT = Vector3.zero;
+            if (e.HasServoPrev)
+            {
+                (rot * Quaternion.Inverse(e.ServoPrevRot)).ToAngleAxis(out float a, out var ax);
+                if (a > 180f) a -= 360f;
+                if (!float.IsNaN(ax.x)) wT = ax * (a * Mathf.Deg2Rad / dt);
+            }
+            e.ServoPrevPos = pos; e.ServoPrevRot = rot; e.HasServoPrev = true;
+            float t = Time.time;
+            e.TelemetryServoCorrection = 0;
+            float w = t < e.FreeUntil ? 0f : t < e.FreeUntil + ServoRampS ? (t - e.FreeUntil) / ServoRampS : 1f;
+            if (w <= 0f) return;   // crash in progress: the game's physics has it
+            // the two machines' crashes differ (each simulated its own); steering the copy back to its owner's result must
+            // not drive it through the car it hit here — at 100 km/h that threw the rammer to 30 m/s and spun the copy at
+            // 400°/s (crashtest v0.57.60). The copy passes through that car until the two are apart.
+            if (GhostOnReturn && e.FreeHit != null && !e.GhostOn && t - e.FreeUntil < 0.1f) Ghost(e, true);
+            if (e.GhostOn && (t - e.FreeUntil > GhostMaxS || Apart(e))) Ghost(e, false);
+            var target = mainscript.UnityPosFromGlobal(pos);
+            if (RestSnap && w >= 1f && !e.GhostOn && vT.sqrMagnitude < 0.01f && wT.sqrMagnitude < 0.01f)
+            {
+                if ((target - rb.position).sqrMagnitude > RestSnapM * RestSnapM || Quaternion.Angle(rot, rb.rotation) > 5f)
+                {
+                    if (e.RestOffSince < 0f) e.RestOffSince = t;
+                    else if (t - e.RestOffSince > RestSnapS)
+                    {
+                        RestSnaps++;
+                        Entities.PhysicsSnap(e, target, rb.position);
+                        if (RestSnaps <= 20) Plugin.Log.LogInfo($"rest snap: copy {e.NetId} {(target - rb.position).magnitude:F2} m off its owner's resting pose, put there");
+                        rb.position = target; rb.rotation = rot; rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
+                        e.RestOffSince = -1f;
+                        return;
+                    }
+                }
+                else e.RestOffSince = -1f;
+            }
+            else e.RestOffSince = -1f;
+            var vServo = vT + (target - rb.position) * ServoGain;
+            e.TelemetryServoCorrection = (target - rb.position).magnitude;
+            if (e.TelemetryServoCorrection > 2) SessionLog.Event("proxy-correction", e.NetId, epoch: e.Epoch, value: e.TelemetryServoCorrection, result: "physics servo", sample: true);
+            (rot * Quaternion.Inverse(rb.rotation)).ToAngleAxis(out float ea, out var eax);
+            if (ea > 180f) ea -= 360f;
+            var wServo = wT + (float.IsNaN(eax.x) ? Vector3.zero : eax * (ea * Mathf.Deg2Rad * SpinGain));
+            var dv = Vector3.ClampMagnitude(vServo - rb.velocity, ServoMaxAccel * dt + (vT - rb.velocity).magnitude);   // follow the path's own motion; the correction on top is bounded
+            rb.velocity = Vector3.Lerp(rb.velocity, rb.velocity + dv, w);
+            rb.angularVelocity = Vector3.Lerp(rb.angularVelocity, wServo, w);
+        }
+
+        internal static void Ghost(Entities.Ent e, bool on)
+        {
+            if (e.Root == null || e.FreeHit == null) { e.GhostOn = false; return; }
+            var mine = e.Root.GetComponentsInChildren<Collider>();
+            var theirs = e.FreeHit.GetComponentsInChildren<Collider>();
+            foreach (var a in mine)
+                if (a != null && !a.isTrigger)
+                    foreach (var b in theirs)
+                        if (b != null && !b.isTrigger) Physics.IgnoreCollision(a, b, on);
+            e.GhostOn = on;
+            if (on) Ghosted++; else { Unghosted++; e.FreeHit = null; }
+        }
+
+        /// The copy's and the hit car's bounds no longer overlap (0.3 m apart).
+        internal static bool Apart(Entities.Ent e) => e.FreeHit == null || Apart(e.Root != null ? e.Root.transform : null, e.FreeHit);
+
+        /// Two bodies' collider bounds no longer overlap (0.3 m apart); a missing one counts as apart.
+        internal static bool Apart(Transform a, Transform b)
+        {
+            if (a == null || b == null) return true;
+            Bounds A = default, B = default; bool ha = false, hb = false;
+            foreach (var c in a.GetComponentsInChildren<Collider>()) if (!c.isTrigger) { if (ha) A.Encapsulate(c.bounds); else { A = c.bounds; ha = true; } }
+            foreach (var c in b.GetComponentsInChildren<Collider>()) if (!c.isTrigger) { if (hb) B.Encapsulate(c.bounds); else { B = c.bounds; hb = true; } }
+            if (!ha || !hb) return true;
+            A.Expand(0.6f);
+            return !A.Intersects(B);
+        }
+
+        /// How long until the copy's data shows the owner's reaction to this crash: the owner meets the crash only when
+        /// OUR car's copy reaches theirs (one display delay after us: one-way trip + interpolation delay), and its reaction
+        /// comes back the same way — two display delays — plus the crash itself (~0.3 s of contact and rebound).
+        /// 0.2 s was too short (crashtest LAN, v0.57.59): the copy was steered back into the rammer while the owner's
+        /// reaction was still in flight — the cars kept 55 % of their momentum (single player ~100 %).
+        internal static float FreeSeconds(Entities.Ent e)
+        {
+            float oneWay = Mp.PingMs() / 2000f;
+            return Mathf.Clamp(2f * (e.Ip.DelayMs / 1000f + oneWay) + CrashS, FreeMinS, FreeMaxS);
+        }
+
+        // Session cleanup.
+        internal static void ResetPhysicalCars() => PhysicalCars.Clear();
+    }
+
+    public static partial class Entities
+    {
+        private static readonly List<carscript> _localCars = new List<carscript>();
         private static float _localCarsAt = -10f;
 
         /// Runner.FixedUpdate: switch copies physical/kinematic by distance to cars simulated here, steer the physical ones.
@@ -124,36 +434,6 @@ namespace TLDRevamp.Net
             }
         }
 
-        /// Copies move as one kinematic BODY in the physics step (MovePosition/MoveRotation + interpolation), the way the
-        /// game moves a real car — not by setting the transform every frame. A transform write makes the physics engine
-        /// re-sync every collider under it before the next query: 16 car01 copies = 3,619 colliders, and the player
-        /// controller's raycasts paid for it — the laptop went from 16 to 80 ms a frame (copycost, v0.57.70; colliders
-        /// off: 21 ms). Moved as a body, the colliders ride along like on the owner's car.
-        public static bool CopiesMoveByBody = true;   // A/B: false = transform writes every frame (before v0.57.71)
-        public static bool CopiesInterpolate = true;  // A/B (fpsdrill): rigidbody interpolation on body-moved copies
-        /// The copy our player sits in: no interpolation, like every body in the game (mainscript.RBI() is
-        /// None). Interpolated, it is drawn up to a physics step behind its colliders — the camera rides the drawn car,
-        /// the look ray hits the colliders: a radio dial ~0.6 m off at 100 km/h, "hard to turn as a passenger at speed"
-        /// (playtest 2026-10-09/10 (d), radiodial.py). A/B: false = before v0.66.8.
-        /// Off by default now: physics-only drawing made the passenger's bus choppy. Riding poses follow its drawn frame.
-        public static bool AboardDrawnAtPhysics;
-        public static long AboardFrames;
-
-        private static bool LocalAboard(Ent e)
-        {
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || e.Root == null) return false;
-            var root = e.Root.transform.root;
-            // seated only: a player standing on the copy (Entities.Footing) rides it from its drawn pose — without
-            // interpolation the standing player slid off at the start (standride.py: fell off once in three runs)
-            bool on = pl.Bsitting && pl.seat != null && pl.seat.transform.root == root;
-            if (on) AboardFrames++;
-            return on;
-        }
-        public static long CopySweeps, CopyRebaseSeats, CopyTeleports;
-        public static bool DirectRebaseBodies = false;   // opt-in until tested in game. A/B: one absolute body teleport; no transform + relative body shift
-        public static long CopyRebaseDirect, CopyRebaseMaxUs;
-
         /// After every floating-origin shift: each body-moved copy placed (transform and body) where it is shown, in the new
         /// origin's coordinates, interpolation history dropped (BodyMotionTick turns it back on). Copies carry no visszarako,
         /// so the shift left them — and the next MovePosition, already in new coordinates, swept the kinematic copy across
@@ -196,26 +476,6 @@ namespace TLDRevamp.Net
             }
         }
 
-        public static int CopyBodiesHealed;
-        /// A copy is moved by its owner's states, its bodies kinematic. One the game made dynamic on this machine alone (its
-        /// pickup of an unclaimed car copy: the playtest bike) was skipped by BodyMotionTick for good — it lay where it was
-        /// dropped, its shown time frozen. Not while this player holds it: the game's Drop runs first.
-        private static void HealCopyBody(Ent e)
-        {
-            var held = mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.pickedUp : null;
-            if (held != null && held.transform.root == e.Root.transform.root) return;
-            int n = 0;
-            foreach (var rb in e.Root.GetComponentsInChildren<Rigidbody>(true))
-                if (!rb.isKinematic) { rb.isKinematic = true; if (!e.MadeKinematic.Contains(rb)) e.MadeKinematic.Add(rb); n++; }
-            StopBodyMotion(e);   // the next move places it where it is shown: driven there, a kinematic body sweeps the world
-            CopyBodiesHealed++;
-            SessionLog.Event("copy-dynamic", e.NetId, epoch: e.Epoch, count: n, result: "made kinematic again");
-            if (CopyBodiesHealed <= 20) Plugin.Log.LogInfo($"copy body dynamic: {e.Root.name} net {e.NetId}, {n} bodies made kinematic again");
-        }
-
-        /// diagnostics: an item copy driven faster than this in a physics step is logged (carload.py)
-        public static float FastStepLogM = 15f; public static int FastStepLogs;
-        public static bool StoredByTransform = true;   // A/B (busstool.py K): a stored copy is placed by its transform
         private static void BodyMotionTick(float dt)
         {
             double now = Time.realtimeSinceStartupAsDouble;
@@ -275,15 +535,6 @@ namespace TLDRevamp.Net
             }
         }
 
-        /// Collider LOD for copies: a car copy far from this machine's player and from every car simulated here keeps only its
-        /// own body's colliders; its parts' colliders (a car01 has ~180 of its ~226 on parts) come back within reach. At
-        /// 14 car copies near, the parts' colliders cost the laptop ~30 ms a frame (fpsdrill v0.57.73: body/part colliders
-        /// off → the frame's first physics query 37 → 6.8 ms) — and a slow machine then fell into the physics catch-up
-        /// spiral (the game lets a frame run up to 5 s of physics steps) and froze. Close up nothing changes: crashes,
-        /// shoving and shots at parts need them.
-        public static bool CopyColliderLod = true;
-        public static float PartCollidersOnM = 40f, PartCollidersOffM = 50f;
-        public static long PartCollidersOff, PartCollidersOn;
         private static float _lodAt;
         private static void ColliderLodTick()
         {
@@ -304,250 +555,6 @@ namespace TLDRevamp.Net
                 }
                 if (want == !e.PartsColOff) continue;
                 SetPartColliders(e, want);
-            }
-        }
-
-        /// A member that came off (its own object since: PartDetached) or rides one that did keeps its place in the car's
-        /// item list, and the LOD switched its colliders off with the car's. The playtest of 2026-11-06: the host's rear
-        /// wheel came off in a crash and lay in the sand, the host's own and simulated there; the host died, the car went
-        /// to the client, and the host respawned over 50 m from that car — the wheel fell through the desert floor in
-        /// front of the host. A/B: false = before (every member's colliders go with the car's).
-        public static bool LodKeepsPartsOff = true;
-        public static long LodPartsOffKept;
-
-        private static void SetPartColliders(Ent e, bool on)
-        {
-            if (!on && e.PartCols == null)
-            {
-                // the parts' colliders: under the group's other items (bolted parts, things in it), not the car body's own
-                e.PartCols = new List<Collider>();
-                for (int i = 0; i < e.Items.Count; i++)
-                {
-                    var it = e.Items[i];
-                    if (it == null || it == e.Root) continue;
-                    if (LodKeepsPartsOff && CameOff(e, i)) { LodPartsOffKept++; continue; }
-                    foreach (var c in it.GetComponentsInChildren<Collider>(true)) if (c.enabled && !(c is WheelCollider)) e.PartCols.Add(c);
-                }
-            }
-            if (e.PartCols == null) { e.PartsColOff = false; return; }
-            foreach (var c in e.PartCols) if (c != null) c.enabled = on;
-            if (on) { e.PartCols = null; PartCollidersOn++; } else PartCollidersOff++;
-            e.PartsColOff = !on;
-        }
-
-        /// A vehicle's limbs (Bus01's back section, BusBack: its own body on a ConfigurableJoint to the front, 33 of its
-        /// seats) are synced like a ragdoll's (save_ragdollpos; RagdollTick: the owner's poses relative to the root).
-        /// RagdollTick set them each frame by transform — the right place, no velocity: a player standing in the back of
-        /// another player's bus wasn't carried by its floor, slid to the rear wall and fell out of the bus (busrear
-        /// --stand; the user, watching: "He fell off"; "players should be able to stand in the bus as they can in vanilla").
-        /// On a copy moved as a body they move as bodies too, in the same physics step as the root, to the same synced
-        /// pose: the floor has the bus's velocity, as on the owner's machine.
-        public static bool VehicleLimbsByBody = true;   // A/B: false = before v0.65.53
-        public static long LimbBodyMoves;
-        internal static bool LimbsByBody(Ent e) => VehicleLimbsByBody && e.MovedByBody && e.Root != null && e.Root.car != null;
-
-        private static void MoveLimbs(Ent e, Rigidbody rb, Vector3 up, Quaternion rot, bool snap)
-        {
-            if (!LimbsByBody(e) || e.Rag == null || !e.Rag.Has || !EntityRagdolls.Following(e)) return;
-            var ls = Limbs(e); var g = e.Rag;
-            if (ls == null || ls.Length != g.TPos.Length) return;
-            for (int i = 0; i < ls.Length; i++)
-            {
-                var l = ls[i]; var lrb = l != null ? l.GetComponent<Rigidbody>() : null;
-                if (lrb == null || lrb == rb || !lrb.isKinematic) continue;
-                var p = up + rot * g.Pos[i]; var q = rot * g.Rot[i];
-                if (snap) { lrb.interpolation = RigidbodyInterpolation.None; l.SetPositionAndRotation(p, q); lrb.position = p; lrb.rotation = q; }
-                else
-                {
-                    if (lrb.interpolation != rb.interpolation) lrb.interpolation = rb.interpolation;
-                    lrb.MovePosition(p); lrb.MoveRotation(q);
-                }
-                LimbBodyMoves++;
-            }
-        }
-
-        internal static void StopBodyMotion(Ent e)
-        {
-            if (!e.MovedByBody) return;
-            e.MovedByBody = false;
-            var rb = e.Root != null ? e.Root.GetComponent<Rigidbody>() : null;
-            if (rb != null) rb.interpolation = e.OrigInterp;
-        }
-
-        private static void EnterPhysical(Ent e, Rigidbody rb)
-        {
-            if (e.PartsColOff) SetPartColliders(e, true);
-            e.Physical = true;
-            e.PhysInterp = e.MovedByBody ? e.OrigInterp : rb.interpolation;
-            e.MovedByBody = false;
-            e.JointBodies.Clear();
-            // parts hung on joints (doors, lids: attachablescript without parentAtAttach) — a kinematic part holds the
-            // car body where the part was put last frame; they move as on the owner's machine while the copy is physical
-            foreach (var j in e.Root.GetComponents<Joint>())
-                if (j.connectedBody != null && j.connectedBody.isKinematic && e.MadeKinematic.Contains(j.connectedBody)) e.JointBodies.Add(j.connectedBody);
-            foreach (var b in e.MadeKinematic)
-                if (b != null && b != rb && b.isKinematic)
-                    foreach (var j in b.GetComponents<Joint>())
-                        if (j.connectedBody == rb) { e.JointBodies.Add(b); break; }
-            rb.isKinematic = false;
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
-            rb.velocity = e.LastVel; rb.angularVelocity = Vector3.zero;
-            foreach (var b in e.JointBodies) { b.isKinematic = false; b.velocity = e.LastVel; }
-            e.HasServoPrev = false; e.FreeUntil = -10f; e.FreeFrom = -10f;
-            PhysicalCars[e.Root.car] = e;
-            if (e.Root.GetComponent<CopyContact>() == null) e.Root.gameObject.AddComponent<CopyContact>().E = e;
-            else e.Root.GetComponent<CopyContact>().E = e;
-            PhysicalEnters++;
-        }
-
-        private static void ExitPhysical(Ent e, Rigidbody rb)
-        {
-            if (e.GhostOn) Ghost(e, false);
-            e.Physical = false;
-            if (e.Root.car != null) PhysicalCars.Remove(e.Root.car);
-            // the display takes over where the body is: the difference to the owner's path blends out (no snap)
-            e.Ip.Absorb(mainscript.GlobalFromUnityPos(rb.position), rb.rotation);
-            if (e.Ip.CorrCm > 200) SessionLog.Event("proxy-correction", e.NetId, epoch: e.Epoch, value: e.Ip.CorrCm / 100f, result: "servo release blend", sample: true);
-            rb.interpolation = e.PhysInterp;
-            rb.isKinematic = true;
-            foreach (var b in e.JointBodies) if (b != null) b.isKinematic = true;
-            e.JointBodies.Clear();
-            PhysicalExits++;
-        }
-
-        /// Undo physical mode without the blend (ownership flips: SetProxy handles the bodies).
-        internal static void DropPhysical(Ent e)
-        {
-            if (e.GhostOn) Ghost(e, false);
-            if (!e.Physical) return;
-            e.Physical = false;
-            if (e.Root != null && e.Root.car != null) PhysicalCars.Remove(e.Root.car);
-            var rb = e.Root != null ? e.Root.GetComponent<Rigidbody>() : null;
-            if (rb != null) rb.interpolation = e.PhysInterp;
-            e.JointBodies.Clear();
-        }
-
-        private static void Servo(Ent e, Rigidbody rb, float dt)
-        {
-            double now = Time.realtimeSinceStartupAsDouble;
-            EntityHands.EvalShown(e, now, dt, out var pos, out var rot);
-            e.ShownPos = pos;
-            if (e.Ip.TakeSnap())   // the owner's object teleported: so does the simulated copy (a servo would fling it)
-            {
-                CopyTeleports++;
-                TelemetryProxySnap(e, mainscript.UnityPosFromGlobal(pos), rb.position);
-                rb.position = mainscript.UnityPosFromGlobal(pos); rb.rotation = rot;
-                rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
-                e.HasServoPrev = false;
-                return;
-            }
-            Vector3 vT = e.HasServoPrev ? (Vector3)(pos - e.ServoPrevPos) / dt : e.LastVel;
-            Vector3 wT = Vector3.zero;
-            if (e.HasServoPrev)
-            {
-                (rot * Quaternion.Inverse(e.ServoPrevRot)).ToAngleAxis(out float a, out var ax);
-                if (a > 180f) a -= 360f;
-                if (!float.IsNaN(ax.x)) wT = ax * (a * Mathf.Deg2Rad / dt);
-            }
-            e.ServoPrevPos = pos; e.ServoPrevRot = rot; e.HasServoPrev = true;
-            float t = Time.time;
-            e.TelemetryServoCorrection = 0;
-            float w = t < e.FreeUntil ? 0f : t < e.FreeUntil + ServoRampS ? (t - e.FreeUntil) / ServoRampS : 1f;
-            if (w <= 0f) return;   // crash in progress: the game's physics has it
-            // the two machines' crashes differ (each simulated its own); steering the copy back to its owner's result must
-            // not drive it through the car it hit here — at 100 km/h that threw the rammer to 30 m/s and spun the copy at
-            // 400°/s (crashtest v0.57.60). The copy passes through that car until the two are apart.
-            if (GhostOnReturn && e.FreeHit != null && !e.GhostOn && t - e.FreeUntil < 0.1f) Ghost(e, true);
-            if (e.GhostOn && (t - e.FreeUntil > GhostMaxS || Apart(e))) Ghost(e, false);
-            var target = mainscript.UnityPosFromGlobal(pos);
-            if (RestSnap && w >= 1f && !e.GhostOn && vT.sqrMagnitude < 0.01f && wT.sqrMagnitude < 0.01f)
-            {
-                if ((target - rb.position).sqrMagnitude > RestSnapM * RestSnapM || Quaternion.Angle(rot, rb.rotation) > 5f)
-                {
-                    if (e.RestOffSince < 0f) e.RestOffSince = t;
-                    else if (t - e.RestOffSince > RestSnapS)
-                    {
-                        RestSnaps++;
-                        TelemetryProxySnap(e, target, rb.position);
-                        if (RestSnaps <= 20) Plugin.Log.LogInfo($"rest snap: copy {e.NetId} {(target - rb.position).magnitude:F2} m off its owner's resting pose, put there");
-                        rb.position = target; rb.rotation = rot; rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
-                        e.RestOffSince = -1f;
-                        return;
-                    }
-                }
-                else e.RestOffSince = -1f;
-            }
-            else e.RestOffSince = -1f;
-            var vServo = vT + (target - rb.position) * ServoGain;
-            e.TelemetryServoCorrection = (target - rb.position).magnitude;
-            if (e.TelemetryServoCorrection > 2) SessionLog.Event("proxy-correction", e.NetId, epoch: e.Epoch, value: e.TelemetryServoCorrection, result: "physics servo", sample: true);
-            (rot * Quaternion.Inverse(rb.rotation)).ToAngleAxis(out float ea, out var eax);
-            if (ea > 180f) ea -= 360f;
-            var wServo = wT + (float.IsNaN(eax.x) ? Vector3.zero : eax * (ea * Mathf.Deg2Rad * SpinGain));
-            var dv = Vector3.ClampMagnitude(vServo - rb.velocity, ServoMaxAccel * dt + (vT - rb.velocity).magnitude);   // follow the path's own motion; the correction on top is bounded
-            rb.velocity = Vector3.Lerp(rb.velocity, rb.velocity + dv, w);
-            rb.angularVelocity = Vector3.Lerp(rb.angularVelocity, wServo, w);
-        }
-
-        private static void Ghost(Ent e, bool on)
-        {
-            if (e.Root == null || e.FreeHit == null) { e.GhostOn = false; return; }
-            var mine = e.Root.GetComponentsInChildren<Collider>();
-            var theirs = e.FreeHit.GetComponentsInChildren<Collider>();
-            foreach (var a in mine)
-                if (a != null && !a.isTrigger)
-                    foreach (var b in theirs)
-                        if (b != null && !b.isTrigger) Physics.IgnoreCollision(a, b, on);
-            e.GhostOn = on;
-            if (on) Ghosted++; else { Unghosted++; e.FreeHit = null; }
-        }
-
-        /// The copy's and the hit car's bounds no longer overlap (0.3 m apart).
-        private static bool Apart(Ent e) => e.FreeHit == null || Apart(e.Root != null ? e.Root.transform : null, e.FreeHit);
-
-        /// Two bodies' collider bounds no longer overlap (0.3 m apart); a missing one counts as apart.
-        private static bool Apart(Transform a, Transform b)
-        {
-            if (a == null || b == null) return true;
-            Bounds A = default, B = default; bool ha = false, hb = false;
-            foreach (var c in a.GetComponentsInChildren<Collider>()) if (!c.isTrigger) { if (ha) A.Encapsulate(c.bounds); else { A = c.bounds; ha = true; } }
-            foreach (var c in b.GetComponentsInChildren<Collider>()) if (!c.isTrigger) { if (hb) B.Encapsulate(c.bounds); else { B = c.bounds; hb = true; } }
-            if (!ha || !hb) return true;
-            A.Expand(0.6f);
-            return !A.Intersects(B);
-        }
-
-        /// How long until the copy's data shows the owner's reaction to this crash: the owner meets the crash only when
-        /// OUR car's copy reaches theirs (one display delay after us: one-way trip + interpolation delay), and its reaction
-        /// comes back the same way — two display delays — plus the crash itself (~0.3 s of contact and rebound).
-        /// 0.2 s was too short (crashtest LAN, v0.57.59): the copy was steered back into the rammer while the owner's
-        /// reaction was still in flight — the cars kept 55 % of their momentum (single player ~100 %).
-        private static float FreeSeconds(Ent e)
-        {
-            float oneWay = Mp.PingMs() / 2000f;
-            return Mathf.Clamp(2f * (e.Ip.DelayMs / 1000f + oneWay) + CrashS, FreeMinS, FreeMaxS);
-        }
-
-        /// On a copy's root while it's physical: contact with a body simulated here starts the free window.
-        internal sealed class CopyContact : MonoBehaviour
-        {
-            [System.NonSerialized] public Ent E;
-            private void OnCollisionEnter(Collision c) => Touch(c);
-            private void OnCollisionStay(Collision c) => Touch(c);
-            private void Touch(Collision c)
-            {
-                var e = E;
-                if (e == null || !e.Physical || c.rigidbody == null || c.rigidbody.isKinematic) return;
-                if (IsProxy(c.rigidbody)) return;                       // another copy: its owner handles it
-                if (c.rigidbody.transform.root == transform.root) return;
-                float t = Time.time;
-                if (t < e.FreeUntil) return;                            // already free
-                if (t - e.FreeFrom < FreeMaxS + ServoRampS) return;    // one window per crash; sustained shoving is steered
-                if (c.relativeVelocity.magnitude < 0.5f) return;
-                if (TryTakeCrash(e, c.rigidbody, c.relativeVelocity.magnitude)) return;   // approach B: this machine simulates the crash
-                e.FreeFrom = t; e.FreeUntil = t + FreeSeconds(e); e.FreeHit = c.rigidbody.transform.root;
-                FreeWindows++;
-                LastFree = "net " + e.NetId + " free " + (e.FreeUntil - t).ToString("F2") + " s, hit " + c.rigidbody.transform.root.name + " at " + c.relativeVelocity.magnitude.ToString("F1") + " m/s";
             }
         }
 

@@ -151,7 +151,7 @@ static partial class EntitySplitTest
             Check(Regex.IsMatch(all, @"\[HarmonyLib\.Harmony" + phase + @", HarmonyLib\.HarmonyPriority\(HarmonyLib\.Priority\.Normal \+ 1\)\]"), "attach " + phase + " precedes telemetry as before the move");
         Check(File.ReadAllText("src/TLDRevamp/Net/Entities.Hitch.cs").Contains("[HarmonyPriority(Priority.First)]"), "hitch joint still precedes attach prefix");
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");
-        Check(kernel.Contains("_held.Clear(); _after.Clear(); DevHooks.CrashReset?.Invoke(); EntityAttachments.ResetCarriedOff();"), "carried reset retains its exact neighbors");
+        Check(kernel.Contains("EntityPhysics.ResetCrashHolds(); DevHooks.CrashReset?.Invoke(); EntityAttachments.ResetCarriedOff();"), "carried reset retains its exact neighbors");
         AttachmentsSourceChecks();
     }
 

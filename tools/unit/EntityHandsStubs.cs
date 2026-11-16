@@ -79,8 +79,6 @@ namespace TLDRevamp.Net
         internal static float HandoverAcceptS = 2;
         private static bool ClaimEpochOk(SEnt se, int from, uint epoch) => TestEpoch;
         internal static void SetProxy(Ent e, bool proxy) { e.Proxy = proxy; }
-        internal static void StopBodyMotion(Ent e) { Stops++; e.MovedByBody = false; }
-        private static void ExitPhysical(Ent e, Rigidbody body) { Exits++; e.Physical = false; }
         internal static void Coast(Ent e) { }
         private static bool LooseRelease(uint previous, uint car, bool held, bool stored) => previous != 0 && car == 0 && !held && !stored;
         private static bool ClaimCargo(Ent e, bool released = false, ClaimReason reason = ClaimReason.CargoNear) => TestCargoClaim;

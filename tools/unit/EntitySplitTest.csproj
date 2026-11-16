@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
+    <Compile Include="EntityPhysicsChecks.cs" />
+    <Compile Include="EntityPhysicsStubs.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/CrashGuard.cs" />
     <Compile Include="EntityCargoInteractionChecks.cs" />
     <Compile Include="EntityCargoInteractionStubs.cs" />
     <Compile Include="EntityAttachmentsChecks.cs" />
@@ -105,6 +108,8 @@
       <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
       <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
     </PropertyGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractPhysicsBoundary.py&quot; &quot;$(IntermediateOutputPath)PhysicsFeature.g.cs&quot; $(PhysicsBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)PhysicsFeature.g*.cs" /></ItemGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractFeatureWire.py&quot; &quot;$(IntermediateOutputPath)FeatureWire.g.cs&quot; $(FeatureWireBaseline)" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractCargoInteraction.py&quot; &quot;$(IntermediateOutputPath)CargoInteraction.g.cs&quot; $(CargoInteractionBaseline)" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)CargoInteraction.g*.cs" /></ItemGroup>

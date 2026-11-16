@@ -4,6 +4,110 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        // Physics boundary. Scheduling, map walks and server ownership stay in the kernel.
+        internal static Ent PhysicsRoot(Transform root) => PlacedOfTransform(root);
+        internal static bool PhysicsNetOf(Transform root, out uint net, out bool proxy) => NetOf(root, out net, out proxy);
+        internal static bool PhysicsTrailer(Ent entity) => HitchTrailer(entity);
+        internal static wheelgraphicsscript[] PhysicsWheels(Ent entity) => WheelsOf(entity);
+        internal static bool PhysicsPartCameOff(Ent entity, int item) => CameOff(entity, item);
+        internal static Transform[] PhysicsLimbs(Ent entity) => Limbs(entity);
+        internal static bool PhysicsIsProxy(Component body) => IsProxy(body);
+        internal static void PhysicsSnap(Ent entity, Vector3 target, Vector3 from) => TelemetryProxySnap(entity, target, from);
+        internal static void SetCrashProxy(Ent entity, bool proxy, bool keepMotion) => SetProxy(entity, proxy, keepMotion);
+        internal static void SendPhysicsRequest(NetWriter writer, bool reliable) => ToServer(writer, reliable);
+        internal static bool TryPhysicsContact(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
+        internal static bool ResolvePhysics(Ent entity) => Resolve(entity);
+        internal static uint PhysicsFootingNet => _telemetryFooting;
+        internal static bool TryPhysicsStand(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
+        internal static void PhysicsContacts(uint net, Collision collision) { CargoContact(net, collision); RabbitContact(net, collision); ItemContact(net, collision); }
+        internal static void AttachContact(Ent e) => EntityPhysics.AttachContact(e);
+        internal static void DetachContact(Ent e) => EntityPhysics.DetachContact(e);
+        private static void ApplyContactImpulse(uint net, Vector3 impulse, Vector3d globalPoint) => EntityPhysics.ApplyContactImpulse(net, impulse, globalPoint);
+        private static void CopyJointTick() => EntityPhysics.CopyJointTick();
+        internal static bool TryTakeCrash(Ent e, Rigidbody mine, float relSpeed) => EntityPhysics.TryTakeCrash(e, mine, relSpeed);
+        internal static void CrashHoldTick() => EntityPhysics.CrashHoldTick();
+        public static string CrashAuthorityStatus() => EntityPhysics.CrashAuthorityStatus();
+        private static void StandInterpTick() => EntityPhysics.StandInterpTick();
+        private static bool StandsOnAtPhysics(Ent e) => EntityPhysics.StandsOnAtPhysics(e);
+        private static bool LocalAboard(Ent e) => EntityPhysics.LocalAboard(e);
+        private static void HealCopyBody(Ent e) => EntityPhysics.HealCopyBody(e);
+        private static void SetPartColliders(Ent e, bool on) => EntityPhysics.SetPartColliders(e, on);
+        internal static bool LimbsByBody(Ent e) => EntityPhysics.LimbsByBody(e);
+        private static void MoveLimbs(Ent e, Rigidbody rb, Vector3 up, Quaternion rot, bool snap) => EntityPhysics.MoveLimbs(e, rb, up, rot, snap);
+        internal static void StopBodyMotion(Ent e) => EntityPhysics.StopBodyMotion(e);
+        private static void EnterPhysical(Ent e, Rigidbody rb) => EntityPhysics.EnterPhysical(e, rb);
+        private static void ExitPhysical(Ent e, Rigidbody rb) => EntityPhysics.ExitPhysical(e, rb);
+        internal static void DropPhysical(Ent e) => EntityPhysics.DropPhysical(e);
+        private static void Servo(Ent e, Rigidbody rb, float dt) => EntityPhysics.Servo(e, rb, dt);
+        public static long ContactSent { get => EntityPhysics.ContactSent; set => EntityPhysics.ContactSent = value; }
+        public static long ContactRelayed { get => EntityPhysics.ContactRelayed; set => EntityPhysics.ContactRelayed = value; }
+        public static long ContactApplied { get => EntityPhysics.ContactApplied; set => EntityPhysics.ContactApplied = value; }
+        public static long ContactMisses { get => EntityPhysics.ContactMisses; set => EntityPhysics.ContactMisses = value; }
+        public static float ContactImpulseMaxSent { get => EntityPhysics.ContactImpulseMaxSent; set => EntityPhysics.ContactImpulseMaxSent = value; }
+        public static float ContactImpulseMaxApplied { get => EntityPhysics.ContactImpulseMaxApplied; set => EntityPhysics.ContactImpulseMaxApplied = value; }
+        public static bool CopyJointsFree { get => EntityPhysics.CopyJointsFree; set => EntityPhysics.CopyJointsFree = value; }
+        public static bool CrashAuthority { get => EntityPhysics.CrashAuthority; set => EntityPhysics.CrashAuthority = value; }
+        public static float CrashMinRelMps { get => EntityPhysics.CrashMinRelMps; set => EntityPhysics.CrashMinRelMps = value; }
+        public static float CrashMinHoldS { get => EntityPhysics.CrashMinHoldS; set => EntityPhysics.CrashMinHoldS = value; }
+        public static float CrashMaxHoldS { get => EntityPhysics.CrashMaxHoldS; set => EntityPhysics.CrashMaxHoldS = value; }
+        public static float CrashLeaseS { get => EntityPhysics.CrashLeaseS; set => EntityPhysics.CrashLeaseS = value; }
+        public static long CrashGranted { get => EntityPhysics.CrashGranted; set => EntityPhysics.CrashGranted = value; }
+        public static long CrashRefused { get => EntityPhysics.CrashRefused; set => EntityPhysics.CrashRefused = value; }
+        public static long CrashAutoReturned { get => EntityPhysics.CrashAutoReturned; set => EntityPhysics.CrashAutoReturned = value; }
+        public static bool CrashLeaveKeep { get => EntityPhysics.CrashLeaveKeep; set => EntityPhysics.CrashLeaveKeep = value; }
+        public static long CrashLeasesKept { get => EntityPhysics.CrashLeasesKept; set => EntityPhysics.CrashLeasesKept = value; }
+        public static float CrashApartCheckS { get => EntityPhysics.CrashApartCheckS; set => EntityPhysics.CrashApartCheckS = value; }
+        public static bool CrashCopyCheck { get => EntityPhysics.CrashCopyCheck; set => EntityPhysics.CrashCopyCheck = value; }
+        public static bool StandCopyAtPhysics { get => EntityPhysics.StandCopyAtPhysics; set => EntityPhysics.StandCopyAtPhysics = value; }
+        public static bool PhysicalCopies { get => EntityPhysics.PhysicalCopies; set => EntityPhysics.PhysicalCopies = value; }
+        public static bool ContactRelayOn { get => EntityPhysics.ContactRelayOn; set => EntityPhysics.ContactRelayOn = value; }
+        public static float NearEnterM { get => EntityPhysics.NearEnterM; set => EntityPhysics.NearEnterM = value; }
+        public static float NearExitM { get => EntityPhysics.NearExitM; set => EntityPhysics.NearExitM = value; }
+        public static float ServoGain { get => EntityPhysics.ServoGain; set => EntityPhysics.ServoGain = value; }
+        public static float SpinGain { get => EntityPhysics.SpinGain; set => EntityPhysics.SpinGain = value; }
+        public static float ServoRampS { get => EntityPhysics.ServoRampS; set => EntityPhysics.ServoRampS = value; }
+        public static float FreeMinS { get => EntityPhysics.FreeMinS; set => EntityPhysics.FreeMinS = value; }
+        public static float FreeMaxS { get => EntityPhysics.FreeMaxS; set => EntityPhysics.FreeMaxS = value; }
+        public static float CrashS { get => EntityPhysics.CrashS; set => EntityPhysics.CrashS = value; }
+        public static float ServoMaxAccel { get => EntityPhysics.ServoMaxAccel; set => EntityPhysics.ServoMaxAccel = value; }
+        public static float GhostMaxS { get => EntityPhysics.GhostMaxS; set => EntityPhysics.GhostMaxS = value; }
+        public static bool GhostOnReturn { get => EntityPhysics.GhostOnReturn; set => EntityPhysics.GhostOnReturn = value; }
+        public static long Ghosted { get => EntityPhysics.Ghosted; set => EntityPhysics.Ghosted = value; }
+        public static long Unghosted { get => EntityPhysics.Unghosted; set => EntityPhysics.Unghosted = value; }
+        public static bool RestSnap { get => EntityPhysics.RestSnap; set => EntityPhysics.RestSnap = value; }
+        public static float RestSnapM { get => EntityPhysics.RestSnapM; set => EntityPhysics.RestSnapM = value; }
+        public static float RestSnapS { get => EntityPhysics.RestSnapS; set => EntityPhysics.RestSnapS = value; }
+        public static long RestSnaps { get => EntityPhysics.RestSnaps; set => EntityPhysics.RestSnaps = value; }
+        public static long PhysicalEnters { get => EntityPhysics.PhysicalEnters; set => EntityPhysics.PhysicalEnters = value; }
+        public static long PhysicalExits { get => EntityPhysics.PhysicalExits; set => EntityPhysics.PhysicalExits = value; }
+        public static long FreeWindows { get => EntityPhysics.FreeWindows; set => EntityPhysics.FreeWindows = value; }
+        public static string LastFree { get => EntityPhysics.LastFree; set => EntityPhysics.LastFree = value; }
+        public static bool CopiesMoveByBody { get => EntityPhysics.CopiesMoveByBody; set => EntityPhysics.CopiesMoveByBody = value; }
+        public static bool CopiesInterpolate { get => EntityPhysics.CopiesInterpolate; set => EntityPhysics.CopiesInterpolate = value; }
+        public static bool AboardDrawnAtPhysics { get => EntityPhysics.AboardDrawnAtPhysics; set => EntityPhysics.AboardDrawnAtPhysics = value; }
+        public static long CopySweeps { get => EntityPhysics.CopySweeps; set => EntityPhysics.CopySweeps = value; }
+        public static long CopyRebaseSeats { get => EntityPhysics.CopyRebaseSeats; set => EntityPhysics.CopyRebaseSeats = value; }
+        public static long CopyTeleports { get => EntityPhysics.CopyTeleports; set => EntityPhysics.CopyTeleports = value; }
+        public static bool DirectRebaseBodies { get => EntityPhysics.DirectRebaseBodies; set => EntityPhysics.DirectRebaseBodies = value; }
+        public static long CopyRebaseDirect { get => EntityPhysics.CopyRebaseDirect; set => EntityPhysics.CopyRebaseDirect = value; }
+        public static long CopyRebaseMaxUs { get => EntityPhysics.CopyRebaseMaxUs; set => EntityPhysics.CopyRebaseMaxUs = value; }
+        public static int CopyBodiesHealed { get => EntityPhysics.CopyBodiesHealed; set => EntityPhysics.CopyBodiesHealed = value; }
+        public static float FastStepLogM { get => EntityPhysics.FastStepLogM; set => EntityPhysics.FastStepLogM = value; }
+        public static int FastStepLogs { get => EntityPhysics.FastStepLogs; set => EntityPhysics.FastStepLogs = value; }
+        public static bool StoredByTransform { get => EntityPhysics.StoredByTransform; set => EntityPhysics.StoredByTransform = value; }
+        public static bool CopyColliderLod { get => EntityPhysics.CopyColliderLod; set => EntityPhysics.CopyColliderLod = value; }
+        public static float PartCollidersOnM { get => EntityPhysics.PartCollidersOnM; set => EntityPhysics.PartCollidersOnM = value; }
+        public static float PartCollidersOffM { get => EntityPhysics.PartCollidersOffM; set => EntityPhysics.PartCollidersOffM = value; }
+        public static long PartCollidersOff { get => EntityPhysics.PartCollidersOff; set => EntityPhysics.PartCollidersOff = value; }
+        public static long PartCollidersOn { get => EntityPhysics.PartCollidersOn; set => EntityPhysics.PartCollidersOn = value; }
+        public static bool LodKeepsPartsOff { get => EntityPhysics.LodKeepsPartsOff; set => EntityPhysics.LodKeepsPartsOff = value; }
+        public static bool VehicleLimbsByBody { get => EntityPhysics.VehicleLimbsByBody; set => EntityPhysics.VehicleLimbsByBody = value; }
+        internal static System.Collections.Generic.IReadOnlyDictionary<ConfigurableJoint, Ent> ObservedFreedJoints => EntityPhysics.ObservedFreedJoints;
+        internal static System.Collections.Generic.IReadOnlyList<Ent> ObservedJointed => EntityPhysics.ObservedJointed;
+        public static long CopyJointsFreed { get => EntityPhysics.CopyJointsFreed; set => EntityPhysics.CopyJointsFreed = value; }
+        public static long CopyJointsLocked { get => EntityPhysics.CopyJointsLocked; set => EntityPhysics.CopyJointsLocked = value; }
+        // End physics boundary.
+
         // Cargo boundary. Map walks and server authority stay in the kernel.
         internal static bool CargoInSession => InSession;
         internal static int CargoLocalId => MyId;

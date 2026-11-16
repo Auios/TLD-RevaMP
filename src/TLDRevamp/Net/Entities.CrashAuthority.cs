@@ -14,9 +14,8 @@ namespace TLDRevamp.Net
     /// hands it back (CrashRelease), and the server returns it anyway after 4 s. Both screens show the same crash.
     /// Costs: the hit player's inputs do nothing during the lease, and they see their car's crash one network delay late;
     /// the crash machine decides the crash (fairness: could be restricted to the host).
-    public static partial class Entities
+    internal static partial class EntityPhysics
     {
-        public const byte CrashClaim = 43, CrashRelease = 44;
         public static bool CrashAuthority = true;       // default since v0.57.67 (the user's call after the A/B and relay runs); false = approach A
         public static float CrashMinRelMps = 4f;        // softer contacts (shoving, touching) stay with approach A
         public static float CrashMinHoldS = 1.0f, CrashMaxHoldS = 3.0f, CrashLeaseS = 4.0f;
@@ -24,15 +23,19 @@ namespace TLDRevamp.Net
         public static string LastCrash = "";
         public static bool CrashLeaveKeep = true;       // A/B: false = before v0.65.56 (crashlease.py)
         public static long CrashLeasesKept;
-
-        private sealed class HeldCrash { public Ent E; public Transform Partner; public float Since, CalmSince = -1f; }
         private static readonly List<HeldCrash> _held = new List<HeldCrash>();
         public static float CrashApartCheckS = 0.25f;   // how often a waiting car's bounds are compared (they walk every collider)
         public static long CrashRetakesSkipped;
-        private sealed class AfterCrash { public Ent E; public Transform Partner; public float CheckedAt; }
         private static readonly List<AfterCrash> _after = new List<AfterCrash>();
+        public static long CrashTowingSkipped;
+        public static bool CrashCopyCheck = true;   // A/B: false = before 2026-11-06, any copy could be taken over (CrashGuard)
+        public static long CrashStaleRefused;
 
-        private static bool WaitingApart(Ent e)
+        private sealed class HeldCrash { public Entities.Ent E; public Transform Partner; public float Since, CalmSince = -1f; }
+
+        private sealed class AfterCrash { public Entities.Ent E; public Transform Partner; public float CheckedAt; }
+
+        internal static bool WaitingApart(Entities.Ent e)
         {
             foreach (var a in _after) if (a.E == e) return true;
             return false;
@@ -44,7 +47,7 @@ namespace TLDRevamp.Net
             _after.Add(new AfterCrash { E = h.E, Partner = h.Partner, CheckedAt = Time.time });
         }
 
-        private static void AfterTick()
+        internal static void AfterTick()
         {
             float t = Time.time;
             for (int i = _after.Count - 1; i >= 0; i--)
@@ -56,29 +59,28 @@ namespace TLDRevamp.Net
                 if (Apart(a.E.Root.transform, a.Partner)) _after.RemoveAt(i);
             }
         }
-        public static long CrashTowingSkipped;
 
-        internal static bool TryTakeCrash(Ent e, Rigidbody mine, float relSpeed)
+        internal static bool TryTakeCrash(Entities.Ent e, Rigidbody mine, float relSpeed)
         {
-            if (HitchTrailer(e)) return false;
+            if (Entities.PhysicsTrailer(e)) return false;
             if (e.Root != null && e.Root.car != null && Fixes.UnfreezeOnGround.Partners(e.Root).Count > 0) { CrashTowingSkipped++; return false; }
             if (!CrashAuthority || !e.Proxy || relSpeed < CrashMinRelMps || e.CrashTaking) return false;
             foreach (var h in _held) if (h.E == e) return false;
             if (WaitingApart(e)) { CrashRetakesSkipped++; return false; }   // still against what it hit last time
-            NetOf(mine.transform.root, out uint partnerNet, out bool partnerProxy);
+            Entities.PhysicsNetOf(mine.transform.root, out uint partnerNet, out bool partnerProxy);
             if (partnerProxy) return false;
             if (CrashCopyCheck && !CrashGuard.SpeedFits(relSpeed)) return Refuse(e, double.NaN, double.NaN, relSpeed, CrashGuard.TooFast);
             if (CrashCopyCheck && !CopyWhereOwnerHasIt(e)) return false;   // a crash with a stale copy: not a crash for its owner
             e.CrashTaking = true;
             // simulated here from this instant, with the crash's motion as it is (no reset to the copy's last velocity)
-            SetProxy(e, false, keepMotion: true);
+            Entities.SetCrashProxy(e, false, keepMotion: true);
             // the owner's driver keeps pressing what they pressed: nobody drives it here, so the owner's last wheel torques
             // (brake, a seated player's automatic handbrake hold, throttle) stay on it — without them the hit car rolled
             // free and was pushed 9–12 m/s where single player gives 2–3 (crashtest A/B, v0.57.64)
             if (e.Root.car != null) PhysicalCars[e.Root.car] = e;
             _held.Add(new HeldCrash { E = e, Partner = mine.transform.root, Since = Time.time });
-            W.Reset(); W.U8(CrashClaim); W.U32(e.NetId); W.U32(partnerNet);
-            ToServer(W, true);
+            W.Reset(); W.U8(Entities.CrashClaim); W.U32(e.NetId); W.U32(partnerNet);
+            Entities.SendPhysicsRequest(W, true);
             CrashClaims++;
             LastCrash = "took net " + e.NetId + " (hit by " + mine.transform.root.name + " at " + relSpeed.ToString("F1") + " m/s)";
             return true;
@@ -100,8 +102,8 @@ namespace TLDRevamp.Net
                 if (calm) { if (h.CalmSince < 0f) h.CalmSince = t; } else h.CalmSince = -1f;
                 bool done = t - h.Since > CrashMaxHoldS || (t - h.Since > CrashMinHoldS && h.CalmSince >= 0f && t - h.CalmSince > 0.3f);
                 if (!done) continue;
-                W.Reset(); W.U8(CrashRelease); W.U32(e.NetId);
-                ToServer(W, true);
+                W.Reset(); W.U8(Entities.CrashRelease); W.U32(e.NetId);
+                Entities.SendPhysicsRequest(W, true);
                 CrashReleases++;
                 EndHeld(e);
                 AfterHeld(h);
@@ -109,11 +111,8 @@ namespace TLDRevamp.Net
             }
         }
 
-        public static bool CrashCopyCheck = true;   // A/B: false = before 2026-11-06, any copy could be taken over (CrashGuard)
-        public static long CrashStaleRefused;
-
         /// The copy's body against its owner's newest pose (CrashGuard): taken over, the owner's car would start from here.
-        private static bool CopyWhereOwnerHasIt(Ent e)
+        internal static bool CopyWhereOwnerHasIt(Entities.Ent e)
         {
             var rb = e.Root != null ? e.Root.GetComponent<Rigidbody>() : null;
             double now = Time.realtimeSinceStartupAsDouble;
@@ -127,7 +126,7 @@ namespace TLDRevamp.Net
 
         /// The event: value = metres from the owner's pose, dx = the pose's age (s), dy = the metres allowed (contact too
         /// fast: the contact's speed).
-        private static bool Refuse(Ent e, double off, double age, double allow, string why)
+        internal static bool Refuse(Entities.Ent e, double off, double age, double allow, string why)
         {
             CrashStaleRefused++;
             LastCrash = "left net " + e.NetId + " to its owner: " + why + (why == CrashGuard.TooFast ? " (" + allow.ToString("F0") + " m/s)" : double.IsNaN(off) ? "" : " (" + off.ToString("F0") + " m, allowed " + allow.ToString("F0") + ", pose " + age.ToString("F1") + " s old)");
@@ -136,11 +135,23 @@ namespace TLDRevamp.Net
             return false;
         }
 
-        private static void EndHeld(Ent e)
+        internal static void EndHeld(Entities.Ent e)
         {
             e.CrashTaking = false;
             if (e.Root != null && e.Root.car != null && PhysicalCars.TryGetValue(e.Root.car, out var pe) && pe == e && !e.Physical) PhysicalCars.Remove(e.Root.car);
         }
+
+        public static string CrashAuthorityStatus() =>
+            "{\"enabled\":" + (CrashAuthority ? "true" : "false") + ",\"claims\":" + CrashClaims + ",\"granted\":" + CrashGranted + ",\"refused\":" + CrashRefused +
+            ",\"staleRefused\":" + CrashStaleRefused + ",\"releases\":" + CrashReleases + ",\"autoReturned\":" + CrashAutoReturned + ",\"held\":" + _held.Count + ",\"waitingApart\":" + _after.Count + ",\"retakesSkipped\":" + CrashRetakesSkipped + ",\"last\":" + Json.Str(LastCrash) + "}";
+
+        // Session cleanup.
+        internal static void ResetCrashHolds() { _held.Clear(); _after.Clear(); }
+    }
+
+    public static partial class Entities
+    {
+        public const byte CrashClaim = 43, CrashRelease = 44;
 
         // ------------------------------------------------------------------ server (host)
 
@@ -203,9 +214,5 @@ namespace TLDRevamp.Net
         }
 
         internal static bool InCrashLease(uint net) => Server.TryGetValue(net, out var se) && se.CrashReturnTo >= 0;
-
-        public static string CrashAuthorityStatus() =>
-            "{\"enabled\":" + (CrashAuthority ? "true" : "false") + ",\"claims\":" + CrashClaims + ",\"granted\":" + CrashGranted + ",\"refused\":" + CrashRefused +
-            ",\"staleRefused\":" + CrashStaleRefused + ",\"releases\":" + CrashReleases + ",\"autoReturned\":" + CrashAutoReturned + ",\"held\":" + _held.Count + ",\"waitingApart\":" + _after.Count + ",\"retakesSkipped\":" + CrashRetakesSkipped + ",\"last\":" + Json.Str(LastCrash) + "}";
     }
 }

@@ -74,6 +74,9 @@ static class MessageTableTest
             return Regex.Match(bodies, @"void " + name + @"\(.*?\n        \}\n", RegexOptions.Singleline).Value;
         }
         string server = Method("Entities", "ServerReceive"), client = Method("Entities", "ClientReceive");
+        Check("ContactImpulse: kernel keeps byte decoding and finite guard", client.Contains("if (!r.Bad && Finite(imp) && Finite(gp)) ApplyContactImpulse(net, imp, gp);") && server.Contains("if (!r.Bad && Finite(imp) && Finite(gp)) ServerContactImpulse(from, net, imp, gp);"));
+        Check("ContactImpulse: facade reaches physics owner", src.Values.Any(s => s.Contains("private static void ApplyContactImpulse(uint net, Vector3 impulse, Vector3d globalPoint) => EntityPhysics.ApplyContactImpulse(net, impulse, globalPoint);")) && Method("EntityPhysics", "ApplyContactImpulse").Contains("rb.AddForceAtPosition(impulse, point, ForceMode.Impulse)"));
+        Check("crash arbitration remains kernel owned", Method("Entities", "ServerCrashClaim").Contains("Server.TryGetValue(net") && Method("Entities", "ServerCrashRelease").Contains("ReturnCrash(se)"));
         Check("PushIn: retained client facade routes to cargo owner", client.Contains("case PushIn: ApplyPush(r);") && src.Values.Any(s => s.Contains("private static void ApplyPush(NetReader r) => EntityCargoInteraction.ApplyPush(r);")) && Method("EntityCargoInteraction", "ApplyPush").Contains("r.F32()"));
         Check("PushIn: raw owner relay stays on kernel", server.Contains("case PushIn: ServerPush(from, r);") && Method("Entities", "ServerPush").Contains("Server.TryGetValue(net"));
         Check("attachments: wire handlers retain kernel authority", new[] { "ServerAttach", "ServerAttachReq", "ServerDetachSync", "ServerPartOff" }.All(name => server.Contains(name + "(") && Method("Entities", name).Contains("r.U32()")));

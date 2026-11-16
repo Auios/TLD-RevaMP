@@ -221,10 +221,9 @@ namespace TLDRevamp.Net
         /// bodies left at a gentle depenetration, crash holds and waits, parts thrown off a carrier.
         private static void ResetSessionLeftovers()
         {
-            foreach (var kv in _freedJoints) if (kv.Key != null) { try { SetJointFree(kv.Key, kv.Value, false); } catch { } }
-            _freedJoints.Clear();
+            EntityPhysics.ResetFreedJoints();
             EntityLocks.ResetGentleBodies();
-            _held.Clear(); _after.Clear(); DevHooks.CrashReset?.Invoke(); EntityAttachments.ResetCarriedOff();
+            EntityPhysics.ResetCrashHolds(); DevHooks.CrashReset?.Invoke(); EntityAttachments.ResetCarriedOff();
         }
 
         public static void Reset(bool wasHost = true)
@@ -238,7 +237,7 @@ namespace TLDRevamp.Net
             Tpa.ResetTelemetry();
             ResetTpaSync();
             DevHooks.TrafficReset?.Invoke();   // session ids start at 1 again; no old object's traffic belongs to the next one
-            if (_standInterp) StandInterpOff(mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.RB : null);
+            EntityPhysics.ResetStandInterpolation();
             foreach (var e in ByNet.Values)
             {
                 if (e.Root == null || !e.Proxy) continue;
@@ -259,7 +258,7 @@ namespace TLDRevamp.Net
             ByNet.Clear(); Server.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
             // keyed by copies and network ids (which start at 1 again next session). (Known, the server's "sent to player N"
             // sets, needs nothing here: ServerOnJoin starts every joiner with an empty one - rehost.py)
-            PhysicalCars.Clear(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); EntityAI.BreaksReset();
+            EntityPhysics.ResetPhysicalCars(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); EntityAI.BreaksReset();
             EntityEdits.ResetTankEditTruth(); _tankAddsOut.Clear(); _censusFirst.Clear(); _censusDue.Clear(); _repairWait.Clear(); _repairCycle.Clear(); _repairCursor = 0; _repairRunAt.Clear(); _placeRunAt.Clear(); _placeWait.Clear();
             ResetPoiCensus(); EntityWorldLeases.ResetLeaseSession();
             EntitySeats.ShotgunReset();

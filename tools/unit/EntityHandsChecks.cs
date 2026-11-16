@@ -245,10 +245,10 @@ static partial class EntitySplitTest
         RemotePlayers.All[2].Mp.anim.RHTarget.position = new Vector3(10, 0, 0);
         e.Ip = new PoseInterpolator { Ready = true, Value = new PoseInterpolator.Sample { Pos = default, Rot = Quaternion.identity } };
         var rb = new Rigidbody(); e.Root.ChildComponent = rb; e.Physical = e.MovedByBody = true;
-        int exits = Entities.Exits, stops = Entities.Stops;
+        long exits = EntityPhysics.PhysicalExits;
         EntityHands.HandItemPullM = .08f; Time.timeAsDouble = 100.4; EntityHands.HandItemsLate();
         Time.timeAsDouble = 100.6; EntityHands.HandItemsLate();
-        Check(Math.Abs(e.Root.transform.position.x - .08f) < .00001 && rb.isKinematic && !e.Physical && !e.MovedByBody && Entities.Exits == exits + 1 && Entities.Stops == stops + 1, "hand pull caps world correction and takes over physical mover");
+        Check(Math.Abs(e.Root.transform.position.x - .08f) < .00001 && rb.isKinematic && !e.Physical && !e.MovedByBody && EntityPhysics.PhysicalExits == exits + 1, "hand pull caps world correction and takes over physical mover");
         RemotePlayers.All.Clear(); Time.timeAsDouble = 100.7; EntityHands.HandItemsLate();
         Check(e.HandDraw.Source == null && EntityHands.HandManaged(e), "disappearing remote holder blends back to interpolation");
         RemotePlayers.All.Clear(); EntityHands.HandItemPullM = .08f;

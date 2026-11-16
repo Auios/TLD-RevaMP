@@ -158,9 +158,6 @@ namespace TLDRevamp.Net
         internal static double CargoClaimedOnContact;
         internal static readonly List<uint> CargoGhostNets = new List<uint>();
         internal static double CargoGhostsMade;
-        internal static double ContactApplied;
-        internal static double ContactRelayed;
-        internal static double ContactSent;
         internal static double ContentsClaimed;
         internal static double ContentsOnOwner;
         internal static double ContentsOnPlace;
