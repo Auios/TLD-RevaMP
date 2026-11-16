@@ -2,7 +2,7 @@
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><NoWarn>CS0649;CS8981</NoWarn><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
     <Compile Include="ValidationTest.cs" />
-    <Compile Include="../../src/TLDRevamp/Net/Entities.PartOff.cs" />
+    <Compile Include="EntityAttachmentsValidationChecks.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
   </ItemGroup>
   <Target Name="ExtractLeasesValidation" BeforeTargets="CoreCompile">
@@ -10,6 +10,8 @@
       <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
       <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
     </PropertyGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractAttachmentsBoundary.py&quot; &quot;$(IntermediateOutputPath)AttachmentsValidation.g.cs&quot; --validation $(AttachmentsBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)AttachmentsValidation.g.cs" /></ItemGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractLeasesBoundary.py&quot; &quot;$(IntermediateOutputPath)LeaseValidation.g.cs&quot; --validation" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)LeaseValidation.g.cs" /></ItemGroup>
   </Target>

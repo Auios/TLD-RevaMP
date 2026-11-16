@@ -58,6 +58,7 @@ namespace TLDRevamp.Net
         internal static SeatServer Server = new SeatServer();
         internal class SeatServer
         {
+            internal void Tell(int player, string notice) => Entities.AttachmentNotices.Add((player, notice));
             internal readonly List<KeyValuePair<int, int>> Seats = new List<KeyValuePair<int, int>>();
             internal readonly List<KeyValuePair<int, Vector3d>> Peers = new List<KeyValuePair<int, Vector3d>>();
             internal bool PeerPos(int player, out Vector3d position) { position = Entities.EditPeerPosition; return Entities.EditPeerKnown; }

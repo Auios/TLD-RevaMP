@@ -76,6 +76,9 @@ static class MessageTableTest
         string server = Method("Entities", "ServerReceive"), client = Method("Entities", "ClientReceive");
         Check("PushIn: retained client facade routes to cargo owner", client.Contains("case PushIn: ApplyPush(r);") && src.Values.Any(s => s.Contains("private static void ApplyPush(NetReader r) => EntityCargoInteraction.ApplyPush(r);")) && Method("EntityCargoInteraction", "ApplyPush").Contains("r.F32()"));
         Check("PushIn: raw owner relay stays on kernel", server.Contains("case PushIn: ServerPush(from, r);") && Method("Entities", "ServerPush").Contains("Server.TryGetValue(net"));
+        Check("attachments: wire handlers retain kernel authority", new[] { "ServerAttach", "ServerAttachReq", "ServerDetachSync", "ServerPartOff" }.All(name => server.Contains(name + "(") && Method("Entities", name).Contains("r.U32()")));
+        Check("attachments: client sync and request retain kernel lookup", new[] { "ApplyAttachSync", "ApplyAttachReq" }.All(name => client.Contains(name + "(") && Method("Entities", name).Contains("ByNet.TryGetValue")));
+        Check("attachments: refusal notice belongs to attachment owner", Method("EntityAttachments", "TellPartOffRefused").Contains("Entities.TellAttachmentRefused("));
         Check("PhysLockSync: client routes to lock owner", client.Contains("case PhysLockSync: EntityLocks.ApplyPhysLock(r);"));
         Check("PhysLockSync: owner reads payload", Method("EntityLocks", "ApplyPhysLock").Contains("r.U8()"));
         foreach (var route in new[] { ("LeaseReq", "ServerLeaseRequest"), ("LeaseDone", "ServerLeaseDoneRequest") })

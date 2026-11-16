@@ -53,7 +53,7 @@ static partial class EntitySplitTest
         d.Entity.Proxy = true; d.Entity.HandDraw.Source = new object(); EntityDoors.RestoreStoredDoorAttaches();
         Check(d.At.point.parent == null && stored.Count == 1, "hand managed attachment waits for release");
         d.Entity.HandDraw.Reset(); d.Entity.Proxy = false; Entities._applyingAttach = true; EntityDoors.RestoreStoredDoorAttaches();
-        Check(d.At.point.parent == d.Frame && d.At.parentAtAttach && d.At.transform.localPosition == new Vector3(2, 3, 4) && Entities._applyingAttach, "restore rebuilds moving frame pose and preserves incoming attach guard"); Entities._applyingAttach = false;
+        Check(d.At.point.parent == d.Frame && d.At.parentAtAttach && d.At.transform.position == d.Frame.position + d.Frame.rotation * new Vector3(2, 3, 4) && Entities._applyingAttach, "restore rebuilds moving frame pose and preserves incoming attach guard"); Entities._applyingAttach = false;
         var bound = d.At.point; EntityDoors.BindStoredDoorAttach(401, bound);
         EntityDoors.RestoreStoredDoorAttaches(); Check(stored.Count == 1 && restored.Count == 0, "bound point keeps stored entry for a later stream placement");
         d.Entity.Root = null; EntityDoors.RestoreStoredDoorAttaches(); Check(stored.Count == 1, "stream out retains stored door attach");

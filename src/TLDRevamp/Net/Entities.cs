@@ -224,7 +224,7 @@ namespace TLDRevamp.Net
             foreach (var kv in _freedJoints) if (kv.Key != null) { try { SetJointFree(kv.Key, kv.Value, false); } catch { } }
             _freedJoints.Clear();
             EntityLocks.ResetGentleBodies();
-            _held.Clear(); _after.Clear(); DevHooks.CrashReset?.Invoke(); _carriedOff.Clear();
+            _held.Clear(); _after.Clear(); DevHooks.CrashReset?.Invoke(); EntityAttachments.ResetCarriedOff();
         }
 
         public static void Reset(bool wasHost = true)

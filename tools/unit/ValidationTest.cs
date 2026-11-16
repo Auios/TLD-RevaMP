@@ -15,6 +15,7 @@ static class ValidationTest
     static int Main()
     {
         Entities.ValidationTests(Check);
+        Entities.AttachmentValidationChecks();
         Console.WriteLine("ALL PASS (" + checks + " validation checks)");
         return 0;
     }

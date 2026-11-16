@@ -28,6 +28,7 @@ static partial class EntitySplitTest
     static void Main()
     {
         CargoInteractionChecks();
+        AttachmentsChecks();
         LocksChecks();
         LeasesChecks();
         HitchChecks();

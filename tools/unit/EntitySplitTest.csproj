@@ -3,6 +3,8 @@
   <ItemGroup>
     <Compile Include="EntityCargoInteractionChecks.cs" />
     <Compile Include="EntityCargoInteractionStubs.cs" />
+    <Compile Include="EntityAttachmentsChecks.cs" />
+    <Compile Include="EntityAttachmentsStubs.cs" />
     <Compile Include="EntityLeasesChecks.cs" />
     <Compile Include="EntityLeasesStubs.cs" />
     <Compile Include="EntitySplitTest.cs" />
@@ -110,6 +112,8 @@
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractUsablesBoundary.py&quot; &quot;$(IntermediateOutputPath)UsablesBoundary.g.cs&quot;" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractResyncEditsBoundary.py&quot; &quot;$(IntermediateOutputPath)ResyncEditsBoundary.g.cs&quot; $(ResyncEditsBaseline)" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractHitchBoundary.py&quot; &quot;$(IntermediateOutputPath)HitchFeature.g.cs&quot; feature" />
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractAttachmentsBoundary.py&quot; &quot;$(IntermediateOutputPath)AttachmentsFeature.g.cs&quot; $(AttachmentsBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)AttachmentsFeature.g.cs" /></ItemGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractLeasesBoundary.py&quot; &quot;$(IntermediateOutputPath)LeasesFeature.g.cs&quot; $(LeasesBaseline)" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)LeasesFeature.g.cs" /></ItemGroup>
     <ItemGroup><Compile Include="$(IntermediateOutputPath)HitchFeature.g.cs" /><Compile Include="$(IntermediateOutputPath)ResyncEditsBoundary.g*.cs" /><Compile Include="$(IntermediateOutputPath)UsablesBoundary.g*.cs" /><Compile Include="$(IntermediateOutputPath)TelemetryBoundary.g.cs" /><Compile Include="$(IntermediateOutputPath)RabbitWire.g.cs" /><Compile Include="$(IntermediateOutputPath)FeatureWire.g.cs" /><Compile Include="$(IntermediateOutputPath)AIWire.g.cs" /></ItemGroup>

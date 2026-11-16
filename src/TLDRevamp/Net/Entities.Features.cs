@@ -36,6 +36,35 @@ namespace TLDRevamp.Net
         internal static bool TryPushTarget(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
         // End cargo boundary.
 
+        // Attachment boundary. Identity, ownership and server records stay in the kernel.
+        internal static bool AttachmentCarriesParts => CarriedPartsShared;
+        internal static bool AttachmentApplying => _applyingAttach || _applyingState;
+        internal static bool AttachmentApplyingDetach => _applyingDetach;
+        internal static bool AttachmentPlayerActing => PlayerActing;
+        internal static Ent AttachmentRoot(tosaveitemscript item) => OwnEntity(item);
+        internal static Ent AttachmentGroup(tosaveitemscript item) => EditEntityOf(item);
+        internal static bool TryAttachmentCarrier(uint net, out Ent carrier) => ByNet.TryGetValue(net, out carrier) && Resolve(carrier);
+        internal static void AttachmentUsablesChanged(tosaveitemscript item) => LiveUsablesChanged(item);
+        internal static void RefreshAttachmentBodies(Ent entity) => ApplyProxyBodies(entity);
+        internal static void SendAttachment(Ent entity, attachablescript at, byte type = AttachSync) => SendAttach(entity, at, type);
+        internal static void SendAttachmentMessage(NetWriter writer, bool reliable) => ToServer(writer, reliable);
+        internal static void TellAttachmentRefused(int player, string notice) => Mp.Server?.Tell(player, notice);
+        internal static void WriteAttachPose(NetWriter writer, attachablescript at) => EntityAttachments.WriteAttachPose(writer, at);
+        private static bool ReadAttachPose(NetReader reader, out Vector3 position, out Quaternion rotation, out int[] path, out Vector3 point) => EntityAttachments.ReadAttachPose(reader, out position, out rotation, out path, out point);
+        internal static void ApplyAttachPose(Ent entity, attachablescript at, Vector3 position, Quaternion rotation) => EntityAttachments.ApplyAttachPose(entity, at, position, rotation);
+        internal static Transform AttachFrame(attachablescript at) => EntityAttachments.AttachFrame(at);
+        private static bool CarriedFar(attachablescript at, out Ent carrier) => EntityAttachments.CarriedFar(at, out carrier);
+        private static tosaveitemscript CarriedItem(uint net, int slot, int owner) => EntityAttachments.CarriedItem(net, slot, owner);
+        private static void NoteCarrier(attachablescript at) => EntityAttachments.NoteCarrier(at);
+        private static bool SentCarriedOff(tosaveitemscript item) => EntityAttachments.SentCarriedOff(item);
+        public static long CarriedOffApplied { get => EntityAttachments.CarriedOffApplied; set => EntityAttachments.CarriedOffApplied = value; }
+        public static long AttachPosesSent { get => EntityAttachments.AttachPosesSent; set => EntityAttachments.AttachPosesSent = value; }
+        public static long AttachPosesApplied { get => EntityAttachments.AttachPosesApplied; set => EntityAttachments.AttachPosesApplied = value; }
+        public static long AttachPosesBad { get => EntityAttachments.AttachPosesBad; set => EntityAttachments.AttachPosesBad = value; }
+        public static float AttachPoseOffLast { get => EntityAttachments.AttachPoseOffLast; set => EntityAttachments.AttachPoseOffLast = value; }
+        public static float AttachPoseOffMax { get => EntityAttachments.AttachPoseOffMax; set => EntityAttachments.AttachPoseOffMax = value; }
+        public static float AttachPoseAngLast { get => EntityAttachments.AttachPoseAngLast; set => EntityAttachments.AttachPoseAngLast = value; }
+        // End attachment boundary.
         // Lock boundary. Copy and ownership decisions stay in the kernel.
         internal static bool IsLockCopy(Component item) => IsProxy(item);
         internal static bool LockRidesParent(Ent entity) => RidesParent(entity);

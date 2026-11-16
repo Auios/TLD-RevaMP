@@ -33,7 +33,6 @@ def method(part, name, seats=False):
 target = Path(sys.argv[1])
 target.parent.mkdir(parents=True, exist_ok=True)
 target.write_text('using UnityEngine;\nusing System.Collections.Generic;\nnamespace TLDRevamp.Net { public static partial class Entities {\n'
-                  + method('Attach', 'WriteAttachPose') + '\n'
                   + method('Edits', 'EditTick') + '\n} }\n', encoding='utf-8', newline='\n')
 
 # Driver claims remain in the kernel. Exercise their real producer and arbitration bodies too.

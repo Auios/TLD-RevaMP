@@ -111,41 +111,10 @@ namespace TLDRevamp.Net
             return null;
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(Transform) })]
-        private static class AttachHook
-        {
-            [HarmonyLib.HarmonyPrefix]
-            private static void Prefix(attachablescript __instance, Transform Ppoint)
-            {
-                if (InSession && __instance.slot == null && Ppoint != null && EntityDoors.DoorAttachFrame(Ppoint.parent)) __instance.parentAtAttach = true;
-            }
-
-            /// Every attach overload and slot Craft ends here: the local player (or the game on its behalf) attached
-            /// a shared object this machine simulates → tell everyone.
-            [HarmonyLib.HarmonyPostfix]
-            private static void Postfix(attachablescript __instance)
-            {
-                if (InSession && __instance.attached) LiveUsablesChanged(__instance.tosave);
-                if (_applyingAttach || _applyingState || !InSession || __instance.tosave == null) return;
-                var pe = OwnEntity(__instance.tosave);
-                if (pe == null) return;
-                if (pe.Proxy)
-                {
-                    // the local player bolted a part this machine doesn't simulate (a pickup claim still on its way, or
-                    // overtaken: another player's car claimed it as it was set down): the owner does it — a local-only
-                    // attach stayed bolted here and loose everywhere else (buglist2m 3b, full sequence)
-                    if (AttachRequests && PlayerActing) { SendAttach(pe, __instance, AttachReq); ApplyProxyBodies(pe); pe.Ip = new PoseInterpolator(); }
-                    return;
-                }
-                SendAttach(pe, __instance);
-            }
-        }
-
         public static bool AttachReqBecomesSync = true;   // A/B: false = relayed as a request every copy ignores (before)
         public static bool StaleDetachDirect = true;    // A/B: false = through the reach and rate checks of ServerDetachReq
         public static bool StaleOwnerForwards = true;   // A/B: false = a bolt or an unbolt from a player who just lost the object is dropped (before)
         public static long StaleAttachesForwarded, StaleDetachesForwarded;
-        public static bool AttachRequests = true;   // A/B: false = before v0.66.4 (a copy bolted by the player stays local)
         public static long AttachReqsSent, AttachReqsApplied, AttachReqsRefused;
 
         private static void SendAttach(Ent pe, attachablescript at, byte type = AttachSync)
@@ -179,64 +148,8 @@ namespace TLDRevamp.Net
             if (type == AttachReq) AttachReqsSent++; else AttachesSent++;
             SessionLog.Event(type == AttachReq ? "attach-request" : "attach-sent", pe.NetId, parentNet, item: parentIdx, slot: rec.index, from: MyId, epoch: pe.Epoch);
         }
-        public static long AttachPosesSent, AttachPosesApplied, AttachPosesBad;
-        public static float AttachPoseOffLast, AttachPoseOffMax, AttachPoseAngLast;   // copy vs. the attacher's pose when it arrived (m, °)
 
-        internal static Transform AttachFrame(attachablescript at) => at.point == null ? null : at.point.parent != null ? at.point.parent : at.point;
         public static long SlotPosesSkipped;
-
-        private static void WriteAttachPose(NetWriter w, attachablescript at)
-        {
-            var f = AttachFrame(at);
-            if (f == null || at.slot != null) { w.U8(0); return; }
-            var t = at.transform; var iq = Quaternion.Inverse(f.rotation);
-            var lp = iq * (t.position - f.position); var lq = iq * t.rotation;
-            var path = EntityDoors.DoorAttachFrame(f) ? EntityDoors.AttachFramePath(at, f) : null;
-            w.U8(path != null ? (byte)2 : (byte)1); w.VarI32(EntityCodec.Mm(lp.x)); w.VarI32(EntityCodec.Mm(lp.y)); w.VarI32(EntityCodec.Mm(lp.z)); WriteRot(w, lq);
-            if (path != null)
-            {
-                w.VarU32((uint)path.Length);
-                foreach (int index in path) w.VarU32((uint)index);
-                var point = f.InverseTransformPoint(at.point.position);
-                w.VarI32(EntityCodec.Mm(point.x)); w.VarI32(EntityCodec.Mm(point.y)); w.VarI32(EntityCodec.Mm(point.z));
-                var e = OwnEntity(at.tosave);
-                if (e != null) EntityDoors.KeepDoorAttach(e.NetId, path, point, lp, lq, at.point);
-            }
-            AttachPosesSent++;
-        }
-
-        private static bool ReadAttachPose(NetReader r, out Vector3 lp, out Quaternion lq, out int[] path, out Vector3 point)
-        {
-            lp = point = Vector3.zero; lq = Quaternion.identity; path = null;
-            byte kind = r.U8();
-            if (kind == 0) return false;
-            if (kind != 1 && kind != 2) { r.Bad = true; return false; }
-            lp = new Vector3(r.VarI32() / 1000f, r.VarI32() / 1000f, r.VarI32() / 1000f);
-            lq = ReadRot(r);
-            if (kind == 2)
-            {
-                uint count = r.VarU32();
-                if (count > 64) { r.Bad = true; return false; }
-                path = new int[count];
-                for (int i = 0; i < path.Length; i++) path[i] = (int)r.VarU32();
-                point = new Vector3(r.VarI32() / 1000f, r.VarI32() / 1000f, r.VarI32() / 1000f);
-            }
-            if (r.Bad || lp.sqrMagnitude > 1e6f || !Finite(lp) || point.sqrMagnitude > 1e6f || !Finite(point)) { r.Bad = true; AttachPosesBad++; return false; }
-            return true;
-        }
-
-        private static void ApplyAttachPose(Ent pe, attachablescript at, Vector3 lp, Quaternion lq)
-        {
-            var f = AttachFrame(at);
-            if (f == null) return;
-            var t = at.transform;
-            Vector3 p = f.position + f.rotation * lp; Quaternion q = f.rotation * lq;
-            AttachPoseOffLast = (t.position - p).magnitude; AttachPoseAngLast = Quaternion.Angle(t.rotation, q);
-            if (AttachPoseOffLast > AttachPoseOffMax) AttachPoseOffMax = AttachPoseOffLast;
-            t.SetPositionAndRotation(p, q);
-            EntityDoors.BindStoredDoorAttach(pe.NetId, at.point);
-            AttachPosesApplied++;
-        }
 
         /// Server: a player bolted a part it doesn't own — to the part's owner (who may be the requester by now: its
         /// claim went through first — then it is a plain attach).
@@ -499,5 +412,99 @@ namespace TLDRevamp.Net
                                               + ",\"slotPosesSkipped\":" + SlotPosesSkipped + ",\"boltedGroupSkips\":" + BoltedGroupSkips +",\"posesSent\":" + AttachPosesSent + ",\"posesApplied\":" + AttachPosesApplied + ",\"posesBad\":" + AttachPosesBad
                                               + ",\"poseOffLast\":" + Json.Num(AttachPoseOffLast) + ",\"poseOffMax\":" + Json.Num(AttachPoseOffMax) + ",\"poseAngLast\":" + Json.Num(AttachPoseAngLast)
                                               + ",\"fails\":" + Json.Str(AttachFails) + ",\"detachSent\":" + DetachSyncsSent + ",\"detachApplied\":" + DetachSyncsApplied + ",\"unmountTrace\":" + Json.Str(UnmountTrace) + "}";
+    }
+
+    internal static partial class EntityAttachments
+    {
+        public static float AttachPoseOffLast, AttachPoseOffMax, AttachPoseAngLast;   // copy vs. the attacher's pose when it arrived (m, °)
+
+        public static long AttachPosesSent, AttachPosesApplied, AttachPosesBad;
+
+        public static bool AttachRequests = true;   // A/B: false = before v0.66.4 (a copy bolted by the player stays local)
+
+        [HarmonyLib.HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(Transform) })]
+        private static class AttachHook
+        {
+            [HarmonyLib.HarmonyPrefix, HarmonyLib.HarmonyPriority(HarmonyLib.Priority.Normal + 1)]
+            private static void Prefix(attachablescript __instance, Transform Ppoint)
+            {
+                if (Entities.InSession && __instance.slot == null && Ppoint != null && EntityDoors.DoorAttachFrame(Ppoint.parent)) __instance.parentAtAttach = true;
+            }
+
+            /// Every attach overload and slot Craft ends here: the local player (or the game on its behalf) attached
+            /// a shared object this machine simulates → tell everyone.
+            [HarmonyLib.HarmonyPostfix, HarmonyLib.HarmonyPriority(HarmonyLib.Priority.Normal + 1)]
+            private static void Postfix(attachablescript __instance)
+            {
+                if (Entities.InSession && __instance.attached) Entities.AttachmentUsablesChanged(__instance.tosave);
+                if (Entities.AttachmentApplying || !Entities.InSession || __instance.tosave == null) return;
+                var pe = Entities.AttachmentRoot(__instance.tosave);
+                if (pe == null) return;
+                if (pe.Proxy)
+                {
+                    // the local player bolted a part this machine doesn't simulate (a pickup claim still on its way, or
+                    // overtaken: another player's car claimed it as it was set down): the owner does it — a local-only
+                    // attach stayed bolted here and loose everywhere else (buglist2m 3b, full sequence)
+                    if (AttachRequests && Entities.AttachmentPlayerActing) { Entities.SendAttachment(pe, __instance, Entities.AttachReq); Entities.RefreshAttachmentBodies(pe); pe.Ip = new PoseInterpolator(); }
+                    return;
+                }
+                Entities.SendAttachment(pe, __instance);
+            }
+        }
+
+        internal static Transform AttachFrame(attachablescript at) => at.point == null ? null : at.point.parent != null ? at.point.parent : at.point;
+
+        internal static void WriteAttachPose(NetWriter w, attachablescript at)
+        {
+            var f = AttachFrame(at);
+            if (f == null || at.slot != null) { w.U8(0); return; }
+            var t = at.transform; var iq = Quaternion.Inverse(f.rotation);
+            var lp = iq * (t.position - f.position); var lq = iq * t.rotation;
+            var path = EntityDoors.DoorAttachFrame(f) ? EntityDoors.AttachFramePath(at, f) : null;
+            w.U8(path != null ? (byte)2 : (byte)1); w.VarI32(EntityCodec.Mm(lp.x)); w.VarI32(EntityCodec.Mm(lp.y)); w.VarI32(EntityCodec.Mm(lp.z)); EntityCodec.WriteRot(w, lq);
+            if (path != null)
+            {
+                w.VarU32((uint)path.Length);
+                foreach (int index in path) w.VarU32((uint)index);
+                var point = f.InverseTransformPoint(at.point.position);
+                w.VarI32(EntityCodec.Mm(point.x)); w.VarI32(EntityCodec.Mm(point.y)); w.VarI32(EntityCodec.Mm(point.z));
+                var e = Entities.AttachmentRoot(at.tosave);
+                if (e != null) EntityDoors.KeepDoorAttach(e.NetId, path, point, lp, lq, at.point);
+            }
+            AttachPosesSent++;
+        }
+
+        internal static bool ReadAttachPose(NetReader r, out Vector3 lp, out Quaternion lq, out int[] path, out Vector3 point)
+        {
+            lp = point = Vector3.zero; lq = Quaternion.identity; path = null;
+            byte kind = r.U8();
+            if (kind == 0) return false;
+            if (kind != 1 && kind != 2) { r.Bad = true; return false; }
+            lp = new Vector3(r.VarI32() / 1000f, r.VarI32() / 1000f, r.VarI32() / 1000f);
+            lq = EntityCodec.ReadRot(r);
+            if (kind == 2)
+            {
+                uint count = r.VarU32();
+                if (count > 64) { r.Bad = true; return false; }
+                path = new int[count];
+                for (int i = 0; i < path.Length; i++) path[i] = (int)r.VarU32();
+                point = new Vector3(r.VarI32() / 1000f, r.VarI32() / 1000f, r.VarI32() / 1000f);
+            }
+            if (r.Bad || lp.sqrMagnitude > 1e6f || !Entities.IsFinite(lp) || point.sqrMagnitude > 1e6f || !Entities.IsFinite(point)) { r.Bad = true; AttachPosesBad++; return false; }
+            return true;
+        }
+
+        internal static void ApplyAttachPose(Entities.Ent pe, attachablescript at, Vector3 lp, Quaternion lq)
+        {
+            var f = AttachFrame(at);
+            if (f == null) return;
+            var t = at.transform;
+            Vector3 p = f.position + f.rotation * lp; Quaternion q = f.rotation * lq;
+            AttachPoseOffLast = (t.position - p).magnitude; AttachPoseAngLast = Quaternion.Angle(t.rotation, q);
+            if (AttachPoseOffLast > AttachPoseOffMax) AttachPoseOffMax = AttachPoseOffLast;
+            t.SetPositionAndRotation(p, q);
+            EntityDoors.BindStoredDoorAttach(pe.NetId, at.point);
+            AttachPosesApplied++;
+        }
     }
 }

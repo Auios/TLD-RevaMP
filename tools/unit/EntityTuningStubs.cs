@@ -115,11 +115,7 @@ namespace TLDRevamp.Net
         internal static string LastEdit;
         internal static void MarkEdit(tosaveitemscript it, bool fromTank = false, string kind = "") => LastEdit = kind;
         internal static Ent SharedGroupOf(tosaveitemscript it) => ByNet.Values.FirstOrDefault(e => e.Items.Contains(it));
-        internal static Ent OwnEntity(tosaveitemscript it) => SharedGroupOf(it);
-        internal static long AttachPosesBad;
-        internal static long AttachPosesSent;
-        internal static Transform AttachFrame(attachablescript at) => at.point == null ? null : at.point.parent ?? at.point;
-        internal static void ApplyAttachPose(Ent e, attachablescript at, Vector3 p, Quaternion q) { at.transform.localPosition = p; at.transform.localRotation = q; }
+        internal static Ent OwnEntity(tosaveitemscript it) => ByNet.Values.FirstOrDefault(e => e.Root == it);
         internal static void TelemetryRender() { }
     }
     internal static partial class ItemSnapshot { internal static itemDataClass Capture(tosaveitemscript it) => new itemDataClass { car = new List<save_carscript> { new save_carscript() } }; }
