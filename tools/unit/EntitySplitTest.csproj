@@ -2,6 +2,10 @@
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
     <Compile Include="EntitySplitTest.cs" />
+    <Compile Include="EntityLocksStubs.cs" />
+    <Compile Include="EntityLocksChecks.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.PhysLock.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.LockPose.cs" />
     <Compile Include="EntityResyncEditsStubs.cs" />
     <Compile Include="EntityResyncEditsChecks.cs" />
     <Compile Include="EntityHitchChecks.cs" />

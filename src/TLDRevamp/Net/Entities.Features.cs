@@ -4,6 +4,49 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        // Lock boundary. Copy and ownership decisions stay in the kernel.
+        internal static bool IsLockCopy(Component item) => IsProxy(item);
+        internal static bool LockRidesParent(Ent entity) => RidesParent(entity);
+        internal static void RefreshLockBodies(Ent entity) => ApplyProxyBodies(entity);
+        internal static void ShowLockCollisions(Ent entity) => ShowCarriedCollisions(entity);
+        internal static bool LockContainerOwnedBy(Transform root, int owner)
+        {
+            var container = ProxyOf(root);
+            return container != null && container.OwnerId == owner;
+        }
+        internal static bool LockContainerMotion(Transform root, int owner, out bool sameOwner, out Vector3 velocity, out PoseInterpolator pose)
+        {
+            var container = ProxyOf(root);
+            sameOwner = container != null && container.OwnerId == owner;
+            velocity = container != null ? container.LastVel : default;
+            pose = container != null ? container.Ip : null;
+            return container != null;
+        }
+        internal static bool LockScanAllows(mountStuff scanning, pickupable item)
+        {
+            var ce = IsProxy(scanning) ? EntOfRoot(scanning.transform.root) : null;
+            int _scanCarOwner = ce != null ? ce.OwnerId : -1;
+            var pe = IsProxy(item) ? EntOfRoot(item.transform.root) : null;
+            bool ok = _scanCarOwner < 0 ? pe == null                          // our container: our own things only
+                                    : pe != null && pe.OwnerId == _scanCarOwner;  // a copy's: the car owner's things only
+            // ... and only what lies there: what the owner carries in a hand or an inventory, sitting in or walking through
+            // the car, was held by the copy of the car on this screen only (itemchaos 2026-10-31)
+            if (ok && pe != null && (pe.Held || pe.Stored)) ok = false;
+            return ok;
+        }
+        internal static bool LockOverlapsCar(Bounds b, Transform own)
+        {
+            int n = Physics.OverlapBoxNonAlloc(b.center, b.extents + Vector3.one * 0.1f, _clearHits, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+            {
+                var r = _clearHits[i].transform.root;
+                if (r == own) continue;
+                if (r.GetComponent<carscript>() != null) return true;
+            }
+            return false;
+        }
+        // End lock boundary.
+
         internal static float EditBackHold => EditHold;
         internal static bool RequestEditBack(uint net, uint item)
         {

@@ -223,8 +223,7 @@ namespace TLDRevamp.Net
         {
             foreach (var kv in _freedJoints) if (kv.Key != null) { try { SetJointFree(kv.Key, kv.Value, false); } catch { } }
             _freedJoints.Clear();
-            foreach (var kv in _gentle) if (kv.Key != null) kv.Key.maxDepenetrationVelocity = kv.Value.was;
-            _gentle.Clear();
+            EntityLocks.ResetGentleBodies();
             _held.Clear(); _after.Clear(); DevHooks.CrashReset?.Invoke(); _carriedOff.Clear();
         }
 
@@ -251,7 +250,7 @@ namespace TLDRevamp.Net
                 }
             }
             ProxyItems.Clear(); EntityCarSignals.ResetSignals(); _rideCars.Clear(); CargoGhostNets.Clear(); EntityRagdolls.ResetCopies(); EntityEffects.ResetSpraying();
-            HostPhysicsLock = -1; _physLockLast = -1;   // a client: its own setting again
+            EntityLocks.ResetHostSetting();   // a client: its own setting again
             EntityWeather.StormReset();   // a client keeps the storms it has: its own from now
             ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();
             foreach (var kv in DisabledBuiltIn)
@@ -445,7 +444,7 @@ namespace TLDRevamp.Net
             EntityRadio.RadioTick(dt);
             EntitySeats.KeyTick(); DevHooks.KeyTestTick?.Invoke();
             HitchTick(); EditBackTick();
-            PhysLockTick(dt);
+            EntityLocks.PhysLockTick(dt);
             PushGripTick();
             EntityWeather.StormTick(dt);
             EntityWorldClock.ServerTimeTick(dt);
@@ -467,7 +466,7 @@ namespace TLDRevamp.Net
             EntityAI.AiTick();
             EntityRabbits.RabbitTick();
             EntityHands.WornTick();
-            GentleTick();
+            EntityLocks.GentleTick();
             ClaimTraceTick();
             ResyncFrameTick(dt);
             // the stored-away objects' far records: every DormantEveryFrames frames, not every frame (Entities.Placed)
@@ -489,8 +488,8 @@ namespace TLDRevamp.Net
                 // interpolator, simulated, at rest, bolted on — before the skip below: a part bolted on in a container)
                 bool wornRides = WornRides(e);   // on its wearer's head here: placed by WornLate
                 TickPoseLock(e);
-                if (e.Proxy && !e.PoseLocked && (e.CarriedBy == 0 || (CarriedLeavesLock && e.Held)) && !wornRides) CheckCopyLock(e, now);
-                if (e.ReleaseGhost && (e.Proxy || GhostEndsOnOwn)) ReleaseGhostTick(e);
+                if (e.Proxy && !e.PoseLocked && (e.CarriedBy == 0 || (CarriedLeavesLock && e.Held)) && !wornRides) EntityLocks.CheckCopyLock(e, now);
+                if (e.ReleaseGhost && (e.Proxy || GhostEndsOnOwn)) EntityLocks.ReleaseGhostTick(e);
                 bool attachedRides = RidesBolted(e) || AttachedCarPart(e);
                 if (attachedRides && e.Proxy) continue;
                 if (!e.Proxy)
@@ -1229,7 +1228,7 @@ namespace TLDRevamp.Net
                 case ShotgunIn: EntitySeats.ApplyShotgun(r); break;
                 case PushIn: ApplyPush(r); break;
                 case RadioSync: EntityRadio.ApplyRadio(r); break;
-                case PhysLockSync: ApplyPhysLock(r); break;
+                case PhysLockSync: EntityLocks.ApplyPhysLock(r); break;
                 case StormSync: EntityWeather.ApplyStorms(r); break;
                 case AttachSync: ApplyAttachSync(r); break;
                 case AttachReq: ApplyAttachReq(r); break;

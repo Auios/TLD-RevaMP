@@ -82,7 +82,6 @@ namespace TLDRevamp.Net
         internal static void StopBodyMotion(Ent e) { Stops++; e.MovedByBody = false; }
         private static void ExitPhysical(Ent e, Rigidbody body) { Exits++; e.Physical = false; }
         internal static void Coast(Ent e) { }
-        private static bool LockedWorld(Ent e, out Vector3d p, out Quaternion q) { p = default; q = Quaternion.identity; return false; }
         private static bool LooseRelease(uint previous, uint car, bool held, bool stored) => previous != 0 && car == 0 && !held && !stored;
         private static bool ClaimCargo(Ent e, bool released = false, ClaimReason reason = ClaimReason.CargoNear) => TestCargoClaim;
     }

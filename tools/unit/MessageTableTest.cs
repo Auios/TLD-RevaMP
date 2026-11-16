@@ -74,6 +74,8 @@ static class MessageTableTest
             return Regex.Match(bodies, @"void " + name + @"\(.*?\n        \}\n", RegexOptions.Singleline).Value;
         }
         string server = Method("Entities", "ServerReceive"), client = Method("Entities", "ClientReceive");
+        Check("PhysLockSync: client routes to lock owner", client.Contains("case PhysLockSync: EntityLocks.ApplyPhysLock(r);"));
+        Check("PhysLockSync: owner reads payload", Method("EntityLocks", "ApplyPhysLock").Contains("r.U8()"));
         foreach (string name in new[] { "Command", "Freeze", "Frozen", "Result" })
         {
             string handler = "ApplyHitch" + name;

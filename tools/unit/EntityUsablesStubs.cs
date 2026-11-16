@@ -39,7 +39,7 @@ namespace TLDRevamp.Net
     }
     public static partial class Entities
     {
-        internal const byte Add = 22, Resync = 31, PartDetached = 27, AttachSync = 41, PhysLockSync = 55, MemberGone = 86,
+        internal const byte Add = 22, Resync = 31, PartDetached = 27, AttachSync = 41, MemberGone = 86,
             HandoverState = 59, Refetch = 58;
         internal static readonly Dictionary<PoiKey, PoiState> KnownPoiUsables = new Dictionary<PoiKey, PoiState>();
         internal static readonly List<string> TpaRows = new List<string>();

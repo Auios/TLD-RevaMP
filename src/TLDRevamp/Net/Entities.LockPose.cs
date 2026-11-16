@@ -4,6 +4,17 @@ using System.Runtime.CompilerServices;
 
 namespace TLDRevamp.Net
 {
+    internal static partial class EntityLocks
+    {
+        private sealed class MountCache { internal mountStuff[] Mounts; }
+        private static readonly ConditionalWeakTable<tosaveitemscript, MountCache> ContainerMounts = new ConditionalWeakTable<tosaveitemscript, MountCache>();
+        internal static mountStuff[] LockMounts(tosaveitemscript item) =>
+            ContainerMounts.GetValue(item, it => new MountCache {
+                Mounts = System.Array.FindAll(it.GetComponentsInChildren<mountStuff>(true), m => m.parentTosave == it)
+            }).Mounts;
+
+    }
+
     public static partial class Entities
     {
         private sealed class LockFrameCache
@@ -19,8 +30,6 @@ namespace TLDRevamp.Net
             internal int Item = -1, Index = -1, Count, Revision;
         }
         private static readonly ConditionalWeakTable<Ent, LockFrameCache> LockFrames = new ConditionalWeakTable<Ent, LockFrameCache>();
-        private sealed class MountCache { internal mountStuff[] Mounts; }
-        private static readonly ConditionalWeakTable<tosaveitemscript, MountCache> ContainerMounts = new ConditionalWeakTable<tosaveitemscript, MountCache>();
         private static int LockBindingRevision;
 
         private static bool LockChainMatches(LockFrameCache cache, mountStuff mount)
@@ -93,10 +102,7 @@ namespace TLDRevamp.Net
                 }
         }
 
-        internal static mountStuff[] LockMounts(tosaveitemscript item) =>
-            ContainerMounts.GetValue(item, it => new MountCache {
-                Mounts = System.Array.FindAll(it.GetComponentsInChildren<mountStuff>(true), m => m.parentTosave == it)
-            }).Mounts;
+        internal static mountStuff[] LockMounts(tosaveitemscript item) => EntityLocks.LockMounts(item);
 
         private static void RebindPoseLocks(Ent parent)
         {

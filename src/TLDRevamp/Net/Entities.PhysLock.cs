@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -14,31 +15,38 @@ namespace TLDRevamp.Net
     /// The same here: the host sends its setting when it changes and every PhysLockResendS (a player who just joined);
     /// on a client the game's checks read the host's value instead of the local one. The client's own setting is
     /// never changed - it is its setting again when the session ends.
-    public static partial class Entities
+    internal static partial class EntityLocks
     {
-        public const byte PhysLockSync = 55;
+        private static readonly NetWriter W = new NetWriter();
         public static float PhysLockResendS = 5f;
         public static int HostPhysicsLock = -1;   // a client: the host's setting (-1: none received)
         public static long PhysLockSent, PhysLockApplied, PhysLockReads;
         private static int _physLockLast = -1;
         private static float _physLockAcc;
 
-        private static void PhysLockTick(float dt)
+        internal static void ResetHostSetting() { HostPhysicsLock = -1; _physLockLast = -1; }
+        internal static void ResetGentleBodies()
         {
-            if (!IsHost || settingsscript.s == null || settingsscript.s.S == null) return;
+            foreach (var kv in _gentle) if (kv.Key != null) kv.Key.maxDepenetrationVelocity = kv.Value.was;
+            _gentle.Clear();
+        }
+
+        internal static void PhysLockTick(float dt)
+        {
+            if (!Entities.IsHost || settingsscript.s == null || settingsscript.s.S == null) return;
             int v = settingsscript.s.S.IPhysicsLock;
             _physLockAcc += dt;
             if (v == _physLockLast && _physLockAcc < PhysLockResendS) return;
             _physLockLast = v; _physLockAcc = 0f;
-            W.Reset(); W.U8(PhysLockSync); W.U8((byte)Mathf.Clamp(v, 0, 255));
-            ServerSendAll(W, true, 0);
+            W.Reset(); W.U8(Entities.PhysLockSync); W.U8((byte)Mathf.Clamp(v, 0, 255));
+            Entities.SendToPeers(W, true, 0);
             PhysLockSent++;
         }
 
-        private static void ApplyPhysLock(NetReader r)
+        internal static void ApplyPhysLock(NetReader r)
         {
             int v = r.U8();
-            if (r.Bad || IsHost) return;
+            if (r.Bad || Entities.IsHost) return;
             HostPhysicsLock = v;
             PhysLockApplied++;
         }
@@ -46,7 +54,7 @@ namespace TLDRevamp.Net
         /// What the game's checks read in place of settingsscript.s.S.IPhysicsLock.
         public static int PhysicsLockSetting(settingsscript.setting s)
         {
-            if (HostPhysicsLock >= 0 && InSession && !IsHost) { PhysLockReads++; return HostPhysicsLock; }
+            if (HostPhysicsLock >= 0 && Entities.InSession && !Entities.IsHost) { PhysLockReads++; return HostPhysicsLock; }
             return s.IPhysicsLock;
         }
 
@@ -70,7 +78,7 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static void Prefix(mountStuff __instance)
             {
-                if (!CopyContainersInert || !InSession) return;
+                if (!CopyContainersInert || !Entities.InSession) return;
                 _scanning = __instance;
                 _containerScan = true;
             }
@@ -140,8 +148,7 @@ namespace TLDRevamp.Net
             if (!StoredRidesCar || e.Held || p == null || p.physlock == null) return false;
             var cr = p.physlock.transform.root;
             if (cr == e.Root.transform) return false;
-            var ce = ProxyOf(cr);
-            return ce != null && ce.OwnerId == e.OwnerId && !OwnerHasItOut(e, p);
+            return Entities.LockContainerOwnedBy(cr, e.OwnerId) && !OwnerHasItOut(e, p);
         }
 
         /// Taken out by its owner and set down next to the container: the copy still rode the container here until its
@@ -169,24 +176,24 @@ namespace TLDRevamp.Net
             var root = p.physlock.transform.root;
             var rt = root.GetComponent<tosaveitemscript>();
             if (rt == null || root == e.Root.transform) return false;
-            var ce = ProxyOf(root);
+            bool copy = Entities.LockContainerMotion(root, e.OwnerId, out bool sameOwner, out var velocity, out var pose);
             // a moving container: nothing is set down beside it, and the item's and the car's latest states are up to a
             // state apart (50 ms = 0.7 m at 50 km/h) - measured against the storing box the lamp left a car at speed
             // and trailed it 6.7 m (takeover.py B). The 5 m rule alone, as before.
             float still = ContainerStillMs;
-            if (ce != null && (ce.LastVel.sqrMagnitude > still * still || e.LastVel.sqrMagnitude > still * still)) return false;
+            if (copy && (velocity.sqrMagnitude > still * still || e.LastVel.sqrMagnitude > still * still)) return false;
             Vector3 local;
-            if (ce != null && ce.OwnerId == e.OwnerId && ce.Ip != null && ce.Ip.Ready)
+            if (sameOwner && pose != null && pose.Ready)
             {
-                var d = (Vector3)(e.Ip.LastPos - ce.Ip.LastPos);
+                var d = (Vector3)(e.Ip.LastPos - pose.LastPos);
                 var sc = root.lossyScale;
-                local = Quaternion.Inverse(ce.Ip.LastRot) * d;
+                local = Quaternion.Inverse(pose.LastRot) * d;
                 local = new Vector3(local.x / Mathf.Max(1e-3f, sc.x), local.y / Mathf.Max(1e-3f, sc.y), local.z / Mathf.Max(1e-3f, sc.z));
             }
             else
             {
                 var rb = root.GetComponent<Rigidbody>();
-                if (ce == null && rb != null && !rb.isKinematic && rb.velocity.sqrMagnitude > still * still) return false;
+                if (!copy && rb != null && !rb.isKinematic && rb.velocity.sqrMagnitude > still * still) return false;
                 local = root.InverseTransformPoint(mainscript.UnityPosFromGlobal(e.Ip.LastPos));
             }
             bool inside;
@@ -243,7 +250,7 @@ namespace TLDRevamp.Net
         public static bool CarriedLeavesLock = true;
         public static float ReleaseClearS = 0.5f;
         public static long CopyLocksDroppedAttached, ReleasesPlaced, ReleaseGhostsCleared, AttachedStoresRefused, LockRecordsDropped;
-        private static void CheckCopyLock(Ent e, double now)
+        internal static void CheckCopyLock(Ent e, double now)
         {
             var p = e.Root.P;
             if (!CopyLockRelease || p == null || p.physlock == null) { e.LockOffSince = 0; return; }
@@ -251,7 +258,7 @@ namespace TLDRevamp.Net
             if (at != null && at.attached)
             {
                 e.LockOffSince = 0;
-                if (!CopyLockSafe) { if (RidesParent(e)) return; }   // v0.66.7: a part riding its parent was skipped, the rest went on
+                if (!CopyLockSafe) { if (Entities.LockRidesParent(e)) return; }   // v0.66.7: a part riding its parent was skipped, the rest went on
                 else { DropAttachedLock(e, p); return; }
             }
             if (e.Ip == null || !e.Ip.Ready) { e.LockOffSince = 0; return; }
@@ -267,7 +274,7 @@ namespace TLDRevamp.Net
             string where = p.physlock.transform.root.name;
             float off = Vector3.Distance(shownUnity, held);
             p.UnPhysicsLock();
-            ApplyProxyBodies(e);
+            Entities.RefreshLockBodies(e);
             if (CopyLockSafe) PlaceReleased(e, shownUnity, e.CarriedBy != 0 ? e.CarriedGlobalRot : e.Ip.LastRot);
             CopyLocksReleased++;
             if (CopyLocksReleased <= 20) Plugin.Log.LogWarning($"copy taken out of a container here: {e.Root.name} net {e.NetId} in {where} — its owner has it {off:F0} m away");
@@ -313,7 +320,7 @@ namespace TLDRevamp.Net
         /// collisions it never got clear: a can put back in a pickup bed fell through the bed and the chassis, 200-300 m
         /// down (review 2026-10-22, #18). Inside a car it comes out of the car's colliders gently instead of popping out.
         public static float OwnGhostDepenetration = 1f;   // m/s
-        private static void EndGhostOnOwn(Ent e)
+        internal static void EndGhostOnOwn(Ent e)
         {
             if (e.Root != null && ReleaseOverlapsCar(e))
             {
@@ -327,14 +334,14 @@ namespace TLDRevamp.Net
                 GhostsEndedInCar++;
             }
             e.ReleaseGhost = false;
-            ShowCarriedCollisions(e);
+            Entities.ShowLockCollisions(e);
             GhostsEndedOnOwn++;
         }
         public static long GhostsEndedInCar;
         public static float GentleS = 3f;   // the gentle way out of the car lasts this long, then the body's own value again
         private static readonly System.Collections.Generic.Dictionary<Rigidbody, (float was, float until)> _gentle = new System.Collections.Generic.Dictionary<Rigidbody, (float, float)>();
         private static readonly System.Collections.Generic.List<Rigidbody> _gentleDone = new System.Collections.Generic.List<Rigidbody>();
-        private static void GentleTick()
+        internal static void GentleTick()
         {
             if (_gentle.Count == 0) return;
             float now = Time.realtimeSinceStartup;
@@ -343,10 +350,9 @@ namespace TLDRevamp.Net
             _gentleDone.Clear();
         }
 
-        private static readonly Collider[] _clearHits = new Collider[64];
         /// Per frame for a released copy: collisions back once no car's collider has overlapped it for ReleaseClearS
         /// (an object simulated here: as soon as it is clear, since it falls with no collisions meanwhile).
-        private static void ReleaseGhostTick(Ent e)
+        internal static void ReleaseGhostTick(Ent e)
         {
             if (e.Root == null) return;
             float now = Time.realtimeSinceStartup;
@@ -355,7 +361,7 @@ namespace TLDRevamp.Net
             if (e.ReleaseClearSince < 0f) { e.ReleaseClearSince = now; return; }
             if (now - e.ReleaseClearSince < ReleaseClearS) return;
             e.ReleaseGhost = false;
-            ShowCarriedCollisions(e);
+            Entities.ShowLockCollisions(e);
             ReleaseGhostsCleared++;
         }
 
@@ -369,14 +375,7 @@ namespace TLDRevamp.Net
                 if (!any) { b = c.bounds; any = true; } else b.Encapsulate(c.bounds);
             }
             if (!any) return false;
-            int n = Physics.OverlapBoxNonAlloc(b.center, b.extents + Vector3.one * 0.1f, _clearHits, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
-            for (int i = 0; i < n; i++)
-            {
-                var r = _clearHits[i].transform.root;
-                if (r == own) continue;
-                if (r.GetComponent<carscript>() != null) return true;
-            }
-            return false;
+            return Entities.LockOverlapsCar(b, own);
         }
 
         [HarmonyPatch(typeof(mountStuff), nameof(mountStuff.QuickFreeze))]
@@ -385,7 +384,7 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static bool Prefix(mountStuff __instance)
             {
-                if (!InSession || !IsProxy(__instance)) return true;
+                if (!Entities.InSession || !Entities.IsLockCopy(__instance)) return true;
                 if (StoreTrace > 0)
                 {
                     var g = mainscript.GlobalFromUnityPos(__instance.transform.root.position);
@@ -400,6 +399,8 @@ namespace TLDRevamp.Net
         [HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Detach))]
         private static class GluedCraftedOff
         {
+            // Clear crafted before the detach broadcast captures the released part, as under Entities.
+            [HarmonyPriority(Priority.Normal + 1)]
             [HarmonyPostfix]
             private static void Postfix(attachablescript __instance, bool __runOriginal)
             {
@@ -424,21 +425,59 @@ namespace TLDRevamp.Net
                 }
                 // attached is never stored: the game's own scan checks it, a container's saved contents don't — a copy of
                 // a car placed again stored a part that its owner had bolted back on meanwhile (partsfar.py far)
-                if (CopyLockSafe && InSession && _p != null && _p.tosave != null && _p.tosave.attachable != null && _p.tosave.attachable.attached)
+                if (CopyLockSafe && Entities.InSession && _p != null && _p.tosave != null && _p.tosave.attachable != null && _p.tosave.attachable.attached)
                 { AttachedStoresRefused++; return false; }
                 if (!_containerScan || _p == null || _scanning == null) return true;
-                var ce = IsProxy(_scanning) ? EntOfRoot(_scanning.transform.root) : null;
-                int _scanCarOwner = ce != null ? ce.OwnerId : -1;
-                var pe = IsProxy(_p) ? EntOfRoot(_p.transform.root) : null;
-                bool ok = _scanCarOwner < 0 ? pe == null                                  // our container: our own things only
-                                            : pe != null && pe.OwnerId == _scanCarOwner;  // a copy's: the car owner's things only
-                // ... and only what lies there: what the owner carries in a hand or an inventory, sitting in or walking through
-                // the car, was held by the copy of the car on this screen only (itemchaos 2026-10-31)
-                if (ok && pe != null && (pe.Held || pe.Stored)) ok = false;
+                bool ok = Entities.LockScanAllows(_scanning, _p);
                 if (ok) return true;
                 ContainerStoresRefused++;
                 return false;
             }
         }
+    }
+
+    public static partial class Entities
+    {
+        private static readonly Collider[] _clearHits = new Collider[64];
+        public static long PhysLockSent { get => EntityLocks.PhysLockSent; set => EntityLocks.PhysLockSent = value; }
+        public static long PhysLockApplied { get => EntityLocks.PhysLockApplied; set => EntityLocks.PhysLockApplied = value; }
+        public static long PhysLockReads { get => EntityLocks.PhysLockReads; set => EntityLocks.PhysLockReads = value; }
+        public static long CopyLocksReleased { get => EntityLocks.CopyLocksReleased; set => EntityLocks.CopyLocksReleased = value; }
+        public static long CopyStartFreezesSkipped { get => EntityLocks.CopyStartFreezesSkipped; set => EntityLocks.CopyStartFreezesSkipped = value; }
+        public const byte PhysLockSync = 55;
+        public static float PhysLockResendS { get => EntityLocks.PhysLockResendS; set => EntityLocks.PhysLockResendS = value; }
+        public static int HostPhysicsLock { get => EntityLocks.HostPhysicsLock; set => EntityLocks.HostPhysicsLock = value; }
+        public static bool CopyContainersInert { get => EntityLocks.CopyContainersInert; set => EntityLocks.CopyContainersInert = value; }
+        public static long ContainerStoresRefused { get => EntityLocks.ContainerStoresRefused; set => EntityLocks.ContainerStoresRefused = value; }
+        public static int StoreTrace { get => EntityLocks.StoreTrace; set => EntityLocks.StoreTrace = value; }
+        public static bool CopyStartFreezeOff { get => EntityLocks.CopyStartFreezeOff; set => EntityLocks.CopyStartFreezeOff = value; }
+        public static bool CopyLockRelease { get => EntityLocks.CopyLockRelease; set => EntityLocks.CopyLockRelease = value; }
+        public static float CopyLockReleaseM { get => EntityLocks.CopyLockReleaseM; set => EntityLocks.CopyLockReleaseM = value; }
+        public static float CopyLockReleaseS { get => EntityLocks.CopyLockReleaseS; set => EntityLocks.CopyLockReleaseS = value; }
+        public static bool CopyLockSafe { get => EntityLocks.CopyLockSafe; set => EntityLocks.CopyLockSafe = value; }
+        public static bool CopyLockByContainer { get => EntityLocks.CopyLockByContainer; set => EntityLocks.CopyLockByContainer = value; }
+        public static bool StoredRidesCar { get => EntityLocks.StoredRidesCar; set => EntityLocks.StoredRidesCar = value; }
+        public static long StoredRides { get => EntityLocks.StoredRides; set => EntityLocks.StoredRides = value; }
+        public static bool CopyLockByBox { get => EntityLocks.CopyLockByBox; set => EntityLocks.CopyLockByBox = value; }
+        public static float ContainerMarginM { get => EntityLocks.ContainerMarginM; set => EntityLocks.ContainerMarginM = value; }
+        public static float ContainerUpM { get => EntityLocks.ContainerUpM; set => EntityLocks.ContainerUpM = value; }
+        public static float ContainerStillMs { get => EntityLocks.ContainerStillMs; set => EntityLocks.ContainerStillMs = value; }
+        public static bool MountBox { get => EntityLocks.MountBox; set => EntityLocks.MountBox = value; }
+        public static float MountMarginM { get => EntityLocks.MountMarginM; set => EntityLocks.MountMarginM = value; }
+        public static float MountUpM { get => EntityLocks.MountUpM; set => EntityLocks.MountUpM = value; }
+        public static bool CarriedLeavesLock { get => EntityLocks.CarriedLeavesLock; set => EntityLocks.CarriedLeavesLock = value; }
+        public static float ReleaseClearS { get => EntityLocks.ReleaseClearS; set => EntityLocks.ReleaseClearS = value; }
+        public static long AttachedStoresRefused { get => EntityLocks.AttachedStoresRefused; set => EntityLocks.AttachedStoresRefused = value; }
+        public static long LockRecordsDropped { get => EntityLocks.LockRecordsDropped; set => EntityLocks.LockRecordsDropped = value; }
+        public static bool GhostEndsOnOwn { get => EntityLocks.GhostEndsOnOwn; set => EntityLocks.GhostEndsOnOwn = value; }
+        public static float OwnGhostDepenetration { get => EntityLocks.OwnGhostDepenetration; set => EntityLocks.OwnGhostDepenetration = value; }
+        public static float GentleS { get => EntityLocks.GentleS; set => EntityLocks.GentleS = value; }
+        public static int PhysicsLockSetting(settingsscript.setting s) => EntityLocks.PhysicsLockSetting(s);
+        internal static bool LockedAway(Ent e) => EntityLocks.LockedAway(e);
+        internal static bool RidesOwnersContainer(Ent e) => EntityLocks.RidesOwnersContainer(e);
+        internal static bool OwnerHasItOut(Ent e, pickupable p) => EntityLocks.OwnerHasItOut(e, p);
+        internal static Vector3 ObservedDiagLocal => EntityLocks.ObservedDiagLocal;
+        internal static Bounds ObservedDiagBox => EntityLocks.ObservedDiagBox;
+        private static void EndGhostOnOwn(Ent e) => EntityLocks.EndGhostOnOwn(e);
     }
 }

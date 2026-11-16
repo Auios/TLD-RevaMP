@@ -73,7 +73,7 @@ namespace TLDRevamp.Net
     internal static class PlaceDigest { internal const int Bytes = 6; }
     public static partial class Entities
     {
-        internal static long RepairsAsked, RepairsHealed, RepairsFailed, RepairsRun, ContainerStoresRefused, AttachedStoresRefused;
+        internal static long RepairsAsked, RepairsHealed, RepairsFailed, RepairsRun;
         internal static bool CensusRepairs;
         internal static List<string> CensusTestRows = new List<string> { "(car) = car", "slot = wheel" };
         internal static List<string> RepairRows(Ent e) => CensusTestRows;
@@ -81,7 +81,7 @@ namespace TLDRevamp.Net
         internal static void CheckCopyPlace(Ent e, int asker, ushort x, ushort y, ushort z) { }
         internal static int FocusRefreshes; internal static bool LastFocusForced;
         private static void TelemetryFocusTick(double now, bool force = false) { FocusRefreshes++; LastFocusForced = force; }
-        private static bool IsProxy(mountStuff m) => false;
+        private static bool IsProxy(mountStuff m) => IsProxy((Component)m);
         public sealed partial class Ent
         {
             public uint ParentNet; public bool PartsColOff, SentAtRest;
