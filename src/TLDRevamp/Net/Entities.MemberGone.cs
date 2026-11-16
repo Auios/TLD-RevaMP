@@ -12,6 +12,14 @@ namespace TLDRevamp.Net
     /// Now the owner's machine names the destroyed member (its group index) the frame after; the others destroy their
     /// copy of it, and the server remembers it for everyone who gets the object later. Message 86, no protocol bump:
     /// an older peer ignores it (as before).
+    internal static partial class EntityLifetimeStreaming
+    {
+        internal static void WriteMemberGone(NetWriter w, uint net, int idx)
+        {
+            w.Reset(); w.U8(Entities.MemberGone); w.U32(net); w.VarU32((uint)idx);
+        }
+    }
+
     public static partial class Entities
     {
         public const byte MemberGone = 86;
@@ -66,11 +74,6 @@ namespace TLDRevamp.Net
             se.ItemState.Remove(idx);   // a later joiner's resync must not bring it back
             WriteMemberGone(WS, net, idx);
             ServerSendAll(WS, true, from);
-        }
-
-        private static void WriteMemberGone(NetWriter w, uint net, int idx)
-        {
-            w.Reset(); w.U8(MemberGone); w.U32(net); w.VarU32((uint)idx);
         }
 
         /// Someone getting the object now: after the object itself (SendObject), what is gone from it.

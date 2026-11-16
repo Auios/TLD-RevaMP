@@ -147,6 +147,27 @@ namespace TLDRevamp.Net
         public static long ProxyStarterSounds { get => EntityProxyPresentation.ProxyStarterSounds; set => EntityProxyPresentation.ProxyStarterSounds = value; }
         public static long ProxyStopSounds { get => EntityProxyPresentation.ProxyStopSounds; set => EntityProxyPresentation.ProxyStopSounds = value; }
         // End copy presentation boundary.
+        internal static bool LifetimeInSession => InSession;
+        internal static long LifetimeSpawnCount => SpawnShared;
+        internal static void ShareLifetimeSpawn(GameObject go) => ShareSpawn(go);
+        internal static bool LifetimePartIsProxy(attachablescript part) => PartIsProxy(part);
+        internal static void RecordLifetimeFallOff() => SuppressedFallOff++;
+        internal static Ent ProxyForLinkedDelay(Transform root) => ProxyOf(root);
+
+        public static float LinkedDelayEveryS { get => EntityLifetimeStreaming.LinkedDelayEveryS; set => EntityLifetimeStreaming.LinkedDelayEveryS = value; }
+        public static float LinkedHoldMaxS { get => EntityLifetimeStreaming.LinkedHoldMaxS; set => EntityLifetimeStreaming.LinkedHoldMaxS = value; }
+        public static long PlayerMadeShared { get => EntityLifetimeStreaming.PlayerMadeShared; set => EntityLifetimeStreaming.PlayerMadeShared = value; }
+        public static long FarResyncItems { get => EntityLifetimeStreaming.FarResyncItems; set => EntityLifetimeStreaming.FarResyncItems = value; }
+        private static void UpdateFarRecord(Ent entity, Vector3d position, Quaternion rotation) => EntityLifetimeStreaming.UpdateFarRecord(entity, position, rotation);
+        internal static string PrefabName(int prefabID) => EntityLifetimeStreaming.PrefabName(prefabID);
+        private static System.Reflection.FieldInfo _idField(object row) => EntityLifetimeStreaming._idField(row);
+        internal static bool FarFromHere(Vector3d position) => EntityLifetimeStreaming.FarFromHere(position);
+        private static void FarResync(Ent entity, int index, itemDataClass data) => EntityLifetimeStreaming.FarResync(entity, index, data);
+        private static bool SaveReady(tosaveitemscript item) => EntityLifetimeStreaming.SaveReady(item);
+        private static void RemoveRecord(uint id) => RemoveSavedRecord(id);
+        private static void LinkedDelayTick() => EntityLifetimeStreaming.LinkedDelayTick();
+        private static void WriteMemberGone(NetWriter writer, uint net, int index) => EntityLifetimeStreaming.WriteMemberGone(writer, net, index);
+        internal static bool Unmount(attachablescript part, bool fallOff) => EntityLifetimeStreaming.Unmount(part, fallOff);
 
         // Cargo boundary. Map walks and server authority stay in the kernel.
         internal static bool CargoInSession => InSession;

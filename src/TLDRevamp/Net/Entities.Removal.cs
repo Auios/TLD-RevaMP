@@ -3,6 +3,18 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
+    internal static partial class EntityLifetimeStreaming
+    {
+        /// Take a part off the way the game does: a slotted part is un-bolted via its slot (the official MP's
+        /// receiver does the same, syncScript.RecAttachable); anything else is a plain Detach.
+        internal static bool Unmount(attachablescript at, bool fallOff)
+        {
+            if (at.slot != null && at.slot.part() == at) return at.slot.UnCraft(fallOff);
+            at.Detach();
+            return true;
+        }
+    }
+
     public static partial class Entities
     {
         private static void SendPartOff(Ent e, int idx, tosaveitemscript ts)
@@ -86,15 +98,6 @@ namespace TLDRevamp.Net
             }
         }
 
-        /// Take a part off the way the game does: a slotted part is un-bolted via its slot (the official MP's
-        /// receiver does the same, syncScript.RecAttachable); anything else is a plain Detach.
-        internal static bool Unmount(attachablescript at, bool fallOff)
-        {
-            if (at.slot != null && at.slot.part() == at) return at.slot.UnCraft(fallOff);
-            at.Detach();
-            return true;
-        }
-
         /// The owner runs the real detach; its DetachHook postfix broadcasts the PartOff to everyone.
         public static long DetachReqsApplied;
         internal static void ApplyDetachReq(int from, uint net, int idx)
@@ -140,6 +143,5 @@ namespace TLDRevamp.Net
             HandOver(pe.Root);
             SessionLog.Event("detach-applied", net, pe.ParentNet, item: pe.PartIndex, to: MyId, epoch: pe.Epoch);
         }
-
     }
 }

@@ -36,6 +36,7 @@ namespace TLDRevamp.Net
     internal static class EntityCarTuning { internal static void CopyTanksOnOwnerChange(Entities.Ent e, bool proxy) { } }
     public static partial class Entities
     {
+        private static void UpdateFarRecord(Ent e, Vector3d p, Quaternion q) => EntityLifetimeStreaming.UpdateFarRecord(e, p, q);
         internal static Transform[] Limbs(Ent e) => EntityRagdolls.Limbs(e);
         internal static bool Limp(Ent e) => EntityRagdolls.Limp(e);
         internal static System.Collections.Generic.IReadOnlyCollection<Ent> ObservedRagdollCopies => EntityRagdolls.ObservedRagdollCopies;

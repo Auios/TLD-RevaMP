@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -13,7 +14,7 @@ namespace TLDRevamp.Net
     /// (PoseInterpolator.Hold): the others are shown that much further back. The display clock steers there within its
     /// ±5 % rate, so nothing jumps.
     ///
-    public static partial class Entities
+    internal static partial class EntityLifetimeStreaming
     {
         public static float LinkedDelayEveryS = 0.2f, LinkedHoldMaxS = 0.5f;
         public static long LinkedGroups, LinkedHeld;
@@ -23,7 +24,7 @@ namespace TLDRevamp.Net
         private static readonly List<Ent> _group = new List<Ent>();
         private static readonly HashSet<Transform> _groupRoots = new HashSet<Transform>();
 
-        private static void LinkedDelayTick()
+        internal static void LinkedDelayTick()
         {
             if (Time.time - _linkedAt < LinkedDelayEveryS) return;
             _linkedAt = Time.time;
@@ -65,7 +66,7 @@ namespace TLDRevamp.Net
             _group.Clear();
             foreach (var r in _groupRoots)
             {
-                var e = ProxyOf(r);
+                var e = Entities.ProxyForLinkedDelay(r);
                 if (e != null && e.Ip != null && e.Ip.Ready) _group.Add(e);
             }
             if (_group.Count < 2) return;

@@ -1,12 +1,12 @@
 namespace TLDRevamp.Net
 {
-    public static partial class Entities
+    internal static partial class EntityLifetimeStreaming
     {
         [HarmonyLib.HarmonyPatch(typeof(attachablescript), nameof(attachablescript.FallOFf))]
         private static class NoProxyFallOff
         {
             [HarmonyLib.HarmonyPrefix]
-            private static bool Prefix(attachablescript __instance) { if (!PartIsProxy(__instance)) return true; SuppressedFallOff++; return false; }
+            private static bool Prefix(attachablescript __instance) { if (!Entities.LifetimePartIsProxy(__instance)) return true; Entities.RecordLifetimeFallOff(); return false; }
         }
     }
 }

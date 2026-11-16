@@ -102,7 +102,6 @@ namespace TLDRevamp.Net
         private static bool HitchCanJoin(Ent tr, Ent car) => tr.HitchAuthorityOwner == tr.OwnerId && car.HitchAuthorityOwner == car.OwnerId &&
             HitchAuthority.CanJoin(car.OwnerId, tr.OwnerId, MyId, tr.HitchWaiting, car.Proxy, tr.Proxy);
         private static void ApplyProxyBodies(Ent entity) { }
-        private static bool Unmount(attachablescript at, bool fallOff) { at.Detach(); return true; }
         private static void SendDetachSync(Ent entity) { }
     }
 }

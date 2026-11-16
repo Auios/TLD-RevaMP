@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 
 namespace TLDRevamp.Net
 {
@@ -16,9 +17,66 @@ namespace TLDRevamp.Net
     /// 0.5 L of fuel instead of 3.7 — resyncs for stored copies were dropped, and an object arriving far away was
     /// spawned as a GameObject 200 km from the player and streamed straight back out by the game. Both now go to the
     /// records directly.
+    internal static partial class EntityLifetimeStreaming
+    {
+        public static long FarResyncItems;
+
+        internal static string PrefabName(int prefabID)
+        {
+            var go = itemdatabase.s != null ? itemdatabase.s.Item(prefabID) : null;
+            return go != null ? go.name : "prefab" + prefabID;
+        }
+
+        internal static FieldInfo _idField(object o) => GameLookups.SaveIdField(typeof(itemDataClass), "id", o.GetType());
+
+        /// Is this global point beyond the game's item range of every generation centre here (where the game would
+        /// stream an item out)? Then a received object goes to the far store, not into the scene.
+        internal static bool FarFromHere(Vector3d g)
+        {
+            var ips = itemPlaceRemoveScript.s;
+            var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
+            if (ips == null || map == null || map.genArounds == null || map.genArounds.Count == 0) return false;
+            double lim = ips.itemRemoveDist;
+            foreach (var ga in map.genArounds)
+            {
+                var c = mainscript.GlobalFromUnityPos(ga.upos);
+                double dx = c.x - g.x, dz = c.z - g.z;
+                if (dx * dx + dz * dz < lim * lim) return false;
+            }
+            return true;
+        }
+
+        /// A resync for an object stored here: its state lists replace the stored ones, item by item.
+        internal static void FarResync(Ent e, int idx, itemDataClass d)
+        {
+            var data = savedatascript.s.data.itemData;
+            uint id = idx >= 0 && idx < e.ItemIds.Count ? e.ItemIds[idx] : 0;
+            if (id == 0 || !savedatascript.IndexOfID(data.items, id, out _)) return;
+            foreach (var f in ItemSnapshot.ListFields)
+            {
+                // the resync carries all of the item's entries in these lists: none = none (an emptied tank isn't saved)
+                if (!FarStateLists.Contains(f.Name) || !(f.GetValue(d) is IList src)) continue;
+                if (!(f.GetValue(data) is IList dst)) continue;
+                for (int i = dst.Count - 1; i >= 0; i--)
+                {
+                    var o = dst[i]; if (o == null) continue;
+                    var idf = _idField(o);
+                    if (idf != null && (uint)idf.GetValue(o) == id) dst.RemoveAt(i);
+                }
+                foreach (var o in src) if (o != null) dst.Add(o);
+            }
+            FarResyncItems++;
+        }
+
+        /// Lists a resync may replace in the far store (Entities.StateOnly's lists). `attachable` stays out: the
+        /// resync carries it stripped of the world attach point (gpos), and the stored one must keep it.
+        private static readonly HashSet<string> FarStateLists = new HashSet<string>
+            { "partconditions", "tanks", "usable", "colors", "door_rots", "car", "ammo", "ginlamp", "busdoorscript", "painting", "food", "rendszam" };
+    }
+
     public static partial class Entities
     {
-        public static long FarAdds, FarResyncs, FarResyncItems, FarShared, InterestSent;
+        public static long FarAdds, FarResyncs, FarShared, InterestSent;
 
         // ------------------------------------------------------------------ server: the whole world, by distance
 
@@ -212,36 +270,6 @@ namespace TLDRevamp.Net
 
         public static bool FarGroupLog = true;   // diagnostics (farworld B): each multi-item / attached group shared at hosting start
 
-        internal static string PrefabName(int prefabID)
-        {
-            var go = itemdatabase.s != null ? itemdatabase.s.Item(prefabID) : null;
-            return go != null ? go.name : "prefab" + prefabID;
-        }
-
-        /// Lists a resync may replace in the far store (Entities.StateOnly's lists). `attachable` stays out: the
-        /// resync carries it stripped of the world attach point (gpos), and the stored one must keep it.
-        private static readonly HashSet<string> FarStateLists = new HashSet<string>
-            { "partconditions", "tanks", "usable", "colors", "door_rots", "car", "ammo", "ginlamp", "busdoorscript", "painting", "food", "rendszam" };
-
-        private static FieldInfo _idField(object o) => GameLookups.SaveIdField(typeof(itemDataClass), "id", o.GetType());
-
-        /// Is this global point beyond the game's item range of every generation centre here (where the game would
-        /// stream an item out)? Then a received object goes to the far store, not into the scene.
-        internal static bool FarFromHere(Vector3d g)
-        {
-            var ips = itemPlaceRemoveScript.s;
-            var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
-            if (ips == null || map == null || map.genArounds == null || map.genArounds.Count == 0) return false;
-            double lim = ips.itemRemoveDist;
-            foreach (var ga in map.genArounds)
-            {
-                var c = mainscript.GlobalFromUnityPos(ga.upos);
-                double dx = c.x - g.x, dz = c.z - g.z;
-                if (dx * dx + dz * dz < lim * lim) return false;
-            }
-            return true;
-        }
-
         /// An object that arrives far from here: its records into the far store under fresh local ids, a dormant entity
         /// for it. The game places it when someone comes near (Resolve binds it then).
         private static Ent AddFar(uint net, int owner, uint epoch, itemDataClass d, bool hasState, Vector3d pos, Quaternion rot)
@@ -272,26 +300,5 @@ namespace TLDRevamp.Net
             return e;
         }
 
-        /// A resync for an object stored here: its state lists replace the stored ones, item by item.
-        private static void FarResync(Ent e, int idx, itemDataClass d)
-        {
-            var data = savedatascript.s.data.itemData;
-            uint id = idx >= 0 && idx < e.ItemIds.Count ? e.ItemIds[idx] : 0;
-            if (id == 0 || !savedatascript.IndexOfID(data.items, id, out _)) return;
-            foreach (var f in ItemSnapshot.ListFields)
-            {
-                // the resync carries all of the item's entries in these lists: none = none (an emptied tank isn't saved)
-                if (!FarStateLists.Contains(f.Name) || !(f.GetValue(d) is IList src)) continue;
-                if (!(f.GetValue(data) is IList dst)) continue;
-                for (int i = dst.Count - 1; i >= 0; i--)
-                {
-                    var o = dst[i]; if (o == null) continue;
-                    var idf = _idField(o);
-                    if (idf != null && (uint)idf.GetValue(o) == id) dst.RemoveAt(i);
-                }
-                foreach (var o in src) if (o != null) dst.Add(o);
-            }
-            FarResyncItems++;
-        }
     }
 }

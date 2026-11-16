@@ -13,6 +13,45 @@ namespace TLDRevamp.Net
     /// Spawn sharing: a session spawn of a root item (mainscript.Spawn — spawnpile, the game's own creation paths)
     /// is shared at once, so the other players see it without anyone having to sit in it first. Streaming placements
     /// of existing save records don't come through this path, and the lease capture dedups against it.
+    internal static partial class EntityLifetimeStreaming
+    {
+        private static readonly HashSet<tosaveitemscript> _playerDeleted = new HashSet<tosaveitemscript>();
+
+        [HarmonyLib.HarmonyPatch(typeof(cheatedStuff), nameof(cheatedStuff.Delete))]
+        private static class PlayerDelete
+        {
+            [HarmonyLib.HarmonyPrefix]
+            private static void Prefix(cheatedStuff __instance)
+            {
+                if (!Entities.LifetimeInSession || __instance == null) return;
+                var ts = __instance.GetComponent<tosaveitemscript>();
+                if (ts == null) return;
+                if (_playerDeleted.Count > 64) _playerDeleted.RemoveWhere(x => x == null);   // destroyed without an OnDestroy here
+                _playerDeleted.Add(ts);   // Destroy is deferred: its OnDestroy (ItemDestroyed) comes at the end of the frame
+            }
+        }
+
+        /// The game can save it and everything active under it (savedatascript.SaveToDictionary needs useThisForDistance,
+        /// set when the item starts; an inactive member never starts).
+        internal static bool SaveReady(tosaveitemscript it)
+        {
+            foreach (var t in it.GetComponentsInChildren<tosaveitemscript>(false)) if (t != null && t.useThisForDistance == null) return false;
+            return true;
+        }
+
+        internal static void RemoveRecord(uint id)
+        {
+            try { savedatascript.s.items.Remove(id); } catch { }
+            var data = savedatascript.s != null ? savedatascript.s.data : null;
+            if (data != null && data.itemData != null && savedatascript.IndexOfID(data.itemData.items, id, out int k))
+                data.itemData.items.RemoveAt(k);
+        }
+
+        internal static bool TakePlayerDeleted(tosaveitemscript item) => _playerDeleted.Remove(item);
+
+        internal static void ClearPlayerDeleted() => _playerDeleted.Clear();
+    }
+
     public static partial class Entities
     {
         /// Set while we destroy copies on purpose (a received RemoveItem): the OnDestroy hooks must not echo.
@@ -52,7 +91,7 @@ namespace TLDRevamp.Net
                         }
                     return;
                 }
-                bool byPlayer = _playerDeleted.Remove(__instance);
+                bool byPlayer = EntityLifetimeStreaming.TakePlayerDeleted(__instance);
                 NoteMemberDestroyed(__instance);   // a part of an object we own: the others lose it too (Entities.MemberGone)
                 if (byPlayer) RequestMemberGone(__instance);   // a part of someone else's: its owner deletes it
                 foreach (var e in ByNet.Values)
@@ -130,21 +169,6 @@ namespace TLDRevamp.Net
             }
         }
         public static long PlayerDeletesSent, MemberDeletesSent, MemberDeletesForwarded, MemberDeletesApplied;
-        private static readonly HashSet<tosaveitemscript> _playerDeleted = new HashSet<tosaveitemscript>();
-
-        [HarmonyLib.HarmonyPatch(typeof(cheatedStuff), nameof(cheatedStuff.Delete))]
-        private static class PlayerDelete
-        {
-            [HarmonyLib.HarmonyPrefix]
-            private static void Prefix(cheatedStuff __instance)
-            {
-                if (!InSession || __instance == null) return;
-                var ts = __instance.GetComponent<tosaveitemscript>();
-                if (ts == null) return;
-                if (_playerDeleted.Count > 64) _playerDeleted.RemoveWhere(x => x == null);   // destroyed without an OnDestroy here
-                _playerDeleted.Add(ts);   // Destroy is deferred: its OnDestroy (ItemDestroyed) comes at the end of the frame
-            }
-        }
 
         /// The local player deleted a member of another player's object: its owner deletes it (ApplyMemberGone).
         private static void RequestMemberGone(tosaveitemscript it)
@@ -257,14 +281,6 @@ namespace TLDRevamp.Net
         }
 
         internal static void QueueReshare(tosaveitemscript it) { if (it != null) _reshare.Add(it); }
-
-        /// The game can save it and everything active under it (savedatascript.SaveToDictionary needs useThisForDistance,
-        /// set when the item starts; an inactive member never starts).
-        private static bool SaveReady(tosaveitemscript it)
-        {
-            foreach (var t in it.GetComponentsInChildren<tosaveitemscript>(false)) if (t != null && t.useThisForDistance == null) return false;
-            return true;
-        }
 
         public const byte Refetch = 58;
         public static long Replaced, CopiesLost, Refetched;
@@ -469,23 +485,6 @@ namespace TLDRevamp.Net
             SuppressDestroyEcho = true;
             try { DestroyLocalCopy(net); }
             finally { SuppressDestroyEcho = false; }
-        }
-
-        private static void RemoveRecord(uint id)
-        {
-            try { savedatascript.s.items.Remove(id); } catch { }
-            var data = savedatascript.s != null ? savedatascript.s.data : null;
-            // Row 4: a deleted far item has no future LoadStuff to consume its component records or its chunk entry, so
-            // they stayed in the save for good (registrycheck.py, 2026-11-17). Its chunk is the one its record's position
-            // snaps to (MoveRecord keeps it so): one lookup, not a walk of every chunk.
-            if (data != null && data.itemData != null)
-            {
-                if (savedatascript.IndexOfID(data.itemData.items, id, out int k)
-                    && savedatascript.s.itemChunks.TryGetValue(savedatascript.SnapChunkPos(data.itemData.items[k].transform.pos), out var ids))
-                    ids.Remove(id);
-                data.itemData.RemoveID(id);
-            }
-            _boltIdx.Invalidate();
         }
 
         /// A session spawn of a root item is shared at once — the others see it without anyone sitting in it first.

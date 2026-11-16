@@ -174,7 +174,6 @@ namespace TLDRevamp.Net
         internal static double FarAttachedMoved;
         internal static double FarRechunked;
         internal static double FarRecordUpdates;
-        internal static double FarResyncItems;
         internal static double FarResyncs;
         internal static double GameFrozenReleased;
         internal static string HandoverLateWhy = "";

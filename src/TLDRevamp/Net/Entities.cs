@@ -267,7 +267,7 @@ namespace TLDRevamp.Net
             PoiUsablesReset(); LiveUsablesReset();
             InterestReset(); EditCheckReset();
             EntityHands.WornReset();
-            _playerDeleted.Clear();
+            EntityLifetimeStreaming.ClearPlayerDeleted();
             EntityWorldClock.ClockReset();
             _hitchOps.Clear(); _hitchTransfers.Clear(); EntityHitches.ClearCommands(); _hitchDeparted.Clear();
         }
@@ -1694,6 +1694,20 @@ namespace TLDRevamp.Net
             _boltIdx.Invalidate();
             MoveRecord(data.itemData.items, k, pos, rot.eulerAngles);
             return true;
+        }
+
+        // Row 4: a deleted far item has no future LoadStuff to consume its component records or its chunk entry, so they
+        // stayed in the save for good (registrycheck.py, 2026-11-17). Its chunk is the one its record's position snaps to
+        // (MoveRecord keeps it so): one lookup, not a walk of every chunk. The record row itself goes in EntityLifetimeStreaming.
+        private static void RemoveSavedRecord(uint id)
+        {
+            var data = savedatascript.s != null ? savedatascript.s.data : null;
+            if (data != null && data.itemData != null && savedatascript.IndexOfID(data.itemData.items, id, out int k)
+                && savedatascript.s.itemChunks.TryGetValue(savedatascript.SnapChunkPos(data.itemData.items[k].transform.pos), out var ids))
+                ids.Remove(id);
+            EntityLifetimeStreaming.RemoveRecord(id);
+            if (data != null && data.itemData != null) data.itemData.RemoveID(id);
+            _boltIdx.Invalidate();
         }
 
         internal static void MoveRecord(List<save_item> list, int k, Vector3d pos, Vector3 euler)

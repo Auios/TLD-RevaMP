@@ -167,6 +167,7 @@ namespace TLDRevamp.Net
             public tosaveitemscript Root;
         }
         internal static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
+        private static void RemoveSavedRecord(uint id) => EntityLifetimeStreaming.RemoveRecord(id);   // the kernel also drops component rows and chunk ids
         public const byte SleepSync = 38;
         public const byte State = 23, DetachSync = 42;
         private static readonly NetWriter W = new NetWriter();

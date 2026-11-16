@@ -69,6 +69,9 @@ namespace TLDRevamp.Net
         const byte DetachReq = 37, PartOff = 26;
         internal const byte DetachSync = 42, IgnitionKey = 96;
         const int MyId = 1;
+        internal static bool LifetimePartIsProxy(attachablescript part) => PartIsProxy(part);
+        internal static void RecordLifetimeFallOff() => SuppressedFallOff++;
+        internal static bool Unmount(attachablescript part, bool fallOff) => EntityLifetimeStreaming.Unmount(part, fallOff);
         internal static bool InSession = true; static bool Near = true, Token = true;
         static float EditRatePerS = 20, EditBurst = 40;
         static long DetachReqsSent, EditsOutOfReach, AutoDetachesIgnored, SuppressedFallOff, PartsReported, DetachSyncsSent, DetachSyncsApplied, DetachesStored;
@@ -159,7 +162,7 @@ namespace TLDRevamp.Net
             ServerDetachReq(2, 7, 2);
             check(Sent == 2 && Target == 2, "ownership overtaking a suppressed dismount still forwards to the current owner");
             RemovalTests(check);
-            var fallOff = typeof(Entities).GetNestedType("NoProxyFallOff", BindingFlags.NonPublic).GetMethod("Prefix", BindingFlags.NonPublic | BindingFlags.Static);
+            var fallOff = typeof(EntityLifetimeStreaming).GetNestedType("NoProxyFallOff", BindingFlags.NonPublic).GetMethod("Prefix", BindingFlags.NonPublic | BindingFlags.Static);
             foreach (bool frameProxy in new[] { false, true }) foreach (bool partProxy in new[] { false, true })
             {
                 ByNet.Clear();
