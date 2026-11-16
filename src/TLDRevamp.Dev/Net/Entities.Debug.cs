@@ -863,6 +863,27 @@ namespace TLDRevamp.Net
                    ",\"granted\":" + LeasesGranted + ",\"spawns\":" + LeaseSpawns + ",\"itemsShared\":" + LeaseItemsShared + ",\"hostShared\":" + HostItemsShared + ",\"builtInShared\":" + BuiltInShared + ",\"builtInDisabled\":" + BuiltInDisabled + ",\"done\":" + LeasesDone + ",\"freed\":" + LeasesFreed + ",\"reEnabled\":" + BuiltInReEnabled + "}}";
         }
 
+        /// `mp relays`: which loaded objects carry a collision relay (what this machine simulates relays its contacts to the
+        /// other machine, EntityPhysics.ContactRelay), and the server's list of locked objects whose pose follows their
+        /// container, with how many of those are no longer server objects.
+        public static string RelayList()
+        {
+            var rows = new List<string>();
+            int ownedLoaded = 0, ownedWithout = 0;
+            foreach (var e in ObservedEntities.Values)
+            {
+                if (e.Root == null) continue;
+                var relay = e.Root.gameObject.GetComponent<EntityPhysics.ContactRelay>();
+                if (!e.Proxy) { ownedLoaded++; if (relay == null) ownedWithout++; }
+                rows.Add("{\"net\":" + e.NetId + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"relay\":" + (relay != null ? "true" : "false") +
+                         ",\"relayNet\":" + (relay != null ? relay.NetId : 0) + "}");
+            }
+            rows.Sort(StringComparer.Ordinal);
+            ObserveServerLocked(out int locked, out int gone);
+            return "{\"ownedLoaded\":" + ownedLoaded + ",\"ownedWithoutRelay\":" + ownedWithout + ",\"serverLocked\":" + locked +
+                   ",\"serverLockedGone\":" + gone + ",\"rows\":[" + string.Join(",", rows) + "]}";
+        }
+
         /// The shared objects here, with the ids a test needs to say exactly which object it means: the network id,
         /// the game's own save id (the id every machine agrees on), the owner's player id and the global position.
         /// `filter` narrows it to a name (a "PlayerRagdol" corpse, an item's name); "" is everything.

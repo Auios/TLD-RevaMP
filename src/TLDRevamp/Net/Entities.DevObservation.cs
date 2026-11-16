@@ -47,6 +47,13 @@ namespace TLDRevamp.Net
             observation = new ServerObservation(se.OwnerId, se.Epoch, se.Held, se.Stored, se.Driven, se.CrashReturnTo, se.ParentNet, se.AttachParent, se.Where, se.AtRest, se.Locked, se.LockFrame);
             return true;
         }
+        /// `mp relays` (Dev): the server's list of locked objects whose pose follows their container, and how many of its
+        /// entries are no longer server objects (a removed one must leave it, relaycheck.py).
+        internal static void ObserveServerLocked(out int count, out int gone)
+        {
+            count = _serverLocked.Count; gone = 0;
+            foreach (var se in _serverLocked) if (!Server.TryGetValue(se.NetId, out var now) || now != se) gone++;
+        }
         private static void OwnerLog(SEnt se, int to, string why) => DevHooks.OwnerDecision?.Invoke(se.NetId, se.OwnerId, se.Epoch, to, why);
         private static void LogJump(Ent e, float dev, float devY, float dt) => DevHooks.CopyJump?.Invoke(e, dev, devY, dt);
     }
