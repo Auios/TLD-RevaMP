@@ -29,6 +29,7 @@ static partial class EntitySplitTest
     {
         CargoInteractionChecks();
         AttachmentsChecks();
+        AuthorityInterestChecks();
         LocksChecks();
         LeasesChecks();
         HitchChecks();

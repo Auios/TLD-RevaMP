@@ -63,6 +63,7 @@ namespace TLDRevamp.Net
             internal readonly List<KeyValuePair<int, Vector3d>> Peers = new List<KeyValuePair<int, Vector3d>>();
             internal bool PeerPos(int player, out Vector3d position) { position = Entities.EditPeerPosition; return Entities.EditPeerKnown; }
             internal void ReadyPeers(List<KeyValuePair<int, Vector3d>> into) { into.Clear(); into.AddRange(Peers); }
+            internal bool SendToPlayer(int player, NetWriter writer, bool reliable) => true;
             internal void SeatedIn(uint net, List<KeyValuePair<int, int>> into) { into.Clear(); into.AddRange(Seats); }
         }
     }

@@ -65,6 +65,52 @@ namespace TLDRevamp.Net
         public static float AttachPoseOffMax { get => EntityAttachments.AttachPoseOffMax; set => EntityAttachments.AttachPoseOffMax = value; }
         public static float AttachPoseAngLast { get => EntityAttachments.AttachPoseAngLast; set => EntityAttachments.AttachPoseAngLast = value; }
         // End attachment boundary.
+        // Authority and interest boundary. Records, map walks and pose replay stay in the kernel.
+        public static bool InterestRelay { get => EntityAuthorityInterest.InterestRelay; set => EntityAuthorityInterest.InterestRelay = value; }
+        public static double StateInterestM { get => EntityAuthorityInterest.StateInterestM; set => EntityAuthorityInterest.StateInterestM = value; }
+        public static string InterestJson() => EntityAuthorityInterest.InterestJson();
+        public static string ShareQuotaStats() => EntityAuthorityInterest.ShareQuotaStats();
+        private static bool ShareAllowed(int from, int recordBytes) => EntityAuthorityInterest.ShareAllowed(from, recordBytes);
+        private static void ShareQuotaTick() => EntityAuthorityInterest.ShareQuotaTick();
+        internal static void ShareQuotaForget(int player) => EntityAuthorityInterest.ShareQuotaForget(player);
+        private static void RelayResync(SEnt se, int from, NetWriter msg) => EntityAuthorityInterest.RelayResync(se.NetId, se.Where, from, msg);
+        private static void RelayPoi(PoiKey key, NetWriter msg, int from, bool reliable = true) => EntityAuthorityInterest.RelayPoi(key, msg, from, reliable);
+        private static void ServerCatchUpTick() => EntityAuthorityInterest.ServerCatchUpTick();
+        internal static int InterestCatchUpLimit => InterestPerTick;
+        internal static void RecordInterestSkip(int player) => SkippedByInterest(player);
+        internal static void DeliverInterestMessage(NetWriter writer) => Deliver(writer);
+        internal static void MarkInterestStale(int player, uint net) => StaleOf(_staleEnts, player).Add(net);
+        internal static bool TakeInterestStale(int player, uint net) => StaleOf(_staleEnts, player).Remove(net);
+        internal static int CountInterestStale()
+        {
+            int count = 0;
+            foreach (var stale in _staleEnts.Values) count += stale.Count;
+            return count;
+        }
+        internal static void WriteInterestResync(NetWriter writer, uint net) => WriteResyncAll(writer, Server[net]);
+        private static bool NearInterestRecord(Vector3d viewer, Vector3d at)
+        {
+            double dx = viewer.x - at.x, dz = viewer.z - at.z;
+            return dx * dx + dz * dz <= StateInterestM * StateInterestM;
+        }
+        internal static void CatchUpInterestRecords(int player, Vector3d viewer, NetWriter writer)
+        {
+            if (_staleEnts.TryGetValue(player, out var ents) && ents.Count > 0)
+            {
+                _dueEnts.Clear();
+                foreach (var net in ents)
+                    if (!Server.TryGetValue(net, out var se) || NearInterestRecord(viewer, se.Where)) { _dueEnts.Add(net); if (_dueEnts.Count >= InterestPerTick) break; }
+                foreach (var net in _dueEnts)
+                {
+                    ents.Remove(net);
+                    if (!Server.TryGetValue(net, out var se) || se.ItemState.Count == 0) continue;
+                    WriteResyncAll(writer, se); Mp.Server.SendToPlayer(player, writer, true); EntityAuthorityInterest.ResyncCaughtUp++;
+                }
+            }
+        }
+        internal static bool HasInterestPoi(PoiKey key) => ServerPoiUsables.ContainsKey(key);
+        internal static bool TryInterestPoi(PoiKey key, out byte[] bytes) => ServerPoiUsables.TryGetValue(key, out bytes);
+        // End authority and interest boundary.
         // Lock boundary. Copy and ownership decisions stay in the kernel.
         internal static bool IsLockCopy(Component item) => IsProxy(item);
         internal static bool LockRidesParent(Ent entity) => RidesParent(entity);

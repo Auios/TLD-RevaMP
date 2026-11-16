@@ -14,7 +14,7 @@ namespace TLDRevamp.Net
     /// shared stays theirs to simulate (the 4000-object cap per player is gone, 2026-11-17: no ownership caps).
     /// Over a limit the share is dropped (the sharer keeps its item unshared) and counted; a player dropped more than
     /// ShareKickDrops times within a minute is kicked. The host's own shares are never limited.
-    public static partial class Entities
+    internal static partial class EntityAuthorityInterest
     {
         public static int ShareBurst = 600, ShareMaxRecordBytes = 256 << 10, ShareKickDrops = 2000;
         public static float ShareRefillPerS = 30f;
@@ -24,7 +24,7 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<int, Bucket> _shareBuckets = new Dictionary<int, Bucket>();
         private static readonly List<int> _kickQ = new List<int>();
 
-        private static bool ShareAllowed(int from, int recordBytes)
+        internal static bool ShareAllowed(int from, int recordBytes)
         {
             if (from == 0) return true;
             float now = Time.realtimeSinceStartup;
@@ -43,7 +43,7 @@ namespace TLDRevamp.Net
         }
 
         /// Per frame (server): kicks decided while a message was being handled happen here, out of the receive loop.
-        private static void ShareQuotaTick()
+        internal static void ShareQuotaTick()
         {
             if (_kickQ.Count == 0) return;
             var q = _kickQ.ToArray(); _kickQ.Clear();
