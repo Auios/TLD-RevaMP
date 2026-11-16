@@ -34,6 +34,7 @@ namespace TLDRevamp.Net
     internal static class Tpa
     {
         internal static bool RefreshingObjects, WaitingWorld;
+        internal static bool ObjectSeen(uint net) => PresentationFloorFixture.Seen;
         internal static List<uint> Applied = new List<uint>();
         internal static void ObjectApplied(uint net) => Applied.Add(net);
     }

@@ -177,7 +177,6 @@ namespace TLDRevamp.Net
         internal static double FarResyncItems;
         internal static double FarResyncs;
         internal static double GameFrozenReleased;
-        internal static double HandoverDamageSuppressed;
         internal static string HandoverLateWhy = "";
         internal static double HandoversApplied;
         internal static double HandoversCrashSkipped;
@@ -195,8 +194,6 @@ namespace TLDRevamp.Net
         internal static double PartsApplied;
         internal static double PartsAppliedStored;
         internal static double PartsReported;
-        internal static double ProxyStarterSounds;
-        internal static double ProxyStopSounds;
         internal static double PushFrames;
         internal static double PushesApplied;
         internal static double PushesSent;
@@ -221,7 +218,6 @@ namespace TLDRevamp.Net
         internal static double StatesIn;
         internal static double StatesSent;
         internal static double StatesStale;
-        internal static double SuppressedDamage;
         internal static double SuppressedFallOff;
     }
 }

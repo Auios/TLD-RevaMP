@@ -10,7 +10,7 @@ namespace UnityEngine
     public static partial class Time { public static int frameCount; }
     public partial struct Vector3 { public static Vector3 operator /(Vector3 p, float n) => p * (1 / n); }
     public partial struct Vector3d { public double sqrMagnitude => x * x + y * y + z * z; }
-    public class Renderer : Component { public bool enabled = true; public Material[] sharedMaterials = Array.Empty<Material>(); }
+    public partial class Renderer : Component { public bool enabled = true; public Material[] sharedMaterials = Array.Empty<Material>(); }
     public class Material { public bool HasProperty(string name) => true; public float GetFloat(string name) => 0; }
     public static class ColorUtility { public static string ToHtmlStringRGB(Color c) => "FFFFFF"; }
 }

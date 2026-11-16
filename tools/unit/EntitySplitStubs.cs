@@ -27,7 +27,7 @@ namespace UnityEngine
     }
     public partial class GameObject : Object { public Component Part; public Transform transform = new Transform(); public string name; public int layer; public sandstormscript Storm; public bool Destroyed, activeSelf = true, activeInHierarchy = true; public GameObject() { Storm = new sandstormscript { gameObject = this }; } public T GetComponent<T>() where T : class => Part as T ?? Storm as T; public T GetComponentInChildren<T>(bool all = false) where T : class => GetComponent<T>(); }
     public partial class Transform : Component { public Vector3 position, eulerAngles, localEulerAngles; }
-    public class Light { public bool enabled; public float intensity; public GameObject gameObject = new GameObject(); }
+    public partial class Light { public bool enabled; public float intensity; public GameObject gameObject = new GameObject(); }
     public class AudioSource : Component { public bool isPlaying; public float volume, pitch; public int priority; public AudioClip clip; }
     public class AudioClip { public string name; public float length; }
     public partial struct Quaternion
@@ -108,7 +108,7 @@ public class headlightscript { public usablescript usableSet; public int current
 public class rearlights { public GameObject[] FLight; public void Upd() { } }
 public partial class usablescript : Component { public int currentTurnState; }
 public partial class enginescript { public bool running, start; public gearstickscript gearstick; }
-public class gearstickscript { public Transform TransmissionHandPos; }
+public partial class gearstickscript { public Transform TransmissionHandPos; }
 public partial class carscript : Component
 {
     public bool ignition, localIgnition, ihorn, isPlayerDriving2;

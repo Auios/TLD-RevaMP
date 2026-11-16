@@ -78,7 +78,7 @@ public partial class attachablescript : Component
 }
 namespace TLDRevamp
 {
-    internal static partial class SessionLog { internal static readonly List<string> Events = new List<string>(); internal static double St = 123.5; internal static void Event(string what, uint net = 0, int item = 0, int slot = 0, int to = 0, uint epoch = 0, int count = 0, int from = 0, string result = "") { Events.Add(what + ":" + result); } }
+    internal static partial class SessionLog { internal static readonly List<string> Events = new List<string>(); internal static double St = 123.5; internal static void Event(string what, uint net = 0, int item = 0, int slot = 0, int to = 0, uint epoch = 0, int count = 0, int from = 0, string result = "", float value = 0) { Events.Add(what + ":" + result); } }
     internal static partial class GameLookups { internal static MethodInfo Method(Type t, string n, Type[] args = null) => args == null ? t.GetMethod(n) : t.GetMethod(n, args); }
 }
 namespace TLDRevamp.Net

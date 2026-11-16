@@ -45,8 +45,7 @@ namespace TLDRevamp.Net
             public Transform[] LimbTransforms;
             public readonly List<Rigidbody> JointBodies = new List<Rigidbody>();
             public List<Collider> PartCols;
-            public bool HasTorques, GhostOn, HasServoPrev;
-            public float[] WBrake, WMotor;
+            public bool GhostOn, HasServoPrev;
             public float FreeUntil = -10, FreeFrom = -10, RestOffSince = -1, TelemetryServoCorrection;
             public Transform FreeHit;
             public Vector3d ServoPrevPos; public Quaternion ServoPrevRot;
@@ -84,7 +83,6 @@ namespace TLDRevamp.Net
         internal static void Event(string kind, uint net = 0, uint epoch = 0, string result = null, float value = 0, float dx = 0, float dy = 0, int count = 0, bool sample = false) => Events.Add("event:" + kind + ":" + result);
     }
 }
-public class wheelgraphicsscript { public UnityEngine.WheelCollider W, W2; }
 
 namespace UnityEngine { public partial class Collision { public Vector3 impulse; } public static partial class Mathf { public const float Deg2Rad = (float)(Math.PI / 180); } }
 public partial class tosaveitemscript { public Rigidbody RB; }
@@ -97,7 +95,6 @@ namespace TLDRevamp.Net
     {
         private static uint _telemetryFooting;
         private static bool NetOf(Transform root, out uint net, out bool proxy) { var e = PlacedOfTransform(root); net = e?.NetId ?? 0; proxy = e?.Proxy ?? false; return e != null; }
-        private static wheelgraphicsscript[] WheelsOf(Ent e) => PhysicsFixture.Wheels;
         private static bool CameOff(Ent e, int item) => e.Split?.Contains(item) ?? false;
         private static void TelemetryProxySnap(Ent e, Vector3 target, Vector3 from) { }
         internal static void SetProxy(Ent e, bool proxy, bool keepMotion) { e.Proxy = proxy; }

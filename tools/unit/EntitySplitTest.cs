@@ -28,6 +28,7 @@ static partial class EntitySplitTest
     static void Main()
     {
         PhysicsChecks();
+        ProxyPresentationChecks();
         CargoInteractionChecks();
         AttachmentsChecks();
         AuthorityInterestChecks();

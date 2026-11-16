@@ -107,6 +107,46 @@ namespace TLDRevamp.Net
         public static long CopyJointsFreed { get => EntityPhysics.CopyJointsFreed; set => EntityPhysics.CopyJointsFreed = value; }
         public static long CopyJointsLocked { get => EntityPhysics.CopyJointsLocked; set => EntityPhysics.CopyJointsLocked = value; }
         // End physics boundary.
+        // Copy presentation boundary. Role transitions, indexes and map walks stay in the kernel.
+        internal static bool IsPresentationCopy(Component item) => IsProxy(item);
+        internal static Ent PresentationEntity(tosaveitemscript item) => OwnEntity(item);
+        internal static bool PresentationHasDamageGrace => DamageGraceUntil.Count > 0;
+        internal static bool TryPresentationDamageGrace(carscript car, out float until) => DamageGraceUntil.TryGetValue(car, out until);
+        internal static void RemovePresentationDamageGrace(carscript car) => DamageGraceUntil.Remove(car);
+        internal static bool PresentationNeedsTorques(Ent entity) => NearOtherPlayersCar(entity);
+        internal static void BindPresentationEngine(Ent entity) => BindProxyEngine(entity);
+        internal static bool TryPresentationEngine(enginescript engine, out Ent entity)
+        {
+            entity = null;
+            return ProxyEngineOwner.Count != 0 && ProxyEngineOwner.TryGetValue(engine, out entity);
+        }
+        internal static bool TryPresentationWheel(wheelgraphicsscript wheel, out Ent entity)
+        {
+            entity = null;
+            return ProxyWheelOwner.Count != 0 && ProxyWheelOwner.TryGetValue(wheel, out entity);
+        }
+        internal static int PresentationWheelIndex(wheelgraphicsscript wheel) => ProxyWheelIndex[wheel];
+        internal static System.Collections.Generic.IEnumerable<carscript> PresentationCars() => CopyCars();
+        internal static Transform[] PresentationLimbs(Ent entity) => Limbs(entity);
+        internal static bool PresentationLimp(Ent entity) => Limp(entity);
+        internal static wheelgraphicsscript[] WheelsOf(Ent entity) => EntityProxyPresentation.WheelsOf(entity);
+        private static void WriteWheels(NetWriter writer, Ent entity) => EntityProxyPresentation.WriteWheels(writer, entity);
+        private static void ReadWheels(NetReader reader, Ent entity) => EntityProxyPresentation.ReadWheels(reader, entity);
+        private static void WriteEngine(NetWriter writer, Ent entity) => EntityProxyPresentation.WriteEngine(writer, entity);
+        private static void ReadEngine(NetReader reader, Ent entity) => EntityProxyPresentation.ReadEngine(reader, entity);
+        internal static bool TpaFloorReady(tosaveitemscript item) => EntityProxyPresentation.TpaFloorReady(item);
+        public static long SuppressedDamage { get => EntityProxyPresentation.SuppressedDamage; set => EntityProxyPresentation.SuppressedDamage = value; }
+        public static float TorqueRadiusM { get => EntityProxyPresentation.TorqueRadiusM; set => EntityProxyPresentation.TorqueRadiusM = value; }
+        public static bool CopyLodAllCars { get => EntityProxyPresentation.CopyLodAllCars; set => EntityProxyPresentation.CopyLodAllCars = value; }
+        public static float CopyFarShadowsM { get => EntityProxyPresentation.CopyFarShadowsM; set => EntityProxyPresentation.CopyFarShadowsM = value; }
+        internal static void CopyLodTick() => EntityProxyPresentation.CopyLodTick();
+        internal static void CopyLodRestoreAll() => EntityProxyPresentation.CopyLodRestoreAll();
+        public static string CopyCounts() => EntityProxyPresentation.CopyCounts();
+        public static long HandoverDamageSuppressed { get => EntityProxyPresentation.HandoverDamageSuppressed; set => EntityProxyPresentation.HandoverDamageSuppressed = value; }
+        public static long DistFreezeSkipped { get => EntityProxyPresentation.DistFreezeSkipped; set => EntityProxyPresentation.DistFreezeSkipped = value; }
+        public static long ProxyStarterSounds { get => EntityProxyPresentation.ProxyStarterSounds; set => EntityProxyPresentation.ProxyStarterSounds = value; }
+        public static long ProxyStopSounds { get => EntityProxyPresentation.ProxyStopSounds; set => EntityProxyPresentation.ProxyStopSounds = value; }
+        // End copy presentation boundary.
 
         // Cargo boundary. Map walks and server authority stay in the kernel.
         internal static bool CargoInSession => InSession;

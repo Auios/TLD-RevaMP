@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Ent = TLDRevamp.Net.Entities.Ent;
 using UnityEngine.Rendering;
 
 namespace TLDRevamp.Net
@@ -9,7 +10,7 @@ namespace TLDRevamp.Net
     /// the copies have live; CopyFarShadowsM (0 = off) switches shadows off on car copies farther than that from this
     /// machine's camera, their renderers' and their lamps' (restored when they come nearer), to measure the lever
     /// (tools/carcopies.py). Only copies: the player's own car and cars nobody else owns stay as the game made them.
-    public static partial class Entities
+    internal static partial class EntityProxyPresentation
     {
         public static float CopyFarShadowsM = 0f;
         public static bool CopyLodAllCars;   // test only: also cars that aren't copies (one machine's measurement)
@@ -24,21 +25,6 @@ namespace TLDRevamp.Net
         }
         private static readonly Dictionary<carscript, LodState> _lod = new Dictionary<carscript, LodState>();
 
-        private static IEnumerable<carscript> CopyCars()
-        {
-            if (CopyLodAllCars) { foreach (var c in Object.FindObjectsOfType<carscript>()) yield return c; yield break; }
-            foreach (var e in ByNet.Values)
-                if (e.Proxy && e.Root != null && e.Root.car != null) yield return e.Root.car;
-        }
-
-        /// Other players' cars shown here (telemetry's slow-frame scene counts).
-        internal static int CopyCarCount()
-        {
-            int n = 0;
-            foreach (var e in ByNet.Values) if (e.Proxy && e.Root != null && e.Root.car != null) n++;
-            return n;
-        }
-
         /// Once a second (Mp tick): far copies without shadows, near ones as the game made them.
         internal static void CopyLodTick()
         {
@@ -49,7 +35,7 @@ namespace TLDRevamp.Net
             if (cam == null) return;
             var seen = new HashSet<carscript>();
             float far2 = CopyFarShadowsM * CopyFarShadowsM, near2 = CopyFarShadowsM * 0.8f * CopyFarShadowsM * 0.8f;
-            foreach (var c in CopyCars())
+            foreach (var c in Entities.PresentationCars())
             {
                 if (c == null) continue;
                 seen.Add(c);
@@ -88,7 +74,7 @@ namespace TLDRevamp.Net
         public static string CopyCounts()
         {
             int cars = 0, tf = 0, rend = 0, rendOn = 0, casters = 0, cols = 0, colsOn = 0, lights = 0, lightsOn = 0, shadowLightsOn = 0, rbs = 0, anim = 0, audio = 0, ps = 0;
-            foreach (var c in CopyCars())
+            foreach (var c in Entities.PresentationCars())
             {
                 if (c == null) continue;
                 cars++;
@@ -109,6 +95,24 @@ namespace TLDRevamp.Net
                    ",\"rigidbodies\":" + rbs + ",\"animators\":" + anim + ",\"audio\":" + audio + ",\"particles\":" + ps + ",\"worldShadowLightsOn\":" + allShadowLights +
                    ",\"perCar\":{\"transforms\":" + per(tf) + ",\"renderersOn\":" + per(rendOn) + ",\"collidersOn\":" + per(colsOn) + ",\"shadowCasters\":" + per(casters) + "}" +
                    ",\"farShadowsM\":" + CopyFarShadowsM.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"lodOff\":" + CopyLodOff + ",\"lodOn\":" + CopyLodOn + ",\"lodNow\":" + _lod.Count + "}";
+        }
+    }
+
+    public static partial class Entities
+    {
+        private static IEnumerable<carscript> CopyCars()
+        {
+            if (CopyLodAllCars) { foreach (var c in Object.FindObjectsOfType<carscript>()) yield return c; yield break; }
+            foreach (var e in ByNet.Values)
+                if (e.Proxy && e.Root != null && e.Root.car != null) yield return e.Root.car;
+        }
+
+        /// Other players' cars shown here (telemetry's slow-frame scene counts).
+        internal static int CopyCarCount()
+        {
+            int n = 0;
+            foreach (var e in ByNet.Values) if (e.Proxy && e.Root != null && e.Root.car != null) n++;
+            return n;
         }
     }
 }

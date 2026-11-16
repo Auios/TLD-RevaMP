@@ -4,6 +4,10 @@
     <Compile Include="EntityPhysicsChecks.cs" />
     <Compile Include="EntityPhysicsStubs.cs" />
     <Compile Include="../../src/TLDRevamp/Net/CrashGuard.cs" />
+    <Compile Include="EntityProxyPresentationChecks.cs" />
+    <Compile Include="EntityProxyPresentationStubs.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.EngineBinding.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/CompactPoseCodec.cs" />
     <Compile Include="EntityCargoInteractionChecks.cs" />
     <Compile Include="EntityCargoInteractionStubs.cs" />
     <Compile Include="EntityAttachmentsChecks.cs" />
@@ -109,7 +113,8 @@
       <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
     </PropertyGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractPhysicsBoundary.py&quot; &quot;$(IntermediateOutputPath)PhysicsFeature.g.cs&quot; $(PhysicsBaseline)" />
-    <ItemGroup><Compile Include="$(IntermediateOutputPath)PhysicsFeature.g*.cs" /></ItemGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractProxyPresentationBoundary.py&quot; &quot;$(IntermediateOutputPath)ProxyPresentation.g.cs&quot; $(ProxyPresentationBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)ProxyPresentation.g*.cs" /><Compile Include="$(IntermediateOutputPath)PhysicsFeature.g*.cs" /></ItemGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractFeatureWire.py&quot; &quot;$(IntermediateOutputPath)FeatureWire.g.cs&quot; $(FeatureWireBaseline)" />
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractCargoInteraction.py&quot; &quot;$(IntermediateOutputPath)CargoInteraction.g.cs&quot; $(CargoInteractionBaseline)" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)CargoInteraction.g*.cs" /></ItemGroup>
