@@ -92,6 +92,9 @@ for part in ('cs', 'ItemGroup', 'JoinLoading', 'Placed', 'Observation', 'DevObse
     path = 'src/TLDRevamp/Net/Entities' + ('' if part == 'cs' else '.' + part) + '.cs'
     text = (subprocess.check_output(['git', 'show', '71cfcae:' + path], cwd=root).decode('utf-8')
             if baseline else (root / path).read_text(encoding='utf-8')).replace('\r\n', '\n')
+    if part == 'cs':
+        # Batch 24 names this exact sequence without changing its position or effects.
+        text = text.replace('ClearProxyBindings();', 'ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();')
     source_rows.append(part + '.file=' + hashlib.sha256(text.encode()).hexdigest().upper())
 if '--capture-source' in sys.argv:
     (root / 'tools/unit/EntityKernelFactsSourceRows.txt').write_text('\n'.join(source_rows) + '\n', encoding='utf-8', newline='\r\n')

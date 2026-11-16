@@ -89,6 +89,8 @@ static partial class EntitySplitTest
 
     static void KernelBoundaryChecks()
     {
+        string registry = File.ReadAllText("src/TLDRevamp/Net/Entities.Registry.cs").Replace("\r\n", "\n");
+        Check(Regex.Replace(registry, @"\s+", "") == "namespaceTLDRevamp.Net{publicstaticpartialclassEntities{internalstaticvoidClearProxyBindings(){ProxyWheelOwner.Clear();ProxyWheelIndex.Clear();ProxyEngineOwner.Clear();}}}", "registry stays on the kernel and contains only the captured proxy binding clears");
         Check(File.ReadAllLines("tools/unit/EntityKernelFactsSourceRows.txt").SequenceEqual(File.ReadAllLines("tools/unit/obj/EntitySplitTest/KernelFactsActualRows.txt")), "helper bodies and retained kernel files equal HEAD after named substitutions");
         string[] files = Directory.GetFiles("src/TLDRevamp/Net", "Entities*.cs");
         foreach (string name in new[] { "Tick", "FixedTick", "Reset", "ServerOnJoin", "ServerOnLeave", "ClientReceive", "ServerReceive", "ToServer", "SendToServer", "ServerSendTo", "ServerSendAll", "ServerForwardRaw", "Deliver" })

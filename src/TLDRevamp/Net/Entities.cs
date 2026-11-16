@@ -251,7 +251,7 @@ namespace TLDRevamp.Net
             ProxyItems.Clear(); EntityCarSignals.ResetSignals(); _rideCars.Clear(); CargoGhostNets.Clear(); EntityRagdolls.ResetCopies(); EntityEffects.ResetSpraying();
             EntityLocks.ResetHostSetting();   // a client: its own setting again
             EntityWeather.StormReset();   // a client keeps the storms it has: its own from now
-            ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();
+            ClearProxyBindings();
             EntityWorldLeases.RestoreBuiltIns();
             HitchReset(wasHost);
             ResetSessionLeftovers();

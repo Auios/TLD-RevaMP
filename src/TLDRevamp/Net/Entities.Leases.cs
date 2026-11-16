@@ -461,7 +461,7 @@ namespace TLDRevamp.Net
         {
             LiveUsablesReset(keepPoiSequences: true);
             ByNet.Clear(); PendingShare.Clear(); ProxyItems.Clear();
-            ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();
+            ClearProxyBindings();
             EntityWorldLeases.ReloadClient();
             Mp.SceneTearingDown = false;
             EntityWorldLeases.ForgetBuiltIns();
