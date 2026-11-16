@@ -9,7 +9,7 @@ namespace HarmonyLib
 {
     public class HarmonyFinalizer : Attribute { }
     public class HarmonyPriority : Attribute { public int priority; public HarmonyPriority(int value) { priority = value; } }
-    public static class Priority { public const int First = 800, Normal = 400; }
+    public static partial class Priority { public const int First = 800, Normal = 400; }
     public static class AccessTools { public delegate ref F FieldRef<T, F>(T instance); }
 }
 namespace UnityEngine

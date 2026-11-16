@@ -253,9 +253,7 @@ namespace TLDRevamp.Net
             EntityLocks.ResetHostSetting();   // a client: its own setting again
             EntityWeather.StormReset();   // a client keeps the storms it has: its own from now
             ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();
-            foreach (var kv in DisabledBuiltIn)
-                foreach (var go in kv.Value) if (go != null) go.SetActive(true);
-            DisabledBuiltIn.Clear();
+            EntityWorldLeases.RestoreBuiltIns();
             HitchReset(wasHost);
             ResetSessionLeftovers();
             ByNet.Clear(); Server.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
@@ -263,7 +261,7 @@ namespace TLDRevamp.Net
             // sets, needs nothing here: ServerOnJoin starts every joiner with an empty one - rehost.py)
             PhysicalCars.Clear(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); EntityAI.BreaksReset();
             EntityEdits.ResetTankEditTruth(); _tankAddsOut.Clear(); _censusFirst.Clear(); _censusDue.Clear(); _repairWait.Clear(); _repairCycle.Clear(); _repairCursor = 0; _repairRunAt.Clear(); _placeRunAt.Clear(); _placeWait.Clear();
-            ResetPoiCensus(); Leases.Clear(); LeaseTypes.Clear(); LeaseUntil.Clear(); LeaseAsked.Clear(); _leaseRetryAt.Clear(); PendingGrants.Clear(); _leasesDone.Clear(); _captureKnown = null; Captures.Clear();
+            ResetPoiCensus(); EntityWorldLeases.ResetLeaseSession();
             EntitySeats.ShotgunReset();
             EntityAI.AiReset();
             EntityRabbits.RabbitReset();
@@ -455,7 +453,7 @@ namespace TLDRevamp.Net
             double now = Time.realtimeSinceStartupAsDouble;
             _driverCheck += dt;
             if (_driverCheck > 0.5f) { _driverCheck = 0; CheckDriverSeat(); }
-            LeaseTick();
+            EntityWorldLeases.LeaseTick();
             LiveUsableTick();
             EditTick();
             EntityCarTuning.CopyFluidTick();
@@ -767,8 +765,8 @@ namespace TLDRevamp.Net
                     ServerPartOff(from, r);
                     break;
                 }
-                case LeaseReq: ServerLeaseRequest(from, r); break;
-                case LeaseDone: ServerLeaseDoneRequest(from, r); break;
+                case LeaseReq: EntityWorldLeases.ServerLeaseRequest(from, r); break;
+                case LeaseDone: EntityWorldLeases.ServerLeaseDoneRequest(from, r); break;
                 case Resync: ServerResync(from, r); break;
                 case Edit: ServerEdit(from, r); break;
                 case Protocol.LiveUsable: ServerLiveUsable(from, r); break;
@@ -891,8 +889,7 @@ namespace TLDRevamp.Net
         /// A player left: their cars go to the host (it keeps simulating them from the last state).
         /// Leases whose holder confirmed the spawn finished (LeaseDone): safe to keep if the holder leaves, because
         /// everything it spawned was already shared. Undone leases are freed: their buildings can be spawned again.
-        private static readonly HashSet<string> _leasesDone = new HashSet<string>();
-        internal static System.Collections.Generic.IReadOnlyCollection<string> ObservedLeasesDone => _leasesDone;
+        internal static System.Collections.Generic.IReadOnlyCollection<string> ObservedLeasesDone => EntityWorldLeases.ObservedLeasesDone;
 
         public static float SilentTakeoverS = 1.5f;   // Mp.Server.SilentTick; 0 = off (A/B: before v0.65.24)
         public static long SilentTakeovers;
@@ -939,7 +936,7 @@ namespace TLDRevamp.Net
                 if (tr.OwnerId == playerId && tr.HitchCar != 0 && Server.TryGetValue(tr.HitchCar, out var tow)) BeginHitchTransfer(tr, tow.OwnerId);
             // the leaver's leases: finished ones stay (their content is shared, holder 0 = the server), unfinished
             // ones are freed so the building isn't stuck half-spawned with spawn flags on everywhere
-            ServerLeaseLeave(playerId);
+            EntityWorldLeases.ServerLeaseLeave(playerId);
         }
 
         internal static void SendToServer(NetWriter w, bool reliable) => ToServer(w, reliable);
@@ -1205,20 +1202,20 @@ namespace TLDRevamp.Net
                 case LeaseGrant:
                 {
                     string key = r.Str();
-                    if (!r.Bad && key != null) OnLeaseGrant(key);
+                    if (!r.Bad && key != null) EntityWorldLeases.OnLeaseGrant(key);
                     break;
                 }
                 case LeaseTaken:
                 {
                     string key = r.Str();
                     int ht = r.Remaining >= 4 ? r.I32() : int.MinValue; string hn = r.Remaining > 0 ? r.Str() : "";
-                    if (key != null && !(r.Bad && ht == int.MinValue)) OnLeaseTaken(key, r.Bad ? int.MinValue : ht, hn ?? "");
+                    if (key != null && !(r.Bad && ht == int.MinValue)) EntityWorldLeases.OnLeaseTaken(key, r.Bad ? int.MinValue : ht, hn ?? "");
                     break;
                 }
                 case LeaseFreed:
                 {
                     string key = r.Str();
-                    if (!r.Bad && key != null) OnLeaseFreed(key);
+                    if (!r.Bad && key != null) EntityWorldLeases.OnLeaseFreed(key);
                     break;
                 }
                 case Resync: ApplyResync(r); break;

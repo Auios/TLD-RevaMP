@@ -3,7 +3,14 @@
   <ItemGroup>
     <Compile Include="ValidationTest.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.PartOff.cs" />
-    <Compile Include="../../src/TLDRevamp/Net/Entities.LeaseValidation.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
   </ItemGroup>
+  <Target Name="ExtractLeasesValidation" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
+      <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
+    </PropertyGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractLeasesBoundary.py&quot; &quot;$(IntermediateOutputPath)LeaseValidation.g.cs&quot; --validation" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)LeaseValidation.g.cs" /></ItemGroup>
+  </Target>
 </Project>

@@ -46,6 +46,39 @@ namespace TLDRevamp.Net
             return false;
         }
         // End lock boundary.
+        // World lease boundary. Entity map walks and ownership decisions stay in the kernel.
+        public const byte LeaseReq = 28, LeaseGrant = 29, LeaseTaken = 30, LeaseDone = 33, LeaseFreed = 34;
+        internal static void SendLeaseRequest(NetWriter writer, bool reliable) => ToServer(writer, reliable);
+        internal static int ShareLeaseRoots(System.Collections.Generic.List<tosaveitemscript> items) => ShareRoots(items);
+        internal static System.Collections.Generic.List<GameObject> DisableLeaseBuiltIns(poiScript poi) => DisableBuiltIns(poi);
+        internal static void LeaseAnomaly(string message) => Anomaly(message);
+        internal static bool TryLeasePlayerPosition(int from, out Vector3d pos)
+        {
+            pos = default;
+            if (Mp.Server == null || from < 0) return false;
+            if (from != 0) return Mp.Server.PeerPos(from, out pos) && Finite(pos);
+            var player = mainscript.s != null ? mainscript.s.player : null;
+            if (player == null) return false;
+            pos = mainscript.GlobalFromUnityPos(player.transform.position);
+            return Finite(pos);
+        }
+        public static string LeaseTable() => EntityWorldLeases.LeaseTable();
+        internal static string LeaseRefusalsJson() => EntityWorldLeases.LeaseRefusalsJson();
+        internal static string WorldSaveFile => EntityWorldLeases.WorldSaveFile;
+        internal static void SaveLeases(string dataFile) => EntityWorldLeases.SaveLeases(dataFile);
+        internal static void SaveLeases() => EntityWorldLeases.SaveLeases();
+        internal static void RotateLeaseFiles() => EntityWorldLeases.RotateLeaseFiles();
+        public static long BuiltInShared { get => EntityWorldLeases.BuiltInShared; set => EntityWorldLeases.BuiltInShared = value; }
+        public static long BuiltInDisabled { get => EntityWorldLeases.BuiltInDisabled; set => EntityWorldLeases.BuiltInDisabled = value; }
+        public static long BuiltInReEnabled { get => EntityWorldLeases.BuiltInReEnabled; set => EntityWorldLeases.BuiltInReEnabled = value; }
+        public static long LeasesDone { get => EntityWorldLeases.LeasesDone; set => EntityWorldLeases.LeasesDone = value; }
+        public static long LeasesFreed { get => EntityWorldLeases.LeasesFreed; set => EntityWorldLeases.LeasesFreed = value; }
+        public static long LeasesAsked { get => EntityWorldLeases.LeasesAsked; set => EntityWorldLeases.LeasesAsked = value; }
+        public static long LeasesGranted { get => EntityWorldLeases.LeasesGranted; set => EntityWorldLeases.LeasesGranted = value; }
+        public static long LeaseSpawns { get => EntityWorldLeases.LeaseSpawns; set => EntityWorldLeases.LeaseSpawns = value; }
+        public static long LeaseItemsShared { get => EntityWorldLeases.LeaseItemsShared; set => EntityWorldLeases.LeaseItemsShared = value; }
+        public static long HostItemsShared { get => EntityWorldLeases.HostItemsShared; set => EntityWorldLeases.HostItemsShared = value; }
+        // End world lease boundary.
 
         internal static float EditBackHold => EditHold;
         internal static bool RequestEditBack(uint net, uint item)

@@ -96,7 +96,6 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         private static bool IsStored(tosaveitemscript it) => false;
-        private static string LeaseRefusalsJson() => "{}";
     }
 }
 
@@ -154,7 +153,6 @@ namespace TLDRevamp.Net
         internal static double AttachesSame;
         internal static double AttachesSent;
         internal static double AutoDetachesIgnored;
-        internal static double BuiltInReEnabled;
         internal static double CargoClaimed;
         internal static double CargoClaimedNear;
         internal static double CargoClaimedOnContact;
@@ -192,8 +190,6 @@ namespace TLDRevamp.Net
         internal static double ItemClaimedNear;
         internal static double ItemClaimedOnContact;
         internal static readonly List<string> LeaseAsked = new List<string>();
-        internal static double LeasesDone;
-        internal static double LeasesFreed;
         internal static double MembersRebound;
         internal static double OrphansCleared;
         internal static double OwnerChanges;

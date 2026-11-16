@@ -11,9 +11,8 @@ namespace TLDRevamp.Net
     /// SpawnStuff, and everything it spawned is shared. Everyone else gets those objects from the server — nothing to
     /// hide, no duplicates. The official MP's version of this ("only the host spawns", clients skip SpawnStuff) can't
     /// work when players are far apart: the host never loads buildings 200 km away.
-    public static partial class Entities
+    internal static partial class EntityWorldLeases
     {
-        public const byte LeaseReq = 28, LeaseGrant = 29, LeaseTaken = 30, LeaseDone = 33, LeaseFreed = 34;
         /// Built-in building items disabled because the lease holder's copies are shared: per lease key, so a lease
         /// that ends without a spawn (its holder left mid-spawn) can give them back.
         private static readonly Dictionary<string, List<GameObject>> DisabledBuiltIn = new Dictionary<string, List<GameObject>>();
@@ -41,7 +40,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static bool Prefix(poiGenScript.poiClass _poiClass)
             {
-                if (!InSession || _leaseSpawning || _poiClass == null) return true;
+                if (!Entities.InSession || _leaseSpawning || _poiClass == null) return true;
                 if (_poiClass.spawnedItems && _poiClass.spawnedFixed) return true;   // nothing left to spawn anyway
                 string k0 = Key(_poiClass);
                 // freed a moment ago (a refusal frees it too: player not placed on the server yet, out of reach): not again
@@ -55,9 +54,9 @@ namespace TLDRevamp.Net
                 {
                     // with the building type generated here: the server compares it with the holder's (a building that
                     // differs between machines — the missing diner)
-                    W.Reset(); W.U8(LeaseReq); W.Str(k);
+                    W.Reset(); W.U8(Entities.LeaseReq); W.Str(k);
                     if (LeaseTypeCheck) { W.I32(_poiClass.id); W.Str(_poiClass.poiName ?? ""); }
-                    ToServer(W, true);
+                    Entities.SendLeaseRequest(W, true);
                     LeasesAsked++;
                 }
                 return false;
@@ -70,21 +69,17 @@ namespace TLDRevamp.Net
         public static long LeaseTypeMismatches;
         public static bool LeaseTypeCheck = true;   // A/B: false = before v0.66.8 (no type in LeaseReq, nothing compared)
 
-        private static void OnLeaseTaken(string key, int holderType = int.MinValue, string holderName = "")
+        internal static void OnLeaseTaken(string key, int holderType = int.MinValue, string holderName = "")
         {
             var poi = FindPoi(key);
             if (holderType != int.MinValue && poi != null && poi.id != holderType)
             {
                 LeaseTypeMismatches++;
-                Anomaly($"building differs at {key}: here {poi.poiName} (type {poi.id}), the player who spawned its contents has {holderName} (type {holderType})");
+                Entities.LeaseAnomaly($"building differs at {key}: here {poi.poiName} (type {poi.id}), the player who spawned its contents has {holderName} (type {holderType})");
             }
             var pobj = FindPoiObject(key);
             if (pobj == null) return;
-            var shared = new HashSet<tosaveitemscript>();
-            foreach (var e in ByNet.Values) foreach (var it in e.Items) if (it != null) shared.Add(it);
-            var list = new List<GameObject>();
-            foreach (var it in pobj.GetComponentsInChildren<tosaveitemscript>(true))
-                if (!shared.Contains(it) && it.gameObject.activeSelf) { it.gameObject.SetActive(false); list.Add(it.gameObject); BuiltInDisabled++; }
+            var list = Entities.DisableLeaseBuiltIns(pobj);
             if (list.Count > 0) DisabledBuiltIn[key] = list;
         }
 
@@ -94,7 +89,7 @@ namespace TLDRevamp.Net
         /// A lease ended without a spawn: its holder left while the building was still empty. Everything the holder
         /// would have shared is gone, so the building is spawnable again: hand the disabled built-ins back, forget that
         /// this machine asked, and clear the poi's spawn flags so the game calls SpawnStuff once someone is near.
-        private static void OnLeaseFreed(string key)
+        internal static void OnLeaseFreed(string key)
         {
             Plugin.Log.LogInfo($"LeaseFreed '{key}': had asked {LeaseAsked.Contains(key)}, clearing");
             LeaseAsked.Remove(key);
@@ -204,7 +199,7 @@ namespace TLDRevamp.Net
             {
                 EnsureWorld();
                 if (string.IsNullOrEmpty(dataFile)) return;
-                if (InSession || Leases.Count > 0)
+                if (Entities.InSession || Leases.Count > 0)
                 {
                     _worldLines = new List<string>();
                     foreach (var kv in Leases) if (_leasesDone.Contains(kv.Key)) _worldLines.Add(kv.Key + "\t0\t1");
@@ -286,21 +281,7 @@ namespace TLDRevamp.Net
 
         internal static void RotateLeaseFiles() => RotateLeasesWithAutosaves.RotateLeaseFiles();
 
-        public static void ResetCounters()
-        {
-            LeaseRefusedWhy.Clear();
-            LeasesAsked = LeasesGranted = LeaseSpawns = LeaseItemsShared = HostItemsShared = BuiltInShared = BuiltInDisabled = BuiltInReEnabled = LeasesDone = LeasesFreed = 0;
-            StatesSent = StatesIn = StatesStale = Spawned = OwnerChanges = 0;
-            StatesSkippedPose = StatesSkippedLocked = StatesSkippedAttached = StatesSkippedRabbitAnimation = StatesSkippedRagdoll = 0;
-            StatesSkippedIdentical = StatesSkippedCorpseRoot = StatesSkippedUnknown = StatesSkippedCreatureRange = StatesSkippedDeadAnimation = 0;
-            PartsReported = PartsApplied = PartOffRejected = ClaimsRefused = ClaimsSent = 0; RefusedCrash = RefusedHeld = RefusedStored = RefusedDriven = 0; _refuseLogged.Clear();
-            ResyncsSent = ResyncsApplied = ResyncItemsLoaded = ResyncSkipped = PartStatesChanged = ResyncBytes = ResyncItemsSent = ResyncHeld = 0;
-            EditsSent = EditsApplied = EditsRejected = EditsMarked = 0;
-            ResyncCaptureMsMax = ResyncCaptureMsTotal = 0; ResyncBudgetFrames = 0;
-            LiveUsablesSent = LiveUsablesRelayed = LiveUsablesApplied = LiveUsablesStale = LiveUsablesRefused = 0;
-        }
-
-        private static void OnLeaseGrant(string key)
+        internal static void OnLeaseGrant(string key)
         {
             if (!TrySpawnLeased(key)) PendingGrants.Add(key);   // building object not there yet: retry in Tick
         }
@@ -322,7 +303,7 @@ namespace TLDRevamp.Net
                         // items built into the building object exist on every machine the moment the building appears:
                         // the holder's go out, everyone else's are disabled (LeaseTaken)
                         var builtIn = new List<tosaveitemscript>(poi.pobj.GetComponentsInChildren<tosaveitemscript>(true));
-                        BuiltInShared += ShareRoots(builtIn);
+                        BuiltInShared += Entities.ShareLeaseRoots(builtIn);
                         if (_captureKnown != null) CaptureTick();   // running captures take what their buildings spawned so far
                         if (_captureKnown == null) _captureKnown = new HashSet<uint>(savedatascript.s.items.Keys);   // (that may end the last)
                         Captures.Add(new Capture { Key = key, At = poi.pobj.transform.position, Until = Time.realtimeSinceStartup + 4f });
@@ -355,18 +336,71 @@ namespace TLDRevamp.Net
                 foreach (var c in Captures)
                     if ((pos - c.At).sqrMagnitude < 400f * 400f) { fresh.Add(kv.Value); break; }
             }
-            if (fresh.Count > 0) LeaseItemsShared += ShareRoots(fresh);
+            if (fresh.Count > 0) LeaseItemsShared += Entities.ShareLeaseRoots(fresh);
             float now = Time.realtimeSinceStartup;
             for (int i = Captures.Count - 1; i >= 0; i--)
             {
                 if (now <= Captures[i].Until) continue;
                 // everything this building spawns is shared: the lease is complete, the server may keep it even if we
                 // leave (ServerOnLeaseDone)
-                W.Reset(); W.U8(LeaseDone); W.Str(Captures[i].Key); ToServer(W, true);
+                W.Reset(); W.U8(Entities.LeaseDone); W.Str(Captures[i].Key); Entities.SendLeaseRequest(W, true);
                 LeasesDone++;
                 Captures.RemoveAt(i);
             }
             if (Captures.Count == 0) _captureKnown = null;
+        }
+
+
+        /// Per frame: grants waiting for their building object, capture windows.
+        internal static void LeaseTick()
+        {
+            if (Entities.IsHost) ServerLeaseExpiry();
+            for (int i = PendingGrants.Count - 1; i >= 0; i--)
+                if (TrySpawnLeased(PendingGrants[i])) PendingGrants.RemoveAt(i);
+            if (_captureKnown != null) CaptureTick();
+        }
+
+        private static readonly NetWriter W = new NetWriter();
+        private static readonly HashSet<string> _leasesDone = new HashSet<string>();
+        internal static System.Collections.Generic.IReadOnlyCollection<string> ObservedLeasesDone => _leasesDone;
+        internal static string AskedKeys => string.Join(" | ", LeaseAsked);
+        internal static void RememberRequest(string key) => LeaseAsked.Add(key);
+        internal static void RememberHostPoi(poiGenScript.poiClass poi) { Leases[Key(poi)] = 0; _leasesDone.Add(Key(poi)); }
+        internal static void RestoreBuiltIns()
+        {
+            foreach (var kv in DisabledBuiltIn)
+                foreach (var go in kv.Value) if (go != null) go.SetActive(true);
+            DisabledBuiltIn.Clear();
+        }
+        internal static void ResetLeaseSession()
+        {
+            Leases.Clear(); LeaseTypes.Clear(); LeaseUntil.Clear(); LeaseAsked.Clear(); _leaseRetryAt.Clear(); PendingGrants.Clear(); _leasesDone.Clear(); _captureKnown = null; Captures.Clear();
+        }
+        internal static void ReloadClient()
+        {
+            LeaseAsked.Clear(); PendingGrants.Clear(); _captureKnown = null; Captures.Clear();
+        }
+        internal static void ForgetBuiltIns() => DisabledBuiltIn.Clear();
+        internal static void ResetLeaseCounters()
+        {
+            LeaseRefusedWhy.Clear();
+            LeasesAsked = LeasesGranted = LeaseSpawns = LeaseItemsShared = HostItemsShared = BuiltInShared = BuiltInDisabled = BuiltInReEnabled = LeasesDone = LeasesFreed = 0;
+        }
+    }
+
+    public static partial class Entities
+    {
+        public static void ResetCounters()
+        {
+            EntityWorldLeases.ResetLeaseCounters();
+            StatesSent = StatesIn = StatesStale = Spawned = OwnerChanges = 0;
+            StatesSkippedPose = StatesSkippedLocked = StatesSkippedAttached = StatesSkippedRabbitAnimation = StatesSkippedRagdoll = 0;
+            StatesSkippedIdentical = StatesSkippedCorpseRoot = StatesSkippedUnknown = StatesSkippedCreatureRange = StatesSkippedDeadAnimation = 0;
+            PartsReported = PartsApplied = PartOffRejected = ClaimsRefused = ClaimsSent = 0; RefusedCrash = RefusedHeld = RefusedStored = RefusedDriven = 0; _refuseLogged.Clear();
+            ResyncsSent = ResyncsApplied = ResyncItemsLoaded = ResyncSkipped = PartStatesChanged = ResyncBytes = ResyncItemsSent = ResyncHeld = 0;
+            EditsSent = EditsApplied = EditsRejected = EditsMarked = 0;
+            ResyncCaptureMsMax = ResyncCaptureMsTotal = 0; ResyncBudgetFrames = 0;
+            LiveUsablesSent = LiveUsablesRelayed = LiveUsablesApplied = LiveUsablesStale = LiveUsablesRefused = 0;
         }
 
         /// Share the group roots among `items` (cars with their parts, loose items); attached parts go with their car.
@@ -413,12 +447,12 @@ namespace TLDRevamp.Net
                     if (g == null) continue;
                     foreach (var ch in g.chunks.Values)
                         foreach (var poi in ch.pois.Values)
-                            if (poi.spawnedItems || poi.spawnedFixed) { Leases[Key(poi)] = 0; _leasesDone.Add(Key(poi)); }
+                            if (poi.spawnedItems || poi.spawnedFixed) { EntityWorldLeases.RememberHostPoi(poi); }
                 }
-            LoadLeases();   // leases from previous server sessions: distant buildings stay taken, no re-spawn duplicates
+            EntityWorldLeases.LoadLeases();   // leases from previous server sessions: distant buildings stay taken, no re-spawn duplicates
             var all = new List<tosaveitemscript>();
             foreach (var it in savedatascript.s.items.Values) if (it != null) all.Add(it);
-            HostItemsShared += ShareRoots(all);
+            EntityWorldLeases.HostItemsShared += ShareRoots(all);
             ShareFarStore();   // and everything stored away from the host: it reaches players by distance
         }
 
@@ -428,18 +462,9 @@ namespace TLDRevamp.Net
             LiveUsablesReset(keepPoiSequences: true);
             ByNet.Clear(); PendingShare.Clear(); ProxyItems.Clear();
             ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();
-            LeaseAsked.Clear(); PendingGrants.Clear(); _captureKnown = null; Captures.Clear();
+            EntityWorldLeases.ReloadClient();
             Mp.SceneTearingDown = false;
-            DisabledBuiltIn.Clear();
-        }
-
-        /// Per frame: grants waiting for their building object, capture windows.
-        private static void LeaseTick()
-        {
-            if (IsHost) ServerLeaseExpiry();
-            for (int i = PendingGrants.Count - 1; i >= 0; i--)
-                if (TrySpawnLeased(PendingGrants[i])) PendingGrants.RemoveAt(i);
-            if (_captureKnown != null) CaptureTick();
+            EntityWorldLeases.ForgetBuiltIns();
         }
 
         // ------------------------------------------------------------------ picking up someone else's item
@@ -553,6 +578,16 @@ namespace TLDRevamp.Net
                 __result = false;
                 if (CarLiftsRefused++ == 0) Plugin.Log.LogInfo($"ridden car copy lift refused: {e.Root.name} net {e.NetId} (owner {e.OwnerId})");
             }
+        }
+
+        private static List<GameObject> DisableBuiltIns(poiScript pobj)
+        {
+            var shared = new HashSet<tosaveitemscript>();
+            foreach (var e in ByNet.Values) foreach (var it in e.Items) if (it != null) shared.Add(it);
+            var list = new List<GameObject>();
+            foreach (var it in pobj.GetComponentsInChildren<tosaveitemscript>(true))
+                if (!shared.Contains(it) && it.gameObject.activeSelf) { it.gameObject.SetActive(false); list.Add(it.gameObject); EntityWorldLeases.BuiltInDisabled++; }
+            return list;
         }
     }
 }

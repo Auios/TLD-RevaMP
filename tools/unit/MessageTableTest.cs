@@ -76,6 +76,10 @@ static class MessageTableTest
         string server = Method("Entities", "ServerReceive"), client = Method("Entities", "ClientReceive");
         Check("PhysLockSync: client routes to lock owner", client.Contains("case PhysLockSync: EntityLocks.ApplyPhysLock(r);"));
         Check("PhysLockSync: owner reads payload", Method("EntityLocks", "ApplyPhysLock").Contains("r.U8()"));
+        foreach (var route in new[] { ("LeaseReq", "ServerLeaseRequest"), ("LeaseDone", "ServerLeaseDoneRequest") })
+            Check(route.Item1 + ": lease owner reads request", server.Contains("case " + route.Item1 + ": EntityWorldLeases." + route.Item2 + "(from, r);") && Method("EntityWorldLeases", route.Item2).Contains("r.Str()"));
+        foreach (string handler in new[] { "OnLeaseGrant", "OnLeaseTaken", "OnLeaseFreed" })
+            Check(handler + ": client routes to lease owner", client.Contains("EntityWorldLeases." + handler + "(") && Method("EntityWorldLeases", handler).Contains("key"));
         foreach (string name in new[] { "Command", "Freeze", "Frozen", "Result" })
         {
             string handler = "ApplyHitch" + name;

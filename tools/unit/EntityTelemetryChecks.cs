@@ -152,6 +152,7 @@ static partial class EntitySplitTest
         foreach (var pair in hashes)
         {
             string source = File.ReadAllText("src/TLDRevamp/Net/" + pair.Item1).Replace("\r\n", "\n").Replace("EntityResync.ResyncForeignAttachDropped", "ResyncForeignAttachDropped");
+            source = source.Replace("EntityWorldLeases.AskedKeys", "string.Join(\" | \", LeaseAsked)");
             if (pair.Item1 == "TelemetryMarks.cs")
             {
                 source = source.Replace("internal static class EntityTelemetry", "public static partial class Entities");
