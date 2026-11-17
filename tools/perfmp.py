@@ -70,7 +70,7 @@ with game.ProtectedSession():
         L("!seeded")
         h = game.loadsave(SAVE)
         for s_ in (h, L):
-            s_("set TLDRevamp.TestSafety.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0")
+            s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0")
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")
         hp = h("gpos"); L(f"tpground {hp['gx'] + 4} {hp['gz'] + 4}")
         time.sleep(20)

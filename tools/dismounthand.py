@@ -2,7 +2,7 @@
 """Bug 3: dismounting a part on another player's car. Single player puts the part in your hand (UnCraft, then Pickup);
 before v0.65.5 a non-owner got nothing in hand — the part dropped off a network delay later (and pressing again sent
 more requests). Desktop only: a bot owns a car copy (and answers removal requests as an owner's game: PartOff); the
-host, standing by it, dismounts its hubcap as the player (Entities.TestAsPlayer). Expected: one request, the hubcap
+host, standing by it, dismounts its hubcap as the player (EntityProxyTools.TestAsPlayer). Expected: one request, the hubcap
 comes off and lands in the host's hand, the host owns it.
   tools/dismounthand.py [--no-build] [--car Car06Full]"""
 import sys, time, math, pathlib
@@ -24,7 +24,7 @@ game.launch()
 with game.ProtectedSession():
     game.newgame()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     try:
         p = b("gpos"); b(f"tpground {p['gx'] + 15} {p['gz']}"); time.sleep(3)
@@ -34,7 +34,7 @@ with game.ProtectedSession():
         a_net = next(n for n, e in ents(b).items() if n not in before and e["car"])
         print("  botcar:", b("mp botcar"), flush=True)
         b(f"deleteshare {a_net}")
-        b("set TLDRevamp.Net.Mp.BotCars True")
+        b("set TLDRevamp.Net.LegacyBots.BotCars True")
         known = set(ents(b))
         b("mp bots 1 10 0")
         c_net = None
@@ -62,7 +62,7 @@ with game.ProtectedSession():
     finally:
         try: b(f"set {T}.TestAsPlayer False"); b("mp stop")
         except Exception: pass
-        b("set TLDRevamp.Net.Mp.BotCars False")
+        b("set TLDRevamp.Net.LegacyBots.BotCars False")
         b(f"set kaposztaleves.s.settings.god {god if god is not None else False}")
 game.quit_game()
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

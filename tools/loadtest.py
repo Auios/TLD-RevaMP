@@ -49,14 +49,14 @@ L = Agent()
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY: print("relay only via", RELAY, b(f"net relay {RELAY}"), L(f"net relay {RELAY}"), flush=True)
         b(f"set TLDRevamp.Net.MpServer.CarTiers {'False' if '--no-cartiers' in sys.argv else 'True'}")   # A/B (v0.57.89)
         b("mp host 27070")
         if RELAY: L(f"mp joinid {b('net me')['steamId']}")
         else: L(f"mp join {DESKTOP_IP}:27070")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY: print("route:", L("net route"), flush=True)
         # the car every bot drives: a car01 next to the host, captured, then removed
         # away from spawn: the start house and the host's start bike (a car it simulates: copies near it turn physical)
@@ -72,8 +72,8 @@ try:
         bc = b("mp botcar"); print("bot car:", bc, flush=True)
         print("bot car:", bc, b("clearpile"), flush=True)
         if "Car01" not in bc.get("car", ""): sys.exit(f"the bots would drive {bc.get('car')}, not the car01")
-        b("set TLDRevamp.Net.Mp.BotCars True"); b("mp contacts on")
-        b(f"set TLDRevamp.Net.Mp.BotTorques {'--no-torques' not in sys.argv}")
+        b("set TLDRevamp.Net.LegacyBots.BotCars True"); b("mp contacts on")
+        b(f"set TLDRevamp.Net.LegacyBots.BotTorques {'--no-torques' not in sys.argv}")
         # the laptop stands next to the host: every bot car is near it too
         L(f"tpground {rp['gx'] + 3} {rp['gz'] + 3}"); time.sleep(3)
         have = 0

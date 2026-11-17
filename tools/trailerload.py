@@ -57,9 +57,9 @@ with game.ProtectedSession():
     print(" saved as:", s0, flush=True)
     if not s0 or not s0["hitched"]: sys.exit("NOT HITCHED BEFORE SAVING")
     gap0 = math.dist(s0["trailer"], s0["car"])
-    b("set TLDRevamp.TestSafety.BlockAutoSave False")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave False")
     print(" autosave:", b("call savedatascript.s.saveScreen.AutoSave"), flush=True); time.sleep(4)
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     newest = max(game.SAVES.glob("TLDsaveData_autosave*.tlds"), key=lambda p: p.stat().st_mtime)
     slot = newest.name[len("TLDsaveData_"):-len(".tlds")]
     print(" saved to", slot, flush=True)

@@ -3,7 +3,7 @@
 shadows). Two machines over the relay; the laptop spawns N cars around the host (its own: copies on the host). The host
 measures its frame phases (FrameBreakdown: Camera.Render, physics, scripts, the main thread) for WINDOW s each:
   1  far spot, no copies          2  near spot, no copies        3  near, N copies 20-45 m around
-  4  near, N copies, far copies without shadows (Entities.CopyFarShadowsM 10: all of them)
+  4  near, N copies, far copies without shadows (EntityProxyPresentation.CopyFarShadowsM 10: all of them)
   5  night: copies with shadows   6  night: without              7  the far spot (copies 600 m away)
 Prints a table and what the copies have live (`mp copycost`). A measurement: no PASS/FAIL beyond the run being valid.
   tools/carcopies.py [--no-build] [--relay iad|off] [--cars 15] [--window 20]"""
@@ -37,13 +37,13 @@ ensure_both("--no-build" not in sys.argv)
 rows, valid = [], True
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     # keep drawing without focus (run 1: the host's window lost it and ran at 1 fps in 6 of 7 windows)
     for s_ in (h, L): s_("bg on")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         rp = h("roadpoint"); x, z, yaw = rp["gx"], rp["gz"], rp["yaw"]
         fx, fz = math.sin(math.radians(yaw)), math.cos(math.radians(yaw))
@@ -59,15 +59,15 @@ with game.ProtectedSession():
         cc = h("mp copycost"); print("  copies on the host:", json.dumps(cc), flush=True)
         if cc["cars"] < N: valid = False; print(f"  INVALID: the host has {cc['cars']} copies of {N}", flush=True)
         rows.append(measure(h, f"3 near, {cc['cars']} copies"))
-        h("set TLDRevamp.Net.Entities.CopyFarShadowsM 10"); time.sleep(3)
+        h("set TLDRevamp.Net.EntityProxyPresentation.CopyFarShadowsM 10"); time.sleep(3)
         print("  lever:", json.dumps(h("mp copycost")), flush=True)
         rows.append(measure(h, "4 near, copies without shadows"))
-        h("set TLDRevamp.Net.Entities.CopyFarShadowsM 0"); time.sleep(2)
+        h("set TLDRevamp.Net.EntityProxyPresentation.CopyFarShadowsM 0"); time.sleep(2)
         night(h, True); time.sleep(8)
         rows.append(measure(h, "5 night, copies with shadows"))
-        h("set TLDRevamp.Net.Entities.CopyFarShadowsM 10"); time.sleep(3)
+        h("set TLDRevamp.Net.EntityProxyPresentation.CopyFarShadowsM 10"); time.sleep(3)
         rows.append(measure(h, "6 night, copies without shadows"))
-        h("set TLDRevamp.Net.Entities.CopyFarShadowsM 0"); night(h, False); time.sleep(3)
+        h("set TLDRevamp.Net.EntityProxyPresentation.CopyFarShadowsM 0"); night(h, False); time.sleep(3)
         tp(h, *far); time.sleep(8)
         rows.append(measure(h, "7 far spot, copies 600 m away"))
         er = [x_("errors") for x_ in (h, L)]
@@ -76,7 +76,7 @@ with game.ProtectedSession():
         if lost: valid = False; print("  INVALID: the laptop dropped", flush=True)
         if any((r["p50"] or 0) > 100 for r in rows): valid = False; print("  INVALID: a window ran under 10 fps (the game throttled?)", flush=True)
     finally:
-        h("set TLDRevamp.Net.Entities.CopyFarShadowsM 0")
+        h("set TLDRevamp.Net.EntityProxyPresentation.CopyFarShadowsM 0")
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nCARCOPIES" + ("" if valid else " (INVALID)"))

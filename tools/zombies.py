@@ -63,18 +63,18 @@ gods = {}
 try:
     with game.ProtectedSession():
         b = seeded_both(L)
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY: print("relay only via", RELAY, b(f"net relay {RELAY}"), L(f"net relay {RELAY}"), flush=True)
         b("mp host 27070")
         if RELAY: L(f"mp joinid {b('net me')['steamId']}")
         else: L(f"mp join {DESKTOP_IP}:27070")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for name, s in (("host", b), ("laptop", L)):
             gods[name] = (s, g(s, "kaposztaleves.s.settings.god"))
             s("set kaposztaleves.s.settings.god True")
         print("god mode on both (was", {k: v[1] for k, v in gods.items()}, ")", flush=True)
-        if "--no-sticky" in sys.argv: b("set TLDRevamp.Net.Entities.AiStickyRemote False")
+        if "--no-sticky" in sys.argv: b("set TLDRevamp.Net.EntityAI.AiStickyRemote False")
         ids = b("mp aiids")["ai"]
         print("creatures in the item database:", ids, flush=True)
         aid = arg("--ai", ids[0][0] if ids else None, int)

@@ -451,7 +451,7 @@ def scripted(h, L, car, tracked, cars):
             check(h, L, tracked, cars, f"out-of-hand {rnd + 1} held")
             h.try_act("drop", net=n, item=0); time.sleep(2)
     for x in (h, L):    # the games are kept between runs: said every time
-        for sw in ("SlotReplaces", "StaleOwnerForwards", "StaleDetachDirect", "AttachReqBecomesSync", "WornLateOk", "EditsComeBack", "CensusRepairs", "CarriedPartsShared", "RemoveFarMembers", "TankAddEdits", "CarriedLeavesLock"): x(f"set TLDRevamp.Net.Entities.{sw} {'--oldslot' not in sys.argv}")
+        for sw in ("SlotReplaces", "StaleOwnerForwards", "StaleDetachDirect", "AttachReqBecomesSync", "WornLateOk", "EditsComeBack", "CensusRepairs", "CarriedPartsShared", "RemoveFarMembers", "TankAddEdits", "CarriedLeavesLock"): x(f"set TLDRevamp.Net.{ {'WornLateOk': 'EntityHands', 'TankAddEdits': 'EntityEdits', 'CarriedLeavesLock': 'EntityLocks'}.get(sw, 'Entities')}.{sw} {'--oldslot' not in sys.argv}")
     for k, x in h.slots(car).items():
         if "--slots" in sys.argv and x["parts"]: print(f"     member {k[0]} slot {k[1]}: {x['parts']}", flush=True)
         if len(x["parts"]) > 1 and not x.get("many"):
@@ -1073,12 +1073,12 @@ def scripted(h, L, car, tracked, cars):
         if not st.get("recording"): note(f"INVALID aud-tail: not recording: {str(st)[:200]}")
         else:
             t0 = time.time()
-            h.s("set TLDRevamp.ReproRecorder.TestFullAt 1"); time.sleep(12)
+            h.s("set TLDRevamp.ReproRecorderTools.TestFullAt 1"); time.sleep(12)
             st = h.s("bug status"); print("     full now:", st.get("full"), flush=True)
             h.s("bug report the recorder was full")
             until(lambda: h.s("bug status").get("phase") in ("Saved", "Failed"), 60)
             print("     report:", h.s("bug status").get("phase"), flush=True)
-            h.s("set TLDRevamp.ReproRecorder.TestFullAt 0"); h.s("set TLDRevamp.ReproPlayback.Active True")
+            h.s("set TLDRevamp.ReproRecorderTools.TestFullAt 0"); h.s("set TLDRevamp.ReproPlayback.Active True")
             zips = [p for p in (tldenv.GAME_DIR / "BepInEx" / "tldrevamp-feedback").glob("TLDRevamp-bug-*.zip") if p.stat().st_mtime >= t0 - 2]
             if not zips: finding("aud-tail", "no bundle")
             else:
@@ -1964,12 +1964,12 @@ with game.ProtectedSession():
         Lag("!seeded")
         hb = game.loadsave(SAVE)
         for s_ in (hb, Lag):
-            s_("set TLDRevamp.TestSafety.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0"); s_("set kaposztaleves.s.settings.god True")
+            s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0"); s_("set kaposztaleves.s.settings.god True")
         if RELAY: print("relay:", hb(f"net relay {RELAY}"), Lag(f"net relay {RELAY}"), flush=True)
         if not join_both(hb, Lag): sys.exit("JOINER NEVER JOINED")
         h, L = Player(hb, "host"), Player(Lag, "joiner")
         for s_ in (h, L):
-            s_(f"set TLDRevamp.ReproPlayback.Active True"); s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+            s_(f"set TLDRevamp.ReproPlayback.Active True"); s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             s_("set UnityEngine.Application.runInBackground True")
         if "--oldglue" in sys.argv: h(f"set {T}.GluedPartOff False")
         near_cars = lambda: [e for e in h.ents().values() if e["car"] and not e.get("dormant")]

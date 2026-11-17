@@ -67,11 +67,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if OLD:
             for s_ in (h, L): s_(f"set {T}.CopyLockSafe False"); s_(f"set {T}.CopyLockByContainer False"); s_(f"set {T}.DriveClaimRootOnly False")
         print(f"  {'OLD (v0.66.7 release)' if OLD else 'CURRENT BUILD'}", flush=True)

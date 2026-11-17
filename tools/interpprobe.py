@@ -32,7 +32,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off" and "--direct" not in sys.argv: h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     if "--laptop-bot" in sys.argv:
         # the laptop alone: it hosts, one bot joins it over loopback inside its own game (no other machine)
@@ -41,7 +41,7 @@ with game.ProtectedSession():
         print("template car:", L(f"spawncarg 1 0 {rp['gx'] + 6} {rp['gz']} 0"), flush=True); time.sleep(3)
         L(f"tpground {rp['gx'] + 8} {rp['gz'] + 1}"); time.sleep(2)
         print("bot car:", L("mp botcar"), L("clearpile"), flush=True)
-        L("set TLDRevamp.Net.Mp.BotCars True")
+        L("set TLDRevamp.Net.LegacyBots.BotCars True")
         before = {e["net"] for e in L("mp entities")["entities"]}
         print("bots:", L("mp bots 1 25 8").get("bots"), flush=True)
         until(lambda: any(e["car"] and e["net"] not in before for e in L("mp entities")["entities"]), 30)
@@ -55,7 +55,7 @@ with game.ProtectedSession():
     if "--direct" in sys.argv: L(f"mp join {DESKTOP_IP}:27070")   # straight over the LAN: no Steam relay in the path
     else: L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     print("route:", L("net route"), flush=True)
     gods = {}
     try:
@@ -68,7 +68,7 @@ with game.ProtectedSession():
             print("template car:", h(f"spawncarg 1 0 {rp['gx'] + 6} {rp['gz']} 0"), flush=True); time.sleep(3)
             h(f"tpground {rp['gx'] + 8} {rp['gz'] + 1}"); time.sleep(2)
             print("bot car:", h("mp botcar"), h("clearpile"), flush=True)
-            h("set TLDRevamp.Net.Mp.BotCars True")
+            h("set TLDRevamp.Net.LegacyBots.BotCars True")
             before = {e["net"] for e in h("mp entities")["entities"]}
             print("bots:", h("mp bots 1 25 8").get("bots"), flush=True)
             until(lambda: any(e["car"] and e["net"] not in before for e in h("mp entities")["entities"]), 30)

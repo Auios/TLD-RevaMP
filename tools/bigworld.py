@@ -23,7 +23,7 @@ ensure_both("--no-build" not in sys.argv)
 rows = []
 with game.ProtectedSession():
     seeded.restart_same_seed(); b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
     b("bg on"); b("set UnityEngine.QualitySettings.vSyncCount 0")   # full speed unfocused (mplib.seeded_both)
     print("  hosting alone:", str(b("mp host 27070"))[:120], flush=True); time.sleep(5)
     rp = b("roadpoint"); x, z = rp["gx"], rp["gz"]; last = rp; heading = (0.0, 0.0)

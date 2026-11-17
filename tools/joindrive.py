@@ -18,7 +18,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     god_h = g(h, "kaposztaleves.s.settings.god"); shift_h = g(h, "settingsscript.s.S.BAutoShift")
     god_l = None
@@ -32,7 +32,7 @@ with game.ProtectedSession():
         print("host driving at", g(h, "mainscript.s.player.Car.speed"), "km/h — the laptop joins", flush=True)
         L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150, 1): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if "--no-hide" in sys.argv: L("set TLDRevamp.Net.RemotePlayers.HideFarSeated False")   # A: before v0.65.30
         god_l = g(L, "kaposztaleves.s.settings.god")   # not set: a fall on arrival must show
         time.sleep(3)

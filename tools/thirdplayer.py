@@ -52,14 +52,14 @@ if not os.path.isdir(COMPAT3):
 T = Third()
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         # the third copy plays on the host's Steam account: a test host lets it in more than once (without player saves)
-        h("set TLDRevamp.Net.MpServer.TestSameAccount True")
+        h("set TLDRevamp.Net.SessionTools.TestSameAccount True")
         # the guarded launch, waiting out a memory pause of this machine's admission broker like the others' launches
         try: game.start(cmd=game.prefix_launch_cmd(["-tldbridge", str(PORT3)], compat=COMPAT3, game_dir=GAME3, port=PORT3))
         except RuntimeError as e: sys.exit(f"third copy: {e}; no fallback")
@@ -76,7 +76,7 @@ with game.ProtectedSession():
         # the host's list is the others (run 1: [1, 2] with all three in, read as a FAIL)
         verdict("A THE THIRD COPY JOINED", joined and len(players) >= 2, f"host players {[p_.get('id') for p_ in players]} (and the host)")
         if joined:
-            T("set TLDRevamp.TestSafety.BlockAutoSave True"); T("set kaposztaleves.s.settings.god True")
+            T("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); T("set kaposztaleves.s.settings.god True")
             rp = h("roadpoint"); x, z = rp["gx"], rp["gz"]
             tp(h, x, z); tp(L, x + 9, z); tp(T, x + 4, z + 6); time.sleep(6)
             lid = L("mp status")["client"]["id"]
@@ -96,7 +96,7 @@ with game.ProtectedSession():
             if T.f: T("mp stop")
         except Exception: pass
         time.sleep(5); game.kill_prefix(COMPAT3, game_dir=GAME3, port=PORT3)
-        h("set TLDRevamp.Net.MpServer.TestSameAccount False")
+        h("set TLDRevamp.Net.SessionTools.TestSameAccount False")
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

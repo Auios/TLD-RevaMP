@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Car signals on copies (v0.64.10, Entities.CarSignals). Two machines over the relay: desktop hosts, laptop joins.
+"""Car signals on copies (v0.64.10, EntityCarSignals.CarSignals). Two machines over the relay: desktop hosts, laptop joins.
 The host sits in the driver's seat of its car; the laptop stands next to it. A copy showed none of the driver's
 signals: no horn, no brake or reverse light, and with ignition off not even the lamps or dashboard.
 Each step works the driver's controls on the host (test hooks where the keyboard's input lands) and compares the
@@ -46,11 +46,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     gods = {}
     for name, s_ in (("host", h), ("laptop", L)):
         gods[name] = (s_, s_("get kaposztaleves.s.settings.god").get("value"))

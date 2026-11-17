@@ -11,7 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_cmd
 
-LIMBS = "--limbs-off" not in sys.argv   # A/B: Entities.VehicleLimbsByBody (v0.65.53)
+LIMBS = "--limbs-off" not in sys.argv   # A/B: EntityPhysics.VehicleLimbsByBody (v0.65.53)
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
 SECS = int(sys.argv[sys.argv.index("--secs") + 1]) if "--secs" in sys.argv else 15
 VERDICTS = []
@@ -109,14 +109,14 @@ def stand(h, L):
     p = ent(h, NET)["pos"]
     if S is L or tow: h(f"tpground {p[0] - 8} {p[2]}")
     S(f"tpground {p[0] + 4} {p[2]}"); time.sleep(2)
-    for s_ in (h, L): s_(f"set TLDRevamp.Net.Entities.VehicleLimbsByBody {LIMBS}")
+    for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityPhysics.VehicleLimbsByBody {LIMBS}")
     time.sleep(1)
     r = S(f"mp standon {NET} 0.15 rear"); print(f"  {sname} stands in the back:", r, flush=True)
     track = []
     for k in range(12):
         time.sleep(0.25); track.append((round((k + 1) * 0.25, 2), S(f"mp relplayers {NET}").get("me"), (S("get TLDRevamp.Net.Entities.FootWhy").get("value") or "")[:28]))
     print(f"  {sname} in the bus's frame after standing (t, local, footing):", track[::3], flush=True)
-    print("  outside bodies — laptop:", L(f"mp outsidebodies {NET}"), "| limb body moves", L("get TLDRevamp.Net.Entities.LimbBodyMoves").get("value"), flush=True)
+    print("  outside bodies — laptop:", L(f"mp outsidebodies {NET}"), "| limb body moves", L("get TLDRevamp.Net.EntityPhysics.LimbBodyMoves").get("value"), flush=True)
     S(f"shot rear_inside_{sname}")
     fw = S("get TLDRevamp.Net.Entities.FootWhy").get("value") or ""
     if "error" in r or f"on {NET}" not in fw or not (0.5 < r.get("local", [0, 9, 0])[1] < 1.2):
@@ -207,11 +207,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     gods = {}
     try:
         for name, s_ in (("host", h), ("laptop", L)):
@@ -230,7 +230,7 @@ with game.ProtectedSession():
         runs = [] if "--cargo" in sys.argv or "--stand" in sys.argv else [(h, L, "host", "laptop", True), (L, h, "laptop", "host", True)]
         if "--ab" in sys.argv and runs: runs.insert(0, (h, L, "host", "laptop", False))   # the old behaviour first, for reference
         for driver, rider, dn, rn, fix in runs:
-            for s_ in (h, L): s_(f"set TLDRevamp.Net.Entities.RearSeats {fix}")
+            for s_ in (h, L): s_(f"set TLDRevamp.Net.EntitySeats.RearSeats {fix}")
             tag = f"{dn.upper()} DRIVES, {rn.upper()} IN THE BACK" + ("" if fix else " (FIX OFF, the old behaviour)")
             for s_ in (h, L):
                 try: s_("driveout")
@@ -245,7 +245,7 @@ with game.ProtectedSession():
         for name, (s_, v) in gods.items():
             try: s_(f"set kaposztaleves.s.settings.god {v if v is not None else False}")
             except Exception as ex: print("god restore", name, ex)
-        for s_ in (h, L): s_("set TLDRevamp.Net.Entities.RearSeats True")
+        for s_ in (h, L): s_("set TLDRevamp.Net.EntitySeats.RearSeats True")
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

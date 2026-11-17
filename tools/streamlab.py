@@ -12,7 +12,7 @@ if running_build() != local_build_hash(): game.quit_game(); game.launch()
 sets = [a for a in sys.argv[1:] if a.startswith("set:")]
 with game.ProtectedSession():
     seeded.restart_same_seed(); b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
     for s_ in sets: b("set " + s_[4:])
     rp = b("roadpoint")
     results = []

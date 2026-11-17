@@ -26,7 +26,7 @@ game.launch()
 with game.ProtectedSession():
     game.newgame()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     try:
         wearables = b("prefabswith wearable")["items"]

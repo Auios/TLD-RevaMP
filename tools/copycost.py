@@ -4,7 +4,7 @@ and the laptop from 20 to 87 ms (v0.57.69) while our network code is ~1 ms. With
 frame times on both machines over WINDOW-second windows, each with one kind of work switched off on every copy:
   all on | collider LOD off | rendering off | colliders off (not wheels) | the game's own scripts off | all three off
 plus a profile of the game's scripts with everything on (which scripts, how many ms a second).
-Test switches only (Entities.CopiesToggle); both games are restarted before the next test anyway.
+Test switches only (EntityDebug.CopiesToggle); both games are restarted before the next test anyway.
   tools/copycost.py [--no-build] [--bots 14] [--window 12]"""
 import sys, time, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -35,10 +35,10 @@ res = {}
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         b("mp host 27070"); L(f"mp join {DESKTOP_IP}:27070")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         rp = b("roadpoint")
         b(f"spawncarg {CAR01} 0 {rp['gx'] + 6} {rp['gz']} 0"); time.sleep(3)
         b(f"tpground {rp['gx'] + 8} {rp['gz'] + 1}"); time.sleep(2)
@@ -48,22 +48,22 @@ try:
         side_names = (("desktop", b), ("laptop", L))
         base = frames([b, L])
         res["no bots (2 players)"] = base
-        b("set TLDRevamp.Net.Mp.BotCars True")
+        b("set TLDRevamp.Net.LegacyBots.BotCars True")
         print("bots:", b(f"mp bots {BOTS} 100 16")["bots"], flush=True)
         until(lambda: sum(1 for e in L("mp entities")["entities"] if e["car"] and e["proxy"]) >= BOTS, 60, 1.0)
         time.sleep(8)
         print("copies on the laptop:", L("mp copies render on"), flush=True)
-        for s in (b, L): s("set TLDRevamp.Net.Entities.CopiesMoveByBody False")
+        for s in (b, L): s("set TLDRevamp.Net.EntityPhysics.CopiesMoveByBody False")
         time.sleep(2)
         res["all on, transform writes"] = frames([b, L])
-        for s in (b, L): s("set TLDRevamp.Net.Entities.CopiesMoveByBody True")
+        for s in (b, L): s("set TLDRevamp.Net.EntityPhysics.CopiesMoveByBody True")
         time.sleep(2)
         res["all on, moved as bodies"] = frames([b, L])
         print("laptop physical/LOD:", L("mp physical"), flush=True)
-        for s in (b, L): s("set TLDRevamp.Net.Entities.CopyColliderLod False")
+        for s in (b, L): s("set TLDRevamp.Net.EntityPhysics.CopyColliderLod False")
         time.sleep(2)
         res["collider LOD off"] = frames([b, L])
-        for s in (b, L): s("set TLDRevamp.Net.Entities.CopyColliderLod True")
+        for s in (b, L): s("set TLDRevamp.Net.EntityPhysics.CopyColliderLod True")
         time.sleep(2)
         for what in ("render", "colliders", "scripts"):
             for s in (b, L): s(f"mp copies {what} off")

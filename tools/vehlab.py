@@ -36,7 +36,7 @@ def main():
         try:
             for c in conds:
                 seeded.restart_same_seed()   # fresh world + car per condition (a long drive can end at an obstacle)
-                b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+                b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
                 setup(b)
                 b("net lag " + c)
                 if RATE: b("set TLDRevamp.Net.VehicleLab.RateRange " + RATE[0])

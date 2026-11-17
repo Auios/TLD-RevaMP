@@ -84,7 +84,7 @@ def main():
                 b("set TLDRevamp.WorldGen.MainRoadOnlyRoads.Enabled False")
             game.newgame(args.seed)
             b = game.Bridge()
-            b("set TLDRevamp.TestSafety.BlockAutoSave True")
+            b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             b("overlay off")
             result["terrain"] = b("terrain")
             z = 0.0

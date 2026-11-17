@@ -314,7 +314,7 @@ def wait_world(seed, timeout=180):
                     # Test worlds must not autosave (also restored at file level by ProtectedSession). Runtime-only mod
                     # flag: never touch the player's own BAutoSave setting (the game persists it when the settings menu
                     # closes; that turned the player's autosave off on 2026-09-25).
-                    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+                    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
                     time.sleep(10)
                     verify_profile(b)
                     return b
@@ -338,7 +338,7 @@ def loadsave(name, timeout=180):
             if b("get DataFromMenuScript.s.mainmenu")["value"] is False and b("get mainscript.s.player")["value"] is not None:
                 pos = vec(b("get mainscript.s.player.transform.position")["value"])
                 if b(f"ground {pos[0]} {pos[2]}")["hit"]:
-                    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+                    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
                     time.sleep(10)  # let the surroundings and items finish loading
                     verify_profile(b)
                     return b

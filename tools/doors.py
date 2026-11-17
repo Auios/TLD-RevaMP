@@ -58,7 +58,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         b = seeded_both(L)
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY: print("relay only via", RELAY, b(f"net relay {RELAY}"), L(f"net relay {RELAY}"), flush=True)
         b("mp host 27070")
         def join():
@@ -66,7 +66,7 @@ try:
             else: L(f"mp join {DESKTOP_IP}:27070")
             return until(lambda: L("mp status")["client"]["ready"], 150)
         if not join(): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
 
         # ---- a building with a door/gate
         rp = b("roadpoint"); D = unit(rp["yaw"]); x, z = rp["gx"], rp["gz"]

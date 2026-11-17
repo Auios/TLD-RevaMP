@@ -3,7 +3,7 @@
  (2026-10-03, "engine state can get unsynced"): a car at rest sends no states, so an engine/ignition change made
 while it rests never reached the others. Desktop only, owner side: the host sits in its car, waits until the car has
 come to rest (no states going out), then switches the ignition (and back): each change must send states at once
-(Entities.CarSignalKey: three in a row).
+(EntityCarSignals.CarSignalKey: three in a row).
   tools/sigsleep.py [--no-build] [--car Car06Full]"""
 import sys, time, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -43,7 +43,7 @@ game.launch()
 with game.ProtectedSession():
     game.newgame()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     try:
         p = b("gpos"); b(f"tpground {p['gx'] + 15} {p['gz']}"); time.sleep(3)

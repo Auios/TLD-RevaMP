@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bodies of limbs in MP (v0.64.12, Entities.Ragdoll). Two machines over the relay: desktop hosts, laptop joins.
+"""Bodies of limbs in MP (v0.64.12, EntityHealthRules.Ragdoll). Two machines over the relay: desktop hosts, laptop joins.
 States carried only an item's own transform; a copy held every limb still. A dead player's body (PlayerRagdol, no
 body of its own) stayed on other screens in the pose it spawned in; a dead creature fell its own way on every machine.
   A a dead player's body (PlayerRagdol) spawned by the host falls: the laptop's copy limbs where the host's are
@@ -55,11 +55,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     gods = {}
     for name, s_ in (("host", h), ("laptop", L)):
         gods[name] = (s_, s_("get kaposztaleves.s.settings.god").get("value"))

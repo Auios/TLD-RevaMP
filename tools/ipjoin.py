@@ -20,7 +20,7 @@ ensure_both("--no-build" not in sys.argv)
 L = Agent()
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     print("host:", h("mp host 27070"), flush=True)
     print(f"laptop joins '{DESKTOP_IP}' (no port):", str(L(f"mp join {DESKTOP_IP}"))[:200], flush=True)
     ok = until(lambda: L("mp status")["client"]["ready"], 90)

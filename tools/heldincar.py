@@ -40,11 +40,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
-    for i, a in enumerate(sys.argv):   # --set Entities.RidingFrames=False (A/B flags under TLDRevamp.Net, both games)
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
+    for i, a in enumerate(sys.argv):   # --set EntityHands.RidingFrames=False (A/B flags under TLDRevamp.Net, both games)
         if a == "--set":
             k, v = sys.argv[i + 1].split("=", 1)
             for s_ in (h, L): s_(f"set TLDRevamp.Net.{k} {v}")
@@ -206,7 +206,7 @@ with game.ProtectedSession():
             print("  C drive (t, laptop x/z, km/h):", track, flush=True)
             time.sleep(1.5)
             verdict("C NO PART LOST", parts(h, car2) + parts(L, car2) == q0, f"{q0} -> {parts(h, car2) + parts(L, car2)}")
-        print("  carried frames: laptop sent", g(L, "TLDRevamp.Net.Entities.CarriedSent"), "| host switches", g(h, "TLDRevamp.Net.Entities.CarriedSwitches"), "no car", g(h, "TLDRevamp.Net.Entities.CarriedNoCar"), "release claims", g(h, "TLDRevamp.Net.Entities.CarriedReleasedClaims"), "takeovers", g(h, "TLDRevamp.Net.Entities.CarriedTakeovers"), flush=True)
+        print("  carried frames: laptop sent", g(L, "TLDRevamp.Net.EntityHands.CarriedSent"), "| host switches", g(h, "TLDRevamp.Net.EntityHands.CarriedSwitches"), "no car", g(h, "TLDRevamp.Net.EntityHands.CarriedNoCar"), "release claims", g(h, "TLDRevamp.Net.EntityHands.CarriedReleasedClaims"), "takeovers", g(h, "TLDRevamp.Net.EntityHands.CarriedTakeovers"), flush=True)
         er = [x_("errors") for x_ in (h, L)]
         verdict("NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er), str([(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er]))
     finally:

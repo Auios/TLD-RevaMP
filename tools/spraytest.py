@@ -31,11 +31,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     gods = {}
     try:
         for name, s_ in (("host", h), ("laptop", L)):
@@ -59,7 +59,7 @@ with game.ProtectedSession():
         print("  laptop's can:", L(f"mp sprayfx {can}"), flush=True)
         runs = [False, True] if "--ab" in sys.argv else [True]
         for fx in runs:
-            h(f"set TLDRevamp.Net.Entities.SprayFx {fx}")
+            h(f"set TLDRevamp.Net.EntityEffects.SprayFx {fx}")
             tag = "B THE EFFECT ON" if fx else "A (EFFECT OFF, the old behaviour)"
             print(f"=== {tag}", flush=True)
             print("  laptop sprays:", L("mp sprayhold 4"), flush=True)
@@ -81,7 +81,7 @@ with game.ProtectedSession():
             verdict(f"{tag}: AND IT STOPS", after.get("valve", 1) < 0.05, f"valve {after.get('valve')} (mist rate and hiss volume follow it)")
             time.sleep(2)
     finally:
-        try: h("set TLDRevamp.Net.Entities.SprayFx True")
+        try: h("set TLDRevamp.Net.EntityEffects.SprayFx True")
         except Exception: pass
         for name, (s_, v) in gods.items():
             try: s_(f"set kaposztaleves.s.settings.god {v if v is not None else False}")

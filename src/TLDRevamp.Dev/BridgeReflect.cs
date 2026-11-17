@@ -12,11 +12,9 @@ namespace TLDRevamp
     {
         private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
         private static Type FindType(string name) => Reflect.FindType(name);
-        private static string MemberPath(string path) => Reflect.MemberPath(path);
         /// Resolves the longest type prefix, then walks members. Returns (owner instance, member, owner type).
         private static void Resolve(string path, out object owner, out MemberInfo member, out Type ownerType)
         {
-            path = MemberPath(path);
             var parts = path.Split('.');
             Type type = null;
             int i = parts.Length - 1;
@@ -80,7 +78,6 @@ namespace TLDRevamp
         /// (owner, member) for every member step of the path; owners of value-type steps are the boxed copies.
         private static List<(object owner, MemberInfo member)> ResolveChain(string path)
         {
-            path = MemberPath(path);
             var parts = path.Split('.');
             Type type = null;
             int i = parts.Length - 1;
@@ -109,7 +106,6 @@ namespace TLDRevamp
         /// Picks the overload whose required parameter count fits the given args; missing optional args use defaults.
         public static string Call(string path, string[] args)
         {
-            path = MemberPath(path);
             int dot = path.LastIndexOf('.');
             string ownerPath = path.Substring(0, dot), name = path.Substring(dot + 1);
             object owner = null;

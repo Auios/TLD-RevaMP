@@ -33,7 +33,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed()
-        b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+        b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
         home = glob(b)
         print("host:", b("mp host 27070")["server"]["port"], "| host items shared at start:", b(f"mp itemsnear {home[0]} {home[2]} 60")["leases"])
         L(f"mp join {DESKTOP_IP}:27070")

@@ -67,10 +67,10 @@ try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
         if LAG: print("simulated internet on both machines:", b(f"net lag {LAG}"), L(f"net lag {LAG}"), flush=True)
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY: print("relay only via", RELAY, ":", b(f"net relay {RELAY}"), L(f"net relay {RELAY}"), flush=True)
         b("mp host 27070")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY: L(f"mp joinid {b('net me')['steamId']}")   # the panel's friend join: Steam P2P
         else: L(f"mp join {DESKTOP_IP}:27070")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")

@@ -9,7 +9,7 @@ the bar stool slides away backwards while I drive, the stool stays, he snaps bac
   C  a cactus the joiner cuts down (the game's TryBreak, a katana's blow): its piece (cactigib01) must reach the host
      too, and stay visible to the host once the joiner puts it in the bus ("a cactus in the bus I can't see")
   busstool.py [--no-build] [--only S,P,R,C] [--speed 12] [--secs 10] [--old]
-  (--old: Entities.ItemSeats, WorldBreakGibs and SeatLeaveOnExit off, the build before the fix)"""
+  (--old: EntitySeats.ItemSeats, WorldBreakGibs and SeatLeaveOnExit off, the build before the fix)"""
 import sys, os, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -141,7 +141,7 @@ def passenger():
     sat, n = seat_leaves(L, True)
     verdict("P: A SEATED PASSENGER LOOKING AROUND LOGS NO SEAT LEAVES (THE REPRO RECORDER MAKES ITS ACTIONS FROM THEM)", seated is True and sat is not None and n == 0,
             f"still seated {seated}; seat leaves in its black box since sitting down: {n}")
-    print(f"  collider pairs its body ignores (Entities.SeatIgnoredPairs): after sitting {p0}, after looking around {p1}", flush=True)
+    print(f"  collider pairs its body ignores (EntitySeats.SeatIgnoredPairs): after sitting {p0}, after looking around {p1}", flush=True)
     L("set mainscript.s.player.FxRot 0"); L("set mainscript.s.player.FyRot 0")
 
 def stool_scene():
@@ -334,11 +334,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     plock = None
     try:
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L):
             s_("set kaposztaleves.s.settings.god True")
             for f in ("ItemSeats", "WorldBreakGibs", "SeatLeaveOnExit", "StoredByTransform"):

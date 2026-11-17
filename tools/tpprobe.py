@@ -30,7 +30,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         b = seeded_both(L)
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         time.sleep(8)
         if "--solo" not in sys.argv:
             if RELAY: print("relay:", b(f"net relay {RELAY}"), L(f"net relay {RELAY}"), flush=True)
@@ -38,7 +38,7 @@ try:
             if RELAY: L(f"mp joinid {b('net me')['steamId']}")
             else: L(f"mp join {DESKTOP_IP}:27070")
             if not until(lambda: L("mp status")["client"]["ready"], 180, 2): sys.exit("LAPTOP NEVER JOINED")
-            L("set TLDRevamp.TestSafety.BlockAutoSave True"); time.sleep(5)
+            L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); time.sleep(5)
         s = L if WHO == "laptop" else b
         home = s("gpos")
         for trip, (tx, tz) in enumerate([(home["gx"] + 200000, home["gz"]), (home["gx"], home["gz"])]):

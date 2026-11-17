@@ -30,10 +30,10 @@ res = {}
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         b("mp host 27070"); L(f"mp join {DESKTOP_IP}:27070")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         rp = b("roadpoint")
         b(f"spawncarg {CAR01} 0 {rp['gx'] + 6} {rp['gz']} 0"); time.sleep(3)
         b(f"tpground {rp['gx'] + 8} {rp['gz'] + 1}"); time.sleep(2)
@@ -42,7 +42,7 @@ try:
         L(f"tpground {rp['gx'] + 3} {rp['gz'] + 3}"); time.sleep(3)
         print("physics before bots\n  desktop:", b("physics"), "\n  laptop: ", L("physics"), flush=True)
         res["no bots"] = phases([b, L])
-        b("set TLDRevamp.Net.Mp.BotCars True")
+        b("set TLDRevamp.Net.LegacyBots.BotCars True")
         print("bots:", b(f"mp bots {BOTS} 100 16")["bots"], flush=True)
         until(lambda: sum(1 for e in L("mp entities")["entities"] if e["car"] and e["proxy"]) >= BOTS, 60, 1.0)
         time.sleep(8)

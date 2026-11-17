@@ -31,17 +31,17 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.Entities.CopyStartFreezeOff {not OLD}")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
+        for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyStartFreezeOff {not OLD}")
         print(f"  {'OLD (copies run their start freeze)' if OLD else 'NEW'}", flush=True)
         time.sleep(5)
         hp = h("gpos"); L(f"tpground {hp['gx'] + 4} {hp['gz'] - 6}"); time.sleep(6)
         box = BOX or next(i["id"] for i in h("items Box")["items"] if i["name"] == "Box")
-        L("set TLDRevamp.Net.Entities.StoreTrace 20")
+        L("set TLDRevamp.Net.EntityLocks.StoreTrace 20")
         l0 = ents(L)
         me = h("mp entities")["me"]; before = set(ents(h))
         u = h("gpos"); sx, sz = u["ux"] + 6, u["uz"] + 6
@@ -63,10 +63,10 @@ with game.ProtectedSession():
         hm = ents(h)
         strangers = {n: m for n, m in moved.items() if n in hm and math.dist(hm[n]["pos"], ents(L)[n]["pos"]) > 1.0}
         verdict("NO COPY PULLED AWAY FROM WHERE ITS OWNER HAS IT", not strangers, str(strangers))
-        print("  start freezes skipped (laptop):", L("get TLDRevamp.Net.Entities.CopyStartFreezesSkipped")["value"], "snapshot drops:", L("get TLDRevamp.Net.ItemSnapshot.ForeignRefsDropped")["value"], "laptop errors:", L("errors")["errors"], flush=True)
+        print("  start freezes skipped (laptop):", L("get TLDRevamp.Net.EntityLocks.CopyStartFreezesSkipped")["value"], "snapshot drops:", L("get TLDRevamp.Net.ItemSnapshot.ForeignRefsDropped")["value"], "laptop errors:", L("errors")["errors"], flush=True)
     finally:
         for s_ in (h, L):
-            try: s_("set TLDRevamp.Net.Entities.CopyStartFreezeOff True")
+            try: s_("set TLDRevamp.Net.EntityLocks.CopyStartFreezeOff True")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

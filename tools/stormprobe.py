@@ -9,7 +9,7 @@ game.deploy_local()
 game.quit_game(); game.launch()
 with game.ProtectedSession():
     seeded.restart_same_seed()
-    b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     print(b("mp storms"))
     print("mainscript.s.sandStormSpawn:", b("get mainscript.s.sandStormSpawn"))
     print("prefab:", b("mp storms prefab"))

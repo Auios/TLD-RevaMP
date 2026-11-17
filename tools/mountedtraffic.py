@@ -139,13 +139,13 @@ with game.ProtectedSession():
     h = seeded_both(L)
     SAVED = {}
     for n_, s_ in (("h", h), ("L", L)):
-        s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+        s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         SAVED[n_] = s_("get kaposztaleves.s.settings.god").get("value")
         s_("set kaposztaleves.s.settings.god True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         for s_ in (h, L):
             try: s_(f"set {T}.ReplayPartAttaches {not OLD}")
             except RuntimeError as ex: print(f"  no switch ReplayPartAttaches in this build: {ex}", flush=True)

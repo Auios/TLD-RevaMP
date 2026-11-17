@@ -21,7 +21,7 @@ def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv
 KM, STEP, SECS, SEED = arg("--km", 300.0, float), arg("--step", 1.0, float), arg("--secs", 20, int), arg("--seed", 20261111, int)
 _clock = None
 SOLO = "--solo" in sys.argv
-TIMERS = ("TLDRevamp.Net.Mp.Tick TLDRevamp.Net.Entities.FixedTick TLDRevamp.Net.Entities.LateSample poiGenScript.Upd "
+TIMERS = ("TLDRevamp.Net.Mp.Tick TLDRevamp.Net.Entities.FixedTick TLDRevamp.Net.EntityDoors.LateSample poiGenScript.Upd "
           "mapSettingScript.Update itemPlaceRemoveScript.RemoveStuff itemPlaceRemoveScript.PlaceStuff terrainGenScript.Update roadGenScript.Update")
 
 
@@ -86,7 +86,7 @@ rows = []
 with game.ProtectedSession():
     try:
         game.launch(); game.newgame(SEED); b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
         b("bg on"); b("set UnityEngine.QualitySettings.vSyncCount 0")
         if not SOLO: print("  hosting alone:", str(b("mp host 27070"))[:80], flush=True)
         rp = b("roadpoint")

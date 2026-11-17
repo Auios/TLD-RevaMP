@@ -35,7 +35,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    h("set TLDRevamp.TestSafety.BlockAutoSave True")
+    h("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     try:
         h("mp host 27070"); time.sleep(2)
         h("set kaposztaleves.s.settings.god True")

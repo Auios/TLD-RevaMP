@@ -18,7 +18,7 @@ if "--no-build" not in sys.argv:
 game.launch()
 with game.ProtectedSession():
     seeded.restart_same_seed(); b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     print("mods:", b("mods"), flush=True)
     shift0 = b("get settingsscript.s.S.BAutoShift")["value"]
     b("set settingsscript.s.S.BAutoShift True"); b("set kaposztaleves.s.settings.god True")

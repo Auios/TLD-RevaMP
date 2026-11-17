@@ -12,7 +12,7 @@ def pos(b):
 
 with game.ProtectedSession():
     seeded.restart_same_seed(); b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
     rp = b("roadpoint"); yaw = rp["yaw"] + 180.0
     F = (math.sin(math.radians(yaw)), math.cos(math.radians(yaw)))
     print("pois near start:", [(p_["name"][:20], p_["d"], p_["items"]) for p_ in b(f"pois {rp['x']} {rp['z']} 700")["pois"]][:10])

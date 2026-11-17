@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Bugs 1/2 (2026-10-03): the others couldn't hear a player hum/scream or see them pee. Desktop only: the host plus a
-bot standing 5 m away that sends the HOST's own pose as its own (Mp.BotPoses) — what the host's player does shows on
+bot standing 5 m away that sends the HOST's own pose as its own (LegacyBots.BotPoses) — what the host's player does shows on
 the bot's model, through the same message, relay and model code a real player's pose takes.
-  1 hum key held (PlayerActs.TestHum): the host's hum plays; on the bot's model the same clip plays
+  1 hum key held (PlayerActsTools.TestHum): the host's hum plays; on the bot's model the same clip plays
   2 let go: the model's hum fades out and stops
   3 pee key held (bladder filled first): the host's stream emits; the model's copy emits particles, its pour sound plays
   4 let go: the model's stream stops
@@ -29,11 +29,11 @@ game.launch()
 with game.ProtectedSession():
     game.newgame()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     try:
         p = b("gpos"); b(f"tpground {p['gx'] + 15} {p['gz']}"); time.sleep(3)
-        b("set TLDRevamp.Net.Mp.BotCars False"); b("set TLDRevamp.Net.Mp.BotPoses True")
+        b("set TLDRevamp.Net.LegacyBots.BotCars False"); b("set TLDRevamp.Net.LegacyBots.BotPoses True")
         b("mp host 27070"); print("  bots:", b("mp bots 1 5 0"), flush=True)
         time.sleep(8)   # the bot joins, is ready, its model is placed
         b(f"set {A}.TestHum True"); time.sleep(3)
@@ -55,7 +55,7 @@ with game.ProtectedSession():
         verdict("4 PEE WINDS DOWN AS THE PLAYER'S OWN AND STOPS", same and not r["local"]["pissEmit"] and not m.get("pissEmit") and not m.get("pourPlaying"), f"while closing same {same}; after: local {r['local']['pissEmit']} model {m}")
         b("screenshot")
     finally:
-        for k, v in ((f"{A}.TestHum", False), (f"{A}.TestPiss", False), ("TLDRevamp.Net.Mp.BotPoses", False)):
+        for k, v in ((f"{A}.TestHum", False), (f"{A}.TestPiss", False), ("TLDRevamp.Net.LegacyBots.BotPoses", False)):
             try: b(f"set {k} {v}")
             except Exception as ex: print("restore", k, ex)
         try: b("mp stop")

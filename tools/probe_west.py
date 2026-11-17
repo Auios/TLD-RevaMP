@@ -11,7 +11,7 @@ def pos(b):
 
 with game.ProtectedSession():
     seeded.restart_same_seed(); b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
     rp = b("roadpoint"); yaw = rp["yaw"]          # west = the bone's own direction (we drove yaw+180 east before)
     F = (math.sin(math.radians(yaw)), math.cos(math.radians(yaw)))
     print("start pois:", [(p_["name"][:16], int(p_["d"]), p_["items"]) for p_ in b(f"pois {rp['x']} {rp['z']} 700")["pois"]])

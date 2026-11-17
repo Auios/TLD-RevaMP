@@ -148,7 +148,7 @@ with game.ProtectedSession():
         L("!seeded")
         h = game.loadsave(SAVE)
         for s_ in (h, L):
-            s_("set TLDRevamp.TestSafety.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0")
+            s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0")
         me = h("gpos"); print(f"  host in the save at {me['gx']:.0f},{me['gz']:.0f}", flush=True)
         h("mp host 27070"); time.sleep(5)
         cars = sorted(((math.hypot(e["pos"][0] - me["gx"], e["pos"][2] - me["gz"]), n, e.get("name", "?"))
@@ -217,8 +217,8 @@ with game.ProtectedSession():
         if not join_both(h, L): sys.exit("P2 NEVER JOINED")
         CAR = min(((math.dist(e["pos"], was), n) for n, e in ents(h).items() if e["car"]))[1]   # net ids start again at 1
         print(f"  the cargo car is net {CAR} in this session ({ents(h)[CAR].get('name')})", flush=True)
-        for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True"); s_("set kaposztaleves.s.settings.god True")
-        h("set TLDRevamp.Net.MpServer.TestSameAccount True")   # B2 shares P2's Steam account
+        for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); s_("set kaposztaleves.s.settings.god True")
+        h("set TLDRevamp.Net.SessionTools.TestSameAccount True")   # B2 shares P2's Steam account
         P2 = L("mp status")["client"]["id"]
         time.sleep(3)
         print(f"  P2 at the join: edits sent {g(L, 'TLDRevamp.Net.Entities.EditsSent')}, marks {str(g(L, 'TLDRevamp.Net.Entities.EditMarks'))[:300]}", flush=True)
@@ -458,7 +458,7 @@ with game.ProtectedSession():
             box = cargo(h, CAR)
             pbot(h, 1, "drive 30 60"); time.sleep(3)
             if not join_both(h, L, rehost=False): verdict("G P2 JOINS AGAIN", False); return
-            L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+            L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
             p = ents(h)[CAR]["pos"]; L(f"tpground {p[0] + 15} {p[2] + 15}")
             ok = until(lambda: CAR in ents(L), 30); time.sleep(3)
             a = ents(L)[CAR]["pos"]; time.sleep(3); b = ents(L)[CAR]["pos"]

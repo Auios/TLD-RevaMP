@@ -25,7 +25,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         b = seeded_both(L)
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
 
         # ---- 1 HTTP GUARD
         print("1 HTTP GUARD", flush=True)

@@ -9,7 +9,7 @@ from bench import Bridge
 with game.ProtectedSession():
     if game.running(): game.quit_game()
     game.deploy_local(); game.launch(); game.newgame()
-    b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     try:
         b("mp host 27070"); time.sleep(2)
         time.sleep(2); b("call mainscript.s.PressedEscape False False"); time.sleep(1)

@@ -87,7 +87,7 @@ def main():
             relay = "" if args.relay in ("off", "none") else f" --relay {args.relay}"
             print("hosting" + (f" through the {args.relay} relay" if relay else ""), flush=True)
             host(f"mp host 27070{relay}")
-            laptop("set TLDRevamp.TestSafety.BlockAutoSave True")
+            laptop("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             laptop(f"mp join {DESKTOP_IP}:27070")
             if not until(lambda: laptop("mp status")["client"]["ready"], 180, what="the join"):
                 check(False, "the joiner joined")

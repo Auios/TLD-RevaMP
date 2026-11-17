@@ -116,7 +116,7 @@ def up(args):
     game.launch()
     game.newgame(args.seed)
     b = bridge()
-    call(b, "set TLDRevamp.TestSafety.BlockAutoSave True")
+    call(b, "set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     reply = call(b, "openxr start")
     if not reply.get("running"):
         reply = call(b, "openxr retry")

@@ -11,7 +11,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         L("!seeded"); seeded.restart_same_seed(); b = Bridge()
-        for s_ in (b, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True"); s_("set kaposztaleves.s.settings.god True")
+        for s_ in (b, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); s_("set kaposztaleves.s.settings.god True")
         b("mp host 27070"); L(f"mp join {DESKTOP_IP}:27070"); time.sleep(5)
         h = glob(b); go_global(b, h[0] + 60, h[2] + 40); me = glob(b)
         g = L(f"ground {me[0] + 12} {me[2]}"); L(f"teleportyaw {me[0] + 8} {g['y'] + 1.5} {me[2]} 90")

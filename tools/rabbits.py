@@ -49,7 +49,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     sid = h("net me")["steamId"]
     gods = {}
@@ -61,7 +61,7 @@ with game.ProtectedSession():
         for s_ in (h, L): s_("set TLDRevamp.Fixes.Rabbits.Enabled False")
         h("mp host 27070"); L(f"mp joinid {sid}")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         lid = L("mp status")["client"]["id"]
         for nm, s_ in (("host", h), ("laptop", L)):
             gods[nm] = s_("get kaposztaleves.s.settings.god").get("value"); s_("set kaposztaleves.s.settings.god True")
@@ -71,14 +71,14 @@ with game.ProtectedSession():
         modes = [("OLD", False), ("NEW", True)] if ONLY != "new" else [("NEW", True)]
         for mi, (tag, on) in enumerate(modes):
             for s_ in (h, L):
-                s_(f"set TLDRevamp.Net.Entities.RabbitSync {on}"); s_(f"set TLDRevamp.Net.Entities.RabbitOwners {on}")
+                s_(f"set TLDRevamp.Net.EntityRabbits.RabbitSync {on}"); s_(f"set TLDRevamp.Net.EntityRabbits.RabbitOwners {on}")
             # each mode further down the road: fresh ground, nothing left over
             bx, bz = X + F[0] * 300 * mi + R[0] * 30, Z + F[1] * 300 * mi + R[1] * 30
             h(f"tpground {bx} {bz}"); L(f"tpground {bx + 4} {bz}"); time.sleep(4)
 
             # ---- A: the laptop's spawner makes a big one
             before = {e["net"] for e in ents(L)}
-            L("set TLDRevamp.Net.Entities.RabbitNextSize 0.9")
+            L("set TLDRevamp.Net.EntityRabbits.RabbitNextSize 0.9")
             print(f"{tag} A spawn:", L("rabbits spawn"), flush=True)
             if not until(lambda: any(e["net"] not in before and not e["car"] for e in ents(L)), 15): verdict(f"{tag} A SPAWNED AND SHARED", False); continue
             na = next(e["net"] for e in ents(L) if e["net"] not in before and not e["car"])
@@ -92,7 +92,7 @@ with game.ProtectedSession():
             # ---- B: the host's small rabbit runs and roars, the laptop 40 m off
             h(f"tpground {bx + 60 * R[0]} {bz + 60 * R[1]}"); L(f"tpground {bx + 60 * R[0] + 40 * F[0]} {bz + 60 * R[1] + 40 * F[1]}"); time.sleep(3)
             before = {e["net"] for e in ents(h)}
-            h("set TLDRevamp.Net.Entities.RabbitNextSize 0.3"); h("devspawn 103")
+            h("set TLDRevamp.Net.EntityRabbits.RabbitNextSize 0.3"); h("devspawn 103")
             if not until(lambda: any(e["net"] not in before and not e["car"] for e in ents(h)), 15): verdict(f"{tag} B RABBIT", False); continue
             nb = next(e["net"] for e in ents(h) if e["net"] not in before and not e["car"])
             if not until(lambda: rab(L, nb) is not None, 20): verdict(f"{tag} B THE LAPTOP HAS THE COPY", False); continue
@@ -116,11 +116,11 @@ with game.ProtectedSession():
             verdict(f"{tag} B THE COPY ROARS WITH THE OWNER", roared and fx1 > fx0, f"roaring {roared}, events {fx0} -> {fx1}")
 
             # ---- C/D: the host's evil rabbit bites the laptop
-            h("set TLDRevamp.Net.Entities.RabbitOwners False")
+            h("set TLDRevamp.Net.EntityRabbits.RabbitOwners False")
             hx, hz = bx + 120 * R[0], bz + 120 * R[1]
             h(f"tpground {hx} {hz}"); L(f"tpground {hx + 30 * F[0]} {hz + 30 * F[1]}"); time.sleep(3)
             before = {e["net"] for e in ents(h)}
-            h("set TLDRevamp.Net.Entities.RabbitNextSize 0.95"); h("devspawn 103")
+            h("set TLDRevamp.Net.EntityRabbits.RabbitNextSize 0.95"); h("devspawn 103")
             if not until(lambda: any(e["net"] not in before and not e["car"] for e in ents(h)), 15): verdict(f"{tag} C RABBIT", False); continue
             nc = next(e["net"] for e in ents(h) if e["net"] not in before and not e["car"])
             if not until(lambda: rab(L, nc) is not None, 20): verdict(f"{tag} C THE LAPTOP HAS THE COPY", False); continue
@@ -142,7 +142,7 @@ with game.ProtectedSession():
             d1 = L("mp rabbits")["stats"]["damageTaken"]
             print("  host stats:", h("mp rabbits")["stats"], flush=True)
             verdict(f"{tag} C THE HOST'S RABBIT BITES THE LAPTOP", d1 > d0, f"laptop damage messages {d0} -> {d1}")
-            h(f"set TLDRevamp.Net.Entities.RabbitOwners {on}")
+            h(f"set TLDRevamp.Net.EntityRabbits.RabbitOwners {on}")
             r = rab(h, nc); p, f = r["pos"], r["fwd"]
             L(f"tpground {p[0] + f[0] * 1.6} {p[2] + f[1] * 1.6}")
             moved = until(lambda: rab(h, nc)["owner"] == lid, 5, 0.25)
@@ -169,7 +169,7 @@ with game.ProtectedSession():
             # (run 1: the laptop's copy swept through the car at 691 m/s)
             h(f"tpground {cp[0] + 16 * R[0]} {cp[2] + 16 * R[1]}"); time.sleep(2)
             before = {e["net"] for e in ents(h)}
-            h("set TLDRevamp.Net.Entities.RabbitNextSize 1.0"); h("devspawn 103")
+            h("set TLDRevamp.Net.EntityRabbits.RabbitNextSize 1.0"); h("devspawn 103")
             if not until(lambda: any(e["net"] not in before and not e["car"] for e in ents(h)), 15): verdict(f"{tag} E RABBIT", False); continue
             ne = next(e["net"] for e in ents(h) if e["net"] not in before and not e["car"])
             if not until(lambda: rab(L, ne) is not None, 20): verdict(f"{tag} E THE LAPTOP HAS THE RABBIT", False); continue
@@ -207,7 +207,7 @@ with game.ProtectedSession():
             spot = (cp[0] + fx * 25, cp[2] + fz * 25)
             h(f"tpground {spot[0] + 3 * fz} {spot[1] - 3 * fx}"); time.sleep(2)
             before = {e["net"] for e in ents(h)}
-            h("set TLDRevamp.Net.Entities.RabbitNextSize 0.6"); h("devspawn 103")
+            h("set TLDRevamp.Net.EntityRabbits.RabbitNextSize 0.6"); h("devspawn 103")
             if not until(lambda: any(e["net"] not in before and not e["car"] for e in ents(h)), 15): verdict(f"{tag} F RABBIT", False); continue
             nf = next(e["net"] for e in ents(h) if e["net"] not in before and not e["car"])
             if not until(lambda: rab(L, nf) is not None, 20): verdict(f"{tag} F THE LAPTOP HAS THE RABBIT", False); continue
@@ -242,7 +242,7 @@ with game.ProtectedSession():
     finally:
         for s_ in (h, L):
             for k in ("RabbitSync", "RabbitOwners"):
-                try: s_(f"set TLDRevamp.Net.Entities.{k} True")
+                try: s_(f"set TLDRevamp.Net.EntityRabbits.{k} True")
                 except Exception: pass
         for nm, s_ in (("host", h), ("laptop", L)):
             try: s_(f"set kaposztaleves.s.settings.god {gods.get(nm) if gods.get(nm) is not None else False}")

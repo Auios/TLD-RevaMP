@@ -38,11 +38,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         lid, hid = L("mp entities")["me"], h("mp entities")["me"]
         hp = h("gpos")
@@ -100,7 +100,7 @@ with game.ProtectedSession():
         print("  the host's copy while the laptop joined again (s, pos):", track["seen"][:12], flush=True)
         if not rj: verdict("D REJOINED", False, "the laptop never joined again")
         else:
-            L("set TLDRevamp.TestSafety.BlockAutoSave True")
+            L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             got = until(lambda: item if item in ents(L) and L(f"mp attachpose {item}") is not None else None, 45)   # placed here, not only listed
             time.sleep(3)
             e2, eh2 = (ents(L).get(got, {}) if got else {}), ents(h).get(item, {})

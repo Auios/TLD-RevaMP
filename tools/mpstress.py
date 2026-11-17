@@ -348,7 +348,7 @@ def late_part(V, nets):
     ok = join_both(h, L, rehost=False)
     verdict(f"{tag}: REJOINED WHILE THE HOST DROVE", ok)
     if not ok: stop(h, V); return
-    L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
     W = Watch(tag)
     got = until(lambda: keep_up(L, V, h) or all(n in ents(L) for n in nets) and V in ents(L), 40)
     worst = 0.0; rows = []
@@ -490,15 +490,15 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     plock0 = None
     try:
         if RELAY != "off": relay_both(h, L, RELAY)
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         h("set settingsscript.s.S.BAutoShift True"); L("set settingsscript.s.S.BAutoShift True")
-        for i, a in enumerate(sys.argv):   # --set Entities.RidingFrames=False (A/B flags under TLDRevamp.Net, both games)
+        for i, a in enumerate(sys.argv):   # --set EntityHands.RidingFrames=False (A/B flags under TLDRevamp.Net, both games)
             if a == "--set":
                 k, v = sys.argv[i + 1].split("=", 1)
                 for s_ in (h, L): s_(f"set TLDRevamp.Net.{k} {v}")

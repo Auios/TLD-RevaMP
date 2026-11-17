@@ -8,7 +8,7 @@ a row of the host's jerry cans on flat ground, the laptop's player beside them.
      and the ownership did not churn (owner changes counted in the host's owner log)
   C  STANDING STILL AGAINST A CAN (the laptop leans on one) → no claim: standing against a copy took it every step before
   D  no errors on either machine
-  --old: Entities.BodyClaims False on both (the A/B: items stay frozen until their owner moves them)
+  --old: EntityCargoInteraction.BodyClaims False on both (the A/B: items stay frozen until their owner moves them)
   tools/bodypush.py [--no-build] [--relay iad|off] [--old]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -49,11 +49,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True"); s_(f"set {T}.BodyClaims {not OLD}")
         print(f"  {'OLD (no body claims)' if OLD else 'NEW (body claims)'}", flush=True)
         lid, hid = L("mp entities")["me"], h("mp entities")["me"]

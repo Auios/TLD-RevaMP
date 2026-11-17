@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """A part that came off a car, simulated here, while the car is another player's copy far from this player (the collider
-LOD switches a far car copy's parts' colliders off: Entities.LodKeepsPartsOff). The playtest of 2026-11-06: the host's
+LOD switches a far car copy's parts' colliders off: EntityPhysics.LodKeepsPartsOff). The playtest of 2026-11-06: the host's
 rear wheel came off in a crash, the host died, the car went to the client, the host respawned over 50 m from it — and
 the wheel fell through the desert floor. Two players:
   A  a wheel off the HOST's car lies beside it; the car goes to the joiner; the host walks 70 m off: the wheel stays on
@@ -73,7 +73,7 @@ def bot_run():
         game.launch(); game.newgame(20261108); h = Bridge()
         try:
             h(f"set {T}.LodKeepsPartsOff {not OLD}")
-            h("set kaposztaleves.s.settings.god True"); h("set TLDRevamp.TestSafety.BlockAutoSave True")
+            h("set kaposztaleves.s.settings.god True"); h("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             print(f"  {'OLD (LodKeepsPartsOff off)' if OLD else 'CURRENT BUILD'}", flush=True)
             print("  host:", h("mp host 27070"), flush=True); time.sleep(4); h("mp policy everyone")
             print("  bot:", h("mp pbot add b1"), flush=True)
@@ -123,7 +123,7 @@ with game.ProtectedSession():
     try:
         for s in (h, L):
             s(f"set {T}.LodKeepsPartsOff {not OLD}")
-            s("set kaposztaleves.s.settings.god True"); s("set TLDRevamp.TestSafety.BlockAutoSave True")
+            s("set kaposztaleves.s.settings.god True"); s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         h("mp policy everyone")
         lid = L("mp entities")["me"]
         print(f"  {'OLD (LodKeepsPartsOff off)' if OLD else 'CURRENT BUILD'}", flush=True)

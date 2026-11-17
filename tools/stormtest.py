@@ -51,7 +51,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     start = h("gpos")
     sand = h("mp storms sand"); print("  sand:", sand, flush=True)
     h(f"tpground {sand['gx']} {sand['gz']}"); L(f"tpground {sand['gx'] + 10} {sand['gz']}"); time.sleep(8)
@@ -59,7 +59,7 @@ with game.ProtectedSession():
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     gods = {}
     for nm, s_ in (("host", h), ("laptop", L)):
         gods[nm] = (s_, s_("get kaposztaleves.s.settings.god").get("value"))

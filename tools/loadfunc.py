@@ -22,11 +22,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     gods = {}; shift_h = g(h, "settingsscript.s.S.BAutoShift")
     try:
         for name, s_ in (("host", h), ("laptop", L)):
@@ -39,7 +39,7 @@ with game.ProtectedSession():
         print("template car:", h(f"spawncarg 2 0 {r0['gx'] + R[0] * 30} {r0['gz'] + R[1] * 30} {yaw}"), flush=True); time.sleep(3)
         h(f"tpground {r0['gx'] + R[0] * 33} {r0['gz'] + R[1] * 33}"); time.sleep(2)
         print("bot car:", h("mp botcar"), h("clearpile"), flush=True)
-        h("set TLDRevamp.Net.Mp.BotCars True")
+        h("set TLDRevamp.Net.LegacyBots.BotCars True")
         h(f"tpground {r0['gx'] + R[0] * 6} {r0['gz'] + R[1] * 6}"); time.sleep(2)
         print(f"+{BOTS} bots:", h(f"mp bots {BOTS} 100 16").get("bots"), flush=True)
         t0 = time.monotonic()
@@ -102,7 +102,7 @@ with game.ProtectedSession():
         verdict("NO ERRORS", all(x["errors"] == 0 and x["exceptions"] == 0 for x in er), str([(x["errors"], x["exceptions"], (x.get('kinds') or [])[:3]) for x in er]))
         print("players at the end:", len(h("mp players")["players"]) + 1, flush=True)
     finally:
-        try: h("set TLDRevamp.Net.Mp.BotCars False")
+        try: h("set TLDRevamp.Net.LegacyBots.BotCars False")
         except Exception: pass
         try: h(f"set settingsscript.s.S.BAutoShift {shift_h}")
         except Exception as ex: print("shift restore", ex)

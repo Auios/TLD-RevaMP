@@ -337,7 +337,7 @@ items spawned differently, "black shiny cars without anything on them".
   the footing and seat lookups, the rabbits' claims and the host's locked-pose updates (a set of the locked ones, not
   every server object at every car state) off the whole table too. DevTest itself, hosting alone at the gas station:
   the mod 16 → 2 ms a frame, 38 → 55 fps (the test window, 1280x720).
-- **A member that came off keeps its collisions** (2026-11-08, `Entities.LodKeepsPartsOff`, `tools/partlod.py`): it
+- **A member that came off keeps its collisions** (2026-11-08, `EntityPhysics.LodKeepsPartsOff`, `tools/partlod.py`): it
   stays in its car's item list (marked in `Split`), and the collider LOD, which switches a far car copy's parts'
   colliders off, switched its colliders off too. A wheel thrown off in a crash and simulated by the machine that had
   the car then fell through the ground once the car became another player's copy over 50 m away (the playtest's host:
@@ -463,7 +463,7 @@ a Delta is 3 + ceil(n/8) + 13 bytes per masked limb.
 Owners send a Key on the first state of an epoch, on entering a player's interest and on the final at-rest state.
 While streaming they send one every `RagdollKeyEveryS` (2 s), or when a Delta exceeds `RagdollDeltaMaxShare`
 (0.75) of a Key. A limb outside the i16 millimetre range falls back to Frame if a fresh anchor cannot fit it.
-Vehicles' limb sets and `Entities.RagdollDelta = false` also use Frame. A Key becomes the baseline only when its
+Vehicles' limb sets and `EntityRagdolls.RagdollDelta = false` also use Frame. A Key becomes the baseline only when its
 State is actually sent. Key States travel reliably; the server caches each entity's latest Key and forwards it
 reliably without thinning. A stored Delta is replayed only after its matching Key.
 
@@ -614,7 +614,7 @@ like any other body (it can be picked up by a limb, it streams, late joiners get
 It wears its player's outfit: the game's `SpawnRagdol` copies the player's outfit onto it, and its record carries the
 outfit (`save_outfit`), so every copy is dressed the same. A corpse loaded from a record is drawn whole: the game's
 outfit load gives it the first-person cut (`_Dist`) meant only for the local player's own model, and the mod undoes it
-(`Entities.CorpseWhole`). `Entities.DeathCorpseStays` off is the old behaviour (the respawn removed the corpse on every
+(`EntityRagdolls.CorpseWhole`). `EntityRagdolls.DeathCorpseStays` off is the old behaviour (the respawn removed the corpse on every
 machine). `tools/corpses.py` checks both.
 
 A pocket handed back to a returning joiner stays with the host until the joiner's record names what came back. A joiner whose game stops while loading, or who can't spawn an item, gets it again at the next join; it can't be lost in between (`PlayerSave.RestoreConfirmed`). The cost: a joiner whose game stops in the moment between spawning its items and sending that record gets them twice.
@@ -628,7 +628,7 @@ bridge's `mp playersave` output.
 When the session respawns the player, the player and its normal carry transforms return to that point just before the
 original `Respawn` calls `Revive` and `DropAll`. The game's own drop path releases the right-hand, dragged and inventory
 items there instead of at the body's flung endpoint. The ordinary 40–60 m respawn movement follows afterwards.
-`Entities.DeathRagdollShare` and `SessionRules.DeathDropAnchor` are runtime A/B switches; both default on. Seated deaths
+`EntityRagdolls.DeathRagdollShare` and `SessionRules.DeathDropAnchor` are runtime A/B switches; both default on. Seated deaths
 use the same public hooks and leave seat exit to the game. `tools/deathsync.py --ab` exercises the corpse and drop paths
 on a real death over the normal Steam relay.
 

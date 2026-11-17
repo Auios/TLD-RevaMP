@@ -45,7 +45,7 @@ def step(b, gx, gz):
 def run(route, target_km, radius, settle):
     seeded.restart_same_seed()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set mainscript.s.player.godModeTillGrounded True"); b("set kaposztaleves.s.settings.god True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set mainscript.s.player.godModeTillGrounded True"); b("set kaposztaleves.s.settings.god True")
     home = glob(b)
     tx, tz = (home[0] + target_km * 1000, home[2]) if TARGET is None else TARGET
     sx = tx + 80  # stand beside the target (the target itself may be inside a building)

@@ -41,13 +41,13 @@ try:
         seeded.restart_same_seed(); b = Bridge()
         print(f"host world ready at {time.time() - T0:.0f} s")
         for side in (b, L):
-            side("set TLDRevamp.TestSafety.BlockAutoSave True"); side("set kaposztaleves.s.settings.god True")
+            side("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); side("set kaposztaleves.s.settings.god True")
         def both(cmd): b(cmd); L(cmd)
         def banner(text, secs=12): both(f"banner {secs} " + text.replace("\n", "\\n"))  # one bridge line
 
         b("mp host 27070"); L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 120)       # the laptop loads the host's world by itself
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         print(f"laptop in the host's world at {time.time() - T0:.0f} s")
         print("session:", L("mp status")["client"]["id"], "joined; seeds", L("mp status")["client"]["serverSeed"], L("mp status")["client"]["mySeed"])
 

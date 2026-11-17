@@ -20,7 +20,7 @@ def files(): return sorted(p.name for p in game.SAVES.glob("*autosave*.leases"))
 
 game.quit_game(); game.launch()
 with game.ProtectedSession():
-    game.newgame(); b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    game.newgame(); b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     time.sleep(8); b("mp host 27070"); time.sleep(3)
     own = leases(b); g = b("gpos")
     # saved keys the new world can't have spawned itself (far from its start): any of them in its table = inherited

@@ -206,7 +206,7 @@ The public release v0.69.1 carries 28. The numbers above that were raised on dev
 
 ## 14
 
-- limbs of bodies in states (Entities.Ragdoll)
+- limbs of bodies in states (EntityHealthRules.Ragdoll)
 
 ## 13
 
@@ -214,7 +214,7 @@ The public release v0.69.1 carries 28. The numbers above that were raised on dev
 
 ## 12
 
-- car signals in states (Entities.CarSignals)
+- car signals in states (EntityCarSignals.CarSignals)
 
 ## 11
 

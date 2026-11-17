@@ -100,7 +100,7 @@ with game.ProtectedSession():
     for cfg in (sys.argv[sys.argv.index("--only") + 1].split(",") if "--only" in sys.argv else ("control", "bot")):
         game.newgame()
         b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
         try: run(b, cfg)
         except Exception as ex: verdict(f"{cfg}: RAN", False, repr(ex))

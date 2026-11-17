@@ -24,13 +24,13 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if "--aboard-interp" in sys.argv:   # A/B: the car the laptop stands on interpolated as before v0.66.8
-        L("set TLDRevamp.Net.Entities.AboardDrawnAtPhysics False"); print("  OLD: the car stood on is interpolated", flush=True)
+        L("set TLDRevamp.Net.EntityPhysics.AboardDrawnAtPhysics False"); print("  OLD: the car stood on is interpolated", flush=True)
     saved = []
     try:
         for s_ in (h, L):

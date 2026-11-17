@@ -16,7 +16,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         b = seeded_both(L)
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         time.sleep(10)
         for n, s in (("desktop", b), ("laptop", L)):
             a = s("attachpoints")

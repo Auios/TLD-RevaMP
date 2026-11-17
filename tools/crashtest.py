@@ -22,7 +22,7 @@ Staging: each crash on the next clear stretch at least 200 m past the previous o
 (parked world cars, earlier wrecks — a rear-end wreck once flew 356 m down the road).
   --old: the behaviour before v0.57.59 (kinematic copies + the impulse relay), for A/B
   --approach A|B|both: A = each machine simulates the crash itself (physical copies, Entities.Physical); B = the machine
-  that hits first simulates the whole crash (Entities.CrashAuthority); both = every MP crash once with each
+  that hits first simulates the whole crash (EntityPhysics.CrashAuthority); both = every MP crash once with each
   tools/crashtest.py [--no-build] [--only rear,tbone,headon] [--mode sp|mp|both] [--relay <dc>] [--kmh 100] [--gap 20] [--old]"""
 import sys, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -255,7 +255,7 @@ L = None
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
         rp = b("roadpoint"); yaw = rp["yaw"]; cur = (rp["gx"], rp["gz"])
         D = unit(yaw)
         def onward(res):
@@ -268,7 +268,7 @@ try:
             print("  cleanup:", b("clearpile"), flush=True)
         if MODE in ("mp", "both"):
             L = Agent()
-            for side in (b, L): side("set TLDRevamp.TestSafety.BlockAutoSave True")
+            for side in (b, L): side("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             L("set kaposztaleves.s.settings.god True")
             if RELAY: print("relay only via", RELAY, b(f"net relay {RELAY}"), L(f"net relay {RELAY}"), flush=True)
             b("mp host 27070")
@@ -278,17 +278,17 @@ try:
             L("set kaposztaleves.s.settings.god True")   # joining loads the host's world: settings are fresh after it
             if RELAY: print("route:", L("net route"), flush=True)
             for s in (b, L):
-                s(f"set TLDRevamp.Net.Entities.PhysicalCopies {not OLD}"); s(f"set TLDRevamp.Net.Entities.ContactRelayOn {OLD}")
+                s(f"set TLDRevamp.Net.EntityPhysics.PhysicalCopies {not OLD}"); s(f"set TLDRevamp.Net.EntityPhysics.ContactRelayOn {OLD}")
             for k, ap in [(k, ap) for k in ONLY for ap in APPROACHES]:
                 APPROACH = ap
-                for s in (b, L): s(f"set TLDRevamp.Net.Entities.CrashAuthority {ap == 'B'}")
+                for s in (b, L): s(f"set TLDRevamp.Net.EntityPhysics.CrashAuthority {ap == 'B'}")
                 print(f"\n=== approach {ap}: " + ("each machine simulates the crash itself" if ap == "A" else "the machine that hits first simulates the whole crash"), flush=True)
                 try: cur = onward(run_mp(b, L, k, cur[0], cur[1], yaw))
                 except RuntimeError as e:   # one crash's setup failing must not lose the others
                     verdict(f"{k.upper()} MP [{ap}]", False, f"aborted: {e}"); d = unit(yaw); cur = (cur[0] + d[0] * 300, cur[1] + d[1] * 300)
                 for s in (b, L):
                     if g(s, "mainscript.s.player.Bsitting") is True: s("driveout"); time.sleep(1)
-            for s in (b, L): s("set TLDRevamp.Net.Entities.PhysicalCopies True"); s("set TLDRevamp.Net.Entities.ContactRelayOn False"); s("set TLDRevamp.Net.Entities.CrashAuthority False")
+            for s in (b, L): s("set TLDRevamp.Net.EntityPhysics.PhysicalCopies True"); s("set TLDRevamp.Net.EntityPhysics.ContactRelayOn False"); s("set TLDRevamp.Net.EntityPhysics.CrashAuthority False")
             L("mp stop"); b("mp stop")
         for s in [b] + ([L] if L else []): s("set kaposztaleves.s.settings.god False")
 finally:

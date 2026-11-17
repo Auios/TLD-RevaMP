@@ -36,7 +36,7 @@ def count(b, tag):
 game.quit_game(); game.launch()
 with game.ProtectedSession():
     seeded.restart_same_seed()
-    b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     g = b("gpos"); print(f"  seed {seeded.SEED}, start at {g['gx']:.0f},{g['gz']:.0f}", flush=True)
     time.sleep(10); n0 = count(b, "start (+10 s)")

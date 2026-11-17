@@ -10,7 +10,7 @@ from bench import Bridge
 CARS = sys.argv[1:] or ["Car09full", "Car10Full", "Car09full_slide", "Car06Full"]
 game.quit_game(); game.launch()
 with game.ProtectedSession():
-    game.newgame(); b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    game.newgame(); b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     time.sleep(5)
     worst = 0.0

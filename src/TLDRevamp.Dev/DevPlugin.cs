@@ -73,7 +73,6 @@ namespace TLDRevamp
 
             KeyBindings.Contribute(("Item health", KeyItemHealth), ("Debug layout (V2)", KeyDebugLayout), ("Item traffic", KeyItemTraffic), ("Debug view (Legacy)", KeyDebugView), ("Ownership labels (Legacy)", KeyOwnership), ("Owner ghost (Legacy)", KeyOwnerGhost), ("Links (Legacy)", KeyLinks), ("Object comparison", KeyCompare), ("Object events", KeyEvents));
             Net.EntityDebug.HoldForTest = Net.FillLab.HoldNet;
-            DevMembers.Install();
             Diagnostics.ErrorLog.DiagnosticMessage = Diagnostics.ErrorLogTools.OnLog;
             DevHooks.CameraStep = Cinematic.CinematicCameraTools.Tick;
             DevHooks.CameraReset = Cinematic.CinematicCameraTools.Reset;

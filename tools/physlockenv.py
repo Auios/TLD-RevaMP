@@ -36,14 +36,14 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     lock0 = h("get settingsscript.s.S.IPhysicsLock")["value"]
     try:
         h("set settingsscript.s.S.IPhysicsLock 3")
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.Entities.CopyContainersInert {not OLD}")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
+        for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyContainersInert {not OLD}")
         print(f"  {'OLD (copy containers take anything)' if OLD else 'NEW'}; host physics lock 3", flush=True)
         time.sleep(6)
         hp = h("gpos"); me = h("mp entities")["me"]; lme = L("mp entities")["me"]
@@ -81,7 +81,7 @@ with game.ProtectedSession():
         try: h(f"set settingsscript.s.S.IPhysicsLock {lock0}")
         except Exception as ex: print("restore physics lock:", ex)
         for s_ in (h, L):
-            try: s_("set TLDRevamp.Net.Entities.CopyContainersInert True")
+            try: s_("set TLDRevamp.Net.EntityLocks.CopyContainersInert True")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

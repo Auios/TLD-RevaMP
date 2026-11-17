@@ -60,7 +60,7 @@ def shot(b, label):
 
 
 def setup_drive(b):
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     b("set kaposztaleves.s.settings.god True")
     rp = b("roadpoint")
     yaw = rp["yaw"] + 180.0

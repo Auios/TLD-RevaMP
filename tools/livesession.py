@@ -24,7 +24,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        for side in (b, L): side("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for side in (b, L): side("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY: print("relay only via", RELAY, ":", b(f"net relay {RELAY}"), L(f"net relay {RELAY}"))
         b("mp host 27070")
         if RELAY: L(f"mp joinid {b('net me')['steamId']}")   # the MP panel's friend join (Steam P2P)
@@ -34,7 +34,7 @@ try:
         if RELAY:
             route = L("net route"); print("route:", {k: route.get(k) for k in ("ping", "relayed", "popRelay", "popRemote")})
             if not route.get("relayed"): sys.exit("NOT RELAYED: " + str(route))
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         rp = b("roadpoint"); yaw = rp["yaw"] + 180.0
         F = (math.sin(math.radians(yaw)), math.cos(math.radians(yaw)))
         cx, cz = rp["x"] + F[0] * 20, rp["z"] + F[1] * 20

@@ -21,7 +21,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
         RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"   # real latency by default
         if RELAY != "off": b(f"net relay {RELAY}"); L(f"net relay {RELAY}")
         b("mp host 27070")
@@ -33,11 +33,11 @@ try:
         net = max(e["net"] for e in b("mp entities")["entities"] if e["part"] < 0)
         print("poke:", b(f"mp entpoke {net} fuel 1.25"), b(f"mp entpoke {net} part 2 3"), b(f"mp entpoke {net} usable 0 1"))
         time.sleep(4)
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY != "off": L(f"mp joinid {b('net me')['steamId']}")
         else: L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 120)
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         L(f"teleportyaw {x} {g['y'] + 1.5} {z - 6} 0")
         ok = until(lambda: "error" not in L(f"mp entstate {net}"), 30)
         time.sleep(2)

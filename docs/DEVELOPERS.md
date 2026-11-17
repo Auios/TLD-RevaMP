@@ -175,7 +175,7 @@ host checks what each joiner generates from (`src/TLDRevamp/Net/WorldCheck.cs`, 
   (`AlignPosToRoad`) and the road its height blends to are looked up there, so they are the same whatever the player
   loaded before, and buildings no longer wait for the live roads (`PoiRoadsSettled` and main road only's wait remain the
   fallback where the shadow is unavailable). Measured equal to the waiting rule: 4,778 placements compared on two
-  copies (`PureRoads.Compare`), 0 different. A building from a candidate is spawned only once no candidate within
+  copies (`PureRoadsTools.Compare`), 0 different. A building from a candidate is spawned only once no candidate within
   two building chunks of it is still waiting for its lookup, so the shared-spot rule never
   meets a spawned loser. Lookups get `PureRoads.BudgetMs` (2 ms) per frame, shadow roads included (a lookup not
   finished goes on next frame: when a building appears changes, never where); shadow chunks more than

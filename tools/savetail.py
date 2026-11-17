@@ -28,7 +28,7 @@ def slots():
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     seeded.restart_same_seed(); b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")   # the game's periodic autosave off; the saves below are ours
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")   # the game's periodic autosave off; the saves below are ours
     try:
         b("mp host 27070"); time.sleep(3)
         # make sure all three slots exist and differ (a fresh world may have fewer)
@@ -46,21 +46,21 @@ with game.ProtectedSession():
         verdict("B FIX: THE GAME'S ROTATION (1 -> 2 -> 3), THEN A NEW AUTOSAVE1", r.get("rotated") is True and s2[2] == s1[1] and s2[3] == s1[2] and s2[1] != s1[1],
                 f"before {s1}, after {s2}")
 
-        b("set TLDRevamp.Net.Mp.TestAutosaveOff True"); b("set TLDRevamp.TestSafety.BlockAutoSave False")
+        b("set TLDRevamp.Net.MpTools.TestAutosaveOff True"); b("set TLDRevamp.TestSafetyTools.BlockAutoSave False")
         k0 = b("get TLDRevamp.Net.Mp.SaveTailSkipped")["value"]
         b("mp stop"); time.sleep(1.5); s3 = slots()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         verdict("C AUTOSAVE OFF: ENDING THE SESSION WRITES NOTHING", s3 == s2 and b("get TLDRevamp.Net.Mp.SaveTailSkipped")["value"] == k0 + 1,
                 f"before {s2}, after {s3}")
 
-        b("set TLDRevamp.Net.Mp.TestAutosaveOff False")
+        b("set TLDRevamp.Net.MpTools.TestAutosaveOff False")
         b("mp host 27070"); time.sleep(3)
-        b("set TLDRevamp.TestSafety.BlockAutoSave False")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave False")
         b("mp stop"); time.sleep(1.5); s4 = slots()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         verdict("D AUTOSAVE ON: ENDING THE SESSION SAVES, ROTATED", s4[2] == s3[1] and s4[1] != s3[1], f"before {s3}, after {s4}")
     finally:
-        for k, v in (("TLDRevamp.Net.Mp.TestAutosaveOff", False), ("TLDRevamp.Net.Mp.RotateOnSaveTail", True), ("TLDRevamp.TestSafety.BlockAutoSave", True)):
+        for k, v in (("TLDRevamp.Net.MpTools.TestAutosaveOff", False), ("TLDRevamp.Net.Mp.RotateOnSaveTail", True), ("TLDRevamp.TestSafetyTools.BlockAutoSave", True)):
             try: b(f"set {k} {v}")
             except Exception as ex: print("restore", k, ex)
         try: b("mp stop")

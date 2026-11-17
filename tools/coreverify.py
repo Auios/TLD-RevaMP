@@ -42,9 +42,9 @@ b = None
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         print("host:", "server" in b("mp host 27070"))
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         L(f"mp join {DESKTOP_IP}:27070")
         if not until(lambda: L("mp status")["client"]["ready"], 150):
             sys.exit(f"LAPTOP NEVER JOINED: {L('mp status')}")
@@ -87,18 +87,18 @@ try:
 
         if want(3):
             s0 = b("seatlook")
-            L("set TLDRevamp.Net.Entities.TestSteer 0.8"); time.sleep(1.5)
+            L("set TLDRevamp.Net.EntityShotgunTools.TestSteer 0.8"); time.sleep(1.5)
             s1 = b("seatlook")
-            L("set TLDRevamp.Net.Entities.TestSteer 0"); time.sleep(1.5)
+            L("set TLDRevamp.Net.EntityShotgunTools.TestSteer 0"); time.sleep(1.5)
             s2 = b("seatlook")
             ang = s1.get("steerAngle", 0)
             steer_ok = ang > 0 and s1.get("carSteer", 0) > 0.5 * ang and abs(s2.get("carSteer", 99)) < 0.2 * ang
             lights0 = b("seatlook").get("lights")
-            L("set TLDRevamp.Net.Entities.TestLights True"); time.sleep(2)
+            L("set TLDRevamp.Net.EntityShotgunTools.TestLights True"); time.sleep(2)
             lights1 = b("seatlook").get("lights")
             diag = {k: L(f"get {k}")["value"] for k in ("mainscript.s.player.seat.Car", "mainscript.s.player.Car", "mainscript.s.player.seat.Car.driving2",
-                     "mainscript.s.player.seat.Car.isPlayerDriving2", "TLDRevamp.Net.Entities.ShotgunSent")}
-            diag["desktop ShotgunApplied"] = b("get TLDRevamp.Net.Entities.ShotgunApplied")["value"]
+                     "mainscript.s.player.seat.Car.isPlayerDriving2", "TLDRevamp.Net.EntitySeats.ShotgunSent")}
+            diag["desktop ShotgunApplied"] = b("get TLDRevamp.Net.EntitySeats.ShotgunApplied")["value"]
             print("   shotgun diag:", diag)
             verdict("3 SHOTGUN STEER", steer_ok, f"owner's steer before {s0.get('carSteer')} / with passenger at 0.8 {s1.get('carSteer')} / released {s2.get('carSteer')} (angle {ang})")
             verdict("3 SHOTGUN LIGHTS", lights0 is not None and lights1 != lights0, f"owner's light switch {lights0} → {lights1}")

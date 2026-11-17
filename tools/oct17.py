@@ -54,13 +54,13 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     gods = {}; lock_h = g(h, "settingsscript.s.S.IPhysicsLock")
     share0 = L(f"get {REP}.Share")["value"]; ask0 = h(f"get {REP}.AskPlayers")["value"]
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L):
             for sw in SWITCHES: s_(f"set {sw} {not OLD}")
         print(f"  {'OLD (switches off)' if OLD else 'CURRENT BUILD'}", flush=True)
@@ -163,16 +163,16 @@ with game.ProtectedSession():
 
         # ---- I: a forged identity, then the real one
         sid_l = L("net me")["steamId"]; ir0 = num(h, "TLDRevamp.Net.MpServer.IdentityRefused")
-        L(f"set TLDRevamp.Net.MpClient.TestClaimSteamId {int(sid_l) + 1}")
+        L(f"set TLDRevamp.Net.ClientSimulation.TestClaimSteamId {int(sid_l) + 1}")
         L(join_cmd(h))
         refused = until(lambda: num(h, "TLDRevamp.Net.MpServer.IdentityRefused") > ir0, 40)
         time.sleep(2)
         st = L("mp status").get("client") or {}
         verdict("I: A JOIN CLAIMING ANOTHER STEAM ID: REFUSED", bool(refused) and not st.get("ready"), f"refused +{num(h, 'TLDRevamp.Net.MpServer.IdentityRefused') - ir0}, laptop {st.get('last')}")
-        L("set TLDRevamp.Net.MpClient.TestClaimSteamId 0"); L("mp stop"); time.sleep(3)
+        L("set TLDRevamp.Net.ClientSimulation.TestClaimSteamId 0"); L("mp stop"); time.sleep(3)
         if not join_both(h, L): verdict("F: REJOINED", False)
         else:
-            L("set TLDRevamp.TestSafety.BlockAutoSave True"); time.sleep(8)
+            L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); time.sleep(8)
             lid2 = L("mp entities")["me"]
             hc = next((e for e in h("mp entities")["entities"] if LAMP in e.get("name", "") and e["owner"] == lid2), None)
             lc = next((e for e in L("mp entities")["entities"] if LAMP in e.get("name", "") and not e["proxy"]), None)
@@ -203,7 +203,7 @@ with game.ProtectedSession():
         verdict("NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er), str([(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er]))
     finally:
         for s_, v in list(gods.values()): s_(f"set kaposztaleves.s.settings.god {v}")
-        for k, s_, v in ((f"{REP}.Share", L, share0), (f"{REP}.AskPlayers", h, ask0), (f"{REP}.StartGapS", h, 30), ("TLDRevamp.Net.MpClient.TestClaimSteamId", L, 0),
+        for k, s_, v in ((f"{REP}.Share", L, share0), (f"{REP}.AskPlayers", h, ask0), (f"{REP}.StartGapS", h, 30), ("TLDRevamp.Net.ClientSimulation.TestClaimSteamId", L, 0),
                          ("settingsscript.s.S.IPhysicsLock", h, lock_h)):
             try: s_(f"set {k} {v}")
             except Exception: pass

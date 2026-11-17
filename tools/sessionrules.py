@@ -12,7 +12,7 @@ if running_build() != local_build_hash(): game.quit_game(); game.launch()
 ok = {}
 with game.ProtectedSession():
     seeded.restart_same_seed(); b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     print("host:", "server" in b("mp host 27070"))
     # pause
     b("call mainscript.s.PressedEscape False False"); time.sleep(1.5)

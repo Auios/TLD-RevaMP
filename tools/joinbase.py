@@ -41,7 +41,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     try:
         h("set kaposztaleves.s.settings.god True")
@@ -58,7 +58,7 @@ with game.ProtectedSession():
         hs = site(h, x, z)
         print(f"  host has {len(hs)} items within {R} m", flush=True)
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         time.sleep(25)
         hs, ls = site(h, x, z), site(L, x, z)
         missing, extra = compare(hs, ls)

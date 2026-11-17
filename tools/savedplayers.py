@@ -25,11 +25,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         rp = h("roadpoint"); x, z = rp["gx"], rp["gz"]
         h(f"tpground {x} {z}"); L(f"tpground {x + 3} {z}"); time.sleep(4)
@@ -75,7 +75,7 @@ with game.ProtectedSession():
             if until(lambda: L("mp status")["client"]["ready"], 150): break
             L("mp stop"); time.sleep(3)
         else: sys.exit("LAPTOP NEVER REJOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         time.sleep(8)
         back = pos(L); d = math.hypot(back[0] - left_at[0], back[1] - left_at[1])
         lps = L("mp playersave")

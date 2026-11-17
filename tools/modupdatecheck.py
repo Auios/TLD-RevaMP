@@ -69,9 +69,9 @@ try:
         q = (s or {}).get("question") or ""
         return bool(s and s["open"] and want in q and q.endswith("Update now?")), q
     def as_at_start():
-        b("set TLDRevamp.Plugin.BridgeEnabled False"); b("set TLDRevamp.Net.ModsScreen._checked False")
+        b("set TLDRevamp.DevPlugin.BridgeEnabled False"); b("set TLDRevamp.Net.ModsScreen._checked False")
     try: ok, q = ask(as_at_start)
-    finally: b("set TLDRevamp.Plugin.BridgeEnabled True")
+    finally: b("set TLDRevamp.DevPlugin.BridgeEnabled True")
     verdict("B. at start, the game checks by itself and asks to update Road End", ok, repr(q))
     try: print("  screenshot:", b("screenshot"), flush=True)
     except Exception as e: print("  screenshot failed:", e, flush=True)

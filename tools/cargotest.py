@@ -94,12 +94,12 @@ with game.ProtectedSession():
     for cfg in ONLY:
         game.newgame()
         b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
         try: run(b, cfg)
         except Exception as ex: verdict(f"{cfg}: RAN", False, repr(ex))
         finally:
-            for k, v in ((f"{T}.CargoClaims", True), ("TLDRevamp.Net.Mp.BotItemHeld", False)):
+            for k, v in ((f"{T}.CargoClaims", True), ("TLDRevamp.Net.LegacyBots.BotItemHeld", False)):
                 try: b(f"set {k} {v}")
                 except Exception as ex: print("restore", k, ex)
             try: b("mp stop")

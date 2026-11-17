@@ -39,7 +39,7 @@ host_orig = None
 with game.ProtectedSession():
     h = seeded_both(L)
     try:
-        for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         host_orig = h(f"get {S}")["value"]; lap = L(f"get {S}")["value"]
         print(f"  settings: host {host_orig}, laptop {lap}", flush=True)
         A = 1 if lap == 0 else 0          # the host's setting for the test: differs from the laptop's (glovebox holds only above 0)
@@ -50,7 +50,7 @@ with game.ProtectedSession():
         verdict("0 BEFORE: THE LAPTOP USES ITS OWN", p0["used"] == lap, f"{p0}")
         if RELAY != "off": relay_both(h, L, RELAY)
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         hp = h("gpos")
         h(f"tpground {hp['gx'] + 15} {hp['gz']}"); time.sleep(3)
         before = set(ents(h))

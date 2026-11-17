@@ -46,12 +46,12 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     gods = {}; lock_h = g(h, "settingsscript.s.S.IPhysicsLock")
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L):
             for sw in SWITCHES: s_(f"set {sw} {not OLD}")
         print(f"  {'OLD (switches off)' if OLD else 'CURRENT BUILD'}", flush=True)

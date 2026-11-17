@@ -22,7 +22,7 @@ if b("mp status").get("server") is None:
     b("mp host 27070")
 L = Agent()
 try:
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     L(f"mp join {DESKTOP_IP}:27070")
     until(lambda: L("mp status")["client"]["ready"], 150)
     b("set kaposztaleves.s.settings.god True"); L("set kaposztaleves.s.settings.god True")

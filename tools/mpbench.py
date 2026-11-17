@@ -18,12 +18,12 @@ def one(n, radius, speed, sets, profile):
     seeded.restart_same_seed()
     b = Bridge()
     vs0 = b("get UnityEngine.QualitySettings.vSyncCount")["value"]
-    b("set UnityEngine.QualitySettings.vSyncCount 0"); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set UnityEngine.QualitySettings.vSyncCount 0"); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     b("set mainscript.s.player.godModeTillGrounded True"); b("set kaposztaleves.s.settings.god True")
     try:
         r = b(f"fakeplayers {n} {speed} {radius}")
         time.sleep(WARM)
-        if profile: b("set TLDRevamp.ScriptProfiler.SlowFrameMs 20"); b("profile start" + (" " + profile if isinstance(profile, str) else ""))
+        if profile: b("set TLDRevamp.ScriptProfilerTools.SlowFrameMs 20"); b("profile start" + (" " + profile if isinstance(profile, str) else ""))
         b("reset"); b("loopprof start"); b("alloc reset"); time.sleep(WINDOW)
         s = b("stats"); ph = b("loopprof stop 200"); a = b("alloc")
         prof = b("profile stop 20") if profile else None

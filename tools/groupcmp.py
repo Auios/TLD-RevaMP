@@ -23,7 +23,7 @@ def cmp(a, b, path):
 
 with game.ProtectedSession():
     seeded.restart_same_seed()
-    b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+    b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
     h = glob(b); go_global(b, h[0] + 60, h[2] + 40); time.sleep(3)
     me = glob(b); g = b(f"ground {me[0] + 6} {me[2]}")
     b(f"spawnpile 2 1 {me[0] + 6} {g['y']} {me[2]} 1 1 1.0 4242"); time.sleep(5)

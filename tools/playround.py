@@ -227,12 +227,12 @@ with game.ProtectedSession():
     h = seeded_both(L)
     GOD = {}
     for n_, s_ in (("h", h), ("L", L)):
-        s_("set TLDRevamp.TestSafety.BlockAutoSave True"); GOD[n_] = s_("get kaposztaleves.s.settings.god").get("value"); s_("set kaposztaleves.s.settings.god True")
+        s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); GOD[n_] = s_("get kaposztaleves.s.settings.god").get("value"); s_("set kaposztaleves.s.settings.god True")
     SHIFT = g(L, "settingsscript.s.S.BAutoShift")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         L("set settingsscript.s.S.BAutoShift True")
         for s_ in (h, L): s_(f"set {T}.StoreOutTrace 60")   # log every shared root streamed out (where, the call stack)
         if "--old-copylock" in sys.argv:   # A/B: the container release rule as in v0.66.7

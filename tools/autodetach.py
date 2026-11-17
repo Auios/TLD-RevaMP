@@ -23,7 +23,7 @@ game.launch()
 with game.ProtectedSession():
     game.newgame()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     try:
         p = b("gpos"); b(f"tpground {p['gx'] + 15} {p['gz']}"); time.sleep(3)
@@ -33,7 +33,7 @@ with game.ProtectedSession():
         a_net = next(n for n, e in ents(b).items() if n not in before and e["car"])
         print("  botcar:", b("mp botcar"), flush=True)
         b("deleteshare %d" % a_net)   # only the bot's copy remains
-        b("set TLDRevamp.Net.Mp.BotCars True")
+        b("set TLDRevamp.Net.LegacyBots.BotCars True")
         known = set(ents(b))
         b("mp bots 1 10 0")
         c_net = None
@@ -57,7 +57,7 @@ with game.ProtectedSession():
     finally:
         try: b("mp stop")
         except Exception: pass
-        b("set TLDRevamp.Net.Mp.BotCars False")
+        b("set TLDRevamp.Net.LegacyBots.BotCars False")
         b(f"set kaposztaleves.s.settings.god {god if god is not None else False}")
 game.quit_game()
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

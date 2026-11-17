@@ -92,7 +92,7 @@ with game.ProtectedSession():
     h = Bridge()
     print("build:", h("ping"), flush=True)
     seeded.restart_same_seed()
-    h("set TLDRevamp.TestSafety.BlockAutoSave True")
+    h("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     try:
         h("mp host 27070"); time.sleep(2)
         h("set kaposztaleves.s.settings.god True")

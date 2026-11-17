@@ -78,7 +78,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     print("  probe host:", h("mp voice probe"), "laptop:", L("mp voice probe"), flush=True)
     h(f"mp host 27070 {PW}")
@@ -101,7 +101,7 @@ with game.ProtectedSession():
         # 3 the right password
         L(f"mp joinid {hid} {PW}")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         lid = L("mp status")["client"].get("id")
         for nm, s_ in (("host", h), ("laptop", L)):
             gods[nm] = (s_, s_("get kaposztaleves.s.settings.god").get("value"))

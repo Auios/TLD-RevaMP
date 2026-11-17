@@ -83,7 +83,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     try:
         IFA = next(i for i, n in h("itemids Bus02UtanfutoFull")["items"] if n.lower() == "bus02utanfutofull")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
@@ -123,7 +123,7 @@ with game.ProtectedSession():
         h("mp stop"); time.sleep(2)
 
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         time.sleep(4)
         pos = h("mp players")["me"]

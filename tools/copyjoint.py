@@ -86,8 +86,8 @@ with game.ProtectedSession():
     if not join_both(h, L): sys.exit("THE SECOND PLAYER NEVER JOINED")
     try:
         for s in (h, L):
-            s(f"set TLDRevamp.Net.Entities.CopyJointsFree {not OLD}")
-            s("set kaposztaleves.s.settings.god True"); s("set TLDRevamp.TestSafety.BlockAutoSave True")
+            s(f"set TLDRevamp.Net.EntityPhysics.CopyJointsFree {not OLD}")
+            s("set kaposztaleves.s.settings.god True"); s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         h("mp policy everyone")
         hp = h("gpos")
         h(f"tpground {hp['gx'] + 15} {hp['gz']}"); L(f"tpground {hp['gx'] + 15} {hp['gz'] + 7}"); time.sleep(4)
@@ -147,7 +147,7 @@ with game.ProtectedSession():
         print("  host joints:", h("mp copyjoints"), flush=True)
     finally:
         for s in (h, L):
-            try: s(f"set TLDRevamp.Net.Entities.CopyJointsFree True")
+            try: s(f"set TLDRevamp.Net.EntityPhysics.CopyJointsFree True")
             except Exception: pass
         try: L("mp stop"); h("mp stop")
         except Exception: pass

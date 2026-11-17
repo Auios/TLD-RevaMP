@@ -107,7 +107,7 @@ def main():
             probe(b, "Choose", "true")
             game.newgame(args.seed)
             b = game.Bridge()
-            b("set TLDRevamp.TestSafety.BlockAutoSave True")
+            b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             b("overlay off")
             checks["picked: on"] = state(b)["active"] is True
             checks["a world with it loads with it"] = probe(b, "SavedWithEnd", args.seed) is True

@@ -45,12 +45,12 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     try:
         h("mp host 27070"); L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_(f"set {T}.AttachRequests {not OLD}"); s_(f"set {T}.OwnerCascade {not OLD}")
         print(f"  {'OLD (no attach requests)' if OLD else 'NEW'}", flush=True)
         lid = L("mp entities")["me"]

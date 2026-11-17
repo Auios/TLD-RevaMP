@@ -66,14 +66,14 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     gods = {}
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, s_("get kaposztaleves.s.settings.god").get("value")); s_("set kaposztaleves.s.settings.god True")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         home = h("gpos")
         time.sleep(SETTLE)
         compare("START (joined next to the host)", h, L, home["gx"], home["gz"])
@@ -101,7 +101,7 @@ with game.ProtectedSession():
             time.sleep(1)
         verdict("REJOINED", ok)
         if ok:
-            L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+            L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
             q = L("gpos"); print(f"  laptop placed at {q['gx']:.0f},{q['gz']:.0f} (host at {h('gpos')['gx']:.0f})", flush=True)
             time.sleep(SETTLE)
             compare("LAST BUILDING (rejoined)", h, L, gx, gz)

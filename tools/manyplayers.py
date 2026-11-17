@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A long session with many players, as close to a real one as two machines allow (architecture §9a). The desktop
 hosts; the laptop joins as a real player over the Steam relay (≈190 ms) with simulated packet loss on top, and runs the
-other players as bots in its own game, each its own Steam connection to the host (Mp.AddRemoteBots): nothing loopback,
+other players as bots in its own game, each its own Steam connection to the host (LegacyBots.AddRemoteBots): nothing loopback,
 every byte over the internet. Players: half the bots near the host, half spread up to --spread km away. During the
 session bots leave and new ones join every --churn s. The laptop's player drives about the whole time.
 Each minute: host frame p50/p99/max, players the host has, bots ready on the laptop, the laptop still in, errors.
@@ -32,16 +32,16 @@ ensure_both("--no-build" not in sys.argv)
 rows, joins_ok, laptop_lost, lost_bots = [], [], False, 0
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         if LOSS > 0: print("  laptop loss:", L(f"net lag 0 {LOSS}"), flush=True)
         sid = h("net me")["steamId"]
         # the bots share the laptop's Steam account: a test host lets it in more than once (without player saves)
-        print("  host lets one account in more than once:", h("set TLDRevamp.Net.MpServer.TestSameAccount True"), flush=True)
+        print("  host lets one account in more than once:", h("set TLDRevamp.Net.SessionTools.TestSameAccount True"), flush=True)
         # the laptop's player in a car on the road, driving about
         rp = h("roadpoint"); F = (math.sin(math.radians(rp["yaw"])), math.cos(math.radians(rp["yaw"])))
         r0 = clear_road(h, rp["gx"], rp["gz"], F[0], F[1]); yaw = r0["yaw"]
@@ -92,7 +92,7 @@ with game.ProtectedSession():
     finally:
         try: L("autodrive off"); L("net lag 0")
         except Exception: pass
-        L("mp stop"); h("mp stop"); h("set TLDRevamp.Net.MpServer.TestSameAccount False")
+        L("mp stop"); h("mp stop"); h("set TLDRevamp.Net.SessionTools.TestSameAccount False")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]
 fails = [n for n, ok in VERDICTS if not ok]

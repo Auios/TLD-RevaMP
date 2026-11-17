@@ -27,11 +27,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         h(f"set TLDRevamp.Net.Tpa.Enabled {not OLD}"); h("set TLDRevamp.Net.Tpa.CooldownS 120")
         print(f"  {'OLD (TPA off)' if OLD else 'CURRENT BUILD'}", flush=True)
         host = next(p["name"] for p in L("mp players")["players"] if p["id"] == 0)

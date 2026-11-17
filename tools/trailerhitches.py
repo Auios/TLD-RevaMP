@@ -162,9 +162,9 @@ def run(h, args):
         f = (math.sin(math.radians(yaw)), math.cos(math.radians(yaw)))
         right = (math.cos(math.radians(yaw)), -math.sin(math.radians(yaw)))
         x, z = rp["gx"] + right[0] * 1.8, rp["gz"] + right[1] * 1.8
-        auto_save = h("get TLDRevamp.TestSafety.BlockAutoSave")["value"]
+        auto_save = h("get TLDRevamp.TestSafetyTools.BlockAutoSave")["value"]
         safety = h("get TLDRevamp.Fixes.MissingTrailerSlot.Enabled")["value"]
-        h("set TLDRevamp.TestSafety.BlockAutoSave True")
+        h("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         # A single-machine host gives the existing stock hitch path and shared-object diagnostics.
         started = True
         host_local(h)
@@ -267,7 +267,7 @@ def run(h, args):
             if safety is not None:
                 restore.append(f"set TLDRevamp.Fixes.MissingTrailerSlot.Enabled {safety}")
             if auto_save is not None:
-                restore.append(f"set TLDRevamp.TestSafety.BlockAutoSave {auto_save}")
+                restore.append(f"set TLDRevamp.TestSafetyTools.BlockAutoSave {auto_save}")
             for command in restore:
                 try:
                     h(command)

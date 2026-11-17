@@ -65,7 +65,7 @@ def main():
         b = Bridge(); b("bg on")
         restore = bench.apply_changes(b, [("UnityEngine.QualitySettings.vSyncCount", "0"), ("settingsscript.s.S.BEnableFpsLimit", "True"), ("settingsscript.s.S.FFPSLimit", "30"),
                                           (bench.GOD, "True"), (bench.SURVIVAL, "1"),
-                                          ("TLDRevamp.TestSafety.BlockAutoSave", "False" if autosave else "True"),
+                                          ("TLDRevamp.TestSafetyTools.BlockAutoSave", "False" if autosave else "True"),
                                           ("TLDRevamp.PlayerLoopProfiler.HitchMs", str(hitch_ms)), *sets])
         result = {"label": label, "time": datetime.datetime.now().isoformat(timespec="seconds"), "version": b("ping")["version"],
                   "minutes": minutes, "speed": speed, "hitchMs": hitch_ms, "autosave": autosave, "sets": dict(sets)}
@@ -98,7 +98,7 @@ def main():
             stats["rebases"] = int(b("get mainscript.s.visszarakvaCount")["value"]) - rb0
             drv = b("autodrive off")
         finally:
-            try: b("set TLDRevamp.TestSafety.BlockAutoSave True")
+            try: b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             except Exception as e: print("!!", e)
             bench.restore_settings(restore)
         log = newest_play_log(t_open)

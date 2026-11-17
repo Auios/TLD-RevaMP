@@ -13,7 +13,7 @@ with game.ProtectedSession():
     else: game.deploy_local()
     game.launch(); game.newgame()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     try:
         time.sleep(3)
         b("mp host 27070")

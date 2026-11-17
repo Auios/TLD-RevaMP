@@ -39,10 +39,10 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     hid, lid = h("mp entities")["me"], L("mp entities")["me"]
     def ents(s): return {e["net"]: e for e in s("mp entities")["entities"]}
     def rel(s, car, *nets): return {int(k): v for k, v in s(f"mp relpos {car} {' '.join(map(str, nets))}")["items"].items()}

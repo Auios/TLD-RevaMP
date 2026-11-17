@@ -31,18 +31,18 @@ ensure_both("--no-build" not in sys.argv)
 killed = False
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     shift_l = g(L, "settingsscript.s.S.BAutoShift"); god_l = g(L, "kaposztaleves.s.settings.god")
     try:
         L("set kaposztaleves.s.settings.god True"); L("set settingsscript.s.S.BAutoShift True")
         rp = h("roadpoint"); yaw = rp["yaw"]; R = (math.cos(math.radians(yaw)), -math.sin(math.radians(yaw)))
         if not car_ready(L, rp["gx"] + R[0] * 1.8, rp["gz"] + R[1] * 1.8, yaw, "laptop"): sys.exit("LAPTOP NOT IN ITS CAR")
         L("autodrive on 11"); time.sleep(8)
-        print("laptop in the host's world:", {k: g(L, "TLDRevamp.TestSafety." + k) for k in ("InHostWorld", "LeavingHostWorld", "BlockAutoSave")}, flush=True)
+        print("laptop in the host's world:", {k: g(L, ("TLDRevamp.TestSafetyTools." if k == "BlockAutoSave" else "TLDRevamp.TestSafety.") + k) for k in ("InHostWorld", "LeavingHostWorld", "BlockAutoSave")}, flush=True)
         saves0 = laptop_saves(); print(f"laptop saves: {len(saves0.splitlines())} files", flush=True)
         if HANG:
             n0 = int(subprocess.run(SSH + [f'grep -a -c "chat: \\*" "{LOG}"'], capture_output=True, text=True).stdout.strip() or 0)

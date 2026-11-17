@@ -76,12 +76,12 @@ with game.ProtectedSession():
     coast = {}
     for alone in (False, True, False, True):
         if not reach(b, 12): continue
-        b(f"set TLDRevamp.Fixes.TrailerBrakes.TestAlone {alone}")   # held only once at speed
+        b(f"set TLDRevamp.Fixes.TrailerBrakesTools.TestAlone {alone}")   # held only once at speed
         v0 = speed(b); b("autodrive off"); time.sleep(3); v1 = speed(b)
-        b("set TLDRevamp.Fixes.TrailerBrakes.TestAlone False")
+        b("set TLDRevamp.Fixes.TrailerBrakesTools.TestAlone False")
         coast.setdefault(alone, []).append(v0 - v1)
         print(f"  coasting 3 s from {v0:.1f} m/s, trailer-only brake {'held' if alone else 'not held'}: lost {v0 - v1:.1f} m/s", flush=True)
-    b("set TLDRevamp.Fixes.TrailerBrakes.TestAlone False")
+    b("set TLDRevamp.Fixes.TrailerBrakesTools.TestAlone False")
     for k in ("Sway", "Roll", "Traction"): b(f"set TLDRevamp.Fixes.DrivingAssists.{k} True")
     reach(b, 18); time.sleep(20); b("autodrive off")
     ticks = {k: b(f"get TLDRevamp.Fixes.DrivingAssists.{k}")["value"] for k in ("SwayTicks", "RollTicks", "TractionCuts")}

@@ -55,7 +55,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True"); setall(s_, not OLD)
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); setall(s_, not OLD)
     print(f"  {'OLD (before v0.68.2)' if OLD else 'OLD SHARE (before v0.68.5)' if OLD_SHARE else 'CURRENT BUILD'}", flush=True)
     if RELAY != "off": relay_both(h, L, RELAY)
     gods = {}; shift_h = None
@@ -75,7 +75,7 @@ with game.ProtectedSession():
         print("  host puts them on:", h(f"mp wearnear {glasses[1]}"), flush=True)
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         # (the join loads the host's world: god mode is off again — the laptop died in C once, flung while getting out)
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); setall(L, not OLD); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); setall(L, not OLD); L("set kaposztaleves.s.settings.god True")
         hid, lid = h("mp entities")["me"], L("mp entities")["me"]
         me = h("mp players")["me"]
         L(f"tpground {me[0] + F[0] * 2.5} {me[2] + F[1] * 2.5}"); time.sleep(4)
@@ -151,7 +151,7 @@ with game.ProtectedSession():
             L(join_cmd(h, sid))
             if until(lambda: L("mp status")["client"]["ready"], 150): break
             L("mp stop"); time.sleep(3)
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); setall(L, not OLD); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); setall(L, not OLD); L("set kaposztaleves.s.settings.god True")
         time.sleep(8)
         time.sleep(3)
         # (2026-10-17: a hat restored loose and put on only then was claimed by the host on the way: owner log "claim")

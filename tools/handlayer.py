@@ -47,7 +47,7 @@ with game.ProtectedSession():
     h = seeded_both(L)
     if not join_both(h, L): sys.exit("THE SECOND PLAYER NEVER JOINED")   # shared objects: the test reaches them by net id
     try:
-        h("set kaposztaleves.s.settings.god True"); h("set TLDRevamp.TestSafety.BlockAutoSave True")
+        h("set kaposztaleves.s.settings.god True"); h("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         hp = h("gpos")
         h(f"tpground {hp['gx'] + 15} {hp['gz']}"); time.sleep(3)
         car = spawn(h, CAR, True)

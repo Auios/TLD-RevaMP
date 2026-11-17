@@ -11,7 +11,7 @@ if "--no-build" not in sys.argv: game.build()
 if running_build() != local_build_hash(): game.quit_game(); game.launch()
 with game.ProtectedSession():
     seeded.restart_same_seed(); b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
     b("mp host 27070")
     rp = b("roadpoint"); x, z = rp["x"], rp["z"]; g = b(f"ground {x} {z}")
     b(f"teleportyaw {x} {g['y'] + 1.5} {z + 4} 0")

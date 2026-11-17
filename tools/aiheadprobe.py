@@ -14,7 +14,7 @@ with game.ProtectedSession():
     b = Bridge()
     god = None
     try:
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         god = g(b, "kaposztaleves.s.settings.god"); b("set kaposztaleves.s.settings.god True")
         ids = b("mp aiids")["ai"]; print("creatures:", ids, flush=True)
         rp = b("roadpoint"); print("road:", tp(b, rp["gx"], rp["gz"]), flush=True); time.sleep(2)

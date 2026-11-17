@@ -33,9 +33,9 @@ try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
         ts("session up")
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         b("mp host 27070")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         T(L, f"mp join {DESKTOP_IP}:27070")   # join first: before it, the client is null by design
         until(lambda: L("mp status")["client"]["ready"], 150)
         ts("joined")

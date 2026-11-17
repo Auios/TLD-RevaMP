@@ -48,7 +48,7 @@ results = {}
 try:
     with game.ProtectedSession():
         b = seeded_both(L)
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         time.sleep(10)   # past the arrival (world generation around the spawn)
         sides = {"desktop": b, "laptop": L}
         if "sp" in ONLY:
@@ -71,7 +71,7 @@ try:
             if RELAY: L(f"mp joinid {b('net me')['steamId']}")
             else: L(f"mp join {DESKTOP_IP}:27070")
             if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-            L("set TLDRevamp.TestSafety.BlockAutoSave True")
+            L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             if RELAY: print("route:", L("net route"), flush=True)
             time.sleep(10)
             label = f"MP, 2 players ({'relay ' + RELAY if RELAY else 'LAN'})"

@@ -5,7 +5,7 @@ Two machines over the relay. The host keeps a car of its own by the slope, so it
 (Entities.Physical: a real body steered along the owner's path; NearEnterM/NearExitM raised for the test so the copy
 stays physical for the whole roll). On --rolls slopes found near the road (a grade of 10-30 % on terrain), the laptop
 spawns a car01 at the top facing downhill, gets out with the handbrake off, and the car rolls until it stops. Then
-where the laptop has it and where the host's copy rests are compared. OLD (Entities.RestSnap off) and NEW, the same
+where the laptop has it and where the host's copy rests are compared. OLD (EntityPhysics.RestSnap off) and NEW, the same
 slopes in turn.
   A  the host's copy is physical during the rolls
   B  OLD: the copy rests > 0.3 m off at least once (the bug; INFO only if it never shows)
@@ -86,13 +86,13 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
-        h("set TLDRevamp.Net.Entities.NearEnterM 150"); h("set TLDRevamp.Net.Entities.NearExitM 200")
+        h("set TLDRevamp.Net.EntityPhysics.NearEnterM 150"); h("set TLDRevamp.Net.EntityPhysics.NearExitM 200")
         rp = L("roadpoint"); tp(L, rp["gx"], rp["gz"]); time.sleep(4)
         spots = slopes(L, rp["gx"], rp["gz"], ROLLS)
         if not spots: sys.exit("NO SLOPE FOUND")
@@ -100,7 +100,7 @@ with game.ProtectedSession():
         ph0 = h("mp physical")
         for i, (x, z, yaw) in enumerate(spots):
             for label, on in (("OLD", False), ("NEW", True)):
-                h(f"set TLDRevamp.Net.Entities.RestSnap {on}")
+                h(f"set TLDRevamp.Net.EntityPhysics.RestSnap {on}")
                 # the NEW roll a little beside the OLD one's start (the OLD car rests below)
                 sx, sz = (x, z) if label == "OLD" else (x + math.cos(math.radians(yaw)) * 6, z - math.sin(math.radians(yaw)) * 6)
                 r = roll(h, L, sx, sz, yaw, f"{label} slope {i + 1}")
@@ -115,8 +115,8 @@ with game.ProtectedSession():
         er = [x_("errors") for x_ in (h, L)]
         verdict("D NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er), str([(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er]))
     finally:
-        h("set TLDRevamp.Net.Entities.RestSnap True")
-        h("set TLDRevamp.Net.Entities.NearEnterM 12"); h("set TLDRevamp.Net.Entities.NearExitM 18")
+        h("set TLDRevamp.Net.EntityPhysics.RestSnap True")
+        h("set TLDRevamp.Net.EntityPhysics.NearEnterM 12"); h("set TLDRevamp.Net.EntityPhysics.NearExitM 18")
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

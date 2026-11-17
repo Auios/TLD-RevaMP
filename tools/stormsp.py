@@ -31,7 +31,7 @@ game.deploy_local()
 game.quit_game(); game.launch()
 with game.ProtectedSession():
     seeded.restart_same_seed()
-    b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     try:
         s = b("mp storms"); print(" ", s, flush=True)

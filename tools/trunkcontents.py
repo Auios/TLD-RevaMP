@@ -65,7 +65,7 @@ with game.ProtectedSession():
         L("!seeded")
         h = game.loadsave(SAVE)
         for s in (h, L):
-            s("set TLDRevamp.TestSafety.BlockAutoSave True"); s("bg on"); s("set UnityEngine.QualitySettings.vSyncCount 0"); s("set kaposztaleves.s.settings.god True")
+            s("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); s("bg on"); s("set UnityEngine.QualitySettings.vSyncCount 0"); s("set kaposztaleves.s.settings.god True")
             s(f"set {T}.StoredContentsApart {not OLD}")   # before the share: the host shares its world as it hosts
         if not join_both(h, L): sys.exit("THE JOINER NEVER JOINED")
         if OLD:

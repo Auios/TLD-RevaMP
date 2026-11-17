@@ -13,7 +13,7 @@ from roadkit import CAR01
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     seeded.restart_same_seed(); b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     rp = b("roadpoint")
     print("spawn:", b(f"spawncarg {CAR01} 0 {rp['gx'] + 6} {rp['gz']} 0"), flush=True); time.sleep(4)
     d = b("followdump 40")

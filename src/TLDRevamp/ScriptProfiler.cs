@@ -52,7 +52,7 @@ namespace TLDRevamp
         internal const int Capacity = 1000; // Slot<A,B,C> with ten digit types
         internal const int SetProfile = 1, SetTimers = 2, SetCoarse = 3;
         private static readonly string[] CoarseMethods = { "carscript.Update", "mapSettingScript.Update", "fpscontroller.Update", "aiscript.Update",
-            "TLDRevamp.Net.Mp.Tick", "TLDRevamp.Net.Entities.FixedTick", "TLDRevamp.Net.Entities.LateSample", "TLDRevamp.Fixes.TinyRendererCull.Tick" };
+            "TLDRevamp.Net.Mp.Tick", "TLDRevamp.Net.Entities.FixedTick", "TLDRevamp.Net.EntityDoors.LateSample", "TLDRevamp.Fixes.TinyRendererCull.Tick" };
         internal static readonly string[] CoarseNames = CoarseMethods.Select(m => "coarse:" + m).Concat(new[] { "coarse:truncated" }).ToArray();
         internal static readonly CoarseClock Coarse = new CoarseClock(CoarseMethods.Length);
         private static readonly int[] CoarseGroup = new int[Capacity];
@@ -283,7 +283,7 @@ namespace TLDRevamp
             "randomFlyer.Update fluidGraphicScript.Update tapeMeasureScript.Update SteamManager.Update SteamP2PMenuHandlerScript.Update " +
             "roadGenScript.Upd2 objGenScript.UpdPlaceRemove objGenScript.UpdGen poiGenScript.Upd terrainGenScript.Upd " +
             "TLDRevamp.Runner.Update TLDRevamp.Runner.FixedUpdate TLDRevamp.Runner.LateUpdate TLDRevamp.Runner.OnGUI " +
-            "TLDRevamp.Net.Mp.Tick TLDRevamp.Net.Entities.FixedTick TLDRevamp.Net.Entities.LateSample TLDRevamp.Fixes.TinyRendererCull.Tick";
+            "TLDRevamp.Net.Mp.Tick TLDRevamp.Net.Entities.FixedTick TLDRevamp.Net.EntityDoors.LateSample TLDRevamp.Fixes.TinyRendererCull.Tick";
 
         public static int MaxColumns = 16;
         /// Methods per 5 s tick line.

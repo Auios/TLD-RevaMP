@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A crash lease when the hit car's owner leaves (Entities.CrashAuthority): the machine whose car hits another player's
+"""A crash lease when the hit car's owner leaves (EntityPhysics.CrashAuthority): the machine whose car hits another player's
 takes the hit car for up to 4 s (CrashReturnTo = its owner), then the server hands it back. If that owner left in
 between, the car went back to a player who was gone: nobody simulated it again, frozen on every screen.
 The host spawns a bus, the laptop takes the wheel (owns it); the host starts a crash lease on it (`mp crashlease`,
@@ -34,7 +34,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     sid = h("net me")["steamId"]
     h("mp host 27070")
@@ -43,7 +43,7 @@ with game.ProtectedSession():
     def join():
         L(f"mp joinid {sid}")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         gods["laptop"] = gods.get("laptop") or L("get kaposztaleves.s.settings.god").get("value"); L("set kaposztaleves.s.settings.god True")
         return L("mp status")["client"].get("id")
 
@@ -65,18 +65,18 @@ with game.ProtectedSession():
             ok = until(lambda: ent(h, NET)["owner"] == lid, 15)
             print(f"  round {rnd}: laptop (id {lid}) at the wheel: {r}; host sees owner {ent(h, NET)['owner']}", flush=True)
             if not ok: verdict(f"ROUND {rnd} SETUP: THE LAPTOP OWNS THE BUS", False, "INVALID"); continue
-            h(f"set TLDRevamp.Net.Entities.CrashLeaveKeep {keep}")
+            h(f"set TLDRevamp.Net.EntityPhysics.CrashLeaveKeep {keep}")
             print("  host's crash lease:", h(f"mp crashlease {NET}"), flush=True)
             L("mp stop")
             time.sleep(6)
             e = ent(h, NET)
             tag = "OLD BEHAVIOUR (expected FAIL)" if not keep else "FIX"
-            print(f"  round {rnd}: 6 s after the laptop left - host sees owner {e['owner']} proxy {e['proxy']}; kept {h('get TLDRevamp.Net.Entities.CrashLeasesKept')['value']}", flush=True)
+            print(f"  round {rnd}: 6 s after the laptop left - host sees owner {e['owner']} proxy {e['proxy']}; kept {h('get TLDRevamp.Net.EntityPhysics.CrashLeasesKept')['value']}", flush=True)
             verdict(f"ROUND {rnd} {tag}: THE BUS IS SIMULATED BY SOMEONE STILL HERE", e["owner"] == 0 and not e["proxy"], f"owner {e['owner']} (the laptop was {lid}), proxy {e['proxy']}")
             if rnd == 1:
                 lid = join()
     finally:
-        h("set TLDRevamp.Net.Entities.CrashLeaveKeep True")
+        h("set TLDRevamp.Net.EntityPhysics.CrashLeaveKeep True")
         for nm, s_ in (("host", h), ("laptop", L)):
             try: s_(f"set kaposztaleves.s.settings.god {gods.get(nm) if gods.get(nm) is not None else False}")
             except Exception as ex: print("god restore", nm, ex)

@@ -35,7 +35,7 @@ def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok, detail)); print(f"  {'PASS' if ok else 'FAIL'}  {name}" + (f"  {detail}" if detail else ""), flush=True)
 def set_switches(ragdoll, anchor, host, client):
     for s in (host, client):
-        s(f"set TLDRevamp.Net.Entities.DeathRagdollShare {ragdoll}")
+        s(f"set TLDRevamp.Net.EntityRagdolls.DeathRagdollShare {ragdoll}")
         s(f"set TLDRevamp.Net.SessionRules.DeathDropAnchor {anchor}")
 def corpse_for_remote():
     # A corpse is a PlayerRagdol-owning entity, not the remote player's ordinary pose capsule.
@@ -57,7 +57,7 @@ try:
         RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
         if RELAY != "off": b(f"net relay {RELAY}"); L(f"net relay {RELAY}")
         b("mp host 27070")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY != "off": L(f"mp joinid {b('net me')['steamId']}")
         else: L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 150)
@@ -132,7 +132,7 @@ try:
             else:
                 print("  A/B OFF: old behaviour path exercised; see stats above", flush=True)
             L("set kaposztaleves.s.settings.god True")
-            L("set TLDRevamp.TestSafety.BlockAutoSave True")
+            L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             b("mp stop"); L("mp stop")
             b("mp host 27070")
             if RELAY != "off": L(f"mp joinid {b('net me')['steamId']}")

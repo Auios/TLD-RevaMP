@@ -22,7 +22,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     try:
         IFA = next(i for i, n in h("itemids Bus02UtanfutoFull")["items"] if n.lower() == "bus02utanfutofull")
         rp = h("roadpoint"); F0 = (math.sin(math.radians(rp["yaw"])), math.cos(math.radians(rp["yaw"])))
@@ -32,7 +32,7 @@ with game.ProtectedSession():
         if not car_ready(h, x, z, yaw, "host"): sys.exit("HOST NOT IN ITS CAR")
         h("driveout"); time.sleep(2)
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         time.sleep(4)
 
@@ -86,7 +86,7 @@ with game.ProtectedSession():
         round_(h, "the host", x, z)
     finally:
         for s_ in (h, L):
-            try: s_("set TLDRevamp.TestSafety.BlockAutoSave False")
+            try: s_("set TLDRevamp.TestSafetyTools.BlockAutoSave False")
             except Exception: pass
 print("\n".join(f"{'PASS' if ok else 'FAIL'}  {n}" for n, ok in VERDICTS), flush=True)
 sys.exit(0 if VERDICTS and all(ok for _, ok in VERDICTS) else 1)

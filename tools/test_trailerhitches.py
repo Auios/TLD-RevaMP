@@ -357,7 +357,7 @@ class MeasurementRun(unittest.TestCase):
         results = self.run_world(bridge)
         self.assertEqual(len(results), 1)
         self.assertIn("set TLDRevamp.Fixes.MissingTrailerSlot.Enabled True", world.commands)
-        self.assertEqual(world.commands[-1], "set TLDRevamp.TestSafety.BlockAutoSave False")
+        self.assertEqual(world.commands[-1], "set TLDRevamp.TestSafetyTools.BlockAutoSave False")
         self.assertIn(("measurement run completes", False), hitch.VERDICTS)
         self.assertFalse(any(".Spawn 397 " in c for c in world.commands))
 
@@ -386,7 +386,7 @@ class MeasurementRun(unittest.TestCase):
         world.probe = fail_one_cleanup
         self.run_world(world)
         self.assertIn("call TrailerHitches.Probe.Cleanup 1", world.commands)
-        self.assertEqual(world.commands[-1], "set TLDRevamp.TestSafety.BlockAutoSave False")
+        self.assertEqual(world.commands[-1], "set TLDRevamp.TestSafetyTools.BlockAutoSave False")
         self.assertIn(("item 243 Car06P: cleanup", False), hitch.VERDICTS)
 
 

@@ -72,7 +72,7 @@ python3 tools/issue_evidence.py --run-tests # also runs the offline unit project
    than the moving camera position.
 5. A respawn puts the player back in the session; the session is not left.
 6. The behaviour is switchable at runtime for an A/B run:
-   `Entities.DeathRagdollShare` and `SessionRules.DeathDropAnchor` both default to on.
+   `EntityRagdolls.DeathRagdollShare` and `SessionRules.DeathDropAnchor` both default to on.
 
 ### Evidence
 

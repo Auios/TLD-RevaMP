@@ -111,7 +111,7 @@ with game.ProtectedSession():
         L("!seeded")
         h = game.loadsave(SAVE)
         for s_ in (h, L):
-            s_("set TLDRevamp.TestSafety.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0")
+            s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0")
         me = h("gpos"); print(f"  host in the save at {me['gx']:.0f},{me['gz']:.0f}", flush=True)
         h("mp host 27070"); time.sleep(5)   # the server's entities from the save
         cars = sorted(((math.hypot(e["pos"][0] - me["gx"], e["pos"][2] - me["gz"]), n, e.get("name", "?"))
@@ -126,9 +126,9 @@ with game.ProtectedSession():
         print("  host anomalies after the load:", h("mp anomalies"), flush=True)
         h("mp stop")
         if RELAY != "off": relay_both(h, L, RELAY)
-        L("set TLDRevamp.Net.Entities.HitTrace 6")   # what makes the joiner hit things at the join (the log, read at the end)
+        L("set TLDRevamp.Net.EntityAI.HitTrace 6")   # what makes the joiner hit things at the join (the log, read at the end)
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True"); s_("set kaposztaleves.s.settings.god True")
+        for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); s_("set kaposztaleves.s.settings.god True")
         hid, lid = h("mp entities")["me"], L("mp entities")["me"]
         L(f"tpground {me['gx'] + 3} {me['gz'] + 3}"); time.sleep(12)
 
@@ -226,9 +226,9 @@ with game.ProtectedSession():
 
         def owner_of(car): return h if ents(h)[car]["owner"] == hid else L
         def parts_change(breaker, bname, car, tag):
-            breaker("set TLDRevamp.Net.Entities.TestAsPlayer True")   # the wrench as the player's own (E-press), not the game's
+            breaker("set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")   # the wrench as the player's own (E-press), not the game's
             try: _parts_change(breaker, bname, car, tag)
-            finally: breaker("set TLDRevamp.Net.Entities.TestAsPlayer False")
+            finally: breaker("set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
         def detach_counts(owner_, breaker):
             a, b = owner_("mp entities")["attach"], breaker("mp entities")["attach"]
             return f"{bname_of(breaker)} requests sent {b.get('detachReqsSent')}, owner applied {a.get('detachReqsApplied')}"
@@ -306,7 +306,7 @@ with game.ProtectedSession():
         def rejoin():
             L("mp stop"); time.sleep(5)
             if not join_both(h, L, rehost=False): verdict("R THE LAPTOP JOINS AGAIN", False); return
-            L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+            L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
             p = h("gpos"); L(f"tpground {p['gx'] + 3} {p['gz'] + 3}"); time.sleep(15)
             sent, run = hits("after the rejoin")
             verdict("R NOBODY HIT ANYTHING: THE LAPTOP SENT NO BREAK HITS AT THE REJOIN (STANDING AT THE HOST)", sent == 0, f"sent {sent} since its join, the host ran {run}")

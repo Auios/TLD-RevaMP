@@ -26,7 +26,7 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     own = {k: g(L, f"{S}.{k}") for k in ("survival", "peacefulEnemies")}
     print("  the laptop's own mode:", own, flush=True)
     try:
@@ -35,7 +35,7 @@ with game.ProtectedSession():
         L(f"set TLDRevamp.Net.GameMode.Sync {not OLD}")
         if RELAY != "off": relay_both(h, L, RELAY)
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         print(f"  {'OLD (the joiner keeps its own mode)' if OLD else 'CURRENT BUILD'}", flush=True)
         sid = h("net me")["steamId"]
         time.sleep(4)

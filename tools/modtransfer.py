@@ -91,7 +91,7 @@ laptop_restart()
 try:
     with game.ProtectedSession():
         h = seeded_both(L)
-        for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         print("  host mods:", h("mp mods"), flush=True)
         if RELAY != "off": relay_both(h, L, RELAY)
 
@@ -112,7 +112,7 @@ try:
         if not laptop_restart(): verdict("C SETUP: THE LAPTOP RESTARTED", False)
         else:
             L("!seeded"); time.sleep(3)
-            L("set TLDRevamp.TestSafety.BlockAutoSave True")
+            L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             if RELAY != "off": relay_both(h, L, RELAY)
             ask, c = join(h, L, 60)
             c = c if c.get("ready") or c.get("reject") else wait_end(L, 60)
@@ -124,7 +124,7 @@ try:
         # D unapproved: the laptop's own list without the line, its copy gone
         rsh(f'rm -rf "{RPLUG}/TLDRevampMods"; cp "{RPLUG}/TLDRevamp/approved-mods.txt" /tmp/approved.bak; grep -v {HU_SHA} /tmp/approved.bak > "{RPLUG}/TLDRevamp/approved-mods.txt"')
         if laptop_restart():
-            L("!seeded"); time.sleep(3); L("set TLDRevamp.TestSafety.BlockAutoSave True")
+            L("!seeded"); time.sleep(3); L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             if RELAY != "off": relay_both(h, L, RELAY)
             ask, c = join(h, L)
             c = c if c.get("reject") else wait_end(L, 30)
@@ -138,7 +138,7 @@ try:
 
         # E no
         if laptop_restart():
-            L("!seeded"); time.sleep(3); L("set TLDRevamp.TestSafety.BlockAutoSave True")
+            L("!seeded"); time.sleep(3); L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             if RELAY != "off": relay_both(h, L, RELAY)
             ask, c = join(h, L)
             if ask["open"]: L("mp ask no")

@@ -22,9 +22,9 @@ L = Agent()
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         b("mp host 27070")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 150)
         rp = b("roadpoint"); yaw = rp["yaw"] + 180.0

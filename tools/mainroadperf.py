@@ -63,7 +63,7 @@ def main():
             b("terrain select MainRoadOnly")
             game.newgame(a.seed)
             b = game.Bridge()
-            for cmd in ("set TLDRevamp.TestSafety.BlockAutoSave True", "set kaposztaleves.s.settings.god True",
+            for cmd in ("set TLDRevamp.TestSafetyTools.BlockAutoSave True", "set kaposztaleves.s.settings.god True",
                         "set gamemodesettingsscript.s.S.survival 1", "set UnityEngine.QualitySettings.vSyncCount 0",
                         "set settingsscript.s.S.BEnableFpsLimit False", f"set settingsscript.s.S.FDrawDistance {a.draw}",
                         "overlay off", "bg on"):

@@ -141,13 +141,13 @@ with game.ProtectedSession():
     h = seeded_both(L)
     GOD = {}
     for n_, s_ in (("h", h), ("L", L)):
-        s_("set TLDRevamp.TestSafety.BlockAutoSave True"); GOD[n_] = s_("get kaposztaleves.s.settings.god").get("value"); s_("set kaposztaleves.s.settings.god True")
+        s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); GOD[n_] = s_("get kaposztaleves.s.settings.god").get("value"); s_("set kaposztaleves.s.settings.god True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     sid = h("net me")["steamId"]
     try:
         h("mp host 27070"); L(join_cmd(h, sid))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")   # (the join reloads the world)
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")   # (the join reloads the world)
         OLD = "--old" in sys.argv   # A/B: both v0.66.2 fixes off on both machines
         for s_ in (h, L):
             s_(f"set TLDRevamp.Net.PoseInterpolator.FreshAfterIdle {not OLD}"); s_(f"set TLDRevamp.Net.Entities.FarMoveAttached {not OLD}")

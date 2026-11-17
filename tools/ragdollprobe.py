@@ -9,7 +9,7 @@ game.deploy_local()
 game.quit_game(); game.launch()
 with game.ProtectedSession():
     seeded.restart_same_seed()
-    b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     r = b("mp ragdolls")
     print("[index, name, ragdollPos childs, ragdollPos pickupables, creature RBs, kind]")
     for row in r.get("ragdolls", []): print(" ", row)

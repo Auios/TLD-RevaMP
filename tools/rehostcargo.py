@@ -58,7 +58,7 @@ with game.ProtectedSession():
         for f in SRC.glob(f"TLDsave*_{SAVE}.*"):
             shutil.copy2(f, game.SAVES / f.name); copied.append(game.SAVES / f.name)
         h = game.loadsave(SAVE)
-        h("set TLDRevamp.TestSafety.BlockAutoSave True"); h("bg on"); h("set UnityEngine.QualitySettings.vSyncCount 0")
+        h("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); h("bg on"); h("set UnityEngine.QualitySettings.vSyncCount 0")
         h("mp host 27070"); time.sleep(5)
         car = car_named(h, "Car06P(Clone)")
         if not car: sys.exit("no Car06P near the host")

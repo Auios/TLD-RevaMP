@@ -27,9 +27,9 @@ try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
         b("banner 8 LIVE TEST: passenger ride starts in ~60 s — watch the car")
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         b("mp host 27070")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 150)
         L("set kaposztaleves.s.settings.god True"); b("set kaposztaleves.s.settings.god True")

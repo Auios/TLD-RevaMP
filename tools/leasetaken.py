@@ -21,12 +21,12 @@ L = Agent()
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         b("mp host 27070")
         rp = b("roadpoint")
         hx, hz = rp["x"], rp["z"]          # the start house (haz02) is right at the start
         time.sleep(5)
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 150)
         time.sleep(8)                       # let the join-time sync settle

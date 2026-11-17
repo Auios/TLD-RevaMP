@@ -21,11 +21,11 @@ L = Agent()
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"   # real latency by default
         if RELAY != "off": b(f"net relay {RELAY}"); L(f"net relay {RELAY}")
         b("mp host 27070")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         L("set TLDRevamp.Net.Mp.RemoteTrace True")   # the lifecycle traces on the laptop
         b("set TLDRevamp.Net.Mp.RemoteTrace True")   # and on the host: the id-0 relay lines
         if RELAY != "off": L(f"mp joinid {b('net me')['steamId']}")

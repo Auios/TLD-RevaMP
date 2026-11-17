@@ -142,7 +142,7 @@ def main():
         b = Bridge(); b("bg on")
         ping = b("ping")
         verdict("no patch failed to apply", ping.get("patchFailures", 0) == 0, f"{ping.get('patchFailures')} {ping.get('failedPatches')}")
-        sets = [(bench.GOD, "True"), ("TLDRevamp.TestSafety.BlockAutoSave", "True"), ("UnityEngine.QualitySettings.vSyncCount", "0"),
+        sets = [(bench.GOD, "True"), ("TLDRevamp.TestSafetyTools.BlockAutoSave", "True"), ("UnityEngine.QualitySettings.vSyncCount", "0"),
                 ("TLDRevamp.Fixes.TankcapIdle.Enabled", "True"), ("TLDRevamp.Fixes.FastNoise.Enabled", "True")]
         sets += [(f"TLDRevamp.Fixes.{f}.Verify", "True") for n in names for f in FIXES[n] if f not in ("WheelSizeWrites", "FastNoise")]
         bench.game_errors()   # the baseline: only errors from here on count

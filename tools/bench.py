@@ -490,7 +490,7 @@ def run(label, profile=False, sets=(), scenarios=("idle", "stream"), loopprof=Fa
                                 (GOD, "True"),
                                 (SURVIVAL, "1"),  # no hunger/thirst drain or damage during the run
                                 # Test worlds must never overwrite the player's autosave slots (they did, 2026-09-23/24)
-                                ("TLDRevamp.TestSafety.BlockAutoSave", "True"),
+                                ("TLDRevamp.TestSafetyTools.BlockAutoSave", "True"),
                                 # Debug modes must never leak into measurements; a --set later in the list overrides
                                 ("TLDRevamp.Fixes.RoadPlaceCache.Verify", "False"),
                                 ("TLDRevamp.Fixes.AsyncTerrain.Verify", "False"),
@@ -544,7 +544,7 @@ def toggle_idle(path, label, rounds=4, seconds=10):
     cur = b(f"get {path}")["value"]
     game_errors()  # baseline: only errors from here on count
     restore = apply_changes(b, [("UnityEngine.QualitySettings.vSyncCount", "0"), ("settingsscript.s.S.BEnableFpsLimit", "False"),
-                                (GOD, "True"), (SURVIVAL, "1"), ("TLDRevamp.TestSafety.BlockAutoSave", "True"), (path, cur)])
+                                (GOD, "True"), (SURVIVAL, "1"), ("TLDRevamp.TestSafetyTools.BlockAutoSave", "True"), (path, cur)])
     res = {"False": [], "True": []}
     try:
         time.sleep(3)  # settle

@@ -52,11 +52,11 @@ ensure_both("--no-build" not in sys.argv)
 killed = False
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god_h = g(h, "kaposztaleves.s.settings.god"); h("set kaposztaleves.s.settings.god True")
     if "--silent" in sys.argv: h(f"set TLDRevamp.Net.Entities.SilentTakeoverS {sys.argv[sys.argv.index('--silent') + 1]}")   # 0 = off (A)
     shift_l = g(L, "settingsscript.s.S.BAutoShift"); print("laptop's automatic shifting (the player's setting):", shift_l, flush=True)

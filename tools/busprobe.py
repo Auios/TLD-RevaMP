@@ -22,11 +22,11 @@ if MP:
     L = Agent()
     with game.ProtectedSession():
         h = seeded_both(L)
-        for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         h("net relay iad"); L("net relay iad")
         h("mp host 27070"); L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         b = L
         import math
         # follow the road 2.5 km out (250 m hops, each onto the nearest road point): a straight line leaves the road and
@@ -80,7 +80,7 @@ game.quit_game(); game.launch()
 with game.ProtectedSession():
     seeded.restart_same_seed()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     rp = b("roadpoint"); cx, cz = rp["gx"], rp["gz"]
     print("road:", tp(b, cx, cz), flush=True); time.sleep(2)
     near0 = {tuple(r[1:4]) for r in b(f"mp sitestate {cx} {cz} 40")["items"]}

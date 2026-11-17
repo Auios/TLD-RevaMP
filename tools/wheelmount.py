@@ -36,7 +36,7 @@ game.launch()
 with game.ProtectedSession():
     game.newgame()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     try:
         p = b("gpos"); b(f"tpground {p['gx'] + 15} {p['gz']}"); time.sleep(3)
@@ -55,7 +55,7 @@ with game.ProtectedSession():
         print(f"  the wheel's entity: {w_net} {ents(b).get(w_net)}", flush=True)
         # the bot's car: a copy of this car as it is now (the slot empty), driven by the bot in a circle around here
         print("  botcar:", b("mp botcar"), flush=True)
-        b("set TLDRevamp.Net.Mp.BotCars True")
+        b("set TLDRevamp.Net.LegacyBots.BotCars True")
         known = set(ents(b))
         print("  bot:", b(f"mp bots 1 14 {SPEED}"), flush=True)
         c_net = until(lambda: next((n for n, e in ents(b).items() if n not in known and e["car"] and e["proxy"]), None), 40)
@@ -87,7 +87,7 @@ with game.ProtectedSession():
     finally:
         try: b("mp stop")
         except Exception: pass
-        b("set TLDRevamp.Net.Mp.BotCars False")
+        b("set TLDRevamp.Net.LegacyBots.BotCars False")
         b(f"set kaposztaleves.s.settings.god {god if god is not None else False}")
 game.quit_game()
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

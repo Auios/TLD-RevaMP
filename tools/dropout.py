@@ -29,11 +29,11 @@ try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
         for who in (b, L):
-            who("set TLDRevamp.TestSafety.BlockAutoSave True"); who("set kaposztaleves.s.settings.god True")
+            who("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); who("set kaposztaleves.s.settings.god True")
         b("mp host 27070")
         L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 120)
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         print("laptop joined")
 
         # both take a car ON the road (the scenario recipe: spawn, face, sit twice) facing down the road

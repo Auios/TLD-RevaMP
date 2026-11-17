@@ -377,7 +377,7 @@ These counters cover all ragdolls on the machine, not just the selected net id. 
 tails the server could not size; those States still go on and the first misses are logged.
 `ReplaysWithoutKey` counts join and interest replays that had no usable ragdoll Key: the pose still goes, a Delta
 without its limbs (the copy keeps the limbs it has) and an unsized tail as it is; the first ones are logged as `[anomaly]`.
-`Entities.RagdollDelta` switches between Key/Delta and Frame for A/B checks.
+`EntityRagdolls.RagdollDelta` switches between Key/Delta and Frame for A/B checks.
 Two-copy measurement with a twitching dead rabbit (14 limbs, about 20 states/s): ragdoll block data was
 5.5 KB/s before and about 1.9 KB/s after. This excludes the rest of the State and transport overhead.
 
@@ -537,7 +537,7 @@ Car01Full · net 1
 you · simulated here · epoch 1
 at rest                                   (a copy: error, angle, age, interpolation mode)
 net ↓ 79 B/s ↑ 0 B/s                      (ItemTraffic, this object's last second)
-colliders 178/239 on · dynamic            (+ "N parts unreachable: <part>", Entities.PartWatch rules)
+colliders 178/239 on · dynamic            (+ "N parts unreachable: <part>", EntityPartWatch.PartWatch rules)
 ```
 
 The collider line is worked out within 30 m, at most once a second per object. **Right Shift** (Keys → DebugLayout) opens
@@ -562,21 +562,21 @@ object, a dynamic copy outside a crash); a loose item the pickup ray can't hit; 
 Each problem lists the matching recent events (35 s) from this machine, else from the other player. While it is open the
 live comparison is pinned to that object; closing puts the comparison and debug view back.
 
-**The background watches** run the same checks without a key (A/B switches: `TLDRevamp.Net.Entities.HealthWatch`,
+**The background watches** run the same checks without a key (A/B switches: `TLDRevamp.Net.EntityHealthWatch.HealthWatch`,
 `.ItemWatch`, `.PartWatch`, `.AutoMarks`):
 
-- *Health watch* (Entities.HealthWatch, HealthWatchRules): the shared objects within 60 m, 3 every 0.5 s — a copy's
+- *Health watch* (EntityHealthWatch.HealthWatch, HealthWatchRules): the shared objects within 60 m, 3 every 0.5 s — a copy's
   position against its owner's poses, the body checks above, and the sanity checks; every other loaded object, 12 every
   0.5 s, the sanity checks only. Sanity: a position or velocity that is not a number or over 200 m/s (reported on sight),
   an object over 5 m under the ground's surface (`sand` layer) with nothing below it, a slot holding the same part twice
   or a part naming another slot, an owner no longer in the session (15 s). A problem lasting 6 s (10 s for a copy behind
   its owner) is an event `health-problem` (result: the check's fixed name) and a log line, once per object and check per
   5 minutes; the Debugging V2 tab shows `health: …` in red while it lasts.
-- *Item watch* (Entities.ItemWatch): the loose shared item under the crosshair within reach (not held, stored, fitted, a
+- *Item watch* (EntityItemWatch.ItemWatch): the loose shared item under the crosshair within reach (not held, stored, fitted, a
   car or a ghost) with no collider the game's pickup ray hits, or a hidden object in front taking the ray. Event
   `item-untargetable`, once per item. A loose item that can't be picked up at all is item health's own check ("Can't pick
   it up": colliders on, none on the pickup layer), so the health watch, Home and the tab all show it.
-- *Part watch* (Entities.PartWatch): fitted parts, as before (`part-untargetable`).
+- *Part watch* (EntityPartWatch.PartWatch): fitted parts, as before (`part-untargetable`).
 - *Census* (Entities.Repair): a repair that did not take is marked; three for one object are a `health-problem`
   (`repair keeps failing`). Its events (`census-repair`, `-failed`, `-run`) are now kept in bug reports.
 
@@ -823,7 +823,7 @@ allocates the arrays it walks. Bridge `scenecount` runs one now.
 
 **Coarse timers** are separate and on by default (`[Telemetry] CoarseTimers = true`; bridge `timers coarse on|off`).
 Eight fixed groups use the same closed-generic Harmony probes: `carscript.Update`, `mapSettingScript.Update`,
-`fpscontroller.Update`, `aiscript.Update`, `Net.Mp.Tick`, `Entities.FixedTick`, `Entities.LateSample`,
+`fpscontroller.Update`, `aiscript.Update`, `Net.Mp.Tick`, `Entities.FixedTick`, `EntityDoors.LateSample`,
 `TinyRendererCull.Tick`. They have `coarse:<method>` black-box columns even when detailed timers are off. Times are
 inclusive and nested groups overlap. There is no allocation tracking, sorting, dictionary lookup or player-loop
 instrumentation. Only the first **128 method invocations per frame** read timestamps; `coarse:truncated = 1` means

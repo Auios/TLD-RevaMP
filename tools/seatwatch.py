@@ -28,8 +28,8 @@ L = Agent()
 try:
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("mp host 27070")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); L(f"mp join {DESKTOP_IP}:27070")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("mp host 27070")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L(f"mp join {DESKTOP_IP}:27070")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         for side in (b, L): side("set kaposztaleves.s.settings.god True"); side("set TLDRevamp.Net.Mp.RemoteTrace True")
         rp = b("roadpoint"); yaw = rp["yaw"] + 180.0

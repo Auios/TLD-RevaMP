@@ -23,7 +23,7 @@ try:
     # ---------- session 1: host spawns + edits + saves
     with game.ProtectedSession():
         seeded.restart_same_seed(); b = Bridge()
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")   # periodic autosave off; `mp save` is the explicit one
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")   # periodic autosave off; `mp save` is the explicit one
         b("mp host 27070")
         rp = b("roadpoint"); yaw = rp["yaw"] + 180.0
         F = (math.sin(math.radians(yaw)), math.cos(math.radians(yaw)))
@@ -62,11 +62,11 @@ try:
         # ---------- rehost; a rejoining client must see the same car
         b("mp host 27070")
         L("mp stop")   # the laptop's old session ended with the world reload; rejoin fresh
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 150)
         L("set kaposztaleves.s.settings.god True"); time.sleep(6)
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         client_ok = False
         for e in L("mp entities")["entities"]:
             try:

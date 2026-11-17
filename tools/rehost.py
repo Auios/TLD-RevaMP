@@ -32,14 +32,14 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     sid = h("net me")["steamId"]
 
     def session(tag):
         h("mp host 27070"); L(f"mp joinid {sid}")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit(f"{tag}: LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         lid = L("mp status")["client"].get("id")
         time.sleep(WAIT)   # interest ticks twice a second, 150 objects a tick
         hn, ln = nets(h), nets(L)

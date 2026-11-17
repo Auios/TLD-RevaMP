@@ -161,7 +161,7 @@ def host_and_join(b, L):
     if RELAY: L(f"mp joinid {b('net me')['steamId']}")
     else: L(f"mp join {DESKTOP_IP}:27070")
     if not until(lambda: L("mp status")["client"]["ready"], 180, 2): sys.exit("LAPTOP NEVER JOINED")
-    L("set TLDRevamp.TestSafety.BlockAutoSave True")
+    L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY: print("route:", L("net route"), flush=True)
     time.sleep(5)
 
@@ -170,7 +170,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         b = seeded_both(L)
-        for s in (b, L): s("set TLDRevamp.TestSafety.BlockAutoSave True")
+        for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         _SIDES[:] = [(b, "desktop"), (L, "laptop")]; _DEATHS0.update(deaths_now())
         AI_IDS.update(x[0] for x in b("mp aiids")["ai"])
         if "--no-handoff" in sys.argv: print("hand-off OFF (A/B):", b("set TLDRevamp.Net.Entities.HandoffEnabled False"), flush=True)
@@ -271,7 +271,7 @@ try:
             game.quit_game()
             game.launch()
             b = game.loadsave("autosave1")
-            b("set TLDRevamp.TestSafety.BlockAutoSave True")
+            b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             g = b("gpos")
             print(f"  host reloaded its save, at {g['gx']:.0f},{g['gz']:.0f}", flush=True)
             sides["desktop"] = b

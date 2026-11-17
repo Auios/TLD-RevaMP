@@ -21,14 +21,14 @@ def run(label, sets, profile):
     seeded.restart_same_seed()
     b = Bridge()
     vs0 = b("get UnityEngine.QualitySettings.vSyncCount")["value"]
-    b("set UnityEngine.QualitySettings.vSyncCount 0"); b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set UnityEngine.QualitySettings.vSyncCount 0"); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     b("set mainscript.s.player.godModeTillGrounded True"); b("set kaposztaleves.s.settings.god True")
     out = {"label": label, "sets": dict(sets), "areas": []}
     try:
         home = vec(b("get mainscript.s.player.transform.position")["value"])
         time.sleep(5)
         for i, (dx, dz, heading) in enumerate(seeded.AREAS):
-            if profile: b("set TLDRevamp.ScriptProfiler.SlowFrameMs 25"); b("profile start" + (" " + profile if isinstance(profile, str) else ""))
+            if profile: b("set TLDRevamp.ScriptProfilerTools.SlowFrameMs 25"); b("profile start" + (" " + profile if isinstance(profile, str) else ""))
             b("reset"); b("loopprof start"); b("alloc reset")
             t0 = time.time()
             place_on_ground(b, home[0] + dx, home[2] + dz, home[1] + 300, timeout=40)

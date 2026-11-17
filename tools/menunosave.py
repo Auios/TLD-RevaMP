@@ -61,11 +61,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")   # no save but the test's own `mp save`
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")   # no save but the test's own `mp save`
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         h(f"set {SW} {not OLD}")
         print(f"  {'OLD (records written on leave and stop)' if OLD else 'CURRENT BUILD'}", flush=True)
         rp = h("roadpoint"); x, z = rp["gx"], rp["gz"]
@@ -93,14 +93,14 @@ with game.ProtectedSession():
         L("mp stop"); time.sleep(3)
         print("  host loads its save:", h("loadsave autosave1"), flush=True)
         until(lambda: h("get DataFromMenuScript.s.mainmenu")["value"] is False and h("get mainscript.s.player")["value"] is not None, 180)
-        time.sleep(15); h("set TLDRevamp.TestSafety.BlockAutoSave True")
+        time.sleep(15); h("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         h(f"set {SW} {not OLD}")
         if RELAY != "off": relay_both(h, L, RELAY)
         print("  file before hosting again:", recfile(), flush=True)
         h("mp host 27070"); time.sleep(3)
         print("  host's records:", h("mp playersave"), flush=True)
         if not join(h, L): sys.exit("LAPTOP NEVER REJOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); time.sleep(12)
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); time.sleep(12)
         k = kinds(h)
         print("  after:", k, "| laptop:", kinds(L), "| laptop's restore:", L("mp playersave").get("last"), flush=True)
         verdict("A: AS MANY LAMPS AND CANS AS AT THE SAVE (THE SAVED WORLD, THE RECORDS SAVED WITH IT)",

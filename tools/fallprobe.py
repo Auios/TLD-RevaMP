@@ -49,7 +49,7 @@ game.quit_game(); game.launch()
 with game.ProtectedSession():
     seeded.restart_same_seed()
     b = Bridge()
-    b("set TLDRevamp.TestSafety.BlockAutoSave True")
+    b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
     offs = []
     if "--vanilla" in sys.argv:

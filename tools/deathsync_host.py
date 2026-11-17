@@ -44,7 +44,7 @@ try:
         seeded.restart_same_seed(); b = Bridge()
         b("net relay iad"); L("net relay iad")
         b("mp host 27070")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         L(f"mp joinid {b('net me')['steamId']}")
         verdict("JOINED", until(lambda: L("mp status")["client"]["ready"], 150))
         time.sleep(5)
@@ -114,7 +114,7 @@ try:
             rows = [(int(r[0]), round(dist(tuple(float(v) for v in r[1:4]), anchor, True), 2)) for r in b("mp itemslist 0 0 999999999")["items"] if len(r) >= 4]
             print("host: items of the death's models", models, "within 5 m (model, m):", [r for r in rows if r[0] in models and r[1] <= 5], flush=True)
         print("host respawned at", b("gpos"), flush=True)
-        # the corpse stays after the respawn (Entities.DeathCorpseStays; tools/corpses.py checks it in full)
+        # the corpse stays after the respawn (EntityRagdolls.DeathCorpseStays; tools/corpses.py checks it in full)
         try: kept = "limbs" in b(f"mp ragdoll {net}") and "limbs" in L(f"mp ragdoll {net}")
         except Exception: kept = False
         verdict("CORPSE STAYS ON BOTH MACHINES", kept)

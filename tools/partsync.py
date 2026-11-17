@@ -94,13 +94,13 @@ with game.ProtectedSession():
     h = seeded_both(L)
     SAVED = {}
     for n_, s_ in (("h", h), ("L", L)):
-        s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+        s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         SAVED[n_] = (s_("get kaposztaleves.s.settings.god").get("value"), s_("get settingsscript.s.S.IPhysicsLock").get("value"))
         s_("set kaposztaleves.s.settings.god True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         h("set settingsscript.s.S.IPhysicsLock 3")   # containers hold what is put in (the host's setting rules)
         for s_ in (h, L):
             for sw in ("SplitParentsCarry", "PrefabChildSave"):

@@ -73,7 +73,7 @@ with game.ProtectedSession():
             L("!seeded")
             h = game.loadsave(SAVE)
         for s_ in (h, L):
-            s_("set TLDRevamp.TestSafety.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0")
+            s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); s_("bg on"); s_("set UnityEngine.QualitySettings.vSyncCount 0")
         me = h("gpos"); print(f"  host in the save at {me['gx']:.0f},{me['gz']:.0f}", flush=True)
         if RELAY: print("relay:", h(f"net relay {RELAY}"), L(f"net relay {RELAY}"), flush=True)
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")

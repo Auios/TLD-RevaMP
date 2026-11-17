@@ -64,7 +64,7 @@ L = Agent()
 try:
     with game.ProtectedSession():
         L("!seeded"); seeded.restart_same_seed()
-        b = Bridge(); b("set TLDRevamp.TestSafety.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
+        b = Bridge(); b("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); b("set kaposztaleves.s.settings.god True")
         print("versions:", b("ping")["version"], L("ping")["version"])
         if DESKTOP_HOSTS:
             print("desktop hosts:", b("mp host 27070")["server"]["port"])

@@ -413,7 +413,7 @@ static class SimMain
     static void Late(bool on)
     {
         var w = new World(Path0, 2, 1, 0.05f);
-        foreach (var m in w.Ms) m.Do($"set Entities.BreaksKept {on}");
+        foreach (var m in w.Ms) m.Do($"set EntityAI.BreaksKept {on}");
         w.Ms[0].Do("host"); w.Run(1);
         Console.WriteLine($"a break before the joiner comes, kept {on}: {w.Ms[0].Do("spawnb 5 5")}; {w.Ms[0].Do("break 1")}");
         w.Ms[1].Do("join"); for (int i = 0; i < 4000 && w.Ms[1].Do("ready") != "1"; i++) w.Step();

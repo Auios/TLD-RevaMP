@@ -60,7 +60,7 @@ def run(a):
             b("poialign on")
             game.newgame(a.seed)
             b = game.Bridge()
-            b("set TLDRevamp.TestSafety.BlockAutoSave True")
+            b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             b("overlay off")
             b(f"set settingsscript.s.S.FDrawDistance {a.draw}")
             b("poialign on")   # forget the start area; record from the first hop on

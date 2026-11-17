@@ -2,7 +2,7 @@
 """Hits on objects someone else owns (HitCheck.AllowOnObject), two machines over the relay. The host owns a lamp (no
 breakable: only the object's position is known, a shot's reach for anything), a creature (its breakables, the flesh
 hitboxes: the host's own copy says exactly where) and a car (a car01 has no breakables). The laptop sends what a hit
-would (Entities.TestObjectHit), from near and from far.
+would (EntityAiTools.TestObjectHit), from near and from far.
   A  near: a shot and a blow on the creature's breakable, a set-off of the lamp, the passenger's controls of the car:
      allowed
   B  2.5 km away: the same four refused, logged as [anomaly]; a shot at the creature from 600 m allowed, a blow from
@@ -30,11 +30,11 @@ L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        L("set TLDRevamp.TestSafety.BlockAutoSave True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         rp = h("roadpoint"); x, z, yaw = rp["gx"], rp["gz"], rp["yaw"]
         tp(h, x, z); tp(L, x + 4, z); time.sleep(3)
@@ -51,7 +51,7 @@ with game.ProtectedSession():
         if not until(lambda: [a for a in ais(h) if ainet(a) not in a0], 15): sys.exit("no creature")
         cre = next(ainet(a) for a in ais(h) if ainet(a) not in a0)
         until(lambda: {car, lamp, cre} <= {e["net"] for e in ents(L)}, 15)
-        def send(what, net, bi=0, kind=1): return L(f"call TLDRevamp.Net.Entities.TestObjectHit {what} {net} {bi} {kind}")["value"]
+        def send(what, net, bi=0, kind=1): return L(f"call TLDRevamp.Net.EntityAiTools.TestObjectHit {what} {net} {bi} {kind}")["value"]
         def cpos(): return next(e["pos"] for e in ents(h) if e["net"] == cre)
         print("  the creature's breakables on the laptop:", send("break", cre, 0, 1), flush=True); time.sleep(1)
         four = lambda: [send("break", cre, 0, 1), send("break", cre, 0, 2), send("explode", lamp, 0, 0), send("shotgun", car, 0, 0)]

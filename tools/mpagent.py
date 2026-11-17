@@ -44,7 +44,7 @@ with game.ProtectedSession():
         try:
             if line == "!seeded":
                 bridge(); _drop()   # (the game started if it isn't) the restart below polls with connections of its own
-                seeded.restart_same_seed(); bridge()("set TLDRevamp.TestSafety.BlockAutoSave True"); r = {"ok": True}
+                seeded.restart_same_seed(); bridge()("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); r = {"ok": True}
             elif line.startswith("!sleep"):
                 time.sleep(float(line.split()[1])); r = {"ok": True}
             else:

@@ -79,7 +79,7 @@ with game.ProtectedSession():
     try:
         # set either way: a game kept from an --old run still has them off
         for s in (h, L):
-            for k in ("DeathCorpseStays", "CorpseWhole", "CorpseOutfitSaved"): s(f"set TLDRevamp.Net.Entities.{k} {not OLD}")
+            for k in ("DeathCorpseStays", "CorpseWhole", "CorpseOutfitSaved"): s(f"set TLDRevamp.Net.EntityRagdolls.{k} {not OLD}")
         h("mp policy everyone")    # the joiner's death below is a developer command
         time.sleep(1)
         hp = h("gpos")

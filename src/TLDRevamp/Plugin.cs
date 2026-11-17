@@ -119,7 +119,6 @@ namespace TLDRevamp
         {
             Instance = this;
             Log = Logger;
-            CoreMembers.Register();
             ScriptProfiler.MainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
             Diagnostics.ErrorLog.Install();   // counts the game's errors for tests (bridge `errors`)

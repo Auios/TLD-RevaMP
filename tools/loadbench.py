@@ -53,10 +53,10 @@ def main():
         res["stored"] = b("get savedatascript.s.data.itemData.items.Count")["value"]
         res["live"] = b("get savedatascript.s.items.Count")["value"]
         before = set(os.listdir(game.SAVES)) if game.SAVES.exists() else set()
-        b("set TLDRevamp.TestSafety.BlockAutoSave False")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave False")
         b("call savedatascript.s.saveScreen.AutoSave")
         time.sleep(4)
-        b("set TLDRevamp.TestSafety.BlockAutoSave True")
+        b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         new = sorted(set(os.listdir(game.SAVES)) - before) or sorted(os.listdir(game.SAVES))
         files = [f for f in new if f.startswith("TLDsaveData_") and f.endswith(".tlds")]
         res["saveFiles"] = {f: (game.SAVES / f).stat().st_size for f in new}
