@@ -8,6 +8,16 @@ namespace TLDRevamp.Net
         internal static void TestPhysLock()
         {
             void Check(bool ok, string why) => IdleTrafficTest.Check(ok, "physlock: " + why);
+            // Row 6: run the real cleanup on old keys without removing another copy's keys (registrycheck.py, 2026-11-17).
+            var removedCopy = new Ent(); var keptCopy = new Ent();
+            var oldWheel = new object(); var keptWheel = new object(); var oldEngine = new object();
+            ProxyWheelOwner[oldWheel] = removedCopy; ProxyWheelIndex[oldWheel] = 0;
+            ProxyWheelOwner[keptWheel] = keptCopy; ProxyWheelIndex[keptWheel] = 1;
+            ProxyEngineOwner[oldEngine] = removedCopy;
+            ForgetProxyMaps(removedCopy);
+            Check(!ProxyWheelOwner.ContainsKey(oldWheel) && !ProxyWheelIndex.ContainsKey(oldWheel) && !ProxyEngineOwner.ContainsKey(oldEngine), "removed copy releases both wheel maps and its engine");
+            Check(ProxyWheelOwner[keptWheel] == keptCopy && ProxyWheelIndex[keptWheel] == 1, "cleanup preserves the other copy");
+            ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();
             var mount = new TestMount();
             var baseline = new PhysLockPose();
             baseline.Sent(false, null, 0, 1, new Vector3d(10, 0, 0), Quaternion.identity);

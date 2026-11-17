@@ -1077,6 +1077,8 @@ namespace TLDRevamp.Net
                     e.NetId = net; e.Epoch = epoch; e.OwnerId = MyId;
                     SessionLog.Event("add-assigned", net, to: MyId, epoch: epoch);
                     ByNet[net] = e;
+                    // Row 5: balanced removal and registration can leave both cache counts unchanged (registrycheck.py, 2026-11-17).
+                    _placedDirty = true;
                     Bind(e);
                     break;
                 }
@@ -1116,6 +1118,8 @@ namespace TLDRevamp.Net
                         if (CopyMembersMissing <= 30) Plugin.Log.LogWarning($"copy of net {net} ({root.name}): member {i} ({PrefabName(prefabs[i])}) didn't spawn here - its place stays empty");
                     }
                     ByNet[net] = e;
+                    // Row 5: a new copy must enter the placed list even when another left this frame (registrycheck.py, 2026-11-17).
+                    _placedDirty = true;
                     LostPartBack(e);
                     Bind(e);
                     if (owner != MyId)
@@ -1515,11 +1519,36 @@ namespace TLDRevamp.Net
         public static bool SplitPartsApart = true;   // A/B: false = before
         private static bool PartApart(Ent e, int i) => SplitPartsApart && CameOff(e, i);
 
+        // Row 6: old component keys must not retain a destroyed copy, or drive a replacement wheel (registrycheck.py, 2026-11-17).
+        // Removal uses this without changing any body's role or touching a detached part's own entity.
+        private static void ForgetProxyMap<T>(Dictionary<T, Ent> owners, Dictionary<T, int> indexes, Ent e)
+        {
+            var keys = new List<T>();
+            foreach (var kv in owners) if (kv.Value == e) keys.Add(kv.Key);
+            foreach (var key in keys) { owners.Remove(key); indexes?.Remove(key); }
+        }
+
+        private static void ForgetProxyMaps(Ent e)
+        {
+            ForgetProxyMap(ProxyWheelOwner, ProxyWheelIndex, e);
+            ForgetProxyMap(ProxyEngineOwner, null, e);
+        }
+
+        private static void RefreshProxyMaps(Ent e)
+        {
+            ForgetProxyMaps(e);
+            e.Wheels = null;
+            var ws = WheelsOf(e);
+            for (int i = 0; i < ws.Length; i++) { ProxyWheelOwner[ws[i]] = e; ProxyWheelIndex[ws[i]] = i; }
+            BindProxyEngine(e);
+        }
+
         /// Every body of every item in the group kinematic, the objects registered as display copies. Jointed parts
         /// (attachablescript.parentAtAttach off) are not children of the car — left dynamic, they were dragged into
         /// crash-level collisions and fell off.
         private static void ApplyProxyBodies(Ent e)
         {
+            MarkersStale();
             for (int i = 0; i < e.Items.Count; i++)
             {
                 var it = e.Items[i];
@@ -1536,10 +1565,7 @@ namespace TLDRevamp.Net
                 ProxyItems.Add(e.Root.attachable.gameObject);
                 foreach (var rb in HitchBodies(e)) if (!rb.isKinematic) { rb.isKinematic = true; e.MadeKinematic.Add(rb); }
             }
-            e.Wheels = null;
-            var ws = WheelsOf(e);
-            for (int i = 0; i < ws.Length; i++) { ProxyWheelOwner[ws[i]] = e; ProxyWheelIndex[ws[i]] = i; }
-            BindProxyEngine(e);
+            RefreshProxyMaps(e);
             if (e.Stored) ShowStored(e, true);
             if (e.Held) ShowHeld(e, true);
         }
@@ -1577,7 +1603,14 @@ namespace TLDRevamp.Net
                         if (!rb.isKinematic) { rb.isKinematic = true; e.MadeKinematic.Add(rb); }
                 }
             }
-            if (any) { e.Wheels = null; RebindPoseLocks(e); }
+            if (any)
+            {
+                // Row 6: a placed member needs the current wheel and engine bindings too (registrycheck.py, 2026-11-17).
+                MarkersStale();
+                e.Wheels = null;
+                if (e.Proxy && e.Root != null) RefreshProxyMaps(e);
+                RebindPoseLocks(e);
+            }
             return any;
         }
 

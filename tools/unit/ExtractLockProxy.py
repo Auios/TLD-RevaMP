@@ -23,6 +23,7 @@ assert 'e.ReceivedStateEpoch == e.Epoch && LockedWorld(e,' in placed, 'dormant l
 target = Path(sys.argv[1])
 target.parent.mkdir(parents=True, exist_ok=True)
 roles = method('SetProxy') + '\n' + method('ApplyProxyBodies')
+roles += '\n' + method('ForgetProxyMap<T>') + '\n' + method('ForgetProxyMaps') + '\n' + method('RefreshProxyMaps')
 roles += '\n' + method('RefuseClaim')
 owner = source.split('                case Owner:\n                {', 1)[1].split('\n                }', 1)[0]
 roles += '\n        static void ApplyOwner(NetReader r) {\n' + owner.replace('                    break;', '                    return;') + '\n        }\n'

@@ -46,6 +46,7 @@ namespace TLDRevamp.Net
         {
             if (_placedFrame == Time.frameCount) return _placed;
             _placedFrame = Time.frameCount; PlacedRebuilds++;
+            PruneMarkers();
             if (!LoopPlacedOnly) { _placed.Clear(); _placed.AddRange(ByNet.Values); PlacedCount = _placed.Count; return _placed; }
             int items = savedatascript.s != null && savedatascript.s.items != null ? savedatascript.s.items.Count : -1;
             if (_placedDirty || items != _itemsSeen || ByNet.Count != _netsSeen || Time.frameCount - _fullFrame >= FullEveryFrames)
@@ -74,11 +75,25 @@ namespace TLDRevamp.Net
             return _placed;
         }
 
+        /// A copy's markers (ProxyItems) outlive its objects when they are destroyed: streamed out, deleted, replaced. Rows 1
+        /// and 6 of registrycheck.py (2026-11-17): they piled up for the whole session, holding the entities they belonged to.
+        /// One walk of the set prunes them, at most every FullEveryFrames frames and only after something was flagged, from
+        /// the next frame on (Destroy finishes at the end of the frame that called it), not a walk at every placed object.
+        private static int _markersStaleFrame = -1, _markersPruned = -1000;
+        public static long MarkersPruned;
+        private static void MarkersStale() { if (_markersStaleFrame < 0) _markersStaleFrame = Time.frameCount; }
+        private static void PruneMarkers()
+        {
+            if (_markersStaleFrame < 0 || Time.frameCount <= _markersStaleFrame || Time.frameCount - _markersPruned < FullEveryFrames) return;
+            _markersStaleFrame = -1; _markersPruned = Time.frameCount;
+            MarkersPruned += ProxyItems.RemoveWhere(go => go == null);
+        }
+
         /// The game destroyed its item: a plain null from now on, and what a copy moved by its body had to stop
         /// (BodyMotionTick did it for every unplaced object each step), and a physical copy (the physical loop).
         private static void StoredAway(Ent e)
         {
-            e.Root = null;
+            e.Root = null; MarkersStale();
             if (e.MovedByBody) e.MovedByBody = false;
             if (e.Physical) e.Physical = false;
         }

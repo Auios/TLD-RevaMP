@@ -29,6 +29,9 @@ namespace TLDRevamp.Net
         static readonly Dictionary<TestCar, float> DamageGraceUntil = new Dictionary<TestCar, float>();
         static readonly Dictionary<object, Ent> ProxyWheelOwner = new Dictionary<object, Ent>();
         static readonly Dictionary<object, int> ProxyWheelIndex = new Dictionary<object, int>();
+        static readonly Dictionary<object, Ent> ProxyEngineOwner = new Dictionary<object, Ent>();
+        static int MarkersStaleCalls;
+        static void MarkersStale() => MarkersStaleCalls++;   // the real one only flags a later prune (Entities.Placed)
         static void ClearWorn(Ent e) { e.WornBy = -1; }
         static void ShowStored(Ent e, bool show) { }
         static void ShowHeld(Ent e, bool show) { e.Held = show; }

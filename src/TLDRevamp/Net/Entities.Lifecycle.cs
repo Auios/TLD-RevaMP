@@ -73,7 +73,7 @@ namespace TLDRevamp.Net
                     // placed again in the same frame (Fixes.StreamRace): a new object holds the id — the entity follows it
                     if (savedatascript.s.items.TryGetValue(__instance.idInSave, out var now) && now != null && now != __instance)
                     {
-                        e.Root = null; e.RootId = __instance.idInSave; Replaced++; _placedDirty = true;
+                        e.Root = null; e.RootId = __instance.idInSave; Replaced++; _placedDirty = true; MarkersStale();
                         return;
                     }
                     // only the owner deletes a shared object. A copy this machine's game destroyed on its own (streaming
@@ -423,10 +423,21 @@ namespace TLDRevamp.Net
                 {
                     if (!Server.TryGetValue(pn, out var part)) continue;
                     if (KeepPartsOnRemove) OrphanPart(se, part);
-                    else { Server.Remove(pn); _serverLocked.Remove(part); }
+                    else { Server.Remove(pn); _serverLocked.Remove(part); ForgetServerNet(pn); }
                 }
+            // Row 2: removed objects no longer occupy the players' knowledge and audience sets (registrycheck.py, 2026-11-17).
+            // OrphanPart above still sees who knew the car before its removal.
+            ForgetServerNet(net);
             W.Reset(); W.U8(RemoveItem); W.U32(net);
             ServerSendAll(W, true, from);   // everyone but the destroyer (already clean) — incl. the host's own copy (Deliver)
+        }
+
+        private static void ForgetServerNet(uint net)
+        {
+            foreach (var set in Known.Values) set.Remove(net);
+            foreach (var set in _staleEnts.Values) set.Remove(net);
+            foreach (var set in _poseNear.Values) set.Remove(net);
+            foreach (var set in _rabbitNear.Values) set.Remove(net);
         }
 
         public static bool RemoveFarMembers = true;   // A/B: false = a far object's members stay in the far store
@@ -435,6 +446,16 @@ namespace TLDRevamp.Net
         private static void DestroyLocalCopy(uint net)
         {
             if (!ByNet.TryGetValue(net, out var e)) return;
+            // Row 1: deletion must release the copy's markers and component keys too (registrycheck.py, 2026-11-17).
+            MarkersStale();
+            for (int i = 0; i < e.Items.Count; i++)
+                if (e.Items[i] != null && !CameOff(e, i)) ProxyItems.Remove(e.Items[i].gameObject);
+            if (e.Root != null)
+            {
+                ProxyItems.Remove(e.Root.gameObject);
+                if (HitchTrailer(e)) ProxyItems.Remove(e.Root.attachable.gameObject);
+            }
+            ForgetProxyMaps(e);
             if (e.Root == null)
             {
                 // dormant: no live copy here — drop the far-store record too, or the item respawns on the next visit
@@ -470,8 +491,17 @@ namespace TLDRevamp.Net
         {
             try { savedatascript.s.items.Remove(id); } catch { }
             var data = savedatascript.s != null ? savedatascript.s.data : null;
-            if (data != null && data.itemData != null && savedatascript.IndexOfID(data.itemData.items, id, out int k))
-                data.itemData.items.RemoveAt(k);
+            // Row 4: a deleted far item has no future LoadStuff to consume its component records or its chunk entry, so
+            // they stayed in the save for good (registrycheck.py, 2026-11-17). Its chunk is the one its record's position
+            // snaps to (MoveRecord keeps it so): one lookup, not a walk of every chunk.
+            if (data != null && data.itemData != null)
+            {
+                if (savedatascript.IndexOfID(data.itemData.items, id, out int k)
+                    && savedatascript.s.itemChunks.TryGetValue(savedatascript.SnapChunkPos(data.itemData.items[k].transform.pos), out var ids))
+                    ids.Remove(id);
+                data.itemData.RemoveID(id);
+            }
+            _boltIdx.Invalidate();
         }
 
         /// The local player picks up the nearest pickupable (the game's own Pickup — the claim hook fires for proxies).
