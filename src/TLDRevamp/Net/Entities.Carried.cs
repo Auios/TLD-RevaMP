@@ -47,7 +47,12 @@ namespace TLDRevamp.Net
             uint released = Entities.LooseCarriedRelease(e.CarriedBy, cb, held, stored) ? e.CarriedBy : RidingFrames && e.Held && cb != 0 && !held && !stored ? cb : 0;
             if (!EntityCodec.ReadLockedState && released != 0 && Entities.TryGetEntity(released, out var car) && !car.Proxy && car.Root != null && Entities.CargoClaims && e.Root != null)
             {
-                if (Entities.ClaimReleasedCarried(e)) { CarriedReleasedClaims++; return true; }
+                if (Entities.ClaimReleasedCarried(e))
+                {
+                    // which state made it ours: itemscheck's rabbit case (2026-11-17) took a held body from its holder
+                    if (CarriedReleasedClaims++ < 20) Plugin.Log.LogInfo($"release claim: {e.Root.name} net {e.NetId} from player {e.OwnerId}: carried by {e.CarriedBy} -> {cb}, held {held} (shown held {e.Held}), stored {stored}, car {released}");
+                    return true;
+                }
             }
             if (cb != e.CarriedBy) { e.CarriedBy = cb; if (e.Ip != null) e.Ip = new PoseInterpolator(); CarriedSwitches++; }
             if (cb == 0) return false;

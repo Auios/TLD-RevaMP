@@ -11,6 +11,24 @@ namespace TLDRevamp.Net
         private static pickupable _itemCheckHold;
         private static uint _itemCheckNet;
         private static float _itemCheckDropGap, _itemCheckDropLimit;
+        // A held body (a dead rabbit): the game starts its hold anchor where the grabbed limb is and moves it to the hold spot
+        // over the next frames; the rest of the body is too heavy to follow a ~1 m move within a frame, so the game dropped it
+        // past dropDist (itemscheck rabbit case, 2026-11-17: dropped within 0.13 s in every try, host or joiner). The fixture
+        // carries the body along with the anchor for these frames, then leaves it to the game's own hold.
+        private static readonly List<Transform> _itemCheckBodyRoots = new List<Transform>();
+        private static int _itemCheckSettleFrames;
+        internal static int ItemCheckSettleFrames = 45;
+
+        private static void ItemCheckSettle(fpscontroller pl)
+        {
+            if (_itemCheckSettleFrames <= 0 || _itemCheckHold == null || pl.pickedUp != _itemCheckHold || pl.TpickedUpParent == null) { _itemCheckSettleFrames = 0; return; }
+            _itemCheckSettleFrames--;
+            var offset = pl.TpickedUpParent.position - _itemCheckHold.transform.position;
+            foreach (var t in _itemCheckBodyRoots) if (t != null) t.position += offset;
+            foreach (var t in _itemCheckBodyRoots)
+                if (t != null) foreach (var rb in t.GetComponentsInChildren<Rigidbody>()) if (!rb.isKinematic) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+            Physics.SyncTransforms();
+        }
 
         private static void ItemCheckHoldInput(inputscript input)
         {
@@ -34,7 +52,7 @@ namespace TLDRevamp.Net
         {
             private static void Prefix(fpscontroller __instance)
             {
-                if (mainscript.s != null && mainscript.s.player == __instance) ItemCheckHoldInput(inputscript.i);
+                if (mainscript.s != null && mainscript.s.player == __instance) { ItemCheckHoldInput(inputscript.i); ItemCheckSettle(__instance); }
             }
         }
 
@@ -81,18 +99,20 @@ namespace TLDRevamp.Net
                 // translating both a parent and its children stretches the joints and makes the game drop it.
                 var roots = new HashSet<Transform> { e.Root.transform };
                 if (limbs != null) foreach (var l in limbs) if (l != null) roots.Add(l);
+                _itemCheckBodyRoots.Clear();
                 foreach (var t in roots)
                 {
                     bool nested = false;
                     for (var parent = t.parent; parent != null; parent = parent.parent)
                         if (roots.Contains(parent)) { nested = true; break; }
-                    if (!nested) t.position += offset;
+                    if (!nested) { t.position += offset; _itemCheckBodyRoots.Add(t); }
                 }
                 Physics.SyncTransforms();
                 pl.Pickup(p, at);
                 _itemCheckHold = p;
                 _itemCheckNet = net;
                 _itemCheckDropGap = _itemCheckDropLimit = 0f;
+                _itemCheckSettleFrames = limbs != null ? ItemCheckSettleFrames : 0;
                 ItemCheckHoldInput(inputscript.i);
             }
             else if (action == "release")
