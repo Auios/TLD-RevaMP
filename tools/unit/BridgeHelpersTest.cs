@@ -162,6 +162,7 @@ namespace UnityEngine
         Vector3 local; public Transform parent; public Vector3 forward => new Vector3(0, 0, 1);
         public Vector3 position { get => parent == null ? local : parent.position + local; set => local = parent == null ? value : value - parent.position; }
         public T GetComponent<T>() where T : new() => new T();
+        public T[] GetComponentsInChildren<T>() => Array.Empty<T>();
     }
     public sealed class Rigidbody { public Vector3 velocity, angularVelocity; public bool detectCollisions = true, isKinematic; public void WakeUp() { } }
     public static class Physics { public static void SyncTransforms() { } }

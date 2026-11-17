@@ -57,6 +57,8 @@ namespace TLDRevamp.Net
             internal double LastStateAt;
             internal double LastPoseStamp;
             internal BandwidthRules.Tail QuietTail;
+            internal BandwidthRules.RestWindow RestWindow;
+            internal Vector3d RestReferencePos; internal Quaternion RestReferenceRot;
             internal PhysLockPose LockPose;
             internal bool PoseLocked;
             internal uint LockFrame, LockContainer, SentLockContainer;
@@ -491,7 +493,7 @@ namespace TLDRevamp.Net
                 if (attachedRides && e.Proxy) continue;
                 if (!e.Proxy)
                 {
-                    if (e.HitchWaiting) continue;
+                    if (e.HitchWaiting) { e.RestWindow = default; continue; }
                     var mount = e.Root.P != null ? e.Root.P.physlock : null;
                     bool locked = mount != null;
                     uint lockFrame = LockedFrame(e, mount, RagdollFrame(e), out var lockPos, out var lockRot, out int lockItem, out int lockMount);
@@ -504,7 +506,7 @@ namespace TLDRevamp.Net
                     if (!lockChange && e.SendAcc < sendEvery) continue;
                     e.SendAcc = Mathf.Max(0f, e.SendAcc - sendEvery);
                     if (e.SendAcc > sendEvery) e.SendAcc = 0;
-                    if (attachedRides && !lockChange && (!ClearHeldOnAttach || !(e.SentHeld || e.SentStored))) { StatesSkippedAttached++; continue; }
+                    if (attachedRides && !lockChange && (!ClearHeldOnAttach || !(e.SentHeld || e.SentStored))) { e.RestWindow = default; StatesSkippedAttached++; continue; }
                     var rb = e.Root.GetComponent<Rigidbody>();
                     var t = RagdollFrame(e);
                     var g = mainscript.GlobalFromUnityPos(t.position);
@@ -538,13 +540,26 @@ namespace TLDRevamp.Net
                     bool corpseRoot = t != e.Root.transform && rb != null && rb.velocity.sqrMagnitude > RestSpeed * RestSpeed;
                     bool driven = IsLocalDriver(e.Root), wDriver = driven != e.SentDriven;
                     bool velocityMoving = poseBody != null && !poseBody.isKinematic && poseBody.velocity.sqrMagnitude > RestSpeed * RestSpeed;
-                    bool moving = EntityProxyPresentation.StateMoving(e, wPos || wRot, limbs, wAwake, ref velocityMoving, ground);
                     bool unlocked = e.LockPose.Locked && !locked;
                     bool released = !held && !stored && (e.SentHeld || e.SentStored || unlocked);
                     bool audience = OwnerAudience(g);
                     bool entered = audience && !e.StateAudience;
                     e.StateAudience = audience;
                     bool first = e.LastStateEpoch != e.Epoch || entered;
+                    bool restEligible = BandwidthRules.RestEligible(WasteFixes, driven, held, stored, locked,
+                        attachedRides || e.RideCar != 0, limbs, spraying)
+                        && HangsOnJoint(e);   // hanging things (fresheners) only: cars and loose items, in containers too, keep the old thresholds (physlockcheck)
+                    bool outsideRest = BandwidthRules.RestPoseChanged((g - e.LastSentPos).sqrMagnitude, Quaternion.Angle(q, e.LastSentRot));
+                    bool restWake = restEligible && e.SentAtRest && outsideRest;
+                    if (BandwidthRules.RestReference(ref e.RestWindow, now, restEligible, first || released || unlocked || lockChange || restWake,
+                        BandwidthRules.RestPoseChanged((g - e.RestReferencePos).sqrMagnitude, Quaternion.Angle(q, e.RestReferenceRot))))
+                    { e.RestReferencePos = g; e.RestReferenceRot = q; }
+                    // wastecheck, 2026-11-17: a hanging pendulum settles inside 2 cm / 1 degree (BandwidthRules.RestWake*).
+                    // While at rest the baseline is the sent rest pose, never the previous physics sample.
+                    bool restQuiet = BandwidthRules.RestQuiet(restEligible, e.SentAtRest, outsideRest, now - e.RestWindow.Since) &&
+                                     !first && !released && !unlocked && !lockChange;
+                    if (restQuiet) { wPos = wRot = wAwake = velocityMoving = false; }
+                    bool moving = EntityProxyPresentation.StateMoving(e, wPos || wRot, limbs, wAwake, ref velocityMoving, ground);
                     // Resume across release, ownership and unlock, including the sample before physics starts.
                     // Position/rotation above count even when the solver reports no velocity or sleeps.
                     EntityProxyPresentation.ReleaseMotion(ref e.ReleaseMoving, released, held, stored, ref moving, first, unlocked);
@@ -553,7 +568,7 @@ namespace TLDRevamp.Net
                     WS.Reset(); EntityProxyPresentation.WriteWheels(WS, e); EntityProxyPresentation.WriteEngine(WS, e); EntityCarSignals.WriteSignals(WS, e);
                     bool visual = BandwidthRules.CarVisualChanged(e.SentState, e.SentStateLength, WS.Buf, WS.Len);
                     var quiet = BandwidthRules.StateQuiet(ref e.QuietTail, now, first || released || unlocked, wPos || wRot, limbs, visual, control, moving, e.SentAtRest,
-                                                         locked, attachedRides, now - e.LastStateAt, driven, stored, e.ReleaseMoving);
+                                                         locked, attachedRides, now - e.LastStateAt, driven, stored, e.ReleaseMoving, restQuiet);
                     if (WasteFixes && quiet != BandwidthRules.Quiet.None && quiet != BandwidthRules.Quiet.Final)
                     {
                         if (quiet == BandwidthRules.Quiet.Locked) StatesSkippedLocked++;
@@ -606,11 +621,11 @@ namespace TLDRevamp.Net
                     e.SentLockContainer = lockContainer;
                     e.LastStateAt = now; e.LastStateEpoch = e.Epoch;
                     e.SentDriven = driven; e.SeqOut++;
-                    bool poseSent = OwnerPoseDue(e, audience, first || final || lockChange || wStored || wHeld || wHand || wDriver, now);
+                    bool poseSent = OwnerPoseDue(e, audience, first || final || restWake || lockChange || wStored || wHeld || wHand || wDriver, now);
                     if (poseSent)
                     {
                         TelemetrySentTeleport(e, g, v);
-                        ToServer(WS, final || lockChange || wStored || wHeld || ragKey);   // a ragdoll Key: the Deltas after it need it
+                        ToServer(WS, final || restWake || lockChange || wStored || wHeld || ragKey);   // a ragdoll Key: the Deltas after it need it
                         TelemetryPose(e, 0, stamp, g, q, v);
                         StatesSent++;
                     }

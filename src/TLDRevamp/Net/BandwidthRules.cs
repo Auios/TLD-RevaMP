@@ -5,16 +5,37 @@ namespace TLDRevamp.Net
     internal static class BandwidthRules
     {
         internal const double PositionM = 0.01;
+        internal const double RestWakeM = 0.02;
+        internal const float RestWakeDeg = 1f;   // swings measured 0.15-0.45 deg; a 2 deg envelope let resting copies lag a lock pose test (physlockcheck)
         internal const float RotationDeg = 0.3f, KeepaliveS = 1f, QuietTailS = 5f;
 
         internal enum Quiet { None, Pose, Locked, Attached, Final }
         internal struct Tail { internal double VisualAt; internal bool Active; }
+        internal struct RestWindow { internal double Since; internal bool Active; }
+
+        internal static bool RestEligible(bool enabled, bool driven, bool held, bool stored, bool locked, bool riding, bool limbs, bool spraying) =>
+            enabled && !driven && !held && !stored && !locked && !riding && !limbs && !spraying;
+
+        internal static bool RestPoseChanged(double distanceSquared, float angle) =>
+            distanceSquared > RestWakeM * RestWakeM || angle > RestWakeDeg;
+
+        // wastecheck, 2026-11-17: small swings must not move their own settling reference each send.
+        internal static bool RestReference(ref RestWindow window, double now, bool eligible, bool reset, bool outside)
+        {
+            if (!eligible) { window = default; return false; }
+            if (!window.Active || reset || outside)
+            { window.Active = true; window.Since = now; return true; }
+            return false;
+        }
+
+        internal static bool RestQuiet(bool eligible, bool wasAtRest, bool outsideSentRest, double elapsed) =>
+            eligible && (wasAtRest ? !outsideSentRest : elapsed >= QuietTailS);
 
         internal static bool PoseChanged(double distanceSquared, float angle) =>
             distanceSquared > PositionM * PositionM || angle > RotationDeg;
 
         internal static bool PositionChanged(double distanceSquared, bool atRest) =>
-            distanceSquared > PositionM * PositionM * (atRest ? 4 : 1);
+            distanceSquared > (atRest ? RestWakeM * RestWakeM : PositionM * PositionM);
 
         internal static bool AttachedPart(bool car, bool attached, bool part, bool slot, bool carPoint) =>
             !car && attached && part && slot && carPoint;
@@ -25,7 +46,7 @@ namespace TLDRevamp.Net
 
         internal static Quiet StateQuiet(ref Tail tail, double now, bool first, bool pose, bool limbs, bool visual, bool control, bool moving,
                                         bool wasAtRest, bool locked, bool attached, double elapsed, bool driven = false, bool stored = false,
-                                        bool resumedMotion = false)
+                                        bool resumedMotion = false, bool settled = false)
         {
             if (first || pose || limbs || visual)
             {
@@ -35,6 +56,7 @@ namespace TLDRevamp.Net
             if (control || first) return Quiet.None;
             if (attached) return Quiet.Attached;
             if (pose || limbs || visual) return Quiet.None;
+            if (settled) { tail.Active = false; return wasAtRest ? Quiet.Pose : Quiet.Final; }
             if (driven) return elapsed >= KeepaliveS * 0.5 ? Quiet.None : Quiet.Pose;
             if (!moving)
             {

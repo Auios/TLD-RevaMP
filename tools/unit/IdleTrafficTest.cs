@@ -132,6 +132,7 @@ static class IdleTrafficTest
         current = (byte[])hot.Clone(); current[10] = 0x7A; current[11] = 3; Check(BandwidthRules.CarVisualChanged(hot, hot.Length, current, current.Length), "engine cooling by a degree sends");
         Timelines();
         TestRestCreep();
+        TestRestHysteresis();
         Entities.TestIdle();
         Entities.TestPhysLock();
         Entities.TestWorldOverlays();
@@ -178,6 +179,110 @@ static class IdleTrafficTest
         }
         Check(finals == 1 && rest, "wundergk keeps one required final and remains silent afterwards");
         Check(BandwidthRules.PoseChanged(0, .31f), "real item rotation still resumes immediately");
+    }
+
+    // wastecheck, 2026-11-17: run the owner decisions with swings that cross the ordinary send thresholds.
+    sealed class RestSender
+    {
+        internal BandwidthRules.RestWindow Window;
+        BandwidthRules.Tail tail;
+        readonly Entities.Ent entity = new Entities.Ent();
+        double reference, last, sentAt;
+        float referenceAngle, lastAngle;
+        bool releaseMoving;
+        internal bool Rest, Wake, Final;
+        internal int Sends, Finals;
+        internal double Last => last;
+        internal BandwidthRules.Quiet Sample(double now, double position, float angle, bool awake = true,
+            bool eligible = true, bool first = false, bool released = false, bool visual = false, bool control = false)
+        {
+            bool pos = BandwidthRules.PositionChanged((position - last) * (position - last), false);
+            bool rot = Math.Abs(angle - lastAngle) > BandwidthRules.RotationDeg;
+            bool outside = BandwidthRules.RestPoseChanged((position - last) * (position - last), Math.Abs(angle - lastAngle));
+            Wake = eligible && Rest && outside;
+            if (BandwidthRules.RestReference(ref Window, now, eligible, first || released || Wake,
+                BandwidthRules.RestPoseChanged((position - reference) * (position - reference), Math.Abs(angle - referenceAngle))))
+            { reference = position; referenceAngle = angle; }
+            bool quietRest = BandwidthRules.RestQuiet(eligible, Rest, outside, now - Window.Since) && !first && !released;
+            bool speed = awake;
+            if (quietRest) { pos = rot = awake = speed = false; }
+            bool moving = EntityProxyPresentation.StateMoving(entity, pos || rot, false, awake, ref speed);
+            EntityProxyPresentation.ReleaseMotion(ref releaseMoving, released, false, false, ref moving, first);
+            var quiet = BandwidthRules.StateQuiet(ref tail, now, first || released, pos || rot, false, visual, control,
+                moving, Rest, false, false, now - sentAt, resumedMotion: releaseMoving, settled: quietRest);
+            Final = false;
+            if (quiet == BandwidthRules.Quiet.None || quiet == BandwidthRules.Quiet.Final)
+            {
+                Final = EntityProxyPresentation.FinalState(false, 0, true, quiet, moving, false);
+                Rest = !moving || Final; last = position; lastAngle = angle; sentAt = now;
+                Sends++; if (Final) Finals++;
+            }
+            return quiet;
+        }
+    }
+
+    static void TestRestHysteresis()
+    {
+        foreach (bool car in new[] { false, true })
+        foreach (bool awake in new[] { false, true })
+        {
+            var sender = new RestSender();
+            for (int tick = 0; tick <= 1300; tick++)
+            {
+                double now = tick / 20.0;
+                double position = car ? .01 * Math.Sin(tick * .7) : 0;
+                float angle = (float)(.4 * Math.Sin(tick * .7));   // fresheners swung 0.15-0.45 deg peak to peak (wastecheck)
+                var quiet = sender.Sample(now, position, angle, awake: awake, first: tick == 0);
+                if (tick == 100) Check(quiet == BandwidthRules.Quiet.Final && sender.Final, "pendulum and parked rocking car send reliable final at five seconds");
+                if (tick > 100) Check(quiet == BandwidthRules.Quiet.Pose, "awake swinging objects stay silent for sixty seconds after settling");
+            }
+            Check(sender.Rest && sender.Finals == 1, "one final finishes each jittering stream");
+            Check(sender.Sample(66, sender.Last + .021, 0) == BandwidthRules.Quiet.None && sender.Wake && !sender.Final,
+                "leaving sent rest position envelope wakes in the same sample");
+        }
+        var rotation = new RestSender { Rest = true };
+        Check(rotation.Sample(0, 0, .5f) == BandwidthRules.Quiet.Pose, "parked rotational jitter alone stays silent");
+        Check(rotation.Sample(.05, 0, 2.01f) == BandwidthRules.Quiet.None && rotation.Wake,
+            "rotation departure wakes in the same sample");
+        var slow = new RestSender { Rest = true }; int steps = 0;
+        for (int tick = 0; tick <= 400; tick++)
+        {
+            double position = tick * .001, previous = slow.Last;
+            var quiet = slow.Sample(tick / 20.0, position, 0, awake: false);
+            if (position - previous > .01 && (tick > 20 || position > .02))
+            { Check(quiet == BandwidthRules.Quiet.None && !slow.Final, "slow real motion retains every ordinary threshold send after wake"); steps++; }
+        }
+        Check(steps > 30 && slow.Last > .39 && !slow.Rest, "continuous slow movement never settles while it leaves reference envelopes");
+        var door = new RestSender();
+        for (int tick = 0; tick <= 400; tick++)
+        {
+            Check(door.Sample(tick / 20.0, 0, tick * .31f, awake: false, first: tick == 0) == BandwidthRules.Quiet.None && !door.Final,
+                "a turning door retains every rotation threshold send without solver velocity");
+        }
+        var creep = new RestSender { Rest = true }; int wakes = 0;
+        for (int tick = 0; tick <= 12000; tick++)
+        {
+            creep.Sample(tick / 20.0, tick * .00001, 0, awake: false);
+            if (creep.Wake) wakes++;
+        }
+        Check(wakes >= 4 && .12 - creep.Last <= BandwidthRules.RestWakeM,
+            "motion slower than 2 cm per five seconds accumulates against sent rest and cannot vanish indefinitely");
+        var released = new RestSender { Rest = true };
+        Check(released.Sample(60, 0, 0, awake: false, released: true) == BandwidthRules.Quiet.None && !released.Final,
+            "release before first physics motion bypasses rest silence");
+        Check(released.Sample(60.05, .011, 0, awake: false) == BandwidthRules.Quiet.None && !released.Final,
+            "released object keeps ordinary 1 cm movement threshold");
+        foreach (string kind in new[] { "driven", "held", "stored", "locked", "riding", "moving limbs", "spraying", "switch off" })
+        {
+            var exempt = new RestSender { Rest = true };
+            Check(exempt.Sample(60, .011, .5f, eligible: false) == BandwidthRules.Quiet.None && !exempt.Window.Active,
+                kind + " retains ordinary pose decisions");
+        }
+        var changed = new RestSender { Rest = true };
+        Check(changed.Sample(0, 0, .5f, visual: true) == BandwidthRules.Quiet.None && changed.Final,
+            "changed car visual still sends its reliable resting state");
+        Check(changed.Sample(.05, 0, .5f, control: true) == BandwidthRules.Quiet.None,
+            "control repeats still send while resting");
     }
 }
 

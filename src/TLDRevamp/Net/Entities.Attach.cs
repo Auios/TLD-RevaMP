@@ -88,6 +88,12 @@ namespace TLDRevamp.Net
             var at = e.Root != null ? e.Root.attachable : null;
             return at != null && at.attached && at.parentAtAttach && e.Root.transform.parent != null;
         }
+        /// Attached by a joint, not parented (an air freshener on a hook): it swings in place (wastecheck, 2026-11-17).
+        internal static bool HangsOnJoint(Ent e)
+        {
+            var at = e.Root != null ? e.Root.attachable : null;
+            return at != null && at.attached && !at.parentAtAttach;
+        }
         public static long BoltedGroupSkips;
         internal static bool RidesBolted(Ent e)
         {

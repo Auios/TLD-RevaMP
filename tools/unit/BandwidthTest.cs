@@ -40,6 +40,7 @@ static class BandwidthTest
         Check(BandwidthRules.CreatureDue(80, 64, true, .1f, 0), "creature flag changes always go out");
         Check(BandwidthRules.CreatureDue(80, 80, true, 1, 0), "existing one-second creature refresh remains");
         Entities.TestBandwidth();
+        TestRestRules();
         long allocated = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 10000; i++)
         {
@@ -47,6 +48,39 @@ static class BandwidthTest
         }
         Check(GC.GetAllocatedBytesForCurrentThread() == allocated, "warmed byte comparison allocates nothing");
         Console.WriteLine("ALL PASS (" + checks + " checks)");
+    }
+
+    static void TestRestRules()
+    {
+        Check(!BandwidthRules.RestPoseChanged(.02 * .02, 1f), "rest envelope includes exactly 2 cm and 1 degree");
+        Check(BandwidthRules.RestPoseChanged(.02001 * .02001, 0), "position outside rest envelope wakes");
+        Check(BandwidthRules.RestPoseChanged(0, 1.001f), "rotation outside rest envelope wakes");
+        Check(BandwidthRules.RestEligible(true, false, false, false, false, false, false, false), "ordinary objects may settle");
+        for (int exempt = 0; exempt < 8; exempt++)
+        {
+            bool eligible = BandwidthRules.RestEligible(exempt != 0, exempt == 1, exempt == 2, exempt == 3,
+                exempt == 4, exempt == 5, exempt == 6, exempt == 7);
+            Check(!eligible && !BandwidthRules.RestQuiet(eligible, true, false, 60), "switch off and each exemption keep existing decisions");
+            var window = new BandwidthRules.RestWindow { Active = true, Since = 1 };
+            Check(!BandwidthRules.RestReference(ref window, 60, eligible, false, false) && !window.Active,
+                "an exemption clears the old settling window");
+        }
+        var rest = new BandwidthRules.RestWindow();
+        Check(BandwidthRules.RestReference(ref rest, 10, true, false, false) && rest.Since == 10, "first eligible sample anchors settling");
+        Check(!BandwidthRules.RestReference(ref rest, 14.99, true, false, false) && rest.Since == 10, "small motion never slides reference");
+        Check(!BandwidthRules.RestQuiet(true, false, false, 4.99) && BandwidthRules.RestQuiet(true, false, false, 5), "settling takes the full quiet tail");
+        Check(BandwidthRules.RestQuiet(true, true, false, 0) && !BandwidthRules.RestQuiet(true, true, true, 60), "sent rest pose alone decides wake");
+        Check(BandwidthRules.RestReference(ref rest, 15, true, false, true) && rest.Since == 15, "leaving reference envelope restarts settling");
+        Check(BandwidthRules.RestReference(ref rest, 16, true, true, false) && rest.Since == 16, "release ownership unlock and wake start a fresh reference");
+        var tail = new BandwidthRules.Tail { Active = true, VisualAt = 19.95 };
+        Check(BandwidthRules.StateQuiet(ref tail, 20, false, false, false, false, false, false, false, false, false, .05, settled: true) == BandwidthRules.Quiet.Final && !tail.Active,
+            "settling delivers final despite a recent small pose send");
+        Check(BandwidthRules.StateQuiet(ref tail, 21, false, false, false, false, false, false, true, false, false, 1, settled: true) == BandwidthRules.Quiet.Pose,
+            "completed rest sends no second final");
+        Check(BandwidthRules.StateQuiet(ref tail, 21, false, false, false, true, false, false, true, false, false, 1, settled: true) == BandwidthRules.Quiet.None,
+            "car visuals still send inside rest envelope");
+        Check(BandwidthRules.StateQuiet(ref tail, 21, false, false, false, false, true, false, true, false, false, 1, settled: true) == BandwidthRules.Quiet.None,
+            "control transitions still send inside rest envelope");
     }
 }
 
