@@ -9,17 +9,19 @@ namespace TLDRevamp.Net
     /// (a few hundred), a crate breaking its gibs and loot (~15-20); a car's record is ~6 KB (`mp recsize`). The playtest
     /// of 2026-10-16/17 had 837 objects on the server after an hour with two players. Limits well above that:
     ///   a token bucket per player: ShareBurst at once, refilled ShareRefillPerS a second
-    ///   ShareMaxRecordBytes per record, ShareMaxLive objects owned by one player
+    ///   ShareMaxRecordBytes per record
+    /// There is no limit on how many objects one player owns: shares come in at the rate above, and whatever a player has
+    /// shared stays theirs to simulate (the 4000-object cap per player is gone, 2026-11-17: no ownership caps).
     /// Over a limit the share is dropped (the sharer keeps its item unshared) and counted; a player dropped more than
     /// ShareKickDrops times within a minute is kicked. The host's own shares are never limited.
     public static partial class Entities
     {
         public static bool ShareQuota = true;
-        public static int ShareBurst = 600, ShareMaxLive = 4000, ShareMaxRecordBytes = 256 << 10, ShareKickDrops = 2000;
+        public static int ShareBurst = 600, ShareMaxRecordBytes = 256 << 10, ShareKickDrops = 2000;
         public static float ShareRefillPerS = 30f;
         public static long SharesDropped, SharesKicked;
 
-        private sealed class Bucket { public float Tokens, At; public int Drops; public float DropsSince; public int Live; public float LiveAt = -10f; }
+        private sealed class Bucket { public float Tokens, At; public int Drops; public float DropsSince; }
         private static readonly Dictionary<int, Bucket> _shareBuckets = new Dictionary<int, Bucket>();
         private static readonly List<int> _kickQ = new List<int>();
 
@@ -32,16 +34,7 @@ namespace TLDRevamp.Net
             string why = null;
             if (recordBytes > ShareMaxRecordBytes) why = "record of " + recordBytes + " bytes";
             else if (b.Tokens < 1f) why = "too many at once";
-            else
-            {
-                if (now - b.LiveAt > 1f)
-                {
-                    b.LiveAt = now; b.Live = 0;
-                    foreach (var se in Server.Values) if (se.OwnerId == from) b.Live++;
-                }
-                if (b.Live >= ShareMaxLive) why = "owns " + b.Live + " objects";
-            }
-            if (why == null) { b.Tokens -= 1f; b.Live++; return true; }
+            if (why == null) { b.Tokens -= 1f; return true; }
             SharesDropped++;
             if (now - b.DropsSince > 60f) { b.DropsSince = now; b.Drops = 0; }
             b.Drops++;
