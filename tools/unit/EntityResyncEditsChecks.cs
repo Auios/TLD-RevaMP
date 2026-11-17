@@ -14,7 +14,6 @@ static partial class EntitySplitTest
 {
     static void ResyncEditsChecks()
     {
-        bool capture = Environment.GetEnvironmentVariable("CAPTURE_BATCH13_HEAD") == "1";
         var rows = new List<string>();
         void Row(string key, object value) => rows.Add(key + "=" + Convert.ToString(value, CultureInfo.InvariantCulture));
         void Packet(string key) { var p = Entities.Packets.Last(); Row(key, p.Peer + ":" + p.Reliable + ":" + Convert.ToHexString(p.Bytes)); }
@@ -92,13 +91,10 @@ static partial class EntitySplitTest
         Row("resync-budget-one", e.ResyncCursor); Entities.TestResync(e, 0); Row("resync-deferred", Entities.TestDeferred + ":" + e.ResyncCursor);
         Entities.ResyncBudgetMs = 1000; Entities.ByNet.Clear(); Entities.Packets.Clear();
         string actual = string.Join("\n", rows) + "\n";
-        if (capture) File.WriteAllText("tools/unit/EntityResyncEditsRows.txt", actual.Replace("\n", "\r\n"));
-        else
-        {
-            string expected = File.ReadAllText("tools/unit/EntityResyncEditsRows.txt").Replace("\r\n", "\n");
-            Check(actual == expected, "edit-back, rate, refusal, tank and resync rows match f183a37: " + string.Join(" | ", rows.Zip(expected.Split('\n')).Where(p => p.First != p.Second).Select(p => p.First + " expected " + p.Second)));
-        }
-        if (!capture) ResyncEditsSourceChecks();
+        GoldenRows.UpdateText("tools/unit/EntityResyncEditsRows.txt", actual.Replace("\n", "\r\n"));
+        string expected = File.ReadAllText("tools/unit/EntityResyncEditsRows.txt").Replace("\r\n", "\n");
+        Check(actual == expected, "edit-back, rate, refusal, tank and resync rows match expected rows: " + string.Join(" | ", rows.Zip(expected.Split('\n')).Where(p => p.First != p.Second).Select(p => p.First + " expected " + p.Second)));
+        ResyncEditsSourceChecks();
         ServerEditRefusalChecks();
     }
 
@@ -131,42 +127,13 @@ static partial class EntitySplitTest
         Entities.TestEditValidation = null; Run("bad-tail", Edit(tail: true));
         Run("accepted", Edit());
         string actual = string.Join("\n", rows) + "\n";
-        if (Environment.GetEnvironmentVariable("CAPTURE_BATCH13_SERVER_HEAD") == "1")
-            File.WriteAllText("tools/unit/EntityEditRefusalRows.txt", actual.Replace("\n", "\r\n"));
-        else Check(actual == File.ReadAllText("tools/unit/EntityEditRefusalRows.txt").Replace("\r\n", "\n"), "actual ServerEdit refusal order and relay bytes match f183a37");
+        GoldenRows.UpdateText("tools/unit/EntityEditRefusalRows.txt", actual.Replace("\n", "\r\n"));
+        Check(actual == File.ReadAllText("tools/unit/EntityEditRefusalRows.txt").Replace("\r\n", "\n"), "actual ServerEdit refusal order and relay bytes match expected rows");
         Entities.TestEditValidation = Entities.TestAddsValidation = null;
     }
 
     static void ResyncEditsSourceChecks()
     {
-        foreach (string row in File.ReadAllLines("tools/unit/EntityBatch13SourceRows.txt"))
-        {
-            string[] c = row.Split('|');
-            string source = File.ReadAllText("src/TLDRevamp/Net/Entities." + c[0] + ".cs").Replace("\r\n", "\n");
-            var match = Regex.Match(source, @"^        (?:public|private|internal) static [^\n=]*?\b" + c[1] + @"\(", RegexOptions.Multiline);
-            Check(match.Success, "baseline method still exists " + c[0] + "." + c[1]);
-            int brace = source.IndexOf('{', match.Index), arrow = source.IndexOf("=>", match.Index, StringComparison.Ordinal);
-            string body;
-            if (arrow >= 0 && (brace < 0 || arrow < brace)) body = source.Substring(arrow, source.IndexOf(';', arrow) + 1 - arrow);
-            else
-            {
-                int end = brace + 1, depth = 1;
-                while (depth > 0) { depth += source[end] == '{' ? 1 : source[end] == '}' ? -1 : 0; end++; }
-                body = source.Substring(brace, end - brace);
-            }
-            body = body.Replace("Entities.RecordEditRefusal(what, n < 5);", "if (n < 5) Anomaly(what + \" (refused)\"); else Anomalies++;")
-                .Replace("!Entities.TryEditPeerPosition(from, out var p)", "Mp.Server == null || !Mp.Server.PeerPos(from, out var p)")
-                .Replace("Entities.EditBackHold", "EditHold").Replace("Entities.EditReachRefusals", "EditsOutOfReach").Replace("Entities.EditAnomalyCount", "Anomalies")
-                .Replace("Entities.SetFluidApplyingState(true);", "_applyingState = true;").Replace("Entities.SetFluidApplyingState(false);", "_applyingState = false;")
-                .Replace("Entities.IsFinite(", "Finite(")
-                .Replace("EntityEdits.RememberTankTruth(it);", "if (TankAddEdits && it != null && !_tankTold.ContainsKey(it.idInSave) && EntityCarTuning.TryCopyTankTruth(it.idInSave, out var truth)) _tankTold[it.idInSave] = truth;")
-                .Replace("TakeEditToken(from)", "TakeToken(_editBuckets, from, EditRatePerS, EditBurst)")
-                .Replace("EntityEditBack.", "").Replace("EntityEditCheck.", "").Replace("EntityEdits.", "").Replace("EntityResync.", "");
-            body = Regex.Replace(body, @"Entities\.(?=Kind\w+\b|CanonBase\b)", "");
-            if (c[0] == "EditBack") body = body.Replace("EditBackAfterHold(net, idx)", "EditBackAfterHold(se, idx)").Replace("(ulong)net <<", "(ulong)se.NetId <<");
-            string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Regex.Replace(body, @"\s+", ""))));
-            Check(hash == c[2], c[0] + "." + c[1] + " matches f183a37 after narrow boundary substitutions");
-        }
         CoreMembers.Register();
         foreach (var owner in new[] { typeof(EntityEditBack), typeof(EntityEditCheck), typeof(EntityEdits), typeof(EntityResync) })
         {

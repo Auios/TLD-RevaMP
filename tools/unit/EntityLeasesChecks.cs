@@ -103,8 +103,9 @@ static partial class EntitySplitTest
         Row("saved-lines", string.Join("|", File.ReadAllLines(second + ".leases")));
         LeaseHook("WorldReset", "Postfix"); LM.s.Scene++; Row("new-world", LeaseCall("get_WorldSaveFile") == null);
         Row("new-world-lines", ((IList)Field(typeof(EntityWorldLeases), "_worldLines")).Count);
-        var expected = File.ReadAllLines("tools/unit/EntityLeasesRows.txt"); Check(expected.Length == rows.Count, "lease HEAD row count");
-        for (int i = 0; i < rows.Count; i++) Check(rows[i] == expected[i], "lease HEAD row " + i + ": " + rows[i]);
+        GoldenRows.Update("tools/unit/EntityLeasesRows.txt", rows);
+        var expected = File.ReadAllLines("tools/unit/EntityLeasesRows.txt"); Check(expected.Length == rows.Count, "lease expected row count");
+        for (int i = 0; i < rows.Count; i++) Check(rows[i] == expected[i], "lease expected row " + i + ": " + rows[i]);
         p = Setup();
         p.pobj.Spawn = _ => throw new InvalidOperationException("spawn failed");
         bool threw = false;

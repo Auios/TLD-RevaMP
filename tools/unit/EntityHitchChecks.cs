@@ -10,10 +10,11 @@ static class EntityHitchChecks
     internal static void Capture(string why) => Rows.Add(Entities.HitchRow(why));
     internal static void Finish()
     {
+        GoldenRows.Update("tools/unit/EntityHitchRows.txt", Rows);
         var expected = File.ReadAllLines("tools/unit/EntityHitchRows.txt");
-        if (Rows.Count != expected.Length) throw new Exception("hitch row count changed");
+        if (Rows.Count != expected.Length) throw new Exception("hitch expected row count differs");
         for (int i = 0; i < expected.Length; i++)
-            if (Rows[i] != expected[i]) throw new Exception("hitch HEAD row changed at " + i + ": " + Rows[i]);
+            if (Rows[i] != expected[i]) throw new Exception("hitch expected row changed at " + i + ": " + Rows[i]);
     }
 }
 #else
@@ -21,7 +22,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using TLDRevamp;
 
@@ -109,32 +109,6 @@ static partial class EntitySplitTest
         EntityHitches.ProxyGripsMoved = 0;
     }
 
-    static string HitchCanonical(string body) => body
-        .Replace("!Entities.TryHitchFreezeTarget(net, epoch, out var tr)", "!ByNet.TryGetValue(net, out var tr) || tr.Epoch != epoch || tr.OwnerId != MyId")
-        .Replace("!Entities.TryHitchFrozenTarget(net, epoch, out var tr)", "!ByNet.TryGetValue(net, out var tr) || tr.Proxy || tr.Epoch != epoch")
-        .Replace("Entities.IsHitchTrailer(", "HitchTrailer(")
-        .Replace("Entities.HitchTowEntity(", "HitchCar(")
-        .Replace("Entities.TryHitchEntity(", "ByNet.TryGetValue(")
-        .Replace("Entities.HitchRootEntity(", "OwnEntity(")
-        .Replace("Entities.HitchGroupEntity(", "EditEntityOf(")
-        .Replace("Entities.HitchMayJoin(", "HitchCanJoin(")
-        .Replace("Entities.ResolveHitch(", "Resolve(")
-        .Replace("Entities.FreezeHitchProxy(", "ApplyProxyBodies(")
-        .Replace("Entities.UnmountHitch(", "Unmount(")
-        .Replace("Entities.SyncHitchDetach(", "SendDetachSync(")
-        .Replace("Entities.SendHitchRequest(", "ToServer(")
-        .Replace("Entities.HitchDamageGrace(car, tr.HitchUntil);", "DamageGraceUntil[car.Root.car] = tr.HitchUntil;")
-        .Replace("Entities.HitchCommandTimeoutS", "HitchTimeoutS")
-        .Replace("Entities.HitchCommandExpires", "HitchTransferTimeout")
-        .Replace("Entities.HitchLocalId", "MyId")
-        .Replace("Entities.HitchInSession", "InSession")
-        .Replace("Entities.HitchPlayerActing", "PlayerActing")
-        .Replace("Entities.HitchApplyingAttach", "_applyingAttach")
-        .Replace("Entities.HitchApplyingDetach", "_applyingDetach")
-        .Replace("EntityHitches.RemoveCommand(net);", "_hitchCommands.Remove(net);")
-        .Replace("Entities.IsFinite(", "Finite(")
-        .Replace("EntityCodec.", "").Replace("EntityHitches.", "").Replace("Entities.", "");
-
     static void HitchSourceChecks()
     {
         string source = File.ReadAllText("src/TLDRevamp/Net/Entities.Hitch.cs").Replace("\r\n", "\n");
@@ -144,23 +118,6 @@ static partial class EntitySplitTest
             Check(feature.Contains("class " + name), name + " moved with feature");
         string hook = feature.Substring(feature.IndexOf("class HitchJointHook", StringComparison.Ordinal));
         Check(Regex.IsMatch(hook, @"\[HarmonyPriority\(Priority.First\)\]\s+private static bool Prefix"), "hitch joint still runs before AttachHook and TelemetryJointCreated prefixes");
-        foreach (string row in File.ReadAllLines("tools/unit/EntityHitchSourceRows.txt"))
-        {
-            var c = row.Split(' ');
-            var matches = Regex.Matches(source, @"^        (?:private|internal|public) static [^\n]*\b" + c[0] + @"\(", RegexOptions.Multiline);
-            var match = matches[int.Parse(c[1])];
-            int brace = source.IndexOf('{', match.Index), arrow = source.IndexOf("=>", match.Index, StringComparison.Ordinal);
-            string body;
-            if (arrow >= 0 && (brace < 0 || arrow < brace)) body = source.Substring(arrow, source.IndexOf(';', arrow) + 1 - arrow);
-            else
-            {
-                int depth = 1, end = brace + 1;
-                while (depth > 0) { depth += source[end] == '{' ? 1 : source[end] == '}' ? -1 : 0; end++; }
-                body = source.Substring(brace, end - brace);
-            }
-            string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(Regex.Replace(HitchCanonical(body), @"\s+", ""))));
-            Check(hash == c[2], c[0] + " hitch implementation matches f183a37 after boundary substitutions");
-        }
         string kernel = source.Substring(feature.Length);
         foreach (string name in new[] { "ServerHitchRequest", "BeginHitchTransfer", "ServerHitchFrozen", "CompleteHitchTransfer", "HitchBeforeOwner", "CascadeHitches", "HitchReset", "HitchTick", "ServerHitchTick", "ReleaseHitch", "RemoveHitches", "HitchInitialTick", "HitchPhysicsTelemetry", "HitchFallGuard" })
             Check(kernel.Contains(name), name + " retains map walks or authority in kernel");

@@ -26,7 +26,7 @@ static partial class EntitySplitTest
             "damage" => "2802CCCC4C3E0000803F0000000000000000010000000000000000000000002D01000000",
             _ => throw new Exception(name)
         };
-        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == expected, name + " matches frozen 5fa082f bytes");
+        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == expected, name + " matches expected bytes");
         Check(Entities.Packets.Last().Reliable == (name != "state"), name + " reliability unchanged");
     }
     static IDictionary AITable(string name) => (IDictionary)Field(AIOwner, name);
@@ -242,7 +242,7 @@ static partial class EntitySplitTest
         Entities.TestTumbleWire = true;
         AIPatch("TumbleSpawn", "Postfix", m, null);
         Check(EntityAI.TumbleShared == shared + 1 && Entities.SpawnShared == spawn + 1 && Entities.Packets.Count == sends + 1, "new tumble delegates to real shared spawn and Share framing");
-        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == "148703000003010203" && Entities.Packets.Last().Reliable, "tumble shared framing matches frozen HEAD bytes with opaque 010203 record");
+        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == "148703000003010203" && Entities.Packets.Last().Reliable, "tumble shared framing matches expected bytes with opaque 010203 record");
         Entities.TestTumbleWire = false; Entities.PendingShare.Clear();
         AIPatch("TumbleSpawn", "Postfix", m, fresh); Check(EntityAI.TumbleShared == shared + 1, "unchanged nowSpawned never shares again");
         var failed = new tosaveitemscript { Go = new GameObject() }; m.nowSpawned = failed; Entities.TestShareMiss = true; AIPatch("TumbleSpawn", "Postfix", m, fresh); Entities.TestShareMiss = false;

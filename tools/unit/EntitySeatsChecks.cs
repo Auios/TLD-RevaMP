@@ -17,8 +17,7 @@ static partial class EntitySplitTest
     static void SeatVector(string name, string expected)
     {
         string actual = Convert.ToHexString(Entities.Packets.Last().Bytes);
-        if (Environment.GetEnvironmentVariable("CAPTURE_SEATS") == "1") Console.WriteLine("SEAT VECTOR " + name + " " + actual);
-        else Check(actual == expected, name + " captured HEAD bytes");
+        Check(actual == expected, name + " expected bytes");
         Check(Entities.Packets.Last().Reliable, name + " reliable");
     }
     static object SeatValue(object value, string name) => value.GetType().GetField(name).GetValue(value);

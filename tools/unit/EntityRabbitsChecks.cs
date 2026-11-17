@@ -26,7 +26,7 @@ static partial class EntitySplitTest
             "damage" => "2802CCCCCC3E0000803F0000000000000000010000000000000000000000002D01000000",
             _ => throw new Exception(name)
         };
-        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == expected, "rabbit " + name + " matches frozen 73f02e3 bytes at " + RabbitOwner.Name);
+        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == expected, "rabbit " + name + " matches expected bytes at " + RabbitOwner.Name);
         Check(Entities.Packets.Last().Reliable, "rabbit " + name + " stays reliable");
     }
     static void RabbitChecks()

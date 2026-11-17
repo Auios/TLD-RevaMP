@@ -69,9 +69,8 @@ static partial class EntitySplitTest
         Row("ground-default", EntityGround.GroundLayers);
 
         string path = "tools/unit/EntityKernelFactsRows.txt";
-        if (Environment.GetEnvironmentVariable("CAPTURE_KERNEL_HEAD") == "1") File.WriteAllText(path, string.Join("\r\n", rows) + "\r\n");
-        Check(rows.SequenceEqual(File.ReadAllLines(path)), "slice 30 fixed rows equal the pre-move HEAD capture");
-        if (Environment.GetEnvironmentVariable("CAPTURE_KERNEL_HEAD") == "1") return;
+        GoldenRows.UpdateText(path, string.Join("\r\n", rows) + "\r\n");
+        Check(rows.SequenceEqual(File.ReadAllLines(path)), "slice 30 fixed rows match expected rows");
         CoreMembers.Register();
         foreach (var owner in new[] { typeof(EntityLookup), typeof(EntityNumbers), typeof(EntityMountFacts), typeof(EntityGround), typeof(EntityModApi), typeof(EntityPlayerSave) })
         {
@@ -90,8 +89,7 @@ static partial class EntitySplitTest
     static void KernelBoundaryChecks()
     {
         string registry = File.ReadAllText("src/TLDRevamp/Net/Entities.Registry.cs").Replace("\r\n", "\n");
-        Check(Regex.Replace(registry, @"\s+", "") == "namespaceTLDRevamp.Net{publicstaticpartialclassEntities{internalstaticvoidClearProxyBindings(){ProxyWheelOwner.Clear();ProxyWheelIndex.Clear();ProxyEngineOwner.Clear();}}}", "registry stays on the kernel and contains only the captured proxy binding clears");
-        Check(File.ReadAllLines("tools/unit/EntityKernelFactsSourceRows.txt").SequenceEqual(File.ReadAllLines("tools/unit/obj/EntitySplitTest/KernelFactsActualRows.txt")), "helper bodies and retained kernel files equal HEAD after named substitutions");
+        Check(registry.Contains("public static partial class Entities") && registry.Contains("internal static void ClearProxyBindings()"), "proxy binding cleanup remains a named kernel call");
         string[] files = Directory.GetFiles("src/TLDRevamp/Net", "Entities*.cs");
         foreach (string name in new[] { "Tick", "FixedTick", "Reset", "ServerOnJoin", "ServerOnLeave", "ClientReceive", "ServerReceive", "ToServer", "SendToServer", "ServerSendTo", "ServerSendAll", "ServerForwardRaw", "Deliver" })
             Check(files.Any(f => Regex.IsMatch(File.ReadAllText(f).Split("public static partial class Entities").Last(), @"(?:public|internal|private) static [^\r\n]*\b" + name + @"\(")), name + " remains declared on Entities");

@@ -27,7 +27,7 @@ static partial class EntitySplitTest
 
     static void Main()
     {
-        // The frozen rows were captured on an en-US machine and some labels print numbers (infinity is "∞" there,
+        // The expected rows were recorded on an en-US machine and some labels print numbers (infinity is "∞" there,
         // "Infinity" on CI's invariant culture): run under that culture everywhere.
         var capture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
         System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.DefaultThreadCurrentCulture = capture;

@@ -104,9 +104,9 @@ static partial class EntitySplitTest
         c.Ip.Ready = d.Ip.Ready = false; b.Ip.Ready = false; Time.time = 1.3f; EntityLifetimeStreaming.LinkedDelayTick(); Row("linked-one-ready", Linked());
 
         string path = "tools/unit/EntityLifetimeStreamingRows.txt";
-        if (Environment.GetEnvironmentVariable("LIFETIME_CAPTURE") == "1") File.WriteAllText(path, string.Join("\r\n", rows) + "\r\n");
-        else { var expected = File.ReadAllLines(path); Check(expected.Length == rows.Count, "lifetime HEAD row count"); for (int i = 0; i < rows.Count; i++) Check(expected[i] == rows[i], "lifetime HEAD row " + i + ": " + rows[i]); }
-        if (Environment.GetEnvironmentVariable("LIFETIME_BASELINE") != "1") LifetimeBoundaryChecks();
+        GoldenRows.UpdateText(path, string.Join("\r\n", rows) + "\r\n");
+        { var expected = File.ReadAllLines(path); Check(expected.Length == rows.Count, "lifetime expected row count"); for (int i = 0; i < rows.Count; i++) Check(expected[i] == rows[i], "lifetime expected row " + i + ": " + rows[i]); }
+        LifetimeBoundaryChecks();
         EntityLifetimeStreaming.FarResyncItems = 0;
         CultureInfo.CurrentCulture = oldCulture;
         mainscript.s = null; itemdatabase.s = null; LF.Save.s = null; LF.Menu.s = null; LF.Placer.s = null; LF.TrailerGrip.All.Clear(); LK.Copies.Clear();

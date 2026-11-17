@@ -31,19 +31,19 @@ static partial class EntitySplitTest
             new Entities.UsableValue { X = 1, Y = 65535, Slide = 32768, Turn = -2, Tuned = 1234 }, default(Entities.PoiState));
         return w.Buf.Take(w.Len).ToArray();
     }
-    // Captured from the HEAD 08b120c shared encoders, compiled by ExtractFeatureWire.py --baseline.
+    // Fixed expected bytes from the shared door encoders.
     const string DoorAttachVector = "02C4138727CC3A030000000000000100F403E707DC0B";
     const string LiveDoorVector = "5D9101000003000000020701020000000000E05E400100FFFF008003D204";
     static void DoorChecks()
     {
         Entities.ByNet.Clear(); EntityDoors.ResetDoorAttachments();
         var d = DoorSetup();
-        Check(Convert.ToHexString(DoorWire(d.At)) == DoorAttachVector, "door frame tail matches HEAD encoder bytes through moved hooks");
+        Check(Convert.ToHexString(DoorWire(d.At)) == DoorAttachVector, "door frame tail matches expected encoder bytes through moved hooks");
         var stored = (IDictionary)Field(typeof(EntityDoors), "_storedDoorAttaches");
         var restored = (IList)Field(typeof(EntityDoors), "_restoredDoorAttaches");
         Check(stored.Count == 1 && EntityDoors.DoorAttachFrame(d.Frame), "sending door frame remembers attachment");
-        d.At.slot = new partslotscript(); Check(Convert.ToHexString(DoorWire(d.At)) == "00", "slot attachment tail matches HEAD bytes"); d.At.slot = null;
-        Check(Convert.ToHexString(LiveDoorWire()) == LiveDoorVector, "car door live usable message matches HEAD bytes");
+        d.At.slot = new partslotscript(); Check(Convert.ToHexString(DoorWire(d.At)) == "00", "slot attachment tail matches expected bytes"); d.At.slot = null;
+        Check(Convert.ToHexString(LiveDoorWire()) == LiveDoorVector, "car door live usable message matches expected bytes");
         Check(EntityDoors.AttachFramePath(d.At, d.Frame).SequenceEqual(new[] { 0 }), "door path uses frame hierarchy indices");
         Check(EntityDoors.RestoreAttachFrame(d.At, null, default), "no stored frame preserves existing attach");
         long bad = Entities.AttachPosesBad;

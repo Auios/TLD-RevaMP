@@ -290,15 +290,15 @@ namespace TLDRevamp.Net
         {
             RegistryScenarios();
             string path = "tools/unit/EntityRegistryRows.txt";
-            if (Environment.GetEnvironmentVariable("CAPTURE_ENTITY_REGISTRY_HEAD") == "1") File.WriteAllText(path, string.Join("\r\n", Rows) + "\r\n");
+            GoldenRows.UpdateText(path, string.Join("\r\n", Rows) + "\r\n");
             var expected = File.ReadAllLines(path);
             if (!Rows.SequenceEqual(expected))
             {
                 File.WriteAllText("tools/unit/obj/EntityRegistryTest/actual-rows.txt", string.Join("\r\n", Rows) + "\r\n");
                 int i = Enumerable.Range(0, Math.Min(Rows.Count, expected.Length)).FirstOrDefault(i => Rows[i] != expected[i], -1);
-                throw new Exception("registry capture differs at row " + i + " " + (i < 0 ? "count" : Rows[i].Split('|')[0]));
+                throw new Exception("registry expected rows differ at row " + i + " " + (i < 0 ? "count" : Rows[i].Split('|')[0]));
             }
-            Console.WriteLine(Rows.Count + " registry rows equal the frozen HEAD capture");
+            Console.WriteLine(Rows.Count + " registry rows match expected rows");
         }
     }
 }

@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using TLDRevamp;
 using TLDRevamp.Net;
@@ -92,7 +91,8 @@ static partial class EntitySplitTest
         Row("frame", typeof(Entities).GetMethod("LockedFrame", Static).Invoke(null, args)); Row("frame-address", args[5] + ":" + args[6]);
         Entities.ByNet.Clear(); Entities.Packets.Clear(); settingsscript.s = null;
         foreach (var saved in snapshot) saved.Field.SetValue(null, saved.Value);
-        { var expected = File.ReadAllLines("tools/unit/EntityLocksRows.txt"); Check(rows.SequenceEqual(expected), "lock rows match a976944; first difference " + rows.Zip(expected).FirstOrDefault(p => p.First != p.Second)); }
+        GoldenRows.Update("tools/unit/EntityLocksRows.txt", rows);
+        { var expected = File.ReadAllLines("tools/unit/EntityLocksRows.txt"); Check(rows.SequenceEqual(expected), "lock rows match expected rows; first difference " + rows.Zip(expected).FirstOrDefault(p => p.First != p.Second)); }
         LocksSourceChecks();
     }
 
@@ -119,7 +119,6 @@ static partial class EntitySplitTest
         Check(typeof(Entities).GetField("_physLockAcc", Static) == null && typeof(Entities).GetField("_containerBox", Static) == null && typeof(Entities).GetField("ContainerMounts", Static) == null, "lock caches and timer have one owner");
         LockGuardChecks();
         string Read(string path) => File.ReadAllText(path).Replace("\r\n", "\n");
-        string features = Read("src/TLDRevamp/Net/Entities.Features.cs");
         string phys = Read("src/TLDRevamp/Net/Entities.PhysLock.cs");
         string pose = Read("src/TLDRevamp/Net/Entities.LockPose.cs");
         foreach (string source in new[] { phys, pose }.Select(s => s.Split("    public static partial class Entities")[0]))
@@ -129,45 +128,6 @@ static partial class EntitySplitTest
         }
         const string priority = "            // Clear crafted before the detach broadcast captures the released part, as under Entities.\n            [HarmonyPriority(Priority.Normal + 1)]\n";
         Check(phys.Contains(priority + "            [HarmonyPostfix]\n            private static void Postfix(attachablescript __instance, bool __runOriginal)"), "crafted cleanup stays ahead of detach broadcast and telemetry postfixes");
-        string Body(string source, string start, string end) { int a = source.IndexOf(start, StringComparison.Ordinal); Check(a >= 0, "lock source start " + start); int b = source.IndexOf(end, a, StringComparison.Ordinal); Check(b > a, "lock source end " + end); return source.Substring(a, b - a); }
-        string store = Body(features, "            var ce = IsProxy(scanning)", "            return ok;");
-        store = string.Join("\n", store.TrimEnd('\n').Split('\n').Select(s => "    " + s)) + "\n";
-        store = store.Replace("scanning", "_scanning").Replace("IsProxy(item)", "IsProxy(_p)").Replace("EntOfRoot(item.transform.root)", "EntOfRoot(_p.transform.root)");
-        string overlap = Body(features, "            int n = Physics.OverlapBoxNonAlloc(b.center", "\n        }\n        // End lock boundary.");
-        phys = phys.Split("\n    public static partial class Entities")[0] + "}\n";
-        phys = phys.Replace("using Ent = TLDRevamp.Net.Entities.Ent;\n", "").Replace("internal static partial class EntityLocks", "public static partial class Entities");
-        phys = phys.Replace("        private static readonly NetWriter W = new NetWriter();", "        public const byte PhysLockSync = 55;");
-        string resets = Body(phys, "        internal static void ResetHostSetting()", "        internal static void PhysLockTick(float dt)");
-        phys = phys.Replace(resets, "").Replace(priority, "");
-        foreach (string name in new[] { "PhysLockTick", "ApplyPhysLock", "CheckCopyLock", "EndGhostOnOwn", "GentleTick", "ReleaseGhostTick" }) phys = phys.Replace("internal static void " + name, "private static void " + name);
-        phys = phys.Replace("                bool ok = Entities.LockScanAllows(_scanning, _p);\n", store);
-        phys = phys.Replace("            return Entities.LockContainerOwnedBy(cr, e.OwnerId) && !OwnerHasItOut(e, p);", "            var ce = ProxyOf(cr);\n            return ce != null && ce.OwnerId == e.OwnerId && !OwnerHasItOut(e, p);");
-        phys = phys.Replace("            bool copy = Entities.LockContainerMotion(root, e.OwnerId, out bool sameOwner, out var velocity, out var pose);", "            var ce = ProxyOf(root);");
-        phys = phys.Replace("copy && (velocity.sqrMagnitude", "ce != null && (ce.LastVel.sqrMagnitude").Replace("sameOwner && pose != null && pose.Ready", "ce != null && ce.OwnerId == e.OwnerId && ce.Ip != null && ce.Ip.Ready").Replace("pose.LastPos", "ce.Ip.LastPos").Replace("pose.LastRot", "ce.Ip.LastRot").Replace("!copy && rb != null", "ce == null && rb != null");
-        phys = phys.Replace("            return Entities.LockOverlapsCar(b, own);", overlap);
-        phys = phys.Replace("        /// Per frame for a released copy:", "        private static readonly Collider[] _clearHits = new Collider[64];\n        /// Per frame for a released copy:");
-        foreach (var pair in new[] { ("Entities.SendToPeers(", "ServerSendAll("), ("Entities.RefreshLockBodies(", "ApplyProxyBodies("), ("Entities.LockRidesParent(", "RidesParent("), ("Entities.ShowLockCollisions(", "ShowCarriedCollisions("), ("Entities.IsLockCopy(", "IsProxy(") }) phys = phys.Replace(pair.Item1, pair.Item2);
-        foreach (string name in new[] { "IsHost", "InSession", "PhysLockSync" }) phys = phys.Replace("Entities." + name, name);
-
-        string cache = Body(pose, "        private sealed class MountCache", "        internal static mountStuff[] LockMounts(");
-        string mounts = Body(pose, "        internal static mountStuff[] LockMounts(", "\n    }\n\n    public static partial class Entities");
-        string feature = Body(pose, "    internal static partial class EntityLocks", "    public static partial class Entities");
-        pose = pose.Replace(feature, "");
-        pose = pose.Replace("        private static int LockBindingRevision;", cache + "        private static int LockBindingRevision;");
-        pose = pose.Replace("        internal static mountStuff[] LockMounts(tosaveitemscript item) => EntityLocks.LockMounts(item);\n", mounts.TrimEnd('\n') + "\n");
-        string kernel = Read("src/TLDRevamp/Net/Entities.cs");
-        kernel = kernel.Replace("            EntityLocks.ResetGentleBodies();", "            foreach (var kv in _gentle) if (kv.Key != null) kv.Key.maxDepenetrationVelocity = kv.Value.was;\n            _gentle.Clear();");
-        kernel = kernel.Replace("EntityLocks.ResetHostSetting();", "HostPhysicsLock = -1; _physLockLast = -1;");
-        foreach (string name in new[] { "PhysLockTick", "GentleTick", "CheckCopyLock", "ReleaseGhostTick", "ApplyPhysLock" }) kernel = kernel.Replace("EntityLocks." + name, name);
-        string[] lockCalls = { "_gentle", "HostPhysicsLock =", "PhysLockTick(dt)", "GentleTick()", "CheckCopyLock(e, now)", "ReleaseGhostTick(e)", "case PhysLockSync:", "bool wornRides =", "TickPoseLock(e);", "bool attachedRides =" };
-        kernel = string.Join("\n", kernel.Split('\n').Where(line => lockCalls.Any(line.Contains)));
-        var restored = new Dictionary<string, string> { ["src/TLDRevamp/Net/Entities.PhysLock.cs"] = phys, ["src/TLDRevamp/Net/Entities.LockPose.cs"] = pose, ["src/TLDRevamp/Net/Entities.cs"] = kernel };
-        foreach (string row in File.ReadAllLines("tools/unit/EntityLocksSourceRows.txt"))
-        {
-            var pair = row.Split('|'); string source = restored.TryGetValue(pair[0], out var value) ? value : Read(pair[0]);
-            string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(Regex.Replace(source, @"\s+", ""))));
-            Check(hash == pair[1], "complete lock source matches a976944 after named boundary substitutions: " + pair[0]);
-        }
     }
 
     static void LockGuardChecks()

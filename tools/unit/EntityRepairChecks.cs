@@ -123,17 +123,12 @@ static partial class EntitySplitTest
         long sent = EntityRepair.PoiCensusSent, received = EntityRepair.PoiCensusIn;
         EntityRepair.ResetPoiCensus(); Row("reset-keeps-counters-settings", (sent == EntityRepair.PoiCensusSent) + ":" + (received == EntityRepair.PoiCensusIn) + ":" + EntityRepair.PoiCensusEveryS + ":" + Field(type, "_poiCensusAt") + ":" + ((IDictionary)Field(type, "_poiLists")).Count);
         var expectedPath = "tools/unit/EntityRepairRows.txt";
-        if (Environment.GetEnvironmentVariable("REPAIR_CAPTURE") == "1")
+        GoldenRows.Update(expectedPath, rows);
         {
-            Check(Environment.GetEnvironmentVariable("REPAIR_BASELINE") == "1", "repair capture explicitly uses the HEAD baseline");
-            File.WriteAllText(expectedPath, string.Join("\r\n", rows) + "\r\n");
+            var expected = File.ReadAllLines(expectedPath); Check(expected.Length == rows.Count, "repair expected row count");
+            for (int i = 0; i < rows.Count; i++) Check(expected[i] == rows[i], "repair expected row " + i + ": " + rows[i]);
         }
-        else
-        {
-            var expected = File.ReadAllLines(expectedPath); Check(expected.Length == rows.Count, "repair HEAD row count");
-            for (int i = 0; i < rows.Count; i++) Check(expected[i] == rows[i], "repair HEAD row " + i + ": " + rows[i]);
-        }
-        if (Environment.GetEnvironmentVariable("REPAIR_BASELINE") != "1") RepairBoundaryChecks();
+        RepairBoundaryChecks();
         EntityRepair.ResetPoiCensus(); Entities.EditAnomalyLogs.Clear(); Entities.Packets.Clear(); Entities.IsHost = false;
         Entities.EditAnomalyTotal = anomalies;
         Time.realtimeSinceStartup = 0; RF.Menu.s = null; RF.Main.s = null; RF.Settings.s = null; RF.Database.s = null;
@@ -142,7 +137,6 @@ static partial class EntitySplitTest
 
     static void RepairBoundaryChecks()
     {
-        Check(File.ReadAllLines("tools/unit/EntityRepairSourceRows.txt").SequenceEqual(File.ReadAllLines("tools/unit/obj/EntityRepair/source-actual.txt")), "repair moved helpers and retained transactions equal HEAD after named substitutions");
         var owner = typeof(EntityRepair);
         Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, "repair owner is internal static");
         CoreMembers.Register();

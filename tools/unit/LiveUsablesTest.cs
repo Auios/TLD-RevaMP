@@ -107,8 +107,8 @@ namespace TLDRevamp.Net
             foreach (var seq in new ushort[] { 65534, 65535, 0, 0, 65535, 1 }) rows.Add(seq + " " + LiveNewer(orders, k, seq, 125.5));
             string text = string.Join("\n", rows) + "\n";
             const string capture = "tools/unit/EntityUsablesRows.txt";
-            if (Environment.GetEnvironmentVariable("CAPTURE_BATCH12_HEAD") == "1") System.IO.File.WriteAllText(capture, text);
-            Check(text == System.IO.File.ReadAllText(capture).Replace("\r\n", "\n"), "live item, POI motion/final bytes and sequence wrap match frozen eaa5f6c rows");
+            GoldenRows.UpdateText(capture, text);
+            Check(text == System.IO.File.ReadAllText(capture).Replace("\r\n", "\n"), "live item, POI motion/final bytes and sequence wrap match expected rows");
         }
         internal static void Tests()
         {

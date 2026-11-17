@@ -194,11 +194,10 @@ static partial class EntitySplitTest
                 for (int i = 0; i < 1000; i++) { EntityPhysics.CopyJointTick(); EntityPhysics.CrashHoldTick(); }
                 Check(GC.GetAllocatedBytesForCurrentThread() == start, "active joint and moving held-crash paths allocate zero bytes");
             }
-            if (Environment.GetCommandLineArgs().Contains("--capture-physics")) foreach (string row in physicsRows) Console.WriteLine("PHYSICSROW=" + row);
-            else
+            GoldenRows.Update("tools/unit/EntityPhysicsRows.txt", physicsRows);
             {
-                var expected = File.ReadAllLines("tools/unit/EntityPhysicsRows.txt"); Check(expected.Length == physicsRows.Count, "physics HEAD row count");
-                for (int i = 0; i < expected.Length; i++) Check(expected[i] == physicsRows[i], "physics HEAD row " + i + ": " + physicsRows[i]);
+                var expected = File.ReadAllLines("tools/unit/EntityPhysicsRows.txt"); Check(expected.Length == physicsRows.Count, "physics expected row count");
+                for (int i = 0; i < expected.Length; i++) Check(expected[i] == physicsRows[i], "physics expected row " + i + ": " + physicsRows[i]);
             }
             PhysicsBoundaryChecks();
             PhysicsSetup(); mainscript.s = null;

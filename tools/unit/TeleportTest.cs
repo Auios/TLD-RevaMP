@@ -236,8 +236,8 @@ namespace TLDRevamp.Net
             ResetTpaSync();
             string rows = string.Join("\n", Frozen) + "\n";
             const string capture = "tools/unit/EntityTeleportRows.txt";
-            if (Environment.GetEnvironmentVariable("CAPTURE_BATCH12_HEAD") == "1") System.IO.File.WriteAllText(capture, rows);
-            check(rows == System.IO.File.ReadAllText(capture).Replace("\r\n", "\n"), "TPA sends, failure guards, refetch bytes and replay order match frozen eaa5f6c rows");
+            GoldenRows.UpdateText(capture, rows);
+            check(rows == System.IO.File.ReadAllText(capture).Replace("\r\n", "\n"), "TPA sends, failure guards, refetch bytes and replay order match expected rows");
         }
     }
     public static class Protocol { public const byte LiveUsable = 93; }

@@ -10,7 +10,7 @@
       <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
       <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
     </PropertyGroup>
-    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractAttachmentsBoundary.py&quot; &quot;$(IntermediateOutputPath)AttachmentsValidation.g.cs&quot; --validation $(AttachmentsBaseline)" />
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractAttachmentsBoundary.py&quot; &quot;$(IntermediateOutputPath)AttachmentsValidation.g.cs&quot; --validation" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)AttachmentsValidation.g.cs" /></ItemGroup>
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractLeasesBoundary.py&quot; &quot;$(IntermediateOutputPath)LeaseValidation.g.cs&quot; --validation" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)LeaseValidation.g.cs" /></ItemGroup>

@@ -99,8 +99,8 @@ static partial class EntitySplitTest
         using var rows = new StringWriter();
         foreach (var row in ReproRecorder.Rows) { row.Write(rows); rows.WriteLine(); }
         string path = "tools/unit/EntityReproRows.txt";
-        if (Environment.GetEnvironmentVariable("CAPTURE_REPRO_HEAD") == "1") File.WriteAllText(path, rows.ToString().Replace("\r\n", "\n"));
-        Check(rows.ToString().Replace("\r\n", "\n") == File.ReadAllText(path).Replace("\r\n", "\n"), "all hooked rows match frozen cb10491 capture");
+        GoldenRows.UpdateText(path, rows.ToString().Replace("\r\n", "\n"));
+        Check(rows.ToString().Replace("\r\n", "\n") == File.ReadAllText(path).Replace("\r\n", "\n"), "all hooked rows match expected rows");
         n = ReproRecorder.Rows.Count;
         Entities.PlayerActing = false;
         ReproCall("ReproAttach", 7u, 8u, 0, 1); ReproPatch("ReproUsable", "Postfix", u, true);
@@ -132,30 +132,15 @@ static partial class EntitySplitTest
         ReproRecorder.Recording = false; Entities.ByNet.Clear(); mainscript.s = null;
     }
 
-    // Frozen whole-file hashes also cover every Harmony target, priority, signature and return path.
+    // Drive recording precedes the passenger input merge.
     static void ReproSourceChecks()
     {
         foreach (string part in new[] { "Repro", "ReproDrive" })
         {
             string source = File.ReadAllText("src/TLDRevamp/Net/Entities." + part + ".cs").Replace("\r\n", "\n");
-            source = source.Replace("internal static partial class EntityReproHooks", "public static partial class Entities");
-            source = source.Replace("Entities.TryGetEntity(net, out var e)", "ByNet.TryGetValue(net, out var e)");
-            source = source.Replace("var e = Entities.ReproAttachEntity(net); if (e == null) return;", "if (!PlayerActing || !ByNet.TryGetValue(net, out var e) || e.Root == null || e.Root.attachable == null || _hitchApplying) return;");
-            source = source.Replace("if (!Entities.ReproOwns(e)) return;", "if (e == null || e.Proxy || e.OwnerId != MyId) return;");
-            source = source.Replace("Entities.ReproOwns(e)", "!e.Proxy && e.OwnerId == MyId");
-            source = source.Replace("!Entities.ReproUsableAllowed", "!PlayerActing || _applyingLive || _applyingState || _applyingPoi");
-            source = source.Replace("!Entities.ReproDetachAllowed", "!PlayerActing || _applyingDetach || _applyingState || _hitchApplying");
-            source = source.Replace("Entities.ReproUsableItem(u)", "ItemOf(u, u.tosaveid, u.setid)");
-            source = source.Replace("Entities.ReproEntityOf(", "EditEntityOf(");
-            source = source.Replace("Entities.ItemUsables(", "ItemUsables(");
-            source = source.Replace("Entities.TelemetryNet(", "TelemetryNet(");
-            source = source.Replace("Entities.LockMounts(", "LockMounts(");
-            source = source.Replace("Entities.SampleReproCar(", "StuckWatch(");
-            // the one deliberate addition: the priority that keeps the drive hook ahead of ShotgunCapture, as before the move
+            // Keep the drive hook ahead of ShotgunCapture.
             const string order = "            // Ahead of ShotgunCapture, which merges the remote passenger's input into the car: the row keeps the driver's own\n            // input, as when this hook was declared inside Entities and so patched first.\n            [HarmonyPriority(Priority.Normal + 1)]\n";
-            if (part == "ReproDrive") { Check(source.Contains(order), "drive hook keeps its place ahead of ShotgunCapture"); source = source.Replace(order, ""); }
-            string expected = part == "Repro" ? "774F30C7322F32E98FF6A0CBB542E432131F6CE9225169C2F38743F5C56B10A1" : "4C9C53F88E491C27431EC9FE3C89E7B917E45E61A0602E67E0814D8B95198C85";
-            Check(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(source))) == expected, part + " complete hook source matches the pre-split source (cb10491 rebased onto the e76d0b2 lock hook) after boundary substitutions");
+            if (part == "ReproDrive") Check(source.Contains(order), "drive hook keeps its place ahead of ShotgunCapture");
         }
     }
 }

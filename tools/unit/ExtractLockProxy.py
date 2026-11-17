@@ -33,7 +33,7 @@ roles += '\n        private static bool SampleControl(bool lockChange, bool wSto
 source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Cargo.cs').read_text(encoding='utf-8')
 from runpy import run_path
 cargo = run_path(str(Path(__file__).with_name('ExtractCargoInteraction.py')))
-roles += '\n' + cargo['legacy_body'](method('ClaimCargo', 'bool')) + '\n' + method('IsHeld', 'bool')
+roles += '\n' + cargo['fixture_body'](method('ClaimCargo', 'bool')) + '\n' + method('IsHeld', 'bool')
 source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Leases.cs').read_text(encoding='utf-8')
 source = source[source.index('        private static class PickupClaim'):]
 roles += '\n' + method('Prefix').replace('Prefix(', 'PickupPrefix(')

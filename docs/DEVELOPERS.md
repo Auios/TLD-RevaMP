@@ -334,6 +334,24 @@ A dev build is a **draft** release by default: only people with write access see
 build is installed from its zip. In game it shows as e.g. `0.69.1-dev.c8d9c55`, and multiplayer only lets that exact
 build join.
 
+### Unit test golden rows
+
+The unit extractors compile the current production sources with isolated game and transport fakes. They do not
+need repository history. The `tools/unit/Entity*Rows.txt` output fixtures record bytes, decisions, counters and call
+order for fixed inputs; `ReproRecorderRows.json` records the recorder's output. They are expected outputs, so an
+intentional behaviour change should update them only after the new behaviour has been checked.
+
+Run `UPDATE_GOLDEN_ROWS=1 bash tools/unit/run-all.sh` to regenerate all golden outputs from the current code, then
+run `bash tools/unit/run-all.sh` normally. In PowerShell, set `$env:UPDATE_GOLDEN_ROWS='1'` before the first run and
+remove it with `Remove-Item Env:UPDATE_GOLDEN_ROWS` before the second. Writers use UTF-8 without a BOM and CRLF.
+Review the rows file diff: it shows the changed outputs and decision order, and is what a reviewer reads alongside
+the behaviour change. Do not update rows just to silence an unexplained failure.
+
+`LiveUsablesTest` produces the complete usable rows; `EntitySplitTest` also checks and updates its two codec rows.
+`EntityKernelOutsideRows.txt` is a source-structure inventory of allowed outside table/writer references, not a
+golden output. Its architecture check stays active during regeneration and changes require explicit review.
+Inline expected byte vectors remain ordinary assertions.
+
 ### Developer plugin
 
 Source builds deploy two BepInEx plugins: `TLDRevamp.dll` runs the game features, and `TLDRevamp.Dev.dll` holds labs, probes, diagnostic loggers, test bots, network simulation, debug panels and overlays. Build `src/TLDRevamp.Dev/TLDRevamp.Dev.csproj` to build both; `tools/build.sh` deploys both. Player releases ship without Dev. To add a lab, register its bridge commands, settings, keys and optional observations through the core hooks, and tick or draw it from the Dev runner. Core must never reference Dev.

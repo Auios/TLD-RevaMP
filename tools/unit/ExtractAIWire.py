@@ -2,14 +2,12 @@
 from pathlib import Path
 import re
 import sys
-import subprocess
 
 root = Path(__file__).resolve().parents[2]
 
 
-def method(path, name, baseline=False):
-    source = (subprocess.check_output(['git', 'show', '5fa082f:' + path], cwd=root).decode()
-              if baseline else (root / path).read_text(encoding='utf-8'))
+def method(path, name):
+    source = (root / path).read_text(encoding='utf-8')
     start = source.rfind('\n', 0, re.search(r'(?:private|internal|public) static \w+ ' + name + r'\(', source).start()) + 1
     brace = source.index('{', start)
     depth, end = 1, brace + 1
@@ -39,8 +37,7 @@ with target.open('a', encoding='utf-8') as output:
                  + case + '} }\n} }\n')
 
 # Tumbleweeds have no message of their own. Run their unchanged shared spawn and Share framing, too.
-baseline = '--baseline' in sys.argv
 with target.open('a', encoding='utf-8') as output:
     output.write('namespace TLDRevamp.Net { using System.Collections.Generic; public static partial class Entities {\n'
-                 + method('src/TLDRevamp/Net/Entities.Lifecycle.cs', 'ShareSpawn', baseline).replace('ShareSpawn(', 'TestTumbleShareSpawn(').replace('ShareItem(', 'TestTumbleShareItem(') + '\n'
-                 + method('src/TLDRevamp/Net/Entities.cs', 'ShareItem', baseline).replace('ShareItem(', 'TestTumbleShareItem(') + '\n} }\n')
+                 + method('src/TLDRevamp/Net/Entities.Lifecycle.cs', 'ShareSpawn').replace('ShareSpawn(', 'TestTumbleShareSpawn(').replace('ShareItem(', 'TestTumbleShareItem(') + '\n'
+                 + method('src/TLDRevamp/Net/Entities.cs', 'ShareItem').replace('ShareItem(', 'TestTumbleShareItem(') + '\n} }\n')

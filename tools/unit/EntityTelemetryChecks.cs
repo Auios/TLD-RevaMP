@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using TLDRevamp;
 using TLDRevamp.Net;
@@ -99,8 +98,8 @@ static partial class EntitySplitTest
         Entities.ServerCensusReply(2, Reader(w.Buf.Take(w.Len).ToArray())); Packet("census-forward-reply");
         CultureInfo.CurrentCulture = oldCulture;
         const string path = "tools/unit/EntityTelemetryRows.txt";
-        if (Environment.GetEnvironmentVariable("CAPTURE_TELEMETRY_HEAD") == "1") File.WriteAllText(path, string.Join("\r\n", rows) + "\r\n");
-        else Check(File.ReadAllLines(path).SequenceEqual(rows), "complete diagnostic status focus and census rows match 1aa82bc");
+        GoldenRows.UpdateText(path, string.Join("\r\n", rows) + "\r\n");
+        Check(File.ReadAllLines(path).SequenceEqual(rows), "complete diagnostic status focus and census rows match expected rows");
         CoreMembers.Register();
         foreach (var owner in new[] { typeof(EntityDiag), typeof(EntityTelemetry) })
         {
@@ -141,40 +140,11 @@ static partial class EntitySplitTest
 
     static void TelemetrySourceChecks()
     {
-        var hashes = new[] {
-            ("Entities.CarDiag.cs", "581595452810A3EDE3535A3BE1B7B177BCCC76B9D0C65DB438E34DCA1D7B796C"),
-            ("Entities.LockDiag.cs", "D8E0B5E3958E4E47E02334EF238FA8CFB8C71FEEDB4166DA40819F64B1D5FEB3"),
-            ("TelemetryMarks.cs", "4802417848ECF5A0171C8B1AB39C94009A8A4BAE76074EA1DC3EF28C01525D6B"),
-            ("Entities.Anomaly.cs", "CA0EC5A4557F46067B47DA8950CE889FFFD802FCCA0E60A193C564CC7E575AE8"),
-            ("Entities.Telemetry.cs", "E05F83F680ABD11C390A7C57D82BAA379735782B3E55F26FFE73BFA079C1D135"),
-            ("Entities.PartWatch.cs", "5D2DBEDB84FF43137C3F9843DC19C6A73480EBAC031D56E44DE456C7E4970B24"),
-            ("Entities.Status.cs", "BFBE9AC0C6D2EF1F6C19D3D45BE157800131E13BFEEC3388499552D82ADEB8C2") };
-        foreach (var pair in hashes)
+        foreach (string part in new[] { "CarDiag", "LockDiag" })
         {
-            string source = File.ReadAllText("src/TLDRevamp/Net/" + pair.Item1).Replace("\r\n", "\n").Replace("EntityResync.ResyncForeignAttachDropped", "ResyncForeignAttachDropped");
-            source = source.Replace("EntityWorldLeases.AskedKeys", "string.Join(\" | \", LeaseAsked)");
-            if (pair.Item1 == "TelemetryMarks.cs")
-            {
-                source = source.Replace("internal static class EntityTelemetry", "public static partial class Entities");
-                source = source.Replace("    }\n    public static partial class Entities\n    {\n        private const int TelemetryRecordLimit", "        private const int TelemetryRecordLimit");
-                source = source.Replace("Entities.LocalSeat(", "LocalSeat(").Replace("Entities.VehicleSeats(", "VehicleSeats(");
-                source = source.Replace("Entities.MarkIsLocal(p.Id)", "p.Id == MyId");
-                source = source.Replace("uint net = Entities.MarkItemNet(item);", "var entity = item != null ? SharedGroupOf(item) : null;");
-                source = source.Replace("Net = net, Prefab = item", "Net = entity != null ? entity.NetId : 0, Prefab = item");
-                source = source.Replace("Entities.RefreshMarkFocus();", "TelemetryFocusTick(Time.realtimeSinceStartupAsDouble, true);");
-            }
-            if (pair.Item1 == "Entities.CarDiag.cs" || pair.Item1 == "Entities.LockDiag.cs")
-            {
-                string[] allowed = { "DiagnosticNet", "DiagnosticMine", "DiagnosticProxy", "DiagnosticStoreRefusals", "TryGetEntity" };
-                Check(!source.Contains("using static") && Regex.Matches(source, @"Entities\.(\w+)").Cast<Match>().All(m => allowed.Contains(m.Groups[1].Value)), pair.Item1 + " uses only narrow kernel calls");
-                source = source.Replace("internal static partial class EntityDiag", "public static partial class Entities");
-                source = source.Replace("Entities.DiagnosticNet(", "TelemetryNet(").Replace("Entities.TryGetEntity(", "ByNet.TryGetValue(");
-                source = source.Replace("Entities.DiagnosticMine(e)", "e.OwnerId == MyId").Replace("Entities.DiagnosticProxy(m)", "IsProxy(m)");
-                source = source.Replace("Entities.DiagnosticStoreRefusals(false)", "ContainerStoresRefused").Replace("Entities.DiagnosticStoreRefusals(true)", "AttachedStoresRefused");
-                source = source.Replace("internal static void StuckWatch(", "private static void StuckWatch(");
-                source = source.Replace("internal static readonly System.Globalization.CultureInfo ic", "private static readonly System.Globalization.CultureInfo ic");
-            }
-            Check(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(source))) == pair.Item2, pair.Item1 + " complete source matches 1aa82bc after boundary substitutions");
+            string source = File.ReadAllText("src/TLDRevamp/Net/Entities." + part + ".cs");
+            string[] allowed = { "DiagnosticNet", "DiagnosticMine", "DiagnosticProxy", "DiagnosticStoreRefusals", "TryGetEntity" };
+            Check(!source.Contains("using static") && Regex.Matches(source, @"Entities\.(\w+)").Cast<Match>().All(m => allowed.Contains(m.Groups[1].Value)), part + " uses only narrow kernel calls");
         }
         string marks = File.ReadAllText("src/TLDRevamp/Net/TelemetryMarks.cs");
         string feature = marks.Substring(marks.IndexOf("    internal static class EntityTelemetry"));

@@ -31,13 +31,13 @@ static partial class EntitySplitTest
         {
             Entities.EditDirty[it] = 0; Entities.EditKinds[it] = kind; Time.realtimeSinceStartup += 1;
             Invoke(typeof(Entities), "EditTick");
-            Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == vectors[index++] && Entities.Packets.Last().Reliable, "blood and fluid edit envelopes match HEAD bytes and reliability");
+            Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == vectors[index++] && Entities.Packets.Last().Reliable, "blood and fluid edit envelopes match expected bytes and reliability");
             Check(Entities.TestWithCar == (kind == Entities.KindBlood), "only blood edit includes car record");
             Check(Entities.EditDirty.Count == 0 && e.EditHoldUntil[0] == Time.realtimeSinceStartup + 1.5f, "edit flush cleanup and hold order retained");
         }
         Entities.TestTankChanges = true; Entities.EditDirty[it] = 0; Entities.EditKinds[it] = Entities.KindTank; Time.realtimeSinceStartup += 1;
         Invoke(typeof(Entities), "EditTick");
-        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == "20F50100000000000000E05E400002030102030100020000A0BF" && Entities.TankAddsSent == 1, "fluid delta edit envelope and production TankAdds tail match HEAD bytes");
+        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == "20F50100000000000000E05E400002030102030100020000A0BF" && Entities.TankAddsSent == 1, "fluid delta edit envelope and production TankAdds tail match expected bytes");
         Entities.TestTankChanges = false;
     }
     static void TuningChecks()
@@ -49,7 +49,7 @@ static partial class EntitySplitTest
         var e = new Entities.Ent { NetId = 301, RootId = 41, Root = root }; Entities.ByNet[301] = e;
         Time.realtimeSinceStartup = 100;
         TuningOwner.CarTuneTick();
-        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == TuneVector && Entities.Packets.Last().Reliable, "tuning owner send matches HEAD bytes and reliability");
+        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == TuneVector && Entities.Packets.Last().Reliable, "tuning owner send matches expected bytes and reliability");
         int sent = Entities.Packets.Count; TuningOwner.CarTuneTick();
         Check(Entities.Packets.Count == sent, "tuning scan waits half a second");
         Time.realtimeSinceStartup = 100.5f; TuningOwner.CarTuneTick();
@@ -60,7 +60,7 @@ static partial class EntitySplitTest
         var message = Entities.Packets.Last().Bytes;
         Check(!TuningOwner.ServerKeepTune(8, Reader(message)) && TuningOwner.ServerKeepTune(9, Reader(message)), "only current server owner can keep tuning");
         TuningOwner.SendTuneTo(7, 301, message.Skip(5).ToArray());
-        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == TuneVector && Entities.Packets.Last().Peer == 7 && Entities.Packets.Last().Reliable, "tuning replay matches HEAD bytes target and reliability");
+        Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == TuneVector && Entities.Packets.Last().Peer == 7 && Entities.Packets.Last().Reliable, "tuning replay matches expected bytes target and reliability");
         long refused = TuningOwner.TunesRefused;
         TuningOwner.ServerKeepTune(9, Reader(message.Take(9).ToArray()));
         TuningOwner.ApplyCarTune(Reader(message.Take(9).ToArray()));

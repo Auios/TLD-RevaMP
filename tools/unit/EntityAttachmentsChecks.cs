@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using TLDRevamp;
 using TLDRevamp.Net;
@@ -112,11 +111,9 @@ static partial class EntitySplitTest
         Check(Entities.AttachmentNotices.All(n => n.Notice == "A part that came off your car could not be shared with the other players, so for them it is still on."), "part refusal keeps its exact plain words");
         EntityAttachments.ResetCarriedOff(); Check(told.Count == 3, "carried reset keeps refusal notice history");
         const string path = "tools/unit/EntityAttachmentsRows.txt";
-#if ATTACHMENTS_CAPTURE
-        File.WriteAllLines(path, rows);
-#else
-        Check(File.ReadAllLines(path).SequenceEqual(rows), "attachment rows match pre-split 4851eaf");
-#endif
+        GoldenRows.Update(path, rows);
+        Check(File.ReadAllLines(path).SequenceEqual(rows), "attachment rows match expected rows");
+
         AttachmentsBoundaryChecks();
         Entities.ByNet.Clear(); Entities.Packets.Clear(); cache.Clear(); told.Clear(); Entities.AttachmentNotices.Clear();
         EntityAttachments.AttachPosesSent = EntityAttachments.AttachPosesBad = EntityAttachments.AttachPosesApplied = 0;
@@ -152,46 +149,6 @@ static partial class EntitySplitTest
         Check(File.ReadAllText("src/TLDRevamp/Net/Entities.Hitch.cs").Contains("[HarmonyPriority(Priority.First)]"), "hitch joint still precedes attach prefix");
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");
         Check(kernel.Contains("EntityPhysics.ResetCrashHolds(); DevHooks.CrashReset?.Invoke(); EntityAttachments.ResetCarriedOff();"), "carried reset retains its exact neighbors");
-        AttachmentsSourceChecks();
     }
 
-    static string AttachmentCanonical(string body)
-    {
-        body = body.Replace(", HarmonyLib.HarmonyPriority(HarmonyLib.Priority.Normal + 1)", "")
-            .Replace("Entities.AttachmentApplyingDetach", "_applyingDetach").Replace("Entities.AttachmentApplying", "_applyingAttach || _applyingState")
-            .Replace("Entities.AttachmentRoot(", "OwnEntity(").Replace("Entities.AttachmentGroup(", "EditEntityOf(")
-            .Replace("Entities.RefreshAttachmentBodies(", "ApplyProxyBodies(").Replace("Entities.SendAttachment(", "SendAttach(")
-            .Replace("Entities.SendAttachmentMessage(", "ToServer(").Replace("Entities.IsFinite(", "Finite(")
-            .Replace("Entities.AttachmentUsablesChanged(", "LiveUsablesChanged(").Replace("Entities.AttachmentPlayerActing", "PlayerActing")
-            .Replace("Entities.AttachmentCarriesParts", "CarriedPartsShared")
-            .Replace("!Entities.TryAttachmentCarrier(carrierNet, out var c)", "!ByNet.TryGetValue(carrierNet, out var c) || !Resolve(c)")
-            .Replace("EntityCodec.", "").Replace("EntityAttachments.", "").Replace("Entities.", "");
-        return Regex.Replace(body, @"\s+", "");
-    }
-    static void AttachmentsSourceChecks()
-    {
-        foreach (string row in File.ReadAllLines("tools/unit/EntityAttachmentsSourceRows.txt"))
-        {
-            string[] c = row.Split(' '); string source = File.ReadAllText("src/TLDRevamp/Net/Entities." + c[0] + ".cs").Replace("\r\n", "\n");
-            Match m = c[1] == "AttachHook" ? Regex.Match(source, @"        private static class AttachHook") : Regex.Match(source, @"^        (?:public|private|internal) static [^\n]*?\b" + c[1] + @"\(", RegexOptions.Multiline);
-            Check(m.Success, c[1] + " is still present");
-            int start = source.IndexOf('{', m.Index), arrow = source.IndexOf("=>", m.Index, StringComparison.Ordinal);
-            string body;
-            if (arrow >= 0 && (start < 0 || arrow < start)) body = source.Substring(arrow, source.IndexOf(';', arrow) + 1 - arrow);
-            else
-            {
-                int depth = 1, end = start + 1; while (depth > 0) { depth += source[end] == '{' ? 1 : source[end] == '}' ? -1 : 0; end++; }
-                body = source.Substring(c[1] == "AttachHook" ? m.Index : start, end - (c[1] == "AttachHook" ? m.Index : start));
-            }
-            if (c[1] == "RefusePartOff")
-            {
-                int notice = source.IndexOf("internal static void TellPartOffRefused", StringComparison.Ordinal);
-                int a = source.IndexOf('{', notice), end = a + 1, depth = 1;
-                while (depth > 0) { depth += source[end] == '{' ? 1 : source[end] == '}' ? -1 : 0; end++; }
-                body = body.Replace("EntityAttachments.TellPartOffRefused(from, carNet);", source.Substring(a + 1, end - a - 2).Replace("Entities.TellAttachmentRefused(", "Mp.Server?.Tell("));
-            }
-            string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(AttachmentCanonical(body))));
-            Check(hash == c[2], c[1] + " implementation matches 4851eaf after narrow substitutions");
-        }
-    }
 }

@@ -97,10 +97,11 @@ static partial class EntitySplitTest
         record.ItemState[0] = new byte[] { 1, 2, 3 }; record.ItemState[16384] = new byte[128];
         AK.EncodeRecord(full, record); Row("full-multiple-records", Convert.ToHexString(full.Buf.AsSpan(0, full.Len)));
         string path = "tools/unit/EntityAuthorityInterestRows.txt";
+        GoldenRows.Update(path, rows);
         var expected = File.ReadAllLines(path);
-        Check(expected.Length == rows.Count, "authority/interest HEAD row count");
-        for (int i = 0; i < rows.Count; i++) Check(expected[i] == rows[i], "authority/interest HEAD row " + i + ": " + rows[i]);
-        if (Environment.GetEnvironmentVariable("AUTHORITY_INTEREST_BASELINE") != "1") AuthorityInterestBoundaryChecks();
+        Check(expected.Length == rows.Count, "authority/interest expected row count");
+        for (int i = 0; i < rows.Count; i++) Check(expected[i] == rows[i], "authority/interest expected row " + i + ": " + rows[i]);
+        AuthorityInterestBoundaryChecks();
         Setup(); AM.Server = null;
     }
 

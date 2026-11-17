@@ -2,7 +2,10 @@
   <!-- Run unit tests through dotnet.exe instead of one apphost .exe per test: one firewall decision covers all of them.
        Every test also gets TestCrashGuard: failures exit with code 1 instead of raising a Windows error dialog. -->
   <PropertyGroup><UseAppHost>false</UseAppHost></PropertyGroup>
-  <ItemGroup><Compile Include="$(MSBuildThisFileDirectory)TestCrashGuard.cs" Link="TestCrashGuard.cs" /></ItemGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)TestCrashGuard.cs" Link="TestCrashGuard.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GoldenRows.cs" Link="GoldenRows.cs" />
+  </ItemGroup>
 
   <!-- The unit test projects (tools/unit): settings every project here shares.
 

@@ -22,7 +22,7 @@ static partial class EntitySplitTest
             "carried-hand-state" => "17AD02072A00D43000000A2800001450000042720000030000000000006400C8002C01949103000010400000A4410000EA4103000000000000FA00F40112FD03000000000000",
             _ => throw new Exception(name)
         };
-        Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == expected, name + " matches 31f5a24 bytes captured before extraction");
+        Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == expected, name + " matches expected bytes");
     }
     static void HandsChecks()
     {

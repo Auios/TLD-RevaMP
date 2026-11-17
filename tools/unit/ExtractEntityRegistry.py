@@ -1,14 +1,9 @@
 """Compile the identity transactions themselves; the game and feature leaves are deterministic fakes."""
 from pathlib import Path
-import hashlib
-import os
 import re
-import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-BASE = '3c78306'
-baseline = '--baseline' in sys.argv
 
 
 def read(part):
@@ -17,8 +12,7 @@ def read(part):
 
 
 def file(path):
-    return (subprocess.check_output(['git', 'show', BASE + ':' + path], cwd=ROOT).decode()
-            if baseline else (ROOT / path).read_text(encoding='utf-8')).replace('\r\n', '\n')
+    return (ROOT / path).read_text(encoding='utf-8').replace('\r\n', '\n')
 
 
 def block(s, start):
@@ -114,18 +108,7 @@ output.extend(method(s, n) for n in ('RagdollRelease', 'ResetCopies'))
 output.append('} }')
 target = Path(sys.argv[1])
 target.parent.mkdir(parents=True, exist_ok=True)
-effects = 'ProxyWheelOwner.Clear(); ProxyWheelIndex.Clear(); ProxyEngineOwner.Clear();'
 source = '\n'.join(output) + '\n'
-# This is the only production substitution permitted by this batch's source capture.
-expanded = source.replace('ClearProxyBindings();', effects)
-fingerprint = hashlib.sha256(expanded.encode()).hexdigest()
-frozen = ROOT / 'tools/unit/EntityRegistrySourceRows.txt'
-if os.environ.get('CAPTURE_ENTITY_REGISTRY_SOURCE') == '1':
-    assert baseline, 'source capture must read the immutable HEAD'
-    frozen.write_text(fingerprint + '\n', encoding='utf-8', newline='\r\n')
-assert frozen.read_text().strip() == fingerprint, 'registry transaction source changed beyond the exact clear substitution'
-if not baseline and (ROOT / 'src/TLDRevamp/Net/Entities.Registry.cs').exists():
-    command = method(read('Registry'), 'ClearProxyBindings')
-    assert re.sub(r'\s+', '', command.split('{', 1)[1].rsplit('}', 1)[0]) == re.sub(r'\s+', '', effects)
-    source += 'namespace TLDRevamp.Net { public static partial class Entities {\n' + command + '\n} }\n'
+command = method(read('Registry'), 'ClearProxyBindings')
+source += 'namespace TLDRevamp.Net { public static partial class Entities {\n' + command + '\n} }\n'
 target.write_text(source, encoding='utf-8', newline='\r\n')

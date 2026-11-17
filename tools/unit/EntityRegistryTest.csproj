@@ -12,7 +12,7 @@
       <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
       <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
     </PropertyGroup>
-    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractEntityRegistry.py&quot; &quot;$(IntermediateOutputPath)Registry.g.cs&quot; $(RegistryBaseline)" />
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractEntityRegistry.py&quot; &quot;$(IntermediateOutputPath)Registry.g.cs&quot;" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)Registry.g.cs" /></ItemGroup>
   </Target>
 </Project>

@@ -13,33 +13,16 @@ static class ReadmeCommandsTest
     static void Check(string name, bool ok) { Console.WriteLine((ok ? "PASS " : "FAIL ") + name); if (!ok) failures++; }
 
 
-    /// The executable bit: the file mode on Linux and macOS. Windows has no such bit on disk, so there it is git's
-    /// recorded mode (100755), which is what a Linux checkout of the repository gets. Before 2026-11-13 this test
-    /// always failed on Windows, so a local run was never green.
+    // Unix checkouts must carry executable bits. Windows checks the shell entry point instead.
     static bool IsExecutable(string path)
     {
-        if (OperatingSystem.IsWindows()) return GitMode(path) == "100755";
+        if (OperatingSystem.IsWindows()) return File.ReadLines(path).FirstOrDefault()?.StartsWith("#!") == true;
         try
         {
             var mode = File.GetUnixFileMode(path);
             return (mode & (UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute)) != 0;
         }
         catch { return false; }
-    }
-
-    /// The mode git records for the file ("100755", "100644"), or null outside a git checkout.
-    static string GitMode(string path)
-    {
-        try
-        {
-            var psi = new System.Diagnostics.ProcessStartInfo("git", "ls-files -s -- \"" + Path.GetFileName(path) + "\"")
-            { WorkingDirectory = Path.GetDirectoryName(path), RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-            using var p = System.Diagnostics.Process.Start(psi);
-            string line = p.StandardOutput.ReadLine();
-            p.WaitForExit(10000);
-            return line?.Split(' ')[0];
-        }
-        catch { return null; }
     }
 
     static int Main(string[] args)

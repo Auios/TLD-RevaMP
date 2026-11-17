@@ -166,8 +166,9 @@ static partial class EntitySplitTest
             var bytes = new byte[] { 53, 45, 1, 0, 0, 99, 77 }; var r = Reader(bytes); r.End = length;
             typeof(Entities).GetMethod("CargoTestServerPush", Static).Invoke(null, new object[] { from, r }); Row("relay-" + from + "-" + length, Wire() + ":" + r.Pos);
         }
-        var expected = File.ReadAllLines("tools/unit/EntityCargoInteractionRows.txt"); Check(expected.Length == rows.Count, "cargo HEAD row count");
-        for (int i = 0; i < rows.Count; i++) Check(rows[i] == expected[i], "cargo HEAD row " + i + ": " + rows[i]);
+        GoldenRows.Update("tools/unit/EntityCargoInteractionRows.txt", rows);
+        var expected = File.ReadAllLines("tools/unit/EntityCargoInteractionRows.txt"); Check(expected.Length == rows.Count, "cargo expected row count");
+        for (int i = 0; i < rows.Count; i++) Check(rows[i] == expected[i], "cargo expected row " + i + ": " + rows[i]);
         Clean(); var firstPush = Item(); var reentrant = Item(302); var reentrantPush = new pushablescript { ParentComponent = firstPush.Root }; firstPush.Root.Children.Add(reentrantPush);
         hook.Invoke(null, new object[] { reentrantPush, Vector3.forward, Vector3.zero, true });
         Entities.IsHost = true;

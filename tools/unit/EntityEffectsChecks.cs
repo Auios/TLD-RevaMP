@@ -35,7 +35,7 @@ static partial class EntitySplitTest
         mainscript.s = new mainscript(); Time.time = 10; Entities.ByNet.Clear(); Entities.IsHost = false;
         void Save(string label)
         {
-            Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == EffectBytes[label], label + " fixed HEAD bytes");
+            Check(Convert.ToHexString(Entities.Packets.Last().Bytes) == EffectBytes[label], label + " fixed expected bytes");
             Check(Entities.Packets.Last().Reliable == (label != "sound0"), label + " original reliability");
         }
         var snd = effects.GetNestedType("Snd", BindingFlags.NonPublic);

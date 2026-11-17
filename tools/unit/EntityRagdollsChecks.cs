@@ -34,7 +34,7 @@ static partial class EntitySplitTest
             "death remove" or "death dormant remove" => "232D010000",
             _ => throw new Exception(name)
         };
-        Check(Convert.ToHexString(bytes) == expected, name + " matches frozen 230cde4 bytes");
+        Check(Convert.ToHexString(bytes) == expected, name + " matches expected bytes");
     }
     static NetReader RagReader(byte[] bytes) => new NetReader { Buf = bytes, End = bytes.Length };
     static void RagRead(byte[] bytes, Entities.Ent e) => EntityRagdolls.ReadRagdoll(RagReader(bytes), e, new Vector3d(1, 2, 3), Quaternion.identity);

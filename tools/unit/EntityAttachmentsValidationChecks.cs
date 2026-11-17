@@ -48,11 +48,9 @@ namespace TLDRevamp.Net
             Time.realtimeSinceStartup = 10 + PartOffToldS;
             RefusePartOff(2, 1, 3, 3, "fixture"); rows.Add("notice-at|" + _partOffToldAt.Count + "|" + Mp.Server.Notice);
             const string path = "tools/unit/EntityAttachmentsValidationRows.txt";
-#if ATTACHMENTS_CAPTURE
-            File.WriteAllLines(path, rows);
-#else
-            ValidationTest.Check(File.ReadAllLines(path).SequenceEqual(rows), "attachment validation rows match pre-split 4851eaf");
-#endif
+            GoldenRows.Update(path, rows);
+            ValidationTest.Check(File.ReadAllLines(path).SequenceEqual(rows), "attachment validation rows match expected rows");
+
         }
     }
 }

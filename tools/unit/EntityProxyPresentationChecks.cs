@@ -130,8 +130,8 @@ static partial class EntitySplitTest
         Entities.ByNet.Clear(); Time.realtimeSinceStartup = 14; EntityProxyPresentation.CopyLodTick(); Row("lod-no-longer-copy", renderer.shadowCastingMode + ":" + EntityProxyPresentation.CopyLodOn);
         EntityProxyPresentation.CopyLodRestoreAll(); EntityProxyPresentation.CopyFarShadowsM = 0;
         var path = "tools/unit/EntityProxyPresentationRows.txt";
-        if (Environment.GetEnvironmentVariable("CAPTURE_PROXY_PRESENTATION") == "1") File.WriteAllText(path, string.Join("\r\n", rows) + "\r\n");
-        else Check(File.ReadAllLines(path).SequenceEqual(rows), "presentation decisions, counters, timers and wire bytes match captured HEAD rows");
+        GoldenRows.UpdateText(path, string.Join("\r\n", rows) + "\r\n");
+        Check(File.ReadAllLines(path).SequenceEqual(rows), "presentation decisions, counters, timers and wire bytes match expected rows");
         CoreMembers.Register();
         foreach (var m in typeof(EntityProxyPresentation).GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is MethodInfo || m is FieldInfo || m is PropertyInfo))
         {
