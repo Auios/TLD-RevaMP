@@ -8,7 +8,7 @@ Two things are checked here:
   * the tool's own command surface: which `cinema` commands only read, which change something, and which are
     refused outright. The tool refuses a malformed command *before* sending it, so a typo in a script cannot turn
     into a mutation on a machine the script was only meant to read.
-  * that the tool's surface still matches the mod's own (src/TLDRevamp/Cinematic/CinematicBridge.cs and
+  * that the tool's surface still matches the mod's own (src/TLDRevamp.Dev/Cinematic/CinematicBridge.cs and
     CinematicCameraCore.cs). The two are separate implementations of the same rule, and this test is what keeps
     them from drifting apart: it reads the C# source and compares.
 
@@ -109,14 +109,14 @@ class MatchesTheMod(unittest.TestCase):
         return (ROOT / relative).read_text(encoding="utf-8")
 
     def test_the_mod_has_the_same_commands(self):
-        bridge = self.source("src/TLDRevamp/Cinematic/CinematicBridge.cs")
+        bridge = self.source("src/TLDRevamp.Dev/Cinematic/CinematicBridge.cs")
         for verb in cinematic.MUTATION_COMMANDS:
             self.assertRegex(bridge, rf'case "{verb}"', f"the mod handles '{verb}'")
         for verb in cinematic.QUERY_COMMANDS:
             self.assertRegex(bridge, rf'case "{verb}"', f"the mod handles '{verb}'")
 
     def test_the_mod_has_the_same_shot_verbs(self):
-        bridge = self.source("src/TLDRevamp/Cinematic/CinematicBridge.cs")
+        bridge = self.source("src/TLDRevamp.Dev/Cinematic/CinematicBridge.cs")
         for verb in cinematic.SHOT_COMMANDS:
             self.assertRegex(bridge, rf'"{verb}"', f"the mod handles shot '{verb}'")
 
@@ -128,7 +128,7 @@ class MatchesTheMod(unittest.TestCase):
 
     def test_the_mod_classifies_the_same_way(self):
         # The mod's pure policy: only the status is a query.
-        core = self.source("src/TLDRevamp/Cinematic/CinematicCameraCore.cs")
+        core = self.source("src/TLDRevamp.Dev/Cinematic/CinematicCommandPolicy.cs")
         policy = core[core.index("class CinematicCommandPolicy"):]
         policy = policy[:policy.index("\n    }")]
         self.assertIn('arg == "status"', policy)
@@ -1313,7 +1313,7 @@ class SourceGuards(unittest.TestCase):
 
     LIFECYCLE = "src/TLDRevamp/Cinematic/CinematicLifecycle.cs"
     CAMERA = "src/TLDRevamp/Cinematic/CinematicCamera.cs"
-    BRIDGE = "src/TLDRevamp/Cinematic/CinematicBridge.cs"
+    BRIDGE = "src/TLDRevamp.Dev/Cinematic/CinematicBridge.cs"
     CORE = "src/TLDRevamp/Cinematic/CinematicCameraCore.cs"
     RIG = "src/TLDRevamp/Cinematic/CinematicRig.cs"
 

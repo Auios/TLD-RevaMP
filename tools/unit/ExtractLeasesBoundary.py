@@ -87,7 +87,9 @@ def main():
                               ('Entities.TryLeasePlayerPosition(from, out pos)', 'LeasePlayerPositionOriginal(from, out pos)')]:
             s = s.replace(before, after)
         if 'LeasePlayerPositionOriginal' in s:
-            old = method(read('LeaseValidation', True), 'LeasePlayerPosition').replace('LeasePlayerPosition(', 'LeasePlayerPositionOriginal(')
+            # The original LeasePlayerPosition is the kernel's TryLeasePlayerPosition, renamed (the feature build checks its
+            # digest against the captured original), so no git history is needed (CI checks out one commit).
+            old = method(read('Features'), 'TryLeasePlayerPosition').replace('TryLeasePlayerPosition(', 'LeasePlayerPositionOriginal(')
             s = s.rsplit('    }', 1)[0] + old + '\n    }\n}\n'
         s = re.sub(r'Entities\.(LeaseGrant|LeaseTaken|LeaseFreed)', r'\1', s)
         target.write_text(s, encoding='utf-8')

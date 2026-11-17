@@ -6,6 +6,7 @@
     <Compile Include="../../src/TLDRevamp/GameLookups.cs" />
     <Reference Include="Microsoft.CodeAnalysis"><HintPath>$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.dll</HintPath></Reference>
     <Reference Include="Microsoft.CodeAnalysis.CSharp"><HintPath>$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath></Reference>
-    <Reference Include="System.Reflection.MetadataLoadContext"><HintPath>$(MSBuildToolsPath)/System.Reflection.MetadataLoadContext.dll</HintPath></Reference>
+    <!-- From NuGet, not the SDK folder: a newer SDK on the machine (CI has 11.0) ships a MetadataLoadContext built for its own runtime. -->
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="10.0.0" />
   </ItemGroup>
 </Project>

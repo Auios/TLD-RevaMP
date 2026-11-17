@@ -93,7 +93,12 @@ def feature(part):
 def digest(s):
     return hashlib.sha256(re.sub(r'\s+', '', re.sub(r'//[^\n]*', '', s)).encode()).hexdigest()
 
+# The parts whose session cleanup moved out of the kernel reset (cleanup() returns '' for the others). Normal runs
+# ask only this, so they need no git history (CI checks out one commit).
+CLEANUP_PARTS = ('CopyJoints', 'CrashAuthority', 'Physical', 'Footing')
+
 def cleanup(part):
+    if part not in CLEANUP_PARTS: return ''
     kernel = subprocess.check_output(['git', 'show', '150bfb1:src/TLDRevamp/Net/Entities.cs'], cwd=ROOT).decode('utf-8').replace('\r\n', '\n')
     if part == 'CopyJoints':
         original = re.search(r'            foreach \(var kv in _freedJoints\)[^\n]*\n            _freedJoints.Clear\(\);', kernel)[0]
@@ -145,7 +150,7 @@ if __name__ == '__main__':
             # Cleanup is compared with the original statements in the kernel reset.
             original = text.split('        // Session cleanup.', 1)[0]
             assert digest(original) == expected[part + '-feature'], part + ' feature differs from HEAD adapter'
-            if cleanup(part):
+            if part in CLEANUP_PARTS:
                 assert digest(text.split('        // Session cleanup.', 1)[1]) == expected[part + '-cleanup'], part + ' cleanup differs from HEAD statements'
             for key, value in expected.items():
                 if key.startswith(part + '.') and key != 'Physical.rebase-class':

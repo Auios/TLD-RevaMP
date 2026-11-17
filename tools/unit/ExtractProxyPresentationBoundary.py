@@ -79,8 +79,10 @@ def digest(s): return hashlib.sha256(re.sub(r'\s+', '', re.sub(r'//[^\n]*', '', 
 def fixture(s):
     return s
 
-def visible_facade():
-    original = read('VisibleState', True).replace('\r\n', '\n')
+def visible_facade(original=None):
+    # Normal runs build the facade from the current owner (its moved methods keep their signatures), so they need no
+    # git history (CI checks out one commit); capture/baseline runs still read the captured commit.
+    original = (original if original is not None else read('VisibleState', True)).replace('\r\n', '\n')
     result = '        private static bool ReadCompactMoving { get => EntityProxyPresentation.ReadCompactMoving; set => EntityProxyPresentation.ReadCompactMoving = value; }\n'
     for match in re.finditer(r'^        (private|internal) static (?!bool ReadCompactMoving)[^\n]*?\b(\w+)\(', original, re.M):
         name = match[2]
@@ -116,4 +118,4 @@ if __name__ == '__main__':
     target = Path(sys.argv[1]); target.parent.mkdir(parents=True, exist_ok=True)
     for part, s in sources.items():
         target.with_name(target.stem + part + '.cs').write_text('using System; using System.Collections.Generic; using UnityEngine; using UnityEngine.Rendering; using Ent = TLDRevamp.Net.Entities.Ent; using Object = UnityEngine.Object;\nnamespace TLDRevamp.Net { internal static partial class EntityProxyPresentation {\n' + fixture(s) + '\n} }\n', encoding='utf-8')
-    target.with_name(target.stem + 'Facade.cs').write_text('using UnityEngine; namespace TLDRevamp.Net { public static partial class Entities {\n' + visible_facade() + '\n} }\n', encoding='utf-8')
+    target.with_name(target.stem + 'Facade.cs').write_text('using UnityEngine; namespace TLDRevamp.Net { public static partial class Entities {\n' + visible_facade(None if baseline else sources['VisibleState']) + '\n} }\n', encoding='utf-8')
