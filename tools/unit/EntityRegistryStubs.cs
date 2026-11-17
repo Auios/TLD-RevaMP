@@ -218,11 +218,11 @@ namespace TLDRevamp.Net
     }
     public class PoseInterpolator { public void Reset() => RegistryFakes.Trace.Add("hand-reset"); }
     static class Tpa { public static void ResetTelemetry() => RegistryFakes.Trace.Add("tpa-reset"); public static void ObjectApplied(uint net) => RegistryFakes.Trace.Add("tpa-applied:" + net); }
-    static class EntityTeleportRefresh { public static bool Deferred; public static bool DeferTpa(byte type, NetReader r) => Deferred; public static void TpaCopyMessage(byte t, NetReader r) => RegistryFakes.Trace.Add("tpa-copy:" + t); }
-    static class EntityCarSignals { public static void ResetSignals() => RegistryFakes.Trace.Add("signals-reset"); public static void ReadSignals(NetReader r, Entities.Ent e) => RegistryFakes.Trace.Add("signals-read"); }
-    static class EntityCarTuning { public static void CopyTanksOnOwnerChange(Entities.Ent e, bool p) => RegistryFakes.Trace.Add("tanks-role:" + e.NetId + ":" + p); public static void CopyTanksAre(uint id, List<save_tankscript> ts) => RegistryFakes.Trace.Add("tank-truth:" + id); public static void SendTuneTo(int p, uint n, byte[] t) => RegistryFakes.Trace.Add("tune-replay:" + p + ":" + n); }
-    static class EntitySeats { public static void SeatCollisionIgnore(object a, object b) => RegistryFakes.Trace.Add("seat-ignore"); public static void ShotgunReset() => RegistryFakes.Trace.Add("shotgun-reset"); }
-    static class EntityHands
+    static partial class EntityTeleportRefresh { public static bool Deferred; public static bool DeferTpa(byte type, NetReader r) => Deferred; public static void TpaCopyMessage(byte t, NetReader r) => RegistryFakes.Trace.Add("tpa-copy:" + t); }
+    static partial class EntityCarSignals { public static void ResetSignals() => RegistryFakes.Trace.Add("signals-reset"); public static void ReadSignals(NetReader r, Entities.Ent e) => RegistryFakes.Trace.Add("signals-read"); }
+    static partial class EntityCarTuning { public static void CopyTanksOnOwnerChange(Entities.Ent e, bool p) => RegistryFakes.Trace.Add("tanks-role:" + e.NetId + ":" + p); public static void CopyTanksAre(uint id, List<save_tankscript> ts) => RegistryFakes.Trace.Add("tank-truth:" + id); public static void SendTuneTo(int p, uint n, byte[] t) => RegistryFakes.Trace.Add("tune-replay:" + p + ":" + n); }
+    static partial class EntitySeats { public static void SeatCollisionIgnore(object a, object b) => RegistryFakes.Trace.Add("seat-ignore"); public static void ShotgunReset() => RegistryFakes.Trace.Add("shotgun-reset"); }
+    static partial class EntityHands
     {
         public static void WriteShareWorn(NetWriter w, tosaveitemscript root) { w.U8(255); RegistryFakes.Trace.Add("share-worn"); }
         public static void ClearWorn(Entities.Ent e) { e.WornBy = -1; RegistryFakes.Trace.Add("clear-worn"); }
@@ -236,19 +236,19 @@ namespace TLDRevamp.Net
         public static void DeathReset() => RegistryFakes.Trace.Add("death-reset");
         public static void ReadRagdoll(NetReader r, Entities.Ent e, Vector3d p, Quaternion q) => RegistryFakes.Trace.Add("rag-read");
     }
-    static class EntityEffects { public static void ResetSpraying() => RegistryFakes.Trace.Add("spray-reset"); }
-    static class EntityLocks { public static void ResetGentleBodies() => RegistryFakes.Trace.Add("gentle-reset"); public static void ResetHostSetting() => RegistryFakes.Trace.Add("host-setting-reset"); }
-    static class EntityWeather { public static void StormReset() => RegistryFakes.Trace.Add("storm-reset"); }
-    static class EntityWorldLeases { public static void RestoreBuiltIns() => RegistryFakes.Trace.Add("builtins-restore"); public static void ResetLeaseSession() => RegistryFakes.Trace.Add("leases-reset"); public static void ReloadClient() => RegistryFakes.Trace.Add("leases-reload"); public static void ForgetBuiltIns() => RegistryFakes.Trace.Add("builtins-forget"); public static void ServerLeaseLeave(int p) => RegistryFakes.Trace.Add("lease-leave:" + p); }
-    static class EntityAttachments { public static void ResetCarriedOff() => RegistryFakes.Trace.Add("carriedoff-reset"); }
-    static class EntityWorldClock { public static void ClockReset() => RegistryFakes.Trace.Add("clock-reset"); public static void ServerWorldClockTo(int p) => RegistryFakes.Trace.Add("clock-join:" + p); }
-    static class EntityRadio { public static void ServerRadioTo(int p) => RegistryFakes.Trace.Add("radio-join:" + p); }
-    static class EntityAI { public static void BreaksReset() => RegistryFakes.Trace.Add("breaks-reset"); public static void AiReset() => RegistryFakes.Trace.Add("ai-reset"); public static void ServerWorldBreaksTo(int p) => RegistryFakes.Trace.Add("breaks-join:" + p); }
-    static class EntityEdits { public static void ResetTankEditTruth() => RegistryFakes.Trace.Add("tank-truth-reset"); }
-    static class EntityRabbits { public static void RabbitReset() => RegistryFakes.Trace.Add("rabbit-reset"); public static void RabbitRole(Entities.Ent e, bool p) => RegistryFakes.Trace.Add("rabbit-role:" + e.NetId + ":" + p); public static void RestoreRabbitState(Entities.Ent e) => RegistryFakes.Trace.Add("rabbit-restore:" + e.NetId); }
-    static class EntityHitches { public static void ClearCommands() => RegistryFakes.Trace.Add("hitch-commands-reset"); public static void RemoveCommand(uint n) => RegistryFakes.Trace.Add("hitch-command-remove:" + n); public static void HitchThaw(Entities.Ent e) => RegistryFakes.Trace.Add("hitch-thaw:" + e.NetId); public static void HitchRestore(Entities.Ent e) => RegistryFakes.Trace.Add("hitch-restore:" + e.NetId); }
-    static class EntityAuthorityInterest { public static void ForgetRelay(int p) => RegistryFakes.Trace.Add("relay-forget:" + p); public static void ResetRelay() => RegistryFakes.Trace.Add("relay-reset"); }
-    static class EntityLifetimeStreaming
+    static partial class EntityEffects { public static void ResetSpraying() => RegistryFakes.Trace.Add("spray-reset"); }
+    static partial class EntityLocks { public static void ResetGentleBodies() => RegistryFakes.Trace.Add("gentle-reset"); public static void ResetHostSetting() => RegistryFakes.Trace.Add("host-setting-reset"); }
+    static partial class EntityWeather { public static void StormReset() => RegistryFakes.Trace.Add("storm-reset"); }
+    static partial class EntityWorldLeases { public static void RestoreBuiltIns() => RegistryFakes.Trace.Add("builtins-restore"); public static void ResetLeaseSession() => RegistryFakes.Trace.Add("leases-reset"); public static void ReloadClient() => RegistryFakes.Trace.Add("leases-reload"); public static void ForgetBuiltIns() => RegistryFakes.Trace.Add("builtins-forget"); public static void ServerLeaseLeave(int p) => RegistryFakes.Trace.Add("lease-leave:" + p); }
+    static partial class EntityAttachments { public static void ResetCarriedOff() => RegistryFakes.Trace.Add("carriedoff-reset"); }
+    static partial class EntityWorldClock { public static void ClockReset() => RegistryFakes.Trace.Add("clock-reset"); public static void ServerWorldClockTo(int p) => RegistryFakes.Trace.Add("clock-join:" + p); }
+    static partial class EntityRadio { public static void ServerRadioTo(int p) => RegistryFakes.Trace.Add("radio-join:" + p); }
+    static partial class EntityAI { public static void BreaksReset() => RegistryFakes.Trace.Add("breaks-reset"); public static void AiReset() => RegistryFakes.Trace.Add("ai-reset"); public static void ServerWorldBreaksTo(int p) => RegistryFakes.Trace.Add("breaks-join:" + p); }
+    static partial class EntityEdits { public static void ResetTankEditTruth() => RegistryFakes.Trace.Add("tank-truth-reset"); }
+    static partial class EntityRabbits { public static void RabbitReset() => RegistryFakes.Trace.Add("rabbit-reset"); public static void RabbitRole(Entities.Ent e, bool p) => RegistryFakes.Trace.Add("rabbit-role:" + e.NetId + ":" + p); public static void RestoreRabbitState(Entities.Ent e) => RegistryFakes.Trace.Add("rabbit-restore:" + e.NetId); }
+    static partial class EntityHitches { public static void ClearCommands() => RegistryFakes.Trace.Add("hitch-commands-reset"); public static void RemoveCommand(uint n) => RegistryFakes.Trace.Add("hitch-command-remove:" + n); public static void HitchThaw(Entities.Ent e) => RegistryFakes.Trace.Add("hitch-thaw:" + e.NetId); public static void HitchRestore(Entities.Ent e) => RegistryFakes.Trace.Add("hitch-restore:" + e.NetId); }
+    static partial class EntityAuthorityInterest { public static void ForgetRelay(int p) => RegistryFakes.Trace.Add("relay-forget:" + p); public static void ResetRelay() => RegistryFakes.Trace.Add("relay-reset"); }
+    static partial class EntityLifetimeStreaming
     {
         public static HashSet<tosaveitemscript> Deleted = new(); public static bool TakePlayerDeleted(tosaveitemscript it) => Deleted.Remove(it); public static void ClearPlayerDeleted() => Deleted.Clear();
     }

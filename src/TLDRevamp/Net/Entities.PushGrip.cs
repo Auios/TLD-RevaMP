@@ -60,9 +60,6 @@ namespace TLDRevamp.Net
     }
     public static partial class Entities
     {
-        private static void PushGripTick() => EntityCargoInteraction.PushGripTick();
-        public static string GripStatus() => EntityCargoInteraction.GripStatus();
-        public static string GripPrefabs() => EntityCargoInteraction.GripPrefabs();
     }
 
 

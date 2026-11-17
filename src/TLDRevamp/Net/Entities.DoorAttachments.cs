@@ -35,7 +35,7 @@ namespace TLDRevamp.Net
             bool Under(Transform t) => t != null && frame.IsChildOf(t);
             bool HasFrame(tosaveitemscript member)
             {
-                foreach (var u in Entities.ItemUsables(member))
+                foreach (var u in EntityUsables.ItemUsables(member))
                     if (u != null && (Under(u.RT1) || Under(u.RT2) || Under(u.TDoor))) return true;
                 var bus = member.busdoorscript;
                 if (bus != null && bus.doors != null)
@@ -53,10 +53,10 @@ namespace TLDRevamp.Net
             var frame = AttachFrameRoot(at);
             foreach (int index in path)
             {
-                if (frame == null || index < 0 || index >= frame.childCount) { Entities.AttachPosesBad++; return false; }
+                if (frame == null || index < 0 || index >= frame.childCount) { EntityAttachments.AttachPosesBad++; return false; }
                 frame = frame.GetChild(index);
             }
-            if (frame == null || frame == at.transform || frame.IsChildOf(at.transform)) { Entities.AttachPosesBad++; return false; }
+            if (frame == null || frame == at.transform || frame.IsChildOf(at.transform)) { EntityAttachments.AttachPosesBad++; return false; }
             at.point.SetParent(frame, true); at.point.localPosition = point;
             if (!at.parentAtAttach && DoorAttachFrame(frame))
             {
@@ -104,7 +104,7 @@ namespace TLDRevamp.Net
             foreach (var kv in _storedDoorAttaches)
             {
                 if (!Entities.TryGetEntity(kv.Key, out var e)) { _restoredDoorAttaches.Add(kv.Key); continue; }
-                if (Entities.HandManaged(e)) continue;   // LateSample runs after final hand placement; retry after its release glide
+                if (EntityHands.HandManaged(e)) continue;   // LateSample runs after final hand placement; retry after its release glide
                 var at = e.Root != null ? e.Root.attachable : null;
                 if (at == null) continue;
                 if (!at.attached) { _restoredDoorAttaches.Add(kv.Key); continue; }

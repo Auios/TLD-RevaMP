@@ -38,7 +38,6 @@ def wire_kernel():
     body = method(read('Attach'), 'SendAttach')
     body = body.replace('new save_attachable(at, at.tosave.idInSave)', 'Record')
     body = body.replace('Fixes.SlotOwnerSave.Owner(at)', 'Parent').replace('SessionLog.Event(', 'WireEvent(')
-    body = body.replace('WriteAttachPose(W, at)', 'TLDRevamp.Net.EntityAttachments.WriteAttachPose(W, at)')
     return 'namespace AttachmentFakes { internal static partial class WireKernel {\n' + body + '\n} }\n'
 
 

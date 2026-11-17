@@ -32,9 +32,9 @@ namespace TLDRevamp.Net
                 modelSteps += mp.GetComponentsInChildren<stepSoundScript>(true).Length;
                 modelStepEvents += mp.GetComponentsInChildren<animStepEventScript>(true).Length;
             }
-            return "{\"did\":" + did + ",\"sent\":" + PlayerSoundsSent + ",\"played\":" + PlayerSoundsPlayed + ",\"sentBy\":[" + string.Join(",", SoundsSentBy) +
-                   "],\"playedBy\":[" + string.Join(",", SoundsPlayedBy) + "],\"modelStepsMuted\":" + ModelStepsMuted + ",\"models\":" + models +
-                   ",\"modelStepScripts\":" + modelSteps + ",\"modelStepEvents\":" + modelStepEvents + ",\"playerMadeShared\":" + PlayerMadeShared + ",\"last\":" + TLDRevamp.Net.Entities.ObservedLastSound + "}";
+            return "{\"did\":" + did + ",\"sent\":" + EntityEffects.PlayerSoundsSent + ",\"played\":" + EntityEffects.PlayerSoundsPlayed + ",\"sentBy\":[" + string.Join(",", EntityEffects.SoundsSentBy) +
+                   "],\"playedBy\":[" + string.Join(",", EntityEffects.SoundsPlayedBy) + "],\"modelStepsMuted\":" + EntityEffects.ModelStepsMuted + ",\"models\":" + models +
+                   ",\"modelStepScripts\":" + modelSteps + ",\"modelStepEvents\":" + modelStepEvents + ",\"playerMadeShared\":" + EntityLifetimeStreaming.PlayerMadeShared + ",\"last\":" + TLDRevamp.Net.EntityEffects.ObservedLastSound + "}";
         }
         [HarmonyPatch(typeof(inputscript), "Update")]
         internal static class WalkTest

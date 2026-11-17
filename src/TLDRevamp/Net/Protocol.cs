@@ -78,7 +78,7 @@ namespace TLDRevamp.Net
             {
                 f.Net = r.U32(); f.Local = new Vector3(r.F32(), r.F32(), r.F32()); f.Yaw = ReadYaw(r);
                 // a non-finite place on the car: no footing (the global position is used); a NaN placed the player nowhere
-                if (!Entities.Finite(f.Local) || f.Local.sqrMagnitude > 1e4f) f = default;
+                if (!EntityNumbers.Finite(f.Local) || f.Local.sqrMagnitude > 1e4f) f = default;
             }
         }
         public static void WriteYaw(NetWriter w, float yaw) => w.U16((ushort)Mathf.RoundToInt(Mathf.Repeat(yaw, 360f) / 360f * 65536f));

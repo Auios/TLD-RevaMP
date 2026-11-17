@@ -158,7 +158,7 @@ namespace TLDRevamp.Net
         }
 
         /// Diagnostics (bridge `mp carsig net`): a car's signals here, and on a copy what was received.
-        public static string CarSignals(uint net)
+        internal static string CarSignals(uint net)
         {
             if (!Entities.TryGetEntity(net, out var e) || e.Root == null || e.Root.car == null) return "{\"error\":\"no such car\"}";
             var c = e.Root.car;

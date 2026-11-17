@@ -13,8 +13,8 @@ namespace TLDRevamp.Net
     internal static partial class EntitySeats
     {
         private static readonly NetWriter W = new NetWriter();
-        public static float KeyResendS = 0.5f, KeyHoldTimeoutS = 1.5f;
-        public static long KeyHoldsSent, KeyHoldsApplied, KeyHoldsRefused;
+        internal static float KeyResendS = 0.5f, KeyHoldTimeoutS = 1.5f;
+        internal static long KeyHoldsSent, KeyHoldsApplied, KeyHoldsRefused;
 
         // ---- the copy's side: the local player holds a copy's key
         private static readonly Dictionary<carscript, float> _keySeen = new Dictionary<carscript, float>();
@@ -71,7 +71,7 @@ namespace TLDRevamp.Net
         private static float _keyFirstAt, _keyLastAt;
         /// How long past the game's toggle time (carscript.startingTime) a press may take to be let go and still count as
         /// a switch: the release has a network trip of its own.
-        public static float KeyTapMarginS = 0.15f;
+        internal static float KeyTapMarginS = 0.15f;
 
         private static void SendKey(uint net, bool held, float heldS)
         {

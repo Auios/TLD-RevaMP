@@ -23,7 +23,7 @@ namespace TLDRevamp.Net
         public static long WorldTimeJumps;
         private static float _wokeAt = -100f;
         public static long WorldTimeStaleIgnored;
-        public static float SleepClockS = 0.25f;
+        internal static float SleepClockS = 0.25f;
         public static long SleepClocksSent;
         private static float _sleepClockAcc;
         internal static void ApplyWorldTime(float wt, bool force)

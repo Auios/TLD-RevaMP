@@ -35,7 +35,7 @@ namespace TLDRevamp.Net
         public static string TakeOffNet(uint net, bool drop)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !ObservedEntities.TryGetValue(net, out var e) || e.Root == null || LocalWornSlot(e.Root) < 0) return "{\"error\":\"not worn here\"}";
+            if (pl == null || !ObservedEntities.TryGetValue(net, out var e) || e.Root == null || EntityHands.LocalWornSlot(e.Root) < 0) return "{\"error\":\"not worn here\"}";
             pl.TakeOff(e.Root.P, drop);
             return "{\"off\":" + Json.Str(e.Root.name) + ",\"held\":" + (pl.pickedUp == e.Root.P ? "true" : "false") + "}";
         }

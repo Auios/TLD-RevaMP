@@ -70,7 +70,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set {T}.ContentsFollowCar {not OLD}"); s_(f"set {T}.StoredRidesCar {not OLD}")
+        for s_ in (h, L): s_(f"set {T}.ContentsFollowCar {not OLD}"); s_(f"set TLDRevamp.Net.EntityLocks.StoredRidesCar {not OLD}")
         print(f"  {'OLD (before v0.68.1)' if OLD else 'CURRENT BUILD'}", flush=True)
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
@@ -135,7 +135,7 @@ with game.ProtectedSession():
         for s_, v in list(shift.values()): s_(f"set settingsscript.s.S.BAutoShift {v}")
         h(f"set settingsscript.s.S.IPhysicsLock {lock_h}")
         for s_ in (h, L):
-            try: s_(f"set {T}.ContentsFollowCar True"); s_(f"set {T}.StoredRidesCar True")
+            try: s_(f"set {T}.ContentsFollowCar True"); s_(f"set TLDRevamp.Net.EntityLocks.StoredRidesCar True")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

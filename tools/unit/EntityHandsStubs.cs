@@ -74,6 +74,7 @@ namespace TLDRevamp.Net
             public float PrevOwnerAt;
             public Vector3 WornLp; public Quaternion WornLq;
         }
+        private static bool ClaimCargoForFixture(Ent e, bool released = false, ClaimReason reason = ClaimReason.CargoNear) => TestCargoClaim;
         internal static bool TestEpoch = true, CargoClaims = true, TestCargoClaim;
         internal static int Stops, Exits;
         internal static float HandoverAcceptS = 2;
@@ -81,6 +82,5 @@ namespace TLDRevamp.Net
         internal static void SetProxy(Ent e, bool proxy) { e.Proxy = proxy; }
         internal static void Coast(Ent e) { }
         private static bool LooseRelease(uint previous, uint car, bool held, bool stored) => previous != 0 && car == 0 && !held && !stored;
-        private static bool ClaimCargo(Ent e, bool released = false, ClaimReason reason = ClaimReason.CargoNear) => TestCargoClaim;
     }
 }

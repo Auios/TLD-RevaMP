@@ -18,9 +18,9 @@ namespace TLDRevamp.Net
     internal static partial class EntityLocks
     {
         private static readonly NetWriter W = new NetWriter();
-        public static float PhysLockResendS = 5f;
-        public static int HostPhysicsLock = -1;   // a client: the host's setting (-1: none received)
-        public static long PhysLockSent, PhysLockApplied, PhysLockReads;
+        internal static float PhysLockResendS = 5f;
+        internal static int HostPhysicsLock = -1;   // a client: the host's setting (-1: none received)
+        internal static long PhysLockSent, PhysLockApplied, PhysLockReads;
         private static int _physLockLast = -1;
         private static float _physLockAcc;
 
@@ -52,7 +52,7 @@ namespace TLDRevamp.Net
         }
 
         /// What the game's checks read in place of settingsscript.s.S.IPhysicsLock.
-        public static int PhysicsLockSetting(settingsscript.setting s)
+        internal static int PhysicsLockSetting(settingsscript.setting s)
         {
             if (HostPhysicsLock >= 0 && Entities.InSession && !Entities.IsHost) { PhysLockReads++; return HostPhysicsLock; }
             return s.IPhysicsLock;
@@ -66,9 +66,9 @@ namespace TLDRevamp.Net
         /// owner's own container holds: parented, they ride exactly with the car — cargoride.py); an own container
         /// doesn't take another player's copy (storing removes its body: it isn't ours — touching it with our car claims
         /// it first, Entities.Cargo).
-        public static bool CopyContainersInert = true;   // A/B: false = before v0.66.2
-        public static long ContainerStoresRefused;
-        public static int StoreTrace;   // test: log the next N stores with their call stack
+        internal static bool CopyContainersInert = true;   // A/B: false = before v0.66.2
+        internal static long ContainerStoresRefused;
+        internal static int StoreTrace;   // test: log the next N stores with their call stack
         private static bool _containerScan;
         private static mountStuff _scanning;     // the container whose scan is running (Update runs every frame: no lookups there)
 
@@ -92,8 +92,8 @@ namespace TLDRevamp.Net
         /// owner's place a moment later: what lay at the old pose went along, stored, on this machine only (cratepull.py:
         /// a crate's copy took a plank off a shelf 12 m from where the crate stood; it fell when the crate broke). A copy's
         /// contents come from its owner's record (physLocks, loaded with it); its first-frames scans are skipped.
-        public static bool CopyStartFreezeOff = true;   // A/B: false = before v0.66.3 (cratepull.py --old)
-        public static long CopyStartFreezesSkipped;
+        internal static bool CopyStartFreezeOff = true;   // A/B: false = before v0.66.3 (cratepull.py --old)
+        internal static long CopyStartFreezesSkipped;
 
         /// Our copy stored in a container here (parented: it rides that object) while its owner has it somewhere else: a
         /// copy's container stored it on this machine only (its own scan takes copies of the car owner's things — the
@@ -103,9 +103,9 @@ namespace TLDRevamp.Net
         /// back every second 35 m from the player (playround.py, the anomaly watch, 2026-10-09; the 2026-10-09 playtest: "items
         /// physlocked onto the other player's car on one machine only", "cars disappearing and reappearing").
         /// Off its owner's pose for a second by more than CopyLockReleaseM: out of that container here, the game's way.
-        public static bool CopyLockRelease = true;   // A/B: false = before v0.66.7
-        public static float CopyLockReleaseM = 5f, CopyLockReleaseS = 1f;
-        public static long CopyLocksReleased;
+        internal static bool CopyLockRelease = true;   // A/B: false = before v0.66.7
+        internal static float CopyLockReleaseM = 5f, CopyLockReleaseS = 1f;
+        internal static long CopyLocksReleased;
 
         /// The release rule had two faults (playtest 2026-10-09/10, v0.66.7):
         ///  - a part bolted on sends no states: its owner's last pose is where it last lay loose. Copies of a friend's
@@ -116,7 +116,7 @@ namespace TLDRevamp.Net
         ///  - a copy taken out stayed where the container had it, inside a moving car, as a kinematic body: the driver's
         ///    car hit it (a lamp, a jerry can: crashes of Δv 56–459, two deaths). Now it is put at its owner's pose at
         ///    once (no sweep) and collides with nothing until it is clear of every car (copyrelease.py).
-        public static bool CopyLockSafe = true;   // A/B: false = v0.66.7
+        internal static bool CopyLockSafe = true;   // A/B: false = v0.66.7
 
         /// A copy a container here holds was still drawn at its owner's pose — parented in that car. The host's ammo box,
         /// lying 800 m back, in client 1's copy of the host's car: the game's streaming removes a whole hierarchy when one
@@ -126,7 +126,7 @@ namespace TLDRevamp.Net
         /// more than CopyLockReleaseM away is not drawn there (it stays in the container); nearer it is drawn at its owner's
         /// pose as before (an owner taking it out of the trunk, carrying it by the car). One its owner holds in hand is
         /// taken out at once (copyflicker.py).
-        public static bool CopyLockByContainer = true;   // A/B: false = v0.66.7
+        internal static bool CopyLockByContainer = true;   // A/B: false = v0.66.7
         internal static bool LockedAway(Ent e)
         {
             if (e.PoseLocked) return false;
@@ -139,8 +139,8 @@ namespace TLDRevamp.Net
         /// at them it trailed the car: a stored item has no body, its states carry no velocity, and the host saw the
         /// laptop's lamp and jerry can 5-6 m behind the seats at 50 km/h (takeover.py A, 2026-10-16). Taken out by its
         /// owner it is held (out at once) or its states leave the container (LockedAway, then the release rule).
-        public static bool StoredRidesCar = true;   // A/B: false = drawn at its own states (before v0.68.1)
-        public static long StoredRides;
+        internal static bool StoredRidesCar = true;   // A/B: false = drawn at its own states (before v0.68.1)
+        internal static long StoredRides;
         internal static bool RidesOwnersContainer(Ent e)
         {
             if (e.PoseLocked) return false; // its authoritative frame pose, including local changes, is applied by the interpolator
@@ -159,10 +159,10 @@ namespace TLDRevamp.Net
         /// owner last sent it when the container is a copy of the same owner (one clock for both: a moving car's lag
         /// doesn't count), else in this machine's container — then only while the container stands still (a car of
         /// another owner moving: the owner's states of the item lag this machine's car; the 5 m rule stays).
-        public static bool CopyLockByBox = true;   // A/B: false = the 5 m rule only (v0.68.1)
-        public static float ContainerMarginM = 0.5f, ContainerUpM = 2f, ContainerStillMs = 0.5f;
-        public static bool MountBox = true;   // A/B: false = the container object's whole box (every collider of the car)
-        public static float MountMarginM = 0.3f, MountUpM = 0.6f;
+        internal static bool CopyLockByBox = true;   // A/B: false = the 5 m rule only (v0.68.1)
+        internal static float ContainerMarginM = 0.5f, ContainerUpM = 2f, ContainerStillMs = 0.5f;
+        internal static bool MountBox = true;   // A/B: false = the container object's whole box (every collider of the car)
+        internal static float MountMarginM = 0.3f, MountUpM = 0.6f;
         public static long OutOfContainerSeen;
         private static Vector3 _diagLocal;
         internal static Vector3 ObservedDiagLocal => _diagLocal;
@@ -247,9 +247,9 @@ namespace TLDRevamp.Net
         /// A passenger takes something out of the car they sit in: held in the car's frame, the check below was skipped (its
         /// states are car-frame poses), and the other machines' copy stayed in the container for as long as they held it, the
         /// owner's game holding it in no container at all (itemchaos `aud-part-hand`). A/B: false = skipped (before).
-        public static bool CarriedLeavesLock = true;
-        public static float ReleaseClearS = 0.5f;
-        public static long CopyLocksDroppedAttached, ReleasesPlaced, ReleaseGhostsCleared, AttachedStoresRefused, LockRecordsDropped;
+        internal static bool CarriedLeavesLock = true;
+        internal static float ReleaseClearS = 0.5f;
+        internal static long CopyLocksDroppedAttached, ReleasesPlaced, ReleaseGhostsCleared, AttachedStoresRefused, LockRecordsDropped;
         internal static void CheckCopyLock(Ent e, double now)
         {
             var p = e.Root.P;
@@ -313,13 +313,13 @@ namespace TLDRevamp.Net
         /// cans): a can taken out of the host's locked bed was a ghost on the host; ownership came back to the host
         /// 2 s later, the ghost tick ran for copies only, and the host simulated it with no collisions: it fell
         /// 207-322 m through the world, and every player saw it go.
-        public static bool GhostEndsOnOwn = true;
+        internal static bool GhostEndsOnOwn = true;
         public static long GhostsEndedOnOwn;
 
         /// Ours now: collisions back at once. Still inside a car, it waited for clear — but simulated here with no
         /// collisions it never got clear: a can put back in a pickup bed fell through the bed and the chassis, 200-300 m
         /// down (review 2026-10-22, #18). Inside a car it comes out of the car's colliders gently instead of popping out.
-        public static float OwnGhostDepenetration = 1f;   // m/s
+        internal static float OwnGhostDepenetration = 1f;   // m/s
         internal static void EndGhostOnOwn(Ent e)
         {
             if (e.Root != null && ReleaseOverlapsCar(e))
@@ -338,7 +338,7 @@ namespace TLDRevamp.Net
             GhostsEndedOnOwn++;
         }
         public static long GhostsEndedInCar;
-        public static float GentleS = 3f;   // the gentle way out of the car lasts this long, then the body's own value again
+        internal static float GentleS = 3f;   // the gentle way out of the car lasts this long, then the body's own value again
         private static readonly System.Collections.Generic.Dictionary<Rigidbody, (float was, float until)> _gentle = new System.Collections.Generic.Dictionary<Rigidbody, (float, float)>();
         private static readonly System.Collections.Generic.List<Rigidbody> _gentleDone = new System.Collections.Generic.List<Rigidbody>();
         internal static void GentleTick()
@@ -439,45 +439,6 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         private static readonly Collider[] _clearHits = new Collider[64];
-        public static long PhysLockSent { get => EntityLocks.PhysLockSent; set => EntityLocks.PhysLockSent = value; }
-        public static long PhysLockApplied { get => EntityLocks.PhysLockApplied; set => EntityLocks.PhysLockApplied = value; }
-        public static long PhysLockReads { get => EntityLocks.PhysLockReads; set => EntityLocks.PhysLockReads = value; }
-        public static long CopyLocksReleased { get => EntityLocks.CopyLocksReleased; set => EntityLocks.CopyLocksReleased = value; }
-        public static long CopyStartFreezesSkipped { get => EntityLocks.CopyStartFreezesSkipped; set => EntityLocks.CopyStartFreezesSkipped = value; }
         public const byte PhysLockSync = 55;
-        public static float PhysLockResendS { get => EntityLocks.PhysLockResendS; set => EntityLocks.PhysLockResendS = value; }
-        public static int HostPhysicsLock { get => EntityLocks.HostPhysicsLock; set => EntityLocks.HostPhysicsLock = value; }
-        public static bool CopyContainersInert { get => EntityLocks.CopyContainersInert; set => EntityLocks.CopyContainersInert = value; }
-        public static long ContainerStoresRefused { get => EntityLocks.ContainerStoresRefused; set => EntityLocks.ContainerStoresRefused = value; }
-        public static int StoreTrace { get => EntityLocks.StoreTrace; set => EntityLocks.StoreTrace = value; }
-        public static bool CopyStartFreezeOff { get => EntityLocks.CopyStartFreezeOff; set => EntityLocks.CopyStartFreezeOff = value; }
-        public static bool CopyLockRelease { get => EntityLocks.CopyLockRelease; set => EntityLocks.CopyLockRelease = value; }
-        public static float CopyLockReleaseM { get => EntityLocks.CopyLockReleaseM; set => EntityLocks.CopyLockReleaseM = value; }
-        public static float CopyLockReleaseS { get => EntityLocks.CopyLockReleaseS; set => EntityLocks.CopyLockReleaseS = value; }
-        public static bool CopyLockSafe { get => EntityLocks.CopyLockSafe; set => EntityLocks.CopyLockSafe = value; }
-        public static bool CopyLockByContainer { get => EntityLocks.CopyLockByContainer; set => EntityLocks.CopyLockByContainer = value; }
-        public static bool StoredRidesCar { get => EntityLocks.StoredRidesCar; set => EntityLocks.StoredRidesCar = value; }
-        public static long StoredRides { get => EntityLocks.StoredRides; set => EntityLocks.StoredRides = value; }
-        public static bool CopyLockByBox { get => EntityLocks.CopyLockByBox; set => EntityLocks.CopyLockByBox = value; }
-        public static float ContainerMarginM { get => EntityLocks.ContainerMarginM; set => EntityLocks.ContainerMarginM = value; }
-        public static float ContainerUpM { get => EntityLocks.ContainerUpM; set => EntityLocks.ContainerUpM = value; }
-        public static float ContainerStillMs { get => EntityLocks.ContainerStillMs; set => EntityLocks.ContainerStillMs = value; }
-        public static bool MountBox { get => EntityLocks.MountBox; set => EntityLocks.MountBox = value; }
-        public static float MountMarginM { get => EntityLocks.MountMarginM; set => EntityLocks.MountMarginM = value; }
-        public static float MountUpM { get => EntityLocks.MountUpM; set => EntityLocks.MountUpM = value; }
-        public static bool CarriedLeavesLock { get => EntityLocks.CarriedLeavesLock; set => EntityLocks.CarriedLeavesLock = value; }
-        public static float ReleaseClearS { get => EntityLocks.ReleaseClearS; set => EntityLocks.ReleaseClearS = value; }
-        public static long AttachedStoresRefused { get => EntityLocks.AttachedStoresRefused; set => EntityLocks.AttachedStoresRefused = value; }
-        public static long LockRecordsDropped { get => EntityLocks.LockRecordsDropped; set => EntityLocks.LockRecordsDropped = value; }
-        public static bool GhostEndsOnOwn { get => EntityLocks.GhostEndsOnOwn; set => EntityLocks.GhostEndsOnOwn = value; }
-        public static float OwnGhostDepenetration { get => EntityLocks.OwnGhostDepenetration; set => EntityLocks.OwnGhostDepenetration = value; }
-        public static float GentleS { get => EntityLocks.GentleS; set => EntityLocks.GentleS = value; }
-        public static int PhysicsLockSetting(settingsscript.setting s) => EntityLocks.PhysicsLockSetting(s);
-        internal static bool LockedAway(Ent e) => EntityLocks.LockedAway(e);
-        internal static bool RidesOwnersContainer(Ent e) => EntityLocks.RidesOwnersContainer(e);
-        internal static bool OwnerHasItOut(Ent e, pickupable p) => EntityLocks.OwnerHasItOut(e, p);
-        internal static Vector3 ObservedDiagLocal => EntityLocks.ObservedDiagLocal;
-        internal static Bounds ObservedDiagBox => EntityLocks.ObservedDiagBox;
-        private static void EndGhostOnOwn(Ent e) => EntityLocks.EndGhostOnOwn(e);
     }
 }

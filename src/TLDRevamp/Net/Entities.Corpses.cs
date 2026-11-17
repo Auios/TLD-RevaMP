@@ -14,7 +14,7 @@ namespace TLDRevamp.Net
         /// copy of a corpse, a late joiner's, a corpse in a loaded save - wore no outfit at all: character 0, every
         /// segment off, black (two copies, 2026-11-06). The record's fields are the game's own (selectedCharacter,
         /// segments), so the bytes have the same shape and an older peer reads them too. Off: as the game does.
-        public static bool CorpseOutfitSaved = true;
+        internal static bool CorpseOutfitSaved = true;
         public static long OutfitsSaved, OutfitLoadsRefused;
 
         [HarmonyLib.HarmonyPatch(typeof(save_outfit), nameof(save_outfit.Save), new[] { typeof(playermodeloutfitscript), typeof(uint) })]
@@ -59,7 +59,7 @@ namespace TLDRevamp.Net
         /// that is neither the local player nor a remote player. The dying machine's corpse was made under its player,
         /// so it keeps them; a copy lost them (two copies, 2026-11-06: the copy drew 16 of the owner's 18, no EyeL/EyeR).
         /// Off: as the game does.
-        public static bool CorpseWhole = true;
+        internal static bool CorpseWhole = true;
         public static long CorpseCutsUndone;
 
         [HarmonyLib.HarmonyPatch(typeof(save_outfit), nameof(save_outfit.Load), new[] { typeof(playermodeloutfitscript) })]
@@ -98,7 +98,7 @@ namespace TLDRevamp.Net
         /// Diagnostics (bridge `mp corpses`): every shared player corpse here, with what a test compares between machines:
         /// its outfit (the character, each segment on/off and its colour), whether it is drawn (renderers on, the
         /// largest first-person cut), whether it is solid (colliders on), and where its limbs are.
-        public static string CorpseList()
+        internal static string CorpseList()
         {
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>();

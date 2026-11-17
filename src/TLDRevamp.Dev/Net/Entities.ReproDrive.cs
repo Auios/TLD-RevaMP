@@ -10,7 +10,7 @@ namespace TLDRevamp.Net
         internal static carscript _reproDrive;
         internal static ReproRow _reproDriveInput;
         internal static float _reproDriveUntil;
-        internal static void ReproDriveEnd() { if (_reproDrive != null) _reproDrive.ResetInput(); _reproDrive = null; ResetDriveSample(); }
+        internal static void ReproDriveEnd() { if (_reproDrive != null) _reproDrive.ResetInput(); _reproDrive = null; EntityReproHooks.ResetDriveSample(); }
         internal static string ReproDriveAction(ReproRow r)
         {
             var it = ReproTarget(r.Net);

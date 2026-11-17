@@ -21,7 +21,7 @@ namespace TLDRevamp.Net
 
         internal static bool PartIsProxy(attachablescript at)
         {
-            if (CarriedFar(at, out var carrier)) return carrier.Proxy;
+            if (EntityAttachments.CarriedFar(at, out var carrier)) return carrier.Proxy;
             var e = at != null ? EditEntityOf(at.tosave) : null;
             return e != null ? e.Proxy : IsProxy(at);
         }
@@ -49,7 +49,7 @@ namespace TLDRevamp.Net
         {
             if (!Server.TryGetValue(net, out var se)) return;
             string why = idx < 0 || idx > 4096 ? "item index" : null;
-            if (why == null && from != 0 && !TakeEditToken(from)) why = "edit rate";
+            if (why == null && from != 0 && !EntityEditCheck.TakeEditToken(from)) why = "edit rate";
             if (why == null && from != 0 && !AtObject(from, se) && !AtSplitPart(from, se)) why = "edit reach";
             if (why != null) { SessionLog.Event("detach-refused", net, item: idx, from: from, to: se.OwnerId, result: why); return; }
             // Ownership may have reached the server while this player's copy was still a proxy. Its local

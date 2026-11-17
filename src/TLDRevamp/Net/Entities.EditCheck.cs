@@ -17,13 +17,13 @@ namespace TLDRevamp.Net
     internal static class EntityEditCheck
     {
         /// An item's edits leave at most every 0.15 s (EditTick): a door dragged is ~7 a second, pouring the same.
-        public static float EditRatePerS = 20f, EditBurst = 40f;
+        internal static float EditRatePerS = 20f, EditBurst = 40f;
         /// Live building controls send up to 60/s each; allow linked gates and reliable settling records.
-        public static float PoiRatePerS = 180f, PoiBurst = 240f;
+        internal static float PoiRatePerS = 180f, PoiBurst = 240f;
         /// How far from a building's position (its poiid: the building's own spot) a player may be to move one of its
         /// usables — buildings are big; their usables are within ~60 m of it (gas station, the big sites).
-        public static float PoiReachM = 150f;
-        public static float UnknownTankL = 1000f;   // a tank whose capacity the server can't look up (no copy, no prefab)
+        internal static float PoiReachM = 150f;
+        internal static float UnknownTankL = 1000f;   // a tank whose capacity the server can't look up (no copy, no prefab)
         public static long EditRefusedRate, EditRefusedKinds, EditRefusedValues, PoiRefusedReach, PoiRefusedRate, PoiRefusedValues;
         public static string EditRefusedLast = "";
 
@@ -76,7 +76,7 @@ namespace TLDRevamp.Net
             return true;
         }
 
-        public static string EditCheckJson() =>
+        internal static string EditCheckJson() =>
             "{\"refused\":{\"outOfReach\":" + Entities.EditReachRefusals + ",\"rate\":" + EditRefusedRate + ",\"kinds\":" + EditRefusedKinds +
             ",\"values\":" + EditRefusedValues + ",\"poiReach\":" + PoiRefusedReach + ",\"poiRate\":" + PoiRefusedRate + ",\"poiValues\":" + PoiRefusedValues + "},\"last\":" + Json.Str(EditRefusedLast) +
             ",\"anomalies\":" + Entities.EditAnomalyCount + "}";
@@ -89,12 +89,6 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         public const int KindsKnown = KindUsable | KindTank | KindPart | KindColor | KindFood | KindAmmo | KindPlate | KindBusDoor | KindBlood;
-        public static float EditRatePerS { get => EntityEditCheck.EditRatePerS; set => EntityEditCheck.EditRatePerS = value; }
-        public static float EditBurst { get => EntityEditCheck.EditBurst; set => EntityEditCheck.EditBurst = value; }
-        public static float PoiRatePerS { get => EntityEditCheck.PoiRatePerS; set => EntityEditCheck.PoiRatePerS = value; }
-        public static float PoiBurst { get => EntityEditCheck.PoiBurst; set => EntityEditCheck.PoiBurst = value; }
-        public static float PoiReachM { get => EntityEditCheck.PoiReachM; set => EntityEditCheck.PoiReachM = value; }
-        public static float UnknownTankL { get => EntityEditCheck.UnknownTankL; set => EntityEditCheck.UnknownTankL = value; }
         private static readonly Dictionary<uint, KeyValuePair<byte[], itemDataClass>> _groupRecords = new Dictionary<uint, KeyValuePair<byte[], itemDataClass>>();
         private static readonly int FluidKinds = Enum.GetValues(typeof(mainscript.fluidenum)).Length;
 
@@ -126,7 +120,7 @@ namespace TLDRevamp.Net
                 if (!(f.GetValue(g) is IList src) || !(f.GetValue(o) is IList dst)) continue;
                 foreach (var x in src)
                 {
-                    var idf = x != null ? _idField(x) : null;
+                    var idf = x != null ? EntityLifetimeStreaming._idField(x) : null;
                     if (idf != null && idf.FieldType == typeof(uint) && (uint)idf.GetValue(x) == id) dst.Add(x);
                 }
             }
@@ -148,7 +142,7 @@ namespace TLDRevamp.Net
                 var c = go != null ? MaxC(go.GetComponent<tosaveitemscript>(), ind) : 0f;
                 if (c > 0) return c;
             }
-            return UnknownTankL;
+            return EntityEditCheck.UnknownTankL;
         }
 
         private static float MaxC(tosaveitemscript it, int ind)
@@ -179,20 +173,20 @@ namespace TLDRevamp.Net
             if (K(KindUsable))
             {
                 foreach (var u in d.usable)
-                    if (u == null || !Ind(u.ind) || !Sane(u.xRot) || !Sane(u.yRot) || !Sane(u.slideValue) || !Sane(u.tunedFloat) || u.currentTurnState < -1 || u.currentTurnState > 1024) return "usable value";
-                foreach (var x in d.door_rots) if (x == null || !Ind(x.ind) || !Sane(x.state)) return "door value";
-                foreach (var x in d.ginlamp) if (x == null || !Sane(x.value)) return "lamp value";
+                    if (u == null || !EntityEditCheck.Ind(u.ind) || !EntityEditCheck.Sane(u.xRot) || !EntityEditCheck.Sane(u.yRot) || !EntityEditCheck.Sane(u.slideValue) || !EntityEditCheck.Sane(u.tunedFloat) || u.currentTurnState < -1 || u.currentTurnState > 1024) return "usable value";
+                foreach (var x in d.door_rots) if (x == null || !EntityEditCheck.Ind(x.ind) || !EntityEditCheck.Sane(x.state)) return "door value";
+                foreach (var x in d.ginlamp) if (x == null || !EntityEditCheck.Sane(x.value)) return "lamp value";
             }
             if (K(KindTank))
                 foreach (var t in d.tanks)
                 {
-                    if (t == null || !Ind(t.ind)) return "tank";
+                    if (t == null || !EntityEditCheck.Ind(t.ind)) return "tank";
                     int n = t.amount != null ? t.amount.Length : 0;
                     if ((t.type != null ? t.type.Length : 0) != n || n > 16) return "tank fluids";
                     float sum = 0f;
                     for (int i = 0; i < n; i++)
                     {
-                        if (!Finite(t.amount[i]) || t.amount[i] < 0f) return "tank amount " + t.amount[i];
+                        if (!EntityNumbers.Finite(t.amount[i]) || t.amount[i] < 0f) return "tank amount " + t.amount[i];
                         if (t.type[i] < 0 || t.type[i] >= FluidKinds) return "fluid type " + t.type[i];
                         sum += t.amount[i];
                     }
@@ -202,8 +196,8 @@ namespace TLDRevamp.Net
             if (K(KindPart | KindColor))
             {
                 foreach (var p in d.partconditions)
-                    if (p == null || !Ind(p.ind) || p.state < 0 || p.state > 16 || p.state2 < 0 || p.state2 > 4096 || p.state3 < 0 || p.state3 > 4096 ||
-                        p.slectedRandomTipus < 0 || p.slectedRandomTipus > 256 || !SaneColor(p.color)) return "part value";
+                    if (p == null || !EntityEditCheck.Ind(p.ind) || p.state < 0 || p.state > 16 || p.state2 < 0 || p.state2 > 4096 || p.state3 < 0 || p.state3 > 4096 ||
+                        p.slectedRandomTipus < 0 || p.slectedRandomTipus > 256 || !EntityEditCheck.SaneColor(p.color)) return "part value";
                 // a paint job carries the part conditions too (one list): it may change their colour, never their condition
                 if (!K(KindPart) && d.partconditions.Count > 0)
                 {
@@ -219,11 +213,11 @@ namespace TLDRevamp.Net
             }
             if (K(KindColor))
             {
-                foreach (var c in d.colors) if (c == null || !Ind(c.ind) || !SaneColor(c)) return "colour value";
+                foreach (var c in d.colors) if (c == null || !EntityEditCheck.Ind(c.ind) || !EntityEditCheck.SaneColor(c)) return "colour value";
                 foreach (var p in d.painting) if (p == null || p.index < 0 || p.index > 4096) return "painting";
             }
-            if (K(KindFood)) foreach (var f in d.food) if (f == null || !Sane(f.hp) || f.hp < 0f || f.index < 0 || f.index > 4096) return "food value";
-            if (K(KindAmmo)) foreach (var a in d.ammo) if (a == null || a.count < 0 || a.count > 10000 || !Sane(a.fammo) || a.fammo < 0f) return "ammo value";
+            if (K(KindFood)) foreach (var f in d.food) if (f == null || !EntityEditCheck.Sane(f.hp) || f.hp < 0f || f.index < 0 || f.index > 4096) return "food value";
+            if (K(KindAmmo)) foreach (var a in d.ammo) if (a == null || a.count < 0 || a.count > 10000 || !EntityEditCheck.Sane(a.fammo) || a.fammo < 0f) return "ammo value";
             if (K(KindPlate))
                 foreach (var p in d.rendszam)
                 {
@@ -238,12 +232,5 @@ namespace TLDRevamp.Net
             return null;
         }
 
-        private static bool TakeEditToken(int player) => EntityEditCheck.TakeEditToken(player);
-        private static void Refuse(ref long counter, string reason, string what) => EntityEditCheck.Refuse(ref counter, reason, what);
-        private static bool Sane(float value) => EntityEditCheck.Sane(value);
-        private static bool SaneColor(save_color color) => EntityEditCheck.SaneColor(color);
-        private static bool Ind(int index) => EntityEditCheck.Ind(index);
-        private static bool CheckPoiUsable(int from, PoiKey key, PoiState state) => EntityEditCheck.CheckPoiUsable(from, key, state);
-        public static string EditCheckJson() => EntityEditCheck.EditCheckJson();
     }
 }

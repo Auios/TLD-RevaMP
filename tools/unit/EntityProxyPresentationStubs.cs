@@ -63,10 +63,10 @@ namespace TLDRevamp.Net
         internal static readonly Dictionary<enginescript, Ent> ProxyEngineOwner = new Dictionary<enginescript, Ent>();
         internal static readonly Dictionary<wheelgraphicsscript, Ent> ProxyWheelOwner = new Dictionary<wheelgraphicsscript, Ent>();
         internal static readonly Dictionary<wheelgraphicsscript, int> ProxyWheelIndex = new Dictionary<wheelgraphicsscript, int>();
-        private static bool NearOtherPlayersCar(Ent e) => ByNet.Values.Any(o => o.Proxy && o.Root != null && o.PartIndex < 0 && o.Root.car != null && (o.Root.transform.position - e.Root.transform.position).sqrMagnitude < TorqueRadiusM * TorqueRadiusM);
+        private static bool NearOtherPlayersCar(Ent e) => ByNet.Values.Any(o => o.Proxy && o.Root != null && o.PartIndex < 0 && o.Root.car != null && (o.Root.transform.position - e.Root.transform.position).sqrMagnitude < EntityProxyPresentation.TorqueRadiusM * EntityProxyPresentation.TorqueRadiusM);
         private static IEnumerable<carscript> CopyCars()
         {
-            if (CopyLodAllCars) { foreach (var car in UnityEngine.Object.FindObjectsOfType<carscript>()) yield return car; yield break; }
+            if (EntityProxyPresentation.CopyLodAllCars) { foreach (var car in UnityEngine.Object.FindObjectsOfType<carscript>()) yield return car; yield break; }
             foreach (var e in ByNet.Values) if (e.Proxy && e.Root != null && e.Root.car != null) yield return e.Root.car;
         }
     }

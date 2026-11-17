@@ -308,7 +308,7 @@ namespace TLDRevamp
                  .Append(",\"mp\":{\"remotePlayers\":").Append(Net.RemotePlayers.Count).Append(",\"statesIn\":").Append(Net.Entities.StatesIn)
                  .Append(",\"statesSent\":").Append(Net.Entities.StatesSent).Append(",\"stale\":").Append(Net.Entities.StatesStale)
                  .Append(",\"spawned\":").Append(Net.Entities.Spawned).Append(",\"ownerChanges\":").Append(Net.Entities.OwnerChanges).Append('}')
-                 .Append(",\"ai\":").Append(Safe(() => TelemetryPrivacy.Bridge("mp aistats", Net.Entities.AiStats()))).Append(",\"combat\":").Append(Safe(() => TelemetryPrivacy.Bridge("mp combat", Net.PlayerCombat.Stats()))).Append(",\"handoffs\":").Append(Net.Entities.Handoffs);
+                 .Append(",\"ai\":").Append(Safe(() => TelemetryPrivacy.Bridge("mp aistats", Net.EntityAI.AiStats()))).Append(",\"combat\":").Append(Safe(() => TelemetryPrivacy.Bridge("mp combat", Net.PlayerCombat.Stats()))).Append(",\"handoffs\":").Append(Net.Entities.Handoffs);
             return b.Append('}').ToString();
         }
         private static void Hitch(TelemetryFrame r, TelemetryHooks.Events ev, FrameBreakdown breakdown)
@@ -489,7 +489,7 @@ namespace TLDRevamp
                 try { Net.Entities.CaptureTelemetry(c.State); } catch (Exception e) { c.State.Failed = true; Fail("state capture", e); }
                 c.State.CaptureMs = (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
                 var focus = new MarkFocus();
-                try { focus = Net.Entities.CaptureMarkFocus(c.State); } catch (Exception e) { Fail("mark focus", e); }
+                try { focus = Net.EntityTelemetry.CaptureMarkFocus(c.State); } catch (Exception e) { Fail("mark focus", e); }
                 c.Head = c.Head.Substring(0, c.Head.Length - 1) + ",\"date\":" + TelemetryPrivacy.DateStr() + ",\"origin\":" + Math.Max(0, markOrigin) + ",\"markedNets\":[" + string.Join(",", c.State.MarkedNets) + "],\"focus\":" + focus.Json() + "}";
                 Events.CopyTo(c.Events, Time.realtimeSinceStartupAsDouble);
                 Captures.Add(c); return true;

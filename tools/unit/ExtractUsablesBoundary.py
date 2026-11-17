@@ -21,9 +21,4 @@ def between(part, start, end):
 
 records = between('LiveUsables', '        internal struct UsableKey', '        private sealed class LocalUsable')
 records += between('PoiMotion', '        internal struct PoiKey', '        private static readonly Dictionary<PoiKey, byte[]>')
-facades = []
-for part in ('Teleport', 'LiveUsables', 'PoiMotion', 'PoiUsables'):
-    source = (net / ('Entities.' + part + '.cs')).read_text(encoding='utf-8')
-    retained = source[source.index('    public static partial class Entities'):]
-    facades += [line for line in retained.splitlines() if 'static ' in line and (' => EntityUsables.' in line or ' => EntityTeleportRefresh.' in line)]
-target.write_text('using System; namespace TLDRevamp.Net { public static partial class Entities {\n' + records + '\n' + '\n'.join(facades) + '\n} }', encoding='utf-8')
+target.write_text('using System; namespace TLDRevamp.Net { public static partial class Entities {\n' + records + '\n} }', encoding='utf-8')

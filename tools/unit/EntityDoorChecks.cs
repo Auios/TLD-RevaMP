@@ -22,7 +22,7 @@ static partial class EntitySplitTest
     }
     static byte[] DoorWire(attachablescript at)
     {
-        var w = new NetWriter(); Invoke(typeof(Entities), "WriteAttachPose", w, at); return w.Buf.Take(w.Len).ToArray();
+        var w = new NetWriter(); Invoke(typeof(EntityAttachments), "WriteAttachPose", w, at); return w.Buf.Take(w.Len).ToArray();
     }
     static byte[] LiveDoorWire()
     {
@@ -46,8 +46,8 @@ static partial class EntitySplitTest
         Check(Convert.ToHexString(LiveDoorWire()) == LiveDoorVector, "car door live usable message matches expected bytes");
         Check(EntityDoors.AttachFramePath(d.At, d.Frame).SequenceEqual(new[] { 0 }), "door path uses frame hierarchy indices");
         Check(EntityDoors.RestoreAttachFrame(d.At, null, default), "no stored frame preserves existing attach");
-        long bad = Entities.AttachPosesBad;
-        Check(!EntityDoors.RestoreAttachFrame(d.At, new[] { 99 }, default) && Entities.AttachPosesBad == bad + 1, "bad frame path increments original counter");
+        long bad = EntityAttachments.AttachPosesBad;
+        Check(!EntityDoors.RestoreAttachFrame(d.At, new[] { 99 }, default) && EntityAttachments.AttachPosesBad == bad + 1, "bad frame path increments original counter");
         var oldPoint = d.At.point; d.At.point = new Transform();
         EntityDoors.KeepDoorAttach(401, new[] { 0 }, new Vector3(.25f, -.5f, .75f), new Vector3(2, 3, 4), Quaternion.identity, oldPoint);
         d.Entity.Proxy = true; d.Entity.HandDraw.Source = new object(); EntityDoors.RestoreStoredDoorAttaches();
@@ -75,10 +75,10 @@ static partial class EntitySplitTest
         Check((bool)args[1] && Entities.LastEdit == "busdoor", "powered bus change marks original busdoor edit");
         bus.Powered = false; Patch(typeof(EntityDoors), "BusDoorChanged", "Prefix", args); Check(!(bool)args[1], "unpowered bus retains prefix guard");
         var car = d.At.Target; var ce = new Entities.Ent { NetId = 402, Root = car }; Entities.ByNet[402] = ce;
-        Check(Entities.DoorsOf(ce).Count == 1 && Entities.CarDoors(402) == EntityDoors.CarDoors(402), "door discovery and diagnostics retain compiled facade");
-        Check(Entities.Food(0) == "{\"gone\":true}" && Entities.Rabbit(0) == "{\"error\":\"no entity\"}", "existing colocated diagnostics keep their facade results");
+        Check(EntityDoors.DoorsOf(ce).Count == 1, "door discovery uses narrow lookup");
+        Check(EntityDoors.Food(0) == "{\"gone\":true}" && EntityDoors.Rabbit(0) == "{\"error\":\"no entity\"}", "existing colocated diagnostics keep their owner call results");
         string attach = File.ReadAllText("src/TLDRevamp/Net/Entities.Attach.cs");
-        Check(attach.Contains("if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) ApplyAttachPose(pe, at, poseLp, poseLq);"), "attach restores frame before applying pose at original call sites");
+        Check(attach.Contains("if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) EntityAttachments.ApplyAttachPose(pe, at, poseLp, poseLq);"), "attach restores frame before applying pose at original call sites");
         string late = File.ReadAllText("src/TLDRevamp/Net/Entities.CarDoors.cs");
         Check(late.Replace("\r\n", "\n").Contains("RestoreStoredDoorAttaches();\n            Entities.TelemetryRender();\n            DevHooks.EntityLateSample?.Invoke();"), "late phase restores attachments before telemetry and Dev sampling");
         Entities.ByNet.Clear(); EntityDoors.ResetDoorAttachments();

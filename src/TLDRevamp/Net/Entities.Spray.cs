@@ -12,7 +12,7 @@ namespace TLDRevamp.Net
     /// copy paints nothing (its raycast stroke is the owner's alone: Fire is not called here).
     internal static partial class EntityEffects
     {
-        public static bool SprayFx = true;   // A/B: false = the copies stay silent (before v0.65.23)
+        internal static bool SprayFx = true;   // A/B: false = the copies stay silent (before v0.65.23)
         public static long SprayShown;
         private static readonly HashSet<Ent> _spraying = new HashSet<Ent>();
 
@@ -63,7 +63,7 @@ namespace TLDRevamp.Net
         private static void SprayHoldTick() => DevHooks.SprayTick?.Invoke();
 
 
-        public static string LampState(uint net)
+        internal static string LampState(uint net)
         {
             if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
             int on = 0, all = 0; var states = new List<string>(); int sw = -1;
@@ -77,7 +77,7 @@ namespace TLDRevamp.Net
         }
 
         /// `mp sprayfx <net>`: a can's spray as shown here — valve, mist emitting, hiss playing; owner or copy.
-        public static string SprayFxState(uint net)
+        internal static string SprayFxState(uint net)
         {
             if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
             var sp = e.Root.GetComponent<sprayscript>();

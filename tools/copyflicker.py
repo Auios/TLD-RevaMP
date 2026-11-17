@@ -52,7 +52,7 @@ with game.ProtectedSession():
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L):
-            s_(f"set {T}.CopyLockSafe {not OLD}"); s_(f"set {T}.CopyLockByContainer {not OLD}"); s_(f"set {T}.DriveClaimRootOnly {not OLD}")
+            s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe {not OLD}"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer {not OLD}"); s_(f"set {T}.DriveClaimRootOnly {not OLD}")
         print(f"  {'OLD (v0.66.7)' if OLD else 'CURRENT BUILD'}", flush=True)
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
@@ -107,7 +107,7 @@ with game.ProtectedSession():
         el, eh = ent(L, it), ent(h, it)
         gap = math.dist(el["pos"], eh["pos"]) if el and eh and not el.get("dormant") else None
         verdict("THE ITEM'S COPY WHERE THE HOST HAS IT (or stored away there)", (gap is not None and gap < 1.0) or (el or {}).get("dormant") is True,
-                f"{gap and round(gap, 2)} m apart; released {L(f'get {T}.CopyLocksReleased')['value']}")
+                f"{gap and round(gap, 2)} m apart; released {L(f'get TLDRevamp.Net.EntityLocks.CopyLocksReleased')['value']}")
         er = [x_("errors") for x_ in (h, L)]
         print("  errors:", [(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er], flush=True)
     finally:
@@ -116,7 +116,7 @@ with game.ProtectedSession():
         for s_, v in gods.values(): s_(f"set kaposztaleves.s.settings.god {v}")
         h(f"set settingsscript.s.S.BAutoShift {shift_h}")
         for s_ in (h, L):
-            try: s_(f"set {T}.CopyLockSafe True"); s_(f"set {T}.CopyLockByContainer True"); s_(f"set {T}.DriveClaimRootOnly True")
+            try: s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe True"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer True"); s_(f"set {T}.DriveClaimRootOnly True")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

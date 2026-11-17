@@ -14,16 +14,9 @@ static partial class EntitySplitTest
     static void UsablesChecks()
     {
         UsablesSourceChecks();
-        CoreMembers.Register();
         foreach (var owner in new[] { typeof(EntityUsables), typeof(EntityTeleportRefresh) })
         {
             Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, owner.Name + " internal static owner");
-            foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is FieldInfo || m is PropertyInfo || m is MethodInfo))
-            {
-                bool retained = typeof(Entities).GetMember(member.Name, Static).Length > 0;
-                foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                    Check(Reflect.MemberPath(prefix + member.Name) == (retained ? prefix + member.Name : owner.FullName + "." + member.Name), "usable/refresh alias " + prefix + member.Name);
-            }
         }
         foreach (string part in new[] { "Teleport", "LiveUsables", "PoiMotion", "PoiUsables" })
         {
@@ -33,8 +26,8 @@ static partial class EntitySplitTest
         }
         Check(typeof(Entities).GetField("TpaInbox", Static) == null && typeof(Entities).GetField("TpaRefetched", Static) == null, "refresh queue and dedup have one owner");
         Check(typeof(Entities).GetField("_usableHierarchy", Static) == null && typeof(Entities).GetField("_applyingPoi", Static) == null, "usable hierarchy and POI guard have one owner");
-        BridgeReflect.Set("TLDRevamp.Net.Entities.PoiUsablesOnSpawn", "0");
-        Check(EntityUsables.PoiUsablesOnSpawn == 0 && BridgeReflect.Get("Entities.PoiUsablesOnSpawn") == "0", "POI counter forwarding and aliases share storage");
+        BridgeReflect.Set("TLDRevamp.Net.EntityUsables.PoiUsablesOnSpawn", "0");
+        Check(EntityUsables.PoiUsablesOnSpawn == 0 && BridgeReflect.Get("EntityUsables.PoiUsablesOnSpawn") == "0", "POI counter forwarding and owner paths share storage");
 
         var item = new tosaveitemscript(); var a = new usablescript(); var b = new usablescript();
         item.usables.Add(a); var first = EntityUsables.ItemUsables(item);
@@ -113,8 +106,8 @@ static partial class EntitySplitTest
         Set(typeof(EntityTeleportRefresh), "_tpaReplaying", true);
         Check(!EntityTeleportRefresh.DeferTpa(22, new NetReader()), "replay cannot defer itself"); Set(typeof(EntityTeleportRefresh), "_tpaReplaying", false);
         Tpa.WaitingWorld = true; EntityTeleportRefresh.DeferTpa(22, new NetReader { Buf = new byte[] { 1 }, End = 1 });
-        BridgeReflect.Call("Entities.ResetTpaClient", Array.Empty<string>());
-        Check(EntityTeleportRefresh.TpaInboxEmpty && BridgeReflect.Get("TLDRevamp.Net.Entities.TpaInbox.Count") == "0", "reset alias clears real queue");
+        BridgeReflect.Call("EntityTeleportRefresh.ResetTpaClient", Array.Empty<string>());
+        Check(EntityTeleportRefresh.TpaInboxEmpty && BridgeReflect.Get("TLDRevamp.Net.EntityTeleportRefresh.TpaInbox.Count") == "0", "reset owner path clears real queue");
         EntityTeleportRefresh.DeferTpa(22, new NetReader { Buf = new byte[] { 1 }, End = 1 });
         Entities.TpaReplayThrows = true; Tpa.WaitingWorld = false;
         try { EntityTeleportRefresh.DrainTpaInbox(); } catch (Exception) { }
@@ -123,9 +116,9 @@ static partial class EntitySplitTest
         var request = new NetWriter(); request.VarU32(123456); int sent = Entities.Packets.Count;
         for (int i = 0; i < 2; i++) EntityTeleportRefresh.TpaCopyMessage(Entities.State, new NetReader { Buf = request.Buf, End = request.Len });
         Check(Entities.Packets.Count == sent + 1 && Entities.Packets[^1].Reliable && Entities.Packets[^1].Bytes.SequenceEqual(new byte[] { 58, 64, 226, 1, 0 }), "missing copy requests one reliable refetch per refresh");
-        BridgeReflect.Call("TLDRevamp.Net.Entities.BeginTpaRefresh", Array.Empty<string>());
+        BridgeReflect.Call("TLDRevamp.Net.EntityTeleportRefresh.BeginTpaRefresh", Array.Empty<string>());
         EntityTeleportRefresh.TpaCopyMessage(Entities.CompactState, new NetReader { Buf = request.Buf, End = request.Len });
-        Check(Entities.Packets.Count == sent + 2, "begin refresh alias clears dedup for a repeat loss"); Tpa.RefreshingObjects = false;
+        Check(Entities.Packets.Count == sent + 2, "begin refresh owner path clears dedup for a repeat loss"); Tpa.RefreshingObjects = false;
         Tpa.WaitingWorld = false; Mp.Server = server; Entities.KnownPoiUsables.Clear();
     }
 
@@ -140,6 +133,6 @@ static partial class EntitySplitTest
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");
         Check(kernel.IndexOf("if (EntityTeleportRefresh.DeferTpa(type, r)) return;") < kernel.IndexOf("EntityTeleportRefresh.TpaCopyMessage(type, r);"), "defer still precedes refetch/dispatch");
         string features = File.ReadAllText("src/TLDRevamp/Net/Entities.Features.cs");
-        Check(features.Contains("ReproUsableAllowed => PlayerActing && !_applyingLive && !_applyingState && !UsablePoiApplying;") && features.Contains("UsablePoiApplying => EntityUsables.ApplyingPoi;"), "repro reads both apply guards through narrow facade");
+        Check(features.Contains("ReproUsableAllowed => PlayerActing && !_applyingLive && !_applyingState && !UsablePoiApplying;") && features.Contains("UsablePoiApplying => EntityUsables.ApplyingPoi;"), "repro reads both apply guards through narrow owner call");
     }
 }

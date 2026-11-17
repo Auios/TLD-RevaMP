@@ -161,7 +161,12 @@ namespace TLDRevamp
 namespace TLDRevamp.Net
 {
     public static class Mp { public static object Client, Server; }
-    public static class Entities { public static string PrefabName(int id) => "item"; }
+    public static class Entities {  }
+    internal static partial class EntityLifetimeStreaming
+    {
+        internal static string PrefabName(int id) => "item";
+    }
+
 }
 public struct Vector2d { public double x, y; }
 public struct Vector3d

@@ -17,8 +17,8 @@ namespace TLDRevamp.Net
             partslotscript slot = at.attached ? at.slot : null;
             if (connect) foreach (var s in car.Root.partslotscripts) if (s != null && s.T != null && !s.hasPart() && s.CanCraft(at)) { slot = s; break; }
             if (slot == null) return "{\"error\":\"no hitch slot\"}";
-            RequestHitch(tr, car, slot, connect, releaseBrake: true);
-            if (car.OwnerId == MyId && tr.OwnerId == MyId && !tr.HitchWaiting) HitchCommandTick();
+            EntityHitches.RequestHitch(tr, car, slot, connect, releaseBrake: true);
+            if (car.OwnerId == MyId && tr.OwnerId == MyId && !tr.HitchWaiting) EntityHitches.HitchCommandTick();
             if (connect && at.attached) return "{\"requested\":true,\"hitched\":" + Json.Str(slot.name) + "}";
             return "{\"requested\":true}";
         }

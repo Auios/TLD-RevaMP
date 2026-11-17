@@ -100,7 +100,7 @@ namespace TLDRevamp.Net
         {
             if (w.Done) return;
             w.Done = true; ItemWatchFlags++;
-            ItemWatchLast = PrefabName(e.Root.id) + " net " + e.NetId + ": " + why + " — (" + how + ", colliders " + r.Live + "/" + r.Cols + " on, " + r.Pickup + " on the pickup layer, "
+            ItemWatchLast = EntityLifetimeStreaming.PrefabName(e.Root.id) + " net " + e.NetId + ": " + why + " — (" + how + ", colliders " + r.Live + "/" + r.Cols + " on, " + r.Pickup + " on the pickup layer, "
                             + r.Held + " on the held layer" + (blocker != null ? ", in front: " + blocker : "") + ", " + (e.Proxy ? "a copy" : "ours") + ")";
             SessionLog.Event("item-untargetable", e.NetId, from: e.OwnerId, epoch: e.Epoch, count: r.Cols, value: r.Live, dx: r.Pickup, dy: r.Held, result: why);
             Plugin.Log.LogWarning("item watch: " + ItemWatchLast);

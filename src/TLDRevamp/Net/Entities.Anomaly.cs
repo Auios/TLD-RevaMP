@@ -104,15 +104,15 @@ namespace TLDRevamp.Net
                 if (it == null || it == e.Root || it.attachable == null || !it.attachable.attached || it.attachable.slot == null) continue;
                 var sl = it.attachable.slot;
                 var so = sl.tosaveitem;
-                string owner = so != null ? PrefabName(so.id) + "#" + so.partslotscripts.IndexOf(sl) : "?" + sl.name;
+                string owner = so != null ? EntityLifetimeStreaming.PrefabName(so.id) + "#" + so.partslotscripts.IndexOf(sl) : "?" + sl.name;
                 // its variant (whitewall or plain tyre, …): each random type selector's choice
                 string tip = "";
                 if (it.randoms != null) foreach (var rs in it.randoms) tip += rs != null ? "/" + rs.rtipus : "/-";
-                rows.Add(owner + " = " + PrefabName(it.id) + tip);
+                rows.Add(owner + " = " + EntityLifetimeStreaming.PrefabName(it.id) + tip);
             }
             string rtip = "";
             if (e.Root.randoms != null) foreach (var rs in e.Root.randoms) rtip += rs != null ? "/" + rs.rtipus : "/-";
-            rows.Add("(car) = " + PrefabName(e.Root.id) + rtip);
+            rows.Add("(car) = " + EntityLifetimeStreaming.PrefabName(e.Root.id) + rtip);
             rows.Sort(System.StringComparer.Ordinal);
             return rows;
         }
@@ -201,7 +201,7 @@ namespace TLDRevamp.Net
             CensusDiffers++;
             if (attempt < 2)
             {
-                if (CensusRepairs) _censusFirst[net] = RowMap(theirs.Split('\n'));
+                if (CensusRepairs) _censusFirst[net] = EntityRepair.RowMap(theirs.Split('\n'));
                 _censusDue[net] = new CensusDue { At = Time.realtimeSinceStartup + CensusRecheckS, Attempt = 2 };
                 return;
             }

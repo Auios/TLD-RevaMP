@@ -22,10 +22,6 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        internal static void WriteDetachSync(NetWriter w, uint net, uint epoch, Vector3d pos, Quaternion rot) =>
-            EntityCodec.WriteDetachSync(w, net, epoch, pos, rot);
 
-        internal static bool ReadDetachSync(NetReader r, out uint net, out Vector3d pos, out Quaternion rot) =>
-            EntityCodec.ReadDetachSync(r, out net, out pos, out rot);
     }
 }

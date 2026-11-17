@@ -273,21 +273,13 @@ namespace TLDRevamp.Net
         internal static string Status(int limit) => TelemetryPrivacyTest.Reply;
         internal static string PoiUsableStats() => TelemetryPrivacyTest.Reply;
         internal static string MemberGoneStats() => TelemetryPrivacyTest.Reply;
-        internal static string ExplosionStats() => TelemetryPrivacyTest.Reply;
-        internal static string ShotFxStats() => TelemetryPrivacyTest.Reply;
         internal static int MyId => 1;
         internal static bool TelemetryAllOwnedPhysics;
         internal static long TelemetryPhysicsSkipped, StatesIn, StatesSent, StatesStale, Spawned, OwnerChanges, Handoffs;
         internal static int CopyCarCount() => 0;
-        internal static string AiStats() => TelemetryPrivacyTest.Reply;
         internal static void ResetTelemetry() { }
         internal static void TelemetryUsable(uint n, int i, int s, bool sent) { }
         internal static void TelemetryTouch(uint n) { }
-        internal static MarkFocus CaptureMarkFocus(TelemetryState state)
-        {
-            var target = new MarkFocus.Target { Net = 4, Prefab = 1, Name = TelemetryPrivacyTest.Private, Distance = 2 };
-            return new MarkFocus { Crosshair = target, Car = target, Held = target, Dragging = target, Seat = 0, ClosestPlayer = 2, PlayerDistance = 3 };
-        }
         internal static void CaptureTelemetry(TelemetryState state)
         {
             string text = TelemetryPrivacyTest.Secrets.Last();
@@ -308,6 +300,33 @@ namespace TLDRevamp.Net
             state.Add(new StateStorm { Prefab = 2 }); state.Add(new StateStation { Index = 2 });
         }
     }
+    internal static partial class EntityExplosions
+    {
+        internal static string ExplosionStats() => TelemetryPrivacyTest.Reply;
+    }
+
+
+    internal static partial class EntityEffects
+    {
+        internal static string ShotFxStats() => TelemetryPrivacyTest.Reply;
+    }
+
+
+    internal static partial class EntityAI
+    {
+        internal static string AiStats() => TelemetryPrivacyTest.Reply;
+    }
+
+
+    internal static partial class EntityTelemetry
+    {
+        internal static MarkFocus CaptureMarkFocus(TelemetryState state)
+        {
+            var target = new MarkFocus.Target { Net = 4, Prefab = 1, Name = TelemetryPrivacyTest.Private, Distance = 2 };
+            return new MarkFocus { Crosshair = target, Car = target, Held = target, Dragging = target, Seat = 0, ClosestPlayer = 2, PlayerDistance = 3 };
+        }
+    }
+
 }
 
 namespace TLDRevamp { static class DevHooks { internal static System.Action TrailReset; internal static System.Action<TelemetryEvent> TrailEvent; } }

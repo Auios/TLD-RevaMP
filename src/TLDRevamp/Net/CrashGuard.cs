@@ -2,7 +2,7 @@ using System;
 
 namespace TLDRevamp.Net
 {
-    /// Whether a crash with another player's car copy may become a crash takeover (Entities.TryTakeCrash): only when the
+    /// Whether a crash with another player's car copy may become a crash takeover (EntityPhysics.TryTakeCrash): only when the
     /// copy is where its owner has the car. A takeover starts the car from the copy, so the owner's car jumps to wherever
     /// the copy is; a copy left behind (stuck on something, fed old poses) made a crash that happened only here move the
     /// real car. Bug report 2026-11-06 10:49: the host's copy of the joiner's car was 141 m behind it, the host's car hit

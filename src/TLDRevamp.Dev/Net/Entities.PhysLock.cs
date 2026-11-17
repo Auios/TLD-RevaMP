@@ -30,18 +30,18 @@ namespace TLDRevamp.Net
                 var t = e.Root.transform;
                 var rb = e.Root.GetComponent<Rigidbody>();
                 sb.Append(",\"parent\":" + Json.Str(t.parent != null ? t.parent.name : "") + ",\"rootOf\":" + Json.Str(t.root.name) + ",\"body\":" + Json.Str(rb == null ? "none" : rb.isKinematic ? "kin" : "free") +
-                          ",\"ridesParent\":" + (RidesParent(e) ? "true" : "false") + ",\"worn\":" + (WornRides(e) ? "true" : "false"));
+                          ",\"ridesParent\":" + (RidesParent(e) ? "true" : "false") + ",\"worn\":" + (EntityHands.WornRides(e) ? "true" : "false"));
                 if (e.Ip != null && e.Ip.Ready) sb.Append(",\"ownerPoseOff\":" + F(Vector3.Distance(mainscript.UnityPosFromGlobal(e.Ip.LastPos), t.position)));
             }
             if (p != null && p.physlock != null)
             {
                 var cr = p.physlock.transform.root;
                 var ce = ProxyOf(cr);
-                bool outNow = OwnerHasItOut(e, p);
+                bool outNow = EntityLocks.OwnerHasItOut(e, p);
                 sb.Append(",\"lock\":{\"container\":" + Json.Str(cr.name) + ",\"mount\":" + Json.Str(p.physlock.name) + ",\"self\":" + (e.Root != null && cr == e.Root.transform ? "true" : "false") +
                           ",\"containerNet\":" + (ce != null ? ce.NetId : 0) + ",\"containerOwner\":" + (ce != null ? ce.OwnerId : -1) + ",\"containerIpReady\":" + (ce != null && ce.Ip != null && ce.Ip.Ready ? "true" : "false") +
-                          ",\"ownerHasItOut\":" + (outNow ? "true" : "false") + ",\"lockedAway\":" + (LockedAway(e) ? "true" : "false") + ",\"rides\":" + (RidesOwnersContainer(e) ? "true" : "false") +
-                          ",\"local\":" + V(TLDRevamp.Net.Entities.ObservedDiagLocal) + ",\"boxMin\":" + V(TLDRevamp.Net.Entities.ObservedDiagBox.min) + ",\"boxMax\":" + V(TLDRevamp.Net.Entities.ObservedDiagBox.max));
+                          ",\"ownerHasItOut\":" + (outNow ? "true" : "false") + ",\"lockedAway\":" + (EntityLocks.LockedAway(e) ? "true" : "false") + ",\"rides\":" + (EntityLocks.RidesOwnersContainer(e) ? "true" : "false") +
+                          ",\"local\":" + V(TLDRevamp.Net.EntityLocks.ObservedDiagLocal) + ",\"boxMin\":" + V(TLDRevamp.Net.EntityLocks.ObservedDiagBox.min) + ",\"boxMax\":" + V(TLDRevamp.Net.EntityLocks.ObservedDiagBox.max));
                 if (e.Ip != null && e.Ip.Ready) sb.Append(",\"offMount\":" + F(Vector3.Distance(mainscript.UnityPosFromGlobal(e.Ip.LastPos), p.physlock.transform.position)));
                 sb.Append("}");
             }
@@ -69,7 +69,7 @@ namespace TLDRevamp.Net
         public static string PhysLockStatus(double gx, double gz, float radius)
         {
             int local = settingsscript.s != null && settingsscript.s.S != null ? settingsscript.s.S.IPhysicsLock : -1;
-            int used = settingsscript.s != null && settingsscript.s.S != null ? PhysicsLockSetting(settingsscript.s.S) : -1;
+            int used = settingsscript.s != null && settingsscript.s.S != null ? EntityLocks.PhysicsLockSetting(settingsscript.s.S) : -1;
             var kinds = new SortedDictionary<string, string>();
             foreach (var m in Object.FindObjectsOfType<mountStuff>())
             {
@@ -84,8 +84,8 @@ namespace TLDRevamp.Net
             }
             var rows = new List<string>();
             foreach (var kv in kinds) rows.Add(Json.Str(kv.Key) + ":" + kv.Value);
-            return "{\"local\":" + local + ",\"host\":" + HostPhysicsLock + ",\"used\":" + used + ",\"patched\":" + PhysLockFromHost.Patched +
-                   ",\"sent\":" + PhysLockSent + ",\"applied\":" + PhysLockApplied + ",\"reads\":" + PhysLockReads + ",\"storesRefused\":" + ContainerStoresRefused + ",\"copyLocksReleased\":" + CopyLocksReleased + ",\"startFreezesSkipped\":" + CopyStartFreezesSkipped +
+            return "{\"local\":" + local + ",\"host\":" + EntityLocks.HostPhysicsLock + ",\"used\":" + used + ",\"patched\":" + PhysLockFromHost.Patched +
+                   ",\"sent\":" + EntityLocks.PhysLockSent + ",\"applied\":" + EntityLocks.PhysLockApplied + ",\"reads\":" + EntityLocks.PhysLockReads + ",\"storesRefused\":" + EntityLocks.ContainerStoresRefused + ",\"copyLocksReleased\":" + EntityLocks.CopyLocksReleased + ",\"startFreezesSkipped\":" + EntityLocks.CopyStartFreezesSkipped +
                    ",\"holds\":{" + string.Join(",", rows) + "}}";
         }
 
@@ -93,7 +93,7 @@ namespace TLDRevamp.Net
         internal static class PhysLockFromHost
         {
             private static readonly FieldInfo Field = GameLookups.Field(typeof(settingsscript.setting), nameof(settingsscript.setting.IPhysicsLock));
-            private static readonly MethodInfo Replacement = AccessTools.Method(typeof(Entities), nameof(PhysicsLockSetting));
+            private static readonly MethodInfo Replacement = AccessTools.Method(typeof(EntityLocks), nameof(EntityLocks.PhysicsLockSetting));
             public static int Patched;
 
             private static IEnumerable<MethodBase> TargetMethods()

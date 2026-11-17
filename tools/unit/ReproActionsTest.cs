@@ -56,9 +56,9 @@ static class ReproActionsTest
         var part = Entities.Make(7); var parent = Entities.Make(8);
         part.Root.attachable = new attachablescript { tosave = part.Root }; part.Root.P = new pickupable { tosave = part.Root };
         parent.Root.Mounts = new[] { new mountStuff { parentTosave = parent.Root } };
-        part.Proxy = true; part.OwnerId = 2; Entities.ReproAttach(7, 8, 0, 0);
+        part.Proxy = true; part.OwnerId = 2; EntityReproHooks.ReproAttach(7, 8, 0, 0);
         Check(Count(ReproKind.EntityPose) == 0 && Count(ReproKind.Attach) == 1, "proxy attach records request without owner pose");
-        part.Proxy = false; part.OwnerId = Entities.MyId; Entities.ReproAttach(7, 8, 0, 0);
+        part.Proxy = false; part.OwnerId = Entities.MyId; EntityReproHooks.ReproAttach(7, 8, 0, 0);
         Check(Count(ReproKind.EntityPose) == 1 && Count(ReproKind.Attach) == 2, "owner attach retains pose");
         p.pickedUp = part.Root.P; p.throwForce = 1.02f; p.Th.forward = new Vector3(0, 0, 1);
         Hook("ReproDrop", "Prefix", p, false);

@@ -66,15 +66,14 @@ namespace TLDRevamp.Net
         internal static UsableKey PoiLiveKey(usablescript u) => new UsableKey { Building = true,
             Poi = new PoiKey { Gen = u.poigenid, X = u.poiid.x, Y = u.poiid.y, Z = u.poiid.z, U = u.usableid } };
 
-        internal static void WritePoi(NetWriter w, PoiKey k, PoiState st) => EntityUsables.WritePoi(w, k, st);
         private static void WritePoiFinal(NetWriter w, UsableKey k, ushort seq, double stamp, PoiState st)
-        { w.Reset(); w.U8(PoiUsable); WritePoi(w, k.Poi, st); w.U16(seq); w.F64(stamp); }
+        { w.Reset(); w.U8(PoiUsable); EntityUsables.WritePoi(w, k.Poi, st); w.U16(seq); w.F64(stamp); }
         private static void SendPoiFinal(LocalUsable s)
         {
             s.Dirty = false; s.Sent = s.Value; s.HasSent = true;
             _liveOut[s.Key] = ++s.Seq;
             KnownPoiUsables[s.Key.Poi] = s.Raw;
-            WritePoiFinal(WL, s.Key, s.Seq, SessionLog.St, s.Raw); ToServer(WL, true); PoiUsablesSent++;
+            WritePoiFinal(WL, s.Key, s.Seq, SessionLog.St, s.Raw); ToServer(WL, true); EntityUsables.PoiUsablesSent++;
         }
         private static void ServerPoiUsable(int from, NetReader r)
         {
@@ -87,14 +86,14 @@ namespace TLDRevamp.Net
             ReceivePoiMotion(r, new UsableKey { Building = true, Poi = k }, seq, stamp, st, true);
         }
         private static bool PoiPacketValid(NetReader r, UsableKey k, double stamp, PoiState st) =>
-            !r.Bad && r.Remaining == 0 && Finite(stamp) && Finite(k.Poi.X) && Finite(k.Poi.Y) && Finite(k.Poi.Z) &&
-            Finite(st.XRot) && Finite(st.YRot) && Finite(st.Slide) && Finite(st.Tuned);
+            !r.Bad && r.Remaining == 0 && EntityNumbers.Finite(stamp) && EntityNumbers.Finite(k.Poi.X) && EntityNumbers.Finite(k.Poi.Y) && EntityNumbers.Finite(k.Poi.Z) &&
+            EntityNumbers.Finite(st.XRot) && EntityNumbers.Finite(st.YRot) && EntityNumbers.Finite(st.Slide) && EntityNumbers.Finite(st.Tuned);
 
         private static void ServerPoiMotion(int from, NetReader r, UsableKey k, ushort seq, double stamp, PoiState st, bool final)
         {
             if (!PoiPacketValid(r, k, stamp, st) || Math.Abs(SessionLog.St - stamp) > 10)
-            { Refuse(ref EntityEditCheck.PoiRefusedValues, "poi value", $"building usable from player {from}: unreadable value/clock"); return; }
-            if (!CheckPoiUsable(from, k.Poi, st)) { if (final) PoiTellBack(from, k); return; }
+            { EntityEditCheck.Refuse(ref EntityEditCheck.PoiRefusedValues, "poi value", $"building usable from player {from}: unreadable value/clock"); return; }
+            if (!EntityEditCheck.CheckPoiUsable(from, k.Poi, st)) { if (final) PoiTellBack(from, k); return; }
             if (_poiServerOrder.TryGetValue(k.Poi, out double last) && stamp < last) { LiveUsablesStale++; return; }
             if (!_liveServerIn.TryGetValue(from, out var orders)) _liveServerIn[from] = orders = new Dictionary<UsableKey, LiveOrder>();
             if (!LiveNewer(orders, k, seq, stamp)) return;
@@ -106,7 +105,7 @@ namespace TLDRevamp.Net
             Buffer.BlockCopy(WL.Buf, 0, bytes, 0, WL.Len);
             ServerPoiUsables[k.Poi] = bytes;
             if (!final) EntityUsables.WriteLiveUsable(WL, k, relaySeq, stamp, default, st);
-            RelayPoi(k.Poi, WL, from, final);
+            EntityAuthorityInterest.RelayPoi(k.Poi, WL, from, final);
         }
         /// A/B: the sender of a refused building usable hears how it is (false: its door stayed moved on its screen alone, for good).
         public static bool PoiRefusalsTold = true;
@@ -119,9 +118,9 @@ namespace TLDRevamp.Net
             PoiState st;
             if (!KnownPoiUsables.TryGetValue(k.Poi, out st))
             {
-                var u = PoiUsableOf(k.Poi);
+                var u = EntityUsables.PoiUsableOf(k.Poi);
                 if (u == null) return;
-                st = UsableState(u);
+                st = EntityUsables.UsableState(u);
             }
             _poiBackAt[from] = now;
             _liveRelaySeq.TryGetValue(k, out ushort seq); _liveRelaySeq[k] = ++seq;
@@ -137,20 +136,20 @@ namespace TLDRevamp.Net
             if (!KnownPoiUsables.TryGetValue(k.Poi, out var was) || !EntityUsables.SameUsable(was, st)) observation.ChangedAt = Time.realtimeSinceStartup;
             KnownPoiUsables[k.Poi] = st;
             if (!final) { observation.Received.Add(Time.realtimeSinceStartup); observation.ReceivedTotal++; }
-            var u = PoiUsableOf(k.Poi);
-            if (u == null) { PoiUsablesUnplaced++; return; }
+            var u = EntityUsables.PoiUsableOf(k.Poi);
+            if (u == null) { EntityUsables.PoiUsablesUnplaced++; return; }
             if (LocalUsableHeld(u)) return;
             u.FStart();
             if (!_remoteUsables.TryGetValue(k, out var s) || s.U != u)
             {
                 s = new RemoteUsable { ClockOffset = SessionLog.St - stamp, U = u };
-                s.Motion.Add(stamp - LiveStepS, UsableState(u)); _remoteUsables[k] = s;
+                s.Motion.Add(stamp - LiveStepS, EntityUsables.UsableState(u)); _remoteUsables[k] = s;
             }
             s.At = Time.realtimeSinceStartup; s.Final = true;
             s.Motion.Add(stamp, st);
             if (u.currentTurnState != st.Turn || !final && u.turnable && u.maxTurnState == 0)
-            { var v = UsableState(u); v.Turn = st.Turn; ApplyUsable(u, v, true); }
-            PoiUsablesApplied++;
+            { var v = EntityUsables.UsableState(u); v.Turn = st.Turn; ApplyUsable(u, v, true); }
+            EntityUsables.PoiUsablesApplied++;
             if (!final) LiveUsablesApplied++;
         }
     }

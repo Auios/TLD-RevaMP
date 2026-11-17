@@ -21,7 +21,7 @@ def method(part, name):
 target = Path(sys.argv[1])
 target.parent.mkdir(parents=True, exist_ok=True)
 target.write_text('using UnityEngine;\nusing System.Collections.Generic;\nnamespace TLDRevamp.Net { public static partial class Entities {\n'
-                  + method('Edits', 'EditTick') + '\n} }\n', encoding='utf-8', newline='\n')
+                  + method('Edits', 'EditTick').replace('EntityEdits.TankChangesNow(', 'TankChangesForFixture(') + '\n} }\n', encoding='utf-8', newline='\n')
 
 # Driver claims remain in the kernel. Exercise their real producer and arbitration bodies too.
 with target.open('a', encoding='utf-8', newline='\n') as output:
@@ -39,3 +39,10 @@ with target.open('a', encoding='utf-8', newline='\n') as output:
                  + 'internal static float TestHeldInterval(Ent e, double now) => ' + interval + ';\n'
                  + 'internal static void TestHeldRelease(Ent e, double now, bool released) { ' + release + ' }\n'
                  + '} }\n')
+
+# These scenarios isolate cargo acceptance and token availability; their owner algorithms have separate row tests.
+features = (root / 'src/TLDRevamp/Net/Entities.Features.cs').read_text(encoding='utf-8')
+features = features.replace('EntityCargoInteraction.ClaimCargo(e, reason: reason)', 'ClaimCargoForFixture(e, reason: reason)')
+features = features.replace('EntityCargoInteraction.ClaimCargo(e, released: true, reason: ClaimReason.CargoRelease)', 'ClaimCargoForFixture(e, released: true, reason: ClaimReason.CargoRelease)')
+features = features.replace('EntityEditCheck.TakeEditToken(from)', 'TakeKeyTokenForFixture(from)')
+target.with_name(target.stem + 'Features.cs').write_text(features, encoding='utf-8')

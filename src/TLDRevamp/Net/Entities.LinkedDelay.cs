@@ -16,7 +16,7 @@ namespace TLDRevamp.Net
     ///
     internal static partial class EntityLifetimeStreaming
     {
-        public static float LinkedDelayEveryS = 0.2f, LinkedHoldMaxS = 0.5f;
+        internal static float LinkedDelayEveryS = 0.2f, LinkedHoldMaxS = 0.5f;
         public static long LinkedGroups, LinkedHeld;
         public static float LinkedLastHoldMs;
         private static float _linkedAt;

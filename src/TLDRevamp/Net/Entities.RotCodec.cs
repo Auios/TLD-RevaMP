@@ -40,10 +40,6 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        private static void WriteRot(NetWriter w, Quaternion q) =>
-            EntityCodec.WriteRot(w, q);
 
-        private static Quaternion ReadRot(NetReader r) =>
-            EntityCodec.ReadRot(r);
     }
 }

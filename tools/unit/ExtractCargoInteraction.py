@@ -6,32 +6,6 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 PARTS = ('BodyPush', 'Cargo', 'ItemPush', 'Push', 'PushGrip')
 
-CALLS = {
-    'ProxyOf': 'CargoCopyOf', 'CargoBody': 'IsCargoBody', 'RidesParent': 'CargoRidesParent',
-    'Limbs': 'CargoLimbs', 'Limp': 'CargoLimp', 'SetProxy': 'SetCargoProxy',
-    'WriteClaim': 'WriteCargoClaim', 'ToServer': 'SendCargoRequest', 'OverlappedCar': 'CargoOverlappedCar',
-    'CarLocalBounds': 'CargoCarBounds', 'LockedAway': 'CargoLockedAway',
-    'IsProxy': 'IsPushCopy', 'EditEntityOf': 'PushEntityOf', 'PlacedOfTransform': 'GripEntityOf',
-    'Finite': 'IsFinite', 'NyOf': 'CargoRabbit', 'CarEnt': 'CargoCarEntity', 'IsHeld': 'CargoItemHeld',
-}
-
-FACTS = {'InSession': 'CargoInSession', 'MyId': 'CargoLocalId', 'CargoClaims': 'CargoClaimsEnabled'}
-
-def fixture_body(body):
-    for old, new in CALLS.items():
-        body = body.replace('Entities.' + new + '(', old + '(')
-    for old, new in FACTS.items():
-        body = body.replace('Entities.' + new, old)
-    body = body.replace('Entities.Ent', 'Ent').replace('Entities.ClaimReason', 'ClaimReason')
-    body = body.replace('Entities.CargoClaimSent();', 'ClaimsSent++;').replace('Entities.CargoContactClaimed();', 'CargoClaimedOnContact++;')
-    body = body.replace('Entities.ItemContactClaimed();', 'ItemClaimedOnContact++;')
-    body = body.replace('Entities.CargoItemClaims', 'ItemClaims').replace('Entities.CargoItemMinSpeed', 'ItemMinSpeed')
-    body = body.replace('Entities.PushMessage', 'PushIn')
-    for name, key in (('TryCargoContactCar', 'carNet'), ('TryItemContactSource', 'net'), ('TryPushTarget', 'net')):
-        body = body.replace('Entities.' + name + '(' + key + ',', 'ByNet.TryGetValue(' + key + ',')
-    return body
-
-
 def read(part):
     path = f'src/TLDRevamp/Net/Entities.{part}.cs'
     return (ROOT / path).read_text(encoding='utf-8').replace('\r\n', '\n')
@@ -70,8 +44,6 @@ def main():
     for i, s in enumerate(features):
         write(target.with_name(target.stem + str(i) + '.cs'), s)
     release = member(read('Cargo'), 'ClaimLetGoInCar').replace('ClaimLetGoInCar(', 'CargoTestLetGo(')
-    for name in ('LooseItem', 'OverlapsCar', 'ClaimCargo'):
-        release = release.replace(name + '(', 'EntityCargoInteraction.' + name + '(')
     visible = read('VisibleState')
     helpers = [release, member(visible, 'LetGoInCar'), member(read('Push'), 'ServerPush').replace('ServerPush(', 'CargoTestServerPush(')]
     write(target.with_name(target.stem + 'Kernel.cs'), 'using UnityEngine; namespace TLDRevamp.Net { public static partial class Entities {\n' + '\n'.join(helpers) + '\n} }\n')

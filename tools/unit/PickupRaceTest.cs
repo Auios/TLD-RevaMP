@@ -6,9 +6,9 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         static readonly NetWriter W = new NetWriter();
-        static bool WornSync = false;
-        internal static float RabbitHoldS = 2, RabbitNearM = 60, RabbitSwitchM = 5, RabbitCarMoveMps = 1.5f;
-        internal static bool RabbitSync = true, RabbitOwners = true;
+
+
+
         internal static long RabbitOwnerMoves;
         internal static string RabbitLastMove;
         static System.Collections.Generic.HashSet<uint> KnownBy(int player)
@@ -138,25 +138,37 @@ namespace TLDRevamp.Net
             IdleTrafficTest.Check(EntityHands.TakeCarried(item, ref sample, default, Quaternion.identity, false, false) && !item.Proxy && Uploaded.Length == 6,
                 "loose release in our car claims cargo without explicit release bit or central held guard");
             // a holder standing outside lets go in our car's box (or touching it): ours at once, cooldown or not
-            IdleTrafficTest.Check(LetGoInCar(false, false, 0, true, false) && LetGoInCar(false, false, 0, false, true),
+            IdleTrafficTest.Check(EntityProxyPresentation.LetGoInCar(false, false, 0, true, false) && EntityProxyPresentation.LetGoInCar(false, false, 0, false, true),
                 "let go by a holder outside, in our car's box or touching it: ours before the next physics step");
-            IdleTrafficTest.Check(!LetGoInCar(true, false, 0, true, true) && !LetGoInCar(false, true, 0, true, true) && !LetGoInCar(false, false, 7, true, true) && !LetGoInCar(false, false, 0, false, false),
+            IdleTrafficTest.Check(!EntityProxyPresentation.LetGoInCar(true, false, 0, true, true) && !EntityProxyPresentation.LetGoInCar(false, true, 0, true, true) && !EntityProxyPresentation.LetGoInCar(false, false, 7, true, true) && !EntityProxyPresentation.LetGoInCar(false, false, 0, false, false),
                 "not when stored, physlocked, a seated holder's release (LooseRelease's) or beside the car");
             var dropped = new Ent { NetId = 12, Proxy = true, OwnerId = 0, OwnerAt = 1e9f }; dropped.Root.P = new TestPickup(); ByNet[12] = dropped; Uploaded = null;
-            IdleTrafficTest.Check(ClaimCargo(dropped, released: true, reason: ClaimReason.CargoRelease) && !dropped.Proxy && dropped.OwnerId == MyId && Uploaded != null && Uploaded[5] == (byte)ClaimReason.CargoRelease,
+            IdleTrafficTest.Check(EntityCargoInteraction.ClaimCargo(dropped, released: true, reason: ClaimReason.CargoRelease) && !dropped.Proxy && dropped.OwnerId == MyId && Uploaded != null && Uploaded[5] == (byte)ClaimReason.CargoRelease,
                 "a let-go claim skips the cargo cooldown (the copy changed owner a moment ago) and is sent as a release claim");
             ByNet.Remove(12);
             // A separate sled still follows the rabbit's simulator without changing the held rabbit.
             var heldRabbit = new SEnt { NetId = 9, Epoch = 1, OwnerId = MyId, Held = true }; Server[9] = heldRabbit;
             var sled = new Ent { NetId = 10, Proxy = true, OwnerId = 0, OwnerAt = 0 }; sled.Root.P = new TestPickup(); ByNet[10] = sled;
             var sledServer = new SEnt { NetId = 10, Epoch = 1, OwnerId = 0 }; Server[10] = sledServer;
-            IdleTrafficTest.Check(ClaimCargo(sled, reason: ClaimReason.RabbitObjectNear), "rabbit simulator can claim separate loose sled");
+            IdleTrafficTest.Check(EntityCargoInteraction.ClaimCargo(sled, reason: ClaimReason.RabbitObjectNear), "rabbit simulator can claim separate loose sled");
             ServerClaim(MyId, new NetReader { Buf = Uploaded, Pos = 1, End = Uploaded.Length });
             IdleTrafficTest.Check(sledServer.OwnerId == MyId && sledServer.Epoch == 2 && !sledServer.Held && heldRabbit.OwnerId == MyId && heldRabbit.Held &&
                 LastOwnerReason == "claim: RabbitObjectNear", "sled claim changes only the separate sled and names its producer");
             ByNet.Clear(); Server.Clear(); CargoClaims = false; OwnerReplies.Clear(); OwnerPackets.Clear();
         }
     }
+    internal static partial class EntityHands
+    {
+        internal static bool WornSync = false;
+    }
+
+
+    internal static partial class EntityRabbits
+    {
+        internal static float RabbitHoldS = 2,RabbitNearM = 60,RabbitSwitchM = 5,RabbitCarMoveMps = 1.5f;
+        internal static bool RabbitSync = true,RabbitOwners = true;
+    }
+
 }
 
 namespace TLDRevamp.Net { static class DedicatedServer { internal static bool Enabled = false; } }

@@ -44,7 +44,7 @@ namespace TLDRevamp.Net
             int cur = Enabled ? CooldownS : -1, i = Array.IndexOf(Choices, cur);
             int next = Choices[(i + 1) % Choices.Length];
             Enabled = next >= 0; if (next >= 0) CooldownS = next;
-            RevampSettings.Save();   // remembered for the next time this player hosts (Settings â†’ Revamp â†’ Multiplayer)
+            RevampSettings.Save();   // remembered for the next time this player hosts (Settings → Revamp → Multiplayer)
         }
 
         // ------------------------------------------------------------------ the asker's side
@@ -52,7 +52,7 @@ namespace TLDRevamp.Net
         internal static void GoIn(NetReader r)
         {
             double gx = r.F64(), gy = r.F64(), gz = r.F64(); float yaw = r.F32();
-            if (r.Bad || !Entities.Finite(gx) || !Entities.Finite(gy) || !Entities.Finite(gz)) { SessionLog.Event("tpa-failure", result: "invalid destination"); return; }
+            if (r.Bad || !EntityNumbers.Finite(gx) || !EntityNumbers.Finite(gy) || !EntityNumbers.Finite(gz)) { SessionLog.Event("tpa-failure", result: "invalid destination"); return; }
             Go(gx, gy, gz, yaw);
         }
 
@@ -91,7 +91,7 @@ namespace TLDRevamp.Net
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null) { SessionLog.Event("tpa-failure", result: "no local player"); return; }
             if (_moving != null) Release(_moving);
-            Entities.BeginTpaRefresh();
+            EntityTeleportRefresh.BeginTpaRefresh();
             if (_arrivalPending) SessionLog.Event("tpa-failure", result: "arrival check superseded");
             _arrivalWaitingGround = false;
             _arrivalTarget = new Vector3d(gx, gy, gz); _arrivalPending = true; _arrivalAt = Time.realtimeSinceStartupAsDouble + .5;
@@ -194,7 +194,7 @@ namespace TLDRevamp.Net
             Mp.Server?.TpaTelemetryTick();
             if (WaitingWorld && (GroundPlacement.TpaWorldReady(_arrivalTarget.x, _arrivalTarget.y, _arrivalTarget.z) || Time.realtimeSinceStartupAsDouble >= _worldUntil))
                 WaitingWorld = false;
-            Entities.DrainTpaInbox();
+            EntityTeleportRefresh.DrainTpaInbox();
             if (_arrivalPending && _moving == null && (mainscript.s == null || mainscript.s.player == null))
             { SessionLog.Event("tpa-failure", result: "player lost before arrival"); _arrivalPending = _arrivalWaitingGround = false; }
             if (_arrivalPending && _arrivalWaitingGround && !GroundPlacement.TpBusy) TelemetryGroundFinished(false);
@@ -222,7 +222,7 @@ namespace TLDRevamp.Net
                     }
                 }
             }
-            if (_objectsAt > 0 && Time.realtimeSinceStartupAsDouble >= _objectsAt && Entities.TpaInboxEmpty)
+            if (_objectsAt > 0 && Time.realtimeSinceStartupAsDouble >= _objectsAt && EntityTeleportRefresh.TpaInboxEmpty)
             {
                 _objectsAt = 0; var offset = _arrivedOffset;
                 SessionLog.Event("tpa-arrived", from: Entities.MyId, value: (float)offset.magnitude, count: _arrivalObjects.Count,

@@ -13,8 +13,8 @@ namespace TLDRevamp.Net
     internal static class EntityWeather
     {
         private static readonly NetWriter W = new NetWriter();
-        public static float StormResendS = 2f;
-        public static long StormSyncsSent, StormSyncsApplied, StormsMade, StormsRemoved, StormSpawnsSkipped, StormSnaps;
+        internal static float StormResendS = 2f;
+        internal static long StormSyncsSent, StormSyncsApplied, StormsMade, StormsRemoved, StormSpawnsSkipped, StormSnaps;
 
         private static readonly Dictionary<sandstormscript, uint> StormIds = new Dictionary<sandstormscript, uint>();
         internal static System.Collections.Generic.IReadOnlyDictionary<sandstormscript, uint> ObservedStormIds => StormIds;

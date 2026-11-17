@@ -6,13 +6,7 @@ namespace TLDRevamp.Net
     {
         // Repair helpers and the POI census use facts and messages without sharing entity tables.
         public const byte PoiCensus = 84;   // c→s: f64 gx, f64 gz, f32 drawLerp, u8 distant terrain, f32 shown within, f32 removed beyond, u16 n × (f64 x, f64 z, i32 type, u8 shown)
-        private static void PoiCensusTick() => EntityRepair.PoiCensusTick();
-        internal static void ServerPoiCensus(int from, NetReader r) => EntityRepair.ServerPoiCensus(from, r);
-        internal static void ResetPoiCensus() => EntityRepair.ResetPoiCensus();
-        private static string RepairState(tosaveitemscript it) => EntityRepair.RepairState(it);
-        private static System.Collections.Generic.Dictionary<string, string> RowMap(System.Collections.Generic.IEnumerable<string> rows) => EntityRepair.RowMap(rows);
-        private static string GluedPlace(attachablescript at) => EntityRepair.GluedPlace(at);
-        internal static Transform RepairAttachFrame(attachablescript at) => AttachFrame(at);
+        internal static Transform RepairAttachFrame(attachablescript at) => EntityAttachments.AttachFrame(at);
         internal static void RepairAnomaly(string what) => Anomaly(what);
 
         // Game adapters ask for one identity fact; all table walks stay here.
@@ -33,9 +27,9 @@ namespace TLDRevamp.Net
         internal static Ent PhysicsRoot(Transform root) => PlacedOfTransform(root);
         internal static bool PhysicsNetOf(Transform root, out uint net, out bool proxy) => NetOf(root, out net, out proxy);
         internal static bool PhysicsTrailer(Ent entity) => HitchTrailer(entity);
-        internal static wheelgraphicsscript[] PhysicsWheels(Ent entity) => WheelsOf(entity);
+        internal static wheelgraphicsscript[] PhysicsWheels(Ent entity) => EntityProxyPresentation.WheelsOf(entity);
         internal static bool PhysicsPartCameOff(Ent entity, int item) => CameOff(entity, item);
-        internal static Transform[] PhysicsLimbs(Ent entity) => Limbs(entity);
+        internal static Transform[] PhysicsLimbs(Ent entity) => EntityRagdolls.Limbs(entity);
         internal static bool PhysicsIsProxy(Component body) => IsProxy(body);
         internal static void PhysicsSnap(Ent entity, Vector3 target, Vector3 from) => TelemetryProxySnap(entity, target, from);
         internal static void SetCrashProxy(Ent entity, bool proxy, bool keepMotion) => SetProxy(entity, proxy, keepMotion);
@@ -44,93 +38,7 @@ namespace TLDRevamp.Net
         internal static bool ResolvePhysics(Ent entity) => Resolve(entity);
         internal static uint PhysicsFootingNet => _telemetryFooting;
         internal static bool TryPhysicsStand(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
-        internal static void PhysicsContacts(uint net, Collision collision) { CargoContact(net, collision); RabbitContact(net, collision); ItemContact(net, collision); }
-        internal static void AttachContact(Ent e) => EntityPhysics.AttachContact(e);
-        internal static void DetachContact(Ent e) => EntityPhysics.DetachContact(e);
-        private static void ApplyContactImpulse(uint net, Vector3 impulse, Vector3d globalPoint) => EntityPhysics.ApplyContactImpulse(net, impulse, globalPoint);
-        private static void CopyJointTick() => EntityPhysics.CopyJointTick();
-        internal static bool TryTakeCrash(Ent e, Rigidbody mine, float relSpeed) => EntityPhysics.TryTakeCrash(e, mine, relSpeed);
-        internal static void CrashHoldTick() => EntityPhysics.CrashHoldTick();
-        public static string CrashAuthorityStatus() => EntityPhysics.CrashAuthorityStatus();
-        private static void StandInterpTick() => EntityPhysics.StandInterpTick();
-        private static bool StandsOnAtPhysics(Ent e) => EntityPhysics.StandsOnAtPhysics(e);
-        private static bool LocalAboard(Ent e) => EntityPhysics.LocalAboard(e);
-        private static void HealCopyBody(Ent e) => EntityPhysics.HealCopyBody(e);
-        private static void SetPartColliders(Ent e, bool on) => EntityPhysics.SetPartColliders(e, on);
-        internal static bool LimbsByBody(Ent e) => EntityPhysics.LimbsByBody(e);
-        private static void MoveLimbs(Ent e, Rigidbody rb, Vector3 up, Quaternion rot, bool snap) => EntityPhysics.MoveLimbs(e, rb, up, rot, snap);
-        internal static void StopBodyMotion(Ent e) => EntityPhysics.StopBodyMotion(e);
-        private static void EnterPhysical(Ent e, Rigidbody rb) => EntityPhysics.EnterPhysical(e, rb);
-        private static void ExitPhysical(Ent e, Rigidbody rb) => EntityPhysics.ExitPhysical(e, rb);
-        internal static void DropPhysical(Ent e) => EntityPhysics.DropPhysical(e);
-        private static void Servo(Ent e, Rigidbody rb, float dt) => EntityPhysics.Servo(e, rb, dt);
-        public static long ContactSent { get => EntityPhysics.ContactSent; set => EntityPhysics.ContactSent = value; }
-        public static long ContactRelayed { get => EntityPhysics.ContactRelayed; set => EntityPhysics.ContactRelayed = value; }
-        public static long ContactApplied { get => EntityPhysics.ContactApplied; set => EntityPhysics.ContactApplied = value; }
-        public static long ContactMisses { get => EntityPhysics.ContactMisses; set => EntityPhysics.ContactMisses = value; }
-        public static float ContactImpulseMaxSent { get => EntityPhysics.ContactImpulseMaxSent; set => EntityPhysics.ContactImpulseMaxSent = value; }
-        public static float ContactImpulseMaxApplied { get => EntityPhysics.ContactImpulseMaxApplied; set => EntityPhysics.ContactImpulseMaxApplied = value; }
-        public static bool CopyJointsFree { get => EntityPhysics.CopyJointsFree; set => EntityPhysics.CopyJointsFree = value; }
-        public static bool CrashAuthority { get => EntityPhysics.CrashAuthority; set => EntityPhysics.CrashAuthority = value; }
-        public static float CrashMinRelMps { get => EntityPhysics.CrashMinRelMps; set => EntityPhysics.CrashMinRelMps = value; }
-        public static float CrashMinHoldS { get => EntityPhysics.CrashMinHoldS; set => EntityPhysics.CrashMinHoldS = value; }
-        public static float CrashMaxHoldS { get => EntityPhysics.CrashMaxHoldS; set => EntityPhysics.CrashMaxHoldS = value; }
-        public static float CrashLeaseS { get => EntityPhysics.CrashLeaseS; set => EntityPhysics.CrashLeaseS = value; }
-        public static long CrashGranted { get => EntityPhysics.CrashGranted; set => EntityPhysics.CrashGranted = value; }
-        public static long CrashRefused { get => EntityPhysics.CrashRefused; set => EntityPhysics.CrashRefused = value; }
-        public static long CrashAutoReturned { get => EntityPhysics.CrashAutoReturned; set => EntityPhysics.CrashAutoReturned = value; }
-        public static bool CrashLeaveKeep { get => EntityPhysics.CrashLeaveKeep; set => EntityPhysics.CrashLeaveKeep = value; }
-        public static long CrashLeasesKept { get => EntityPhysics.CrashLeasesKept; set => EntityPhysics.CrashLeasesKept = value; }
-        public static float CrashApartCheckS { get => EntityPhysics.CrashApartCheckS; set => EntityPhysics.CrashApartCheckS = value; }
-        public static bool CrashCopyCheck { get => EntityPhysics.CrashCopyCheck; set => EntityPhysics.CrashCopyCheck = value; }
-        public static bool StandCopyAtPhysics { get => EntityPhysics.StandCopyAtPhysics; set => EntityPhysics.StandCopyAtPhysics = value; }
-        public static bool PhysicalCopies { get => EntityPhysics.PhysicalCopies; set => EntityPhysics.PhysicalCopies = value; }
-        public static bool ContactRelayOn { get => EntityPhysics.ContactRelayOn; set => EntityPhysics.ContactRelayOn = value; }
-        public static float NearEnterM { get => EntityPhysics.NearEnterM; set => EntityPhysics.NearEnterM = value; }
-        public static float NearExitM { get => EntityPhysics.NearExitM; set => EntityPhysics.NearExitM = value; }
-        public static float ServoGain { get => EntityPhysics.ServoGain; set => EntityPhysics.ServoGain = value; }
-        public static float SpinGain { get => EntityPhysics.SpinGain; set => EntityPhysics.SpinGain = value; }
-        public static float ServoRampS { get => EntityPhysics.ServoRampS; set => EntityPhysics.ServoRampS = value; }
-        public static float FreeMinS { get => EntityPhysics.FreeMinS; set => EntityPhysics.FreeMinS = value; }
-        public static float FreeMaxS { get => EntityPhysics.FreeMaxS; set => EntityPhysics.FreeMaxS = value; }
-        public static float CrashS { get => EntityPhysics.CrashS; set => EntityPhysics.CrashS = value; }
-        public static float ServoMaxAccel { get => EntityPhysics.ServoMaxAccel; set => EntityPhysics.ServoMaxAccel = value; }
-        public static float GhostMaxS { get => EntityPhysics.GhostMaxS; set => EntityPhysics.GhostMaxS = value; }
-        public static bool GhostOnReturn { get => EntityPhysics.GhostOnReturn; set => EntityPhysics.GhostOnReturn = value; }
-        public static long Ghosted { get => EntityPhysics.Ghosted; set => EntityPhysics.Ghosted = value; }
-        public static long Unghosted { get => EntityPhysics.Unghosted; set => EntityPhysics.Unghosted = value; }
-        public static bool RestSnap { get => EntityPhysics.RestSnap; set => EntityPhysics.RestSnap = value; }
-        public static float RestSnapM { get => EntityPhysics.RestSnapM; set => EntityPhysics.RestSnapM = value; }
-        public static float RestSnapS { get => EntityPhysics.RestSnapS; set => EntityPhysics.RestSnapS = value; }
-        public static long RestSnaps { get => EntityPhysics.RestSnaps; set => EntityPhysics.RestSnaps = value; }
-        public static long PhysicalEnters { get => EntityPhysics.PhysicalEnters; set => EntityPhysics.PhysicalEnters = value; }
-        public static long PhysicalExits { get => EntityPhysics.PhysicalExits; set => EntityPhysics.PhysicalExits = value; }
-        public static long FreeWindows { get => EntityPhysics.FreeWindows; set => EntityPhysics.FreeWindows = value; }
-        public static string LastFree { get => EntityPhysics.LastFree; set => EntityPhysics.LastFree = value; }
-        public static bool CopiesMoveByBody { get => EntityPhysics.CopiesMoveByBody; set => EntityPhysics.CopiesMoveByBody = value; }
-        public static bool CopiesInterpolate { get => EntityPhysics.CopiesInterpolate; set => EntityPhysics.CopiesInterpolate = value; }
-        public static bool AboardDrawnAtPhysics { get => EntityPhysics.AboardDrawnAtPhysics; set => EntityPhysics.AboardDrawnAtPhysics = value; }
-        public static long CopySweeps { get => EntityPhysics.CopySweeps; set => EntityPhysics.CopySweeps = value; }
-        public static long CopyRebaseSeats { get => EntityPhysics.CopyRebaseSeats; set => EntityPhysics.CopyRebaseSeats = value; }
-        public static long CopyTeleports { get => EntityPhysics.CopyTeleports; set => EntityPhysics.CopyTeleports = value; }
-        public static bool DirectRebaseBodies { get => EntityPhysics.DirectRebaseBodies; set => EntityPhysics.DirectRebaseBodies = value; }
-        public static long CopyRebaseDirect { get => EntityPhysics.CopyRebaseDirect; set => EntityPhysics.CopyRebaseDirect = value; }
-        public static long CopyRebaseMaxUs { get => EntityPhysics.CopyRebaseMaxUs; set => EntityPhysics.CopyRebaseMaxUs = value; }
-        public static int CopyBodiesHealed { get => EntityPhysics.CopyBodiesHealed; set => EntityPhysics.CopyBodiesHealed = value; }
-        public static float FastStepLogM { get => EntityPhysics.FastStepLogM; set => EntityPhysics.FastStepLogM = value; }
-        public static int FastStepLogs { get => EntityPhysics.FastStepLogs; set => EntityPhysics.FastStepLogs = value; }
-        public static bool StoredByTransform { get => EntityPhysics.StoredByTransform; set => EntityPhysics.StoredByTransform = value; }
-        public static bool CopyColliderLod { get => EntityPhysics.CopyColliderLod; set => EntityPhysics.CopyColliderLod = value; }
-        public static float PartCollidersOnM { get => EntityPhysics.PartCollidersOnM; set => EntityPhysics.PartCollidersOnM = value; }
-        public static float PartCollidersOffM { get => EntityPhysics.PartCollidersOffM; set => EntityPhysics.PartCollidersOffM = value; }
-        public static long PartCollidersOff { get => EntityPhysics.PartCollidersOff; set => EntityPhysics.PartCollidersOff = value; }
-        public static long PartCollidersOn { get => EntityPhysics.PartCollidersOn; set => EntityPhysics.PartCollidersOn = value; }
-        public static bool LodKeepsPartsOff { get => EntityPhysics.LodKeepsPartsOff; set => EntityPhysics.LodKeepsPartsOff = value; }
-        public static bool VehicleLimbsByBody { get => EntityPhysics.VehicleLimbsByBody; set => EntityPhysics.VehicleLimbsByBody = value; }
-        internal static System.Collections.Generic.IReadOnlyDictionary<ConfigurableJoint, Ent> ObservedFreedJoints => EntityPhysics.ObservedFreedJoints;
-        internal static System.Collections.Generic.IReadOnlyList<Ent> ObservedJointed => EntityPhysics.ObservedJointed;
-        public static long CopyJointsFreed { get => EntityPhysics.CopyJointsFreed; set => EntityPhysics.CopyJointsFreed = value; }
-        public static long CopyJointsLocked { get => EntityPhysics.CopyJointsLocked; set => EntityPhysics.CopyJointsLocked = value; }
+        internal static void PhysicsContacts(uint net, Collision collision) { EntityCargoInteraction.CargoContact(net, collision); EntityRabbits.RabbitContact(net, collision); EntityCargoInteraction.ItemContact(net, collision); }
         // End physics boundary.
         // Copy presentation boundary. Role transitions, indexes and map walks stay in the kernel.
         internal static bool IsPresentationCopy(Component item) => IsProxy(item);
@@ -152,25 +60,8 @@ namespace TLDRevamp.Net
         }
         internal static int PresentationWheelIndex(wheelgraphicsscript wheel) => ProxyWheelIndex[wheel];
         internal static System.Collections.Generic.IEnumerable<carscript> PresentationCars() => CopyCars();
-        internal static Transform[] PresentationLimbs(Ent entity) => Limbs(entity);
-        internal static bool PresentationLimp(Ent entity) => Limp(entity);
-        internal static wheelgraphicsscript[] WheelsOf(Ent entity) => EntityProxyPresentation.WheelsOf(entity);
-        private static void WriteWheels(NetWriter writer, Ent entity) => EntityProxyPresentation.WriteWheels(writer, entity);
-        private static void ReadWheels(NetReader reader, Ent entity) => EntityProxyPresentation.ReadWheels(reader, entity);
-        private static void WriteEngine(NetWriter writer, Ent entity) => EntityProxyPresentation.WriteEngine(writer, entity);
-        private static void ReadEngine(NetReader reader, Ent entity) => EntityProxyPresentation.ReadEngine(reader, entity);
-        internal static bool TpaFloorReady(tosaveitemscript item) => EntityProxyPresentation.TpaFloorReady(item);
-        public static long SuppressedDamage { get => EntityProxyPresentation.SuppressedDamage; set => EntityProxyPresentation.SuppressedDamage = value; }
-        public static float TorqueRadiusM { get => EntityProxyPresentation.TorqueRadiusM; set => EntityProxyPresentation.TorqueRadiusM = value; }
-        public static bool CopyLodAllCars { get => EntityProxyPresentation.CopyLodAllCars; set => EntityProxyPresentation.CopyLodAllCars = value; }
-        public static float CopyFarShadowsM { get => EntityProxyPresentation.CopyFarShadowsM; set => EntityProxyPresentation.CopyFarShadowsM = value; }
-        internal static void CopyLodTick() => EntityProxyPresentation.CopyLodTick();
-        internal static void CopyLodRestoreAll() => EntityProxyPresentation.CopyLodRestoreAll();
-        public static string CopyCounts() => EntityProxyPresentation.CopyCounts();
-        public static long HandoverDamageSuppressed { get => EntityProxyPresentation.HandoverDamageSuppressed; set => EntityProxyPresentation.HandoverDamageSuppressed = value; }
-        public static long DistFreezeSkipped { get => EntityProxyPresentation.DistFreezeSkipped; set => EntityProxyPresentation.DistFreezeSkipped = value; }
-        public static long ProxyStarterSounds { get => EntityProxyPresentation.ProxyStarterSounds; set => EntityProxyPresentation.ProxyStarterSounds = value; }
-        public static long ProxyStopSounds { get => EntityProxyPresentation.ProxyStopSounds; set => EntityProxyPresentation.ProxyStopSounds = value; }
+        internal static Transform[] PresentationLimbs(Ent entity) => EntityRagdolls.Limbs(entity);
+        internal static bool PresentationLimp(Ent entity) => EntityRagdolls.Limp(entity);
         // End copy presentation boundary.
         internal static bool LifetimeInSession => InSession;
         internal static long LifetimeSpawnCount => SpawnShared;
@@ -179,20 +70,7 @@ namespace TLDRevamp.Net
         internal static void RecordLifetimeFallOff() => SuppressedFallOff++;
         internal static Ent ProxyForLinkedDelay(Transform root) => ProxyOf(root);
 
-        public static float LinkedDelayEveryS { get => EntityLifetimeStreaming.LinkedDelayEveryS; set => EntityLifetimeStreaming.LinkedDelayEveryS = value; }
-        public static float LinkedHoldMaxS { get => EntityLifetimeStreaming.LinkedHoldMaxS; set => EntityLifetimeStreaming.LinkedHoldMaxS = value; }
-        public static long PlayerMadeShared { get => EntityLifetimeStreaming.PlayerMadeShared; set => EntityLifetimeStreaming.PlayerMadeShared = value; }
-        public static long FarResyncItems { get => EntityLifetimeStreaming.FarResyncItems; set => EntityLifetimeStreaming.FarResyncItems = value; }
-        private static void UpdateFarRecord(Ent entity, Vector3d position, Quaternion rotation) => EntityLifetimeStreaming.UpdateFarRecord(entity, position, rotation);
-        internal static string PrefabName(int prefabID) => EntityLifetimeStreaming.PrefabName(prefabID);
-        private static System.Reflection.FieldInfo _idField(object row) => EntityLifetimeStreaming._idField(row);
-        internal static bool FarFromHere(Vector3d position) => EntityLifetimeStreaming.FarFromHere(position);
-        private static void FarResync(Ent entity, int index, itemDataClass data) => EntityLifetimeStreaming.FarResync(entity, index, data);
-        private static bool SaveReady(tosaveitemscript item) => EntityLifetimeStreaming.SaveReady(item);
         private static void RemoveRecord(uint id) => RemoveSavedRecord(id);
-        private static void LinkedDelayTick() => EntityLifetimeStreaming.LinkedDelayTick();
-        private static void WriteMemberGone(NetWriter writer, uint net, int index) => EntityLifetimeStreaming.WriteMemberGone(writer, net, index);
-        internal static bool Unmount(attachablescript part, bool fallOff) => EntityLifetimeStreaming.Unmount(part, fallOff);
 
         // Cargo boundary. Map walks and server authority stay in the kernel.
         internal static bool CargoInSession => InSession;
@@ -202,10 +80,10 @@ namespace TLDRevamp.Net
         internal static float CargoItemMinSpeed => ItemMinSpeed;
         internal static byte PushMessage => PushIn;
         internal static Ent CargoCopyOf(Transform root) => ProxyOf(root);
-        internal static bool IsCargoBody(Ent entity) => CargoBody(entity);
+        internal static bool IsCargoBody(Ent entity) => EntityProxyPresentation.CargoBody(entity);
         internal static bool CargoRidesParent(Ent entity) => RidesParent(entity);
-        internal static Transform[] CargoLimbs(Ent entity) => Limbs(entity);
-        internal static bool CargoLimp(Ent entity) => Limp(entity);
+        internal static Transform[] CargoLimbs(Ent entity) => EntityRagdolls.Limbs(entity);
+        internal static bool CargoLimp(Ent entity) => EntityRagdolls.Limp(entity);
         internal static void SetCargoProxy(Ent entity, bool proxy) => SetProxy(entity, proxy);
         internal static void WriteCargoClaim(NetWriter writer, uint net, ClaimReason reason) => WriteClaim(writer, net, reason);
         internal static void SendCargoRequest(NetWriter writer, bool reliable) => ToServer(writer, reliable);
@@ -214,11 +92,11 @@ namespace TLDRevamp.Net
         internal static void ItemContactClaimed() => ItemClaimedOnContact++;
         internal static carscript CargoOverlappedCar(Ent entity) => OverlappedCar(entity);
         internal static Bounds CargoCarBounds(carscript car) => CarLocalBounds(car);
-        internal static bool CargoLockedAway(Ent entity) => LockedAway(entity);
+        internal static bool CargoLockedAway(Ent entity) => EntityLocks.LockedAway(entity);
         internal static bool IsPushCopy(Component pushable) => IsProxy(pushable);
         internal static Ent PushEntityOf(tosaveitemscript item) => EditEntityOf(item);
         internal static Ent GripEntityOf(Transform root) => PlacedOfTransform(root);
-        internal static nyulscript CargoRabbit(Ent entity) => NyOf(entity);
+        internal static nyulscript CargoRabbit(Ent entity) => EntityRabbits.NyOf(entity);
         internal static Ent CargoCarEntity(carscript car) => CarEnt(car);
         internal static bool CargoItemHeld(tosaveitemscript item) => IsHeld(item);
         internal static bool TryCargoContactCar(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
@@ -239,33 +117,9 @@ namespace TLDRevamp.Net
         internal static void SendAttachment(Ent entity, attachablescript at, byte type = AttachSync) => SendAttach(entity, at, type);
         internal static void SendAttachmentMessage(NetWriter writer, bool reliable) => ToServer(writer, reliable);
         internal static void TellAttachmentRefused(int player, string notice) => Mp.Server?.Tell(player, notice);
-        internal static void WriteAttachPose(NetWriter writer, attachablescript at) => EntityAttachments.WriteAttachPose(writer, at);
-        private static bool ReadAttachPose(NetReader reader, out Vector3 position, out Quaternion rotation, out int[] path, out Vector3 point) => EntityAttachments.ReadAttachPose(reader, out position, out rotation, out path, out point);
-        internal static void ApplyAttachPose(Ent entity, attachablescript at, Vector3 position, Quaternion rotation) => EntityAttachments.ApplyAttachPose(entity, at, position, rotation);
-        internal static Transform AttachFrame(attachablescript at) => EntityAttachments.AttachFrame(at);
-        private static bool CarriedFar(attachablescript at, out Ent carrier) => EntityAttachments.CarriedFar(at, out carrier);
-        private static tosaveitemscript CarriedItem(uint net, int slot, int owner) => EntityAttachments.CarriedItem(net, slot, owner);
-        private static void NoteCarrier(attachablescript at) => EntityAttachments.NoteCarrier(at);
-        private static bool SentCarriedOff(tosaveitemscript item) => EntityAttachments.SentCarriedOff(item);
-        public static long CarriedOffApplied { get => EntityAttachments.CarriedOffApplied; set => EntityAttachments.CarriedOffApplied = value; }
-        public static long AttachPosesSent { get => EntityAttachments.AttachPosesSent; set => EntityAttachments.AttachPosesSent = value; }
-        public static long AttachPosesApplied { get => EntityAttachments.AttachPosesApplied; set => EntityAttachments.AttachPosesApplied = value; }
-        public static long AttachPosesBad { get => EntityAttachments.AttachPosesBad; set => EntityAttachments.AttachPosesBad = value; }
-        public static float AttachPoseOffLast { get => EntityAttachments.AttachPoseOffLast; set => EntityAttachments.AttachPoseOffLast = value; }
-        public static float AttachPoseOffMax { get => EntityAttachments.AttachPoseOffMax; set => EntityAttachments.AttachPoseOffMax = value; }
-        public static float AttachPoseAngLast { get => EntityAttachments.AttachPoseAngLast; set => EntityAttachments.AttachPoseAngLast = value; }
         // End attachment boundary.
         // Authority and interest boundary. Records, map walks and pose replay stay in the kernel.
-        public static bool InterestRelay { get => EntityAuthorityInterest.InterestRelay; set => EntityAuthorityInterest.InterestRelay = value; }
-        public static double StateInterestM { get => EntityAuthorityInterest.StateInterestM; set => EntityAuthorityInterest.StateInterestM = value; }
-        public static string InterestJson() => EntityAuthorityInterest.InterestJson();
-        public static string ShareQuotaStats() => EntityAuthorityInterest.ShareQuotaStats();
-        private static bool ShareAllowed(int from, int recordBytes) => EntityAuthorityInterest.ShareAllowed(from, recordBytes);
-        private static void ShareQuotaTick() => EntityAuthorityInterest.ShareQuotaTick();
-        internal static void ShareQuotaForget(int player) => EntityAuthorityInterest.ShareQuotaForget(player);
         private static void RelayResync(SEnt se, int from, NetWriter msg) => EntityAuthorityInterest.RelayResync(se.NetId, se.Where, from, msg);
-        private static void RelayPoi(PoiKey key, NetWriter msg, int from, bool reliable = true) => EntityAuthorityInterest.RelayPoi(key, msg, from, reliable);
-        private static void ServerCatchUpTick() => EntityAuthorityInterest.ServerCatchUpTick();
         internal static int InterestCatchUpLimit => InterestPerTick;
         internal static void RecordInterestSkip(int player) => SkippedByInterest(player);
         internal static void DeliverInterestMessage(NetWriter writer) => Deliver(writer);
@@ -281,7 +135,7 @@ namespace TLDRevamp.Net
         private static bool NearInterestRecord(Vector3d viewer, Vector3d at)
         {
             double dx = viewer.x - at.x, dz = viewer.z - at.z;
-            return dx * dx + dz * dz <= StateInterestM * StateInterestM;
+            return dx * dx + dz * dz <= EntityAuthorityInterest.StateInterestM * EntityAuthorityInterest.StateInterestM;
         }
         internal static void CatchUpInterestRecords(int player, Vector3d viewer, NetWriter writer)
         {
@@ -353,28 +207,12 @@ namespace TLDRevamp.Net
         {
             pos = default;
             if (Mp.Server == null || from < 0) return false;
-            if (from != 0) return Mp.Server.PeerPos(from, out pos) && Finite(pos);
+            if (from != 0) return Mp.Server.PeerPos(from, out pos) && EntityNumbers.Finite(pos);
             var player = mainscript.s != null ? mainscript.s.player : null;
             if (player == null) return false;
             pos = mainscript.GlobalFromUnityPos(player.transform.position);
-            return Finite(pos);
+            return EntityNumbers.Finite(pos);
         }
-        public static string LeaseTable() => EntityWorldLeases.LeaseTable();
-        internal static string LeaseRefusalsJson() => EntityWorldLeases.LeaseRefusalsJson();
-        internal static string WorldSaveFile => EntityWorldLeases.WorldSaveFile;
-        internal static void SaveLeases(string dataFile) => EntityWorldLeases.SaveLeases(dataFile);
-        internal static void SaveLeases() => EntityWorldLeases.SaveLeases();
-        internal static void RotateLeaseFiles() => EntityWorldLeases.RotateLeaseFiles();
-        public static long BuiltInShared { get => EntityWorldLeases.BuiltInShared; set => EntityWorldLeases.BuiltInShared = value; }
-        public static long BuiltInDisabled { get => EntityWorldLeases.BuiltInDisabled; set => EntityWorldLeases.BuiltInDisabled = value; }
-        public static long BuiltInReEnabled { get => EntityWorldLeases.BuiltInReEnabled; set => EntityWorldLeases.BuiltInReEnabled = value; }
-        public static long LeasesDone { get => EntityWorldLeases.LeasesDone; set => EntityWorldLeases.LeasesDone = value; }
-        public static long LeasesFreed { get => EntityWorldLeases.LeasesFreed; set => EntityWorldLeases.LeasesFreed = value; }
-        public static long LeasesAsked { get => EntityWorldLeases.LeasesAsked; set => EntityWorldLeases.LeasesAsked = value; }
-        public static long LeasesGranted { get => EntityWorldLeases.LeasesGranted; set => EntityWorldLeases.LeasesGranted = value; }
-        public static long LeaseSpawns { get => EntityWorldLeases.LeaseSpawns; set => EntityWorldLeases.LeaseSpawns = value; }
-        public static long LeaseItemsShared { get => EntityWorldLeases.LeaseItemsShared; set => EntityWorldLeases.LeaseItemsShared = value; }
-        public static long HostItemsShared { get => EntityWorldLeases.HostItemsShared; set => EntityWorldLeases.HostItemsShared = value; }
         // End world lease boundary.
 
         internal static float EditBackHold => EditHold;
@@ -418,15 +256,10 @@ namespace TLDRevamp.Net
         internal static bool ResolveHitch(Ent entity) => Resolve(entity);
         internal static bool HitchMayJoin(Ent trailer, Ent car) => HitchCanJoin(trailer, car);
         internal static void FreezeHitchProxy(Ent entity) => ApplyProxyBodies(entity);
-        internal static bool UnmountHitch(attachablescript at, bool fallOff) => Unmount(at, fallOff);
+        internal static bool UnmountHitch(attachablescript at, bool fallOff) => EntityLifetimeStreaming.Unmount(at, fallOff);
         internal static void SyncHitchDetach(Ent entity) => SendDetachSync(entity);
         internal static void SendHitchRequest(NetWriter writer, bool reliable) => ToServer(writer, reliable);
         internal static void HitchDamageGrace(Ent car, float until) => DamageGraceUntil[car.Root.car] = until;
-        internal static void RequestHitch(Ent tr, Ent car, partslotscript slot, bool connect, bool releaseBrake = false) => EntityHitches.RequestHitch(tr, car, slot, connect, releaseBrake);
-        internal static void HitchCommandTick() => EntityHitches.HitchCommandTick();
-        private static bool HitchDetach(attachablescript at) => EntityHitches.HitchDetach(at);
-        private static void HitchRemoveJoint(attachablescript at) => EntityHitches.HitchRemoveJoint(at);
-        private static System.Collections.Generic.IEnumerable<Rigidbody> HitchBodies(Ent tr) => EntityHitches.HitchBodies(tr);
         // End hitch client boundary.
 
         internal static bool HasTpaCopy(uint net) => ByNet.ContainsKey(net);
@@ -437,17 +270,10 @@ namespace TLDRevamp.Net
         internal static bool TryKnownPoiUsable(PoiKey key, out PoiState state) => KnownPoiUsables.TryGetValue(key, out state);
         internal static bool MarkPoiUsable(usablescript usable) => MarkLiveUsable(usable);
 
-        internal static int CountActive(System.Collections.Generic.List<BoxCollider> colliders) => EntityDiag.CountActive(colliders);
-        internal static string CarDiagnostics() => EntityDiag.CarDiagnostics();
-        internal static string LockDiagnostics() => EntityDiag.LockDiagnostics();
-        internal static string WhyNotLock(tosaveitemscript item) => EntityDiag.WhyNotLock(item);
-        internal static string StuckCarJson { get => EntityDiag.StuckCarJson; set => EntityDiag.StuckCarJson = value; }
         internal static uint DiagnosticNet(Component component) => TelemetryNet(component);
         internal static bool DiagnosticMine(Ent entity) => entity.OwnerId == MyId;
         internal static bool DiagnosticProxy(mountStuff mount) => IsProxy(mount);
-        internal static long DiagnosticStoreRefusals(bool attached) => attached ? AttachedStoresRefused : ContainerStoresRefused;
-        internal static MarkFocus CaptureMarkFocus(TelemetryState state) => EntityTelemetry.CaptureMarkFocus(state);
-        internal static uint[] MarkNets(uint subject = 0) => EntityTelemetry.MarkNets(subject);
+        internal static long DiagnosticStoreRefusals(bool attached) => attached ? EntityLocks.AttachedStoresRefused : EntityLocks.ContainerStoresRefused;
         internal static void RefreshMarkFocus() => TelemetryFocusTick(Time.realtimeSinceStartupAsDouble, true);
         internal static bool MarkIsLocal(int player) => player == MyId;
         internal static uint MarkItemNet(tosaveitemscript item)
@@ -456,13 +282,6 @@ namespace TLDRevamp.Net
             return entity != null ? entity.NetId : 0;
         }
 
-        internal static ReproRow ReproBinding(uint net) => EntityReproHooks.ReproBinding(net);
-        internal static void ReproAttach(uint net, uint other, int item, int slot) => EntityReproHooks.ReproAttach(net, other, item, slot);
-        internal static void ReproClear() => EntityReproHooks.ReproClear();
-        internal static void ReproReset() => EntityReproHooks.ReproReset();
-        internal static void ReproFlush() => EntityReproHooks.ReproFlush();
-        internal static void ReproFinish() => EntityReproHooks.ReproFinish();
-        internal static void ResetDriveSample() => EntityReproHooks.ResetDriveSample();
         internal static Ent ReproEntityOf(tosaveitemscript it) => EditEntityOf(it);
         internal static bool ReproOwns(Ent e) => e != null && !e.Proxy && e.OwnerId == MyId;
         internal static Ent ReproAttachEntity(uint net)
@@ -478,25 +297,8 @@ namespace TLDRevamp.Net
         public const byte RabbitState = 90, RabbitFx = 91;
         private static readonly bool _rabbitLookupsReady = EntityRabbits.InitializeRabbitLookups();
         internal sealed class RabCharge { public Vector3d At; public float Speed, Until, OwnSpeed; }
-        public static bool RabbitSync { get => EntityRabbits.RabbitSync; set => EntityRabbits.RabbitSync = value; }
-        public static bool RabbitOwners { get => EntityRabbits.RabbitOwners; set => EntityRabbits.RabbitOwners = value; }
-        public static float RabbitNearM { get => EntityRabbits.RabbitNearM; set => EntityRabbits.RabbitNearM = value; }
-        public static float RabbitSwitchM { get => EntityRabbits.RabbitSwitchM; set => EntityRabbits.RabbitSwitchM = value; }
-        public static float RabbitHoldS { get => EntityRabbits.RabbitHoldS; set => EntityRabbits.RabbitHoldS = value; }
-        public static float RabbitCarMoveMps { get => EntityRabbits.RabbitCarMoveMps; set => EntityRabbits.RabbitCarMoveMps = value; }
-        public static float RabbitClaimM { get => EntityRabbits.RabbitClaimM; set => EntityRabbits.RabbitClaimM = value; }
-        public static float RabbitClaimSteps { get => EntityRabbits.RabbitClaimSteps; set => EntityRabbits.RabbitClaimSteps = value; }
-        public static float RabbitNextSize { get => EntityRabbits.RabbitNextSize; set => EntityRabbits.RabbitNextSize = value; }
-        internal static nyulscript NyOf(Ent e) => EntityRabbits.NyOf(e);
-        internal static void RabbitBeforeShare(tosaveitemscript root) => EntityRabbits.RabbitBeforeShare(root);
-        internal static void RabbitSpawned(GameObject go) => EntityRabbits.RabbitSpawned(go);
-        internal static bool RabbitBreakOnCopy(breakablescript br, float force) => EntityRabbits.RabbitBreakOnCopy(br, force);
-        internal static void RabbitContact(uint net, Collision c) => EntityRabbits.RabbitContact(net, c);
-        internal static string RabbitJson(Ent e) => EntityRabbits.RabbitJson(e);
-        public static string RabbitList() => EntityRabbits.RabbitList();
-        internal static System.Collections.Generic.IReadOnlyDictionary<movecreaturescript, RabCharge> ObservedRabCharges => EntityRabbits.ObservedRabCharges;
         internal static bool RabbitHandoverActive(Ent e) => Time.realtimeSinceStartup - e.OwnerAt <= HandoverWindowS;
-        internal static byte[] CaptureRabbitSnapshot(NetReader r) => FinalSnapshot(r, true);
+        internal static byte[] CaptureRabbitSnapshot(NetReader r) => EntityProxyPresentation.FinalSnapshot(r, true);
         internal static Ent RabbitOfItem(tosaveitemscript it)
         {
             foreach (var e in ByNet.Values) if (e.Root == it && e.PartIndex < 0) return e;
@@ -504,18 +306,18 @@ namespace TLDRevamp.Net
         }
         internal static void CollectRabbits(System.Collections.Generic.List<Ent> into)
         {
-            foreach (var e in ByNet.Values) if (NyOf(e) != null) into.Add(e);
+            foreach (var e in ByNet.Values) if (EntityRabbits.NyOf(e) != null) into.Add(e);
         }
         internal static System.Collections.Generic.IEnumerable<Ent> KnownRabbits()
         {
-            foreach (var e in ByNet.Values) if (NyOf(e) != null) yield return e;
+            foreach (var e in ByNet.Values) if (EntityRabbits.NyOf(e) != null) yield return e;
         }
         internal static bool HasRabbitCars => _localCars.Count != 0;
         internal static System.Collections.Generic.IEnumerable<carscript> LocalRabbitCars()
         {
             foreach (var car in _localCars) yield return car;
         }
-        internal static bool ClaimRabbitObject(Ent e, ClaimReason reason) => ClaimCargo(e, reason: reason);
+        internal static bool ClaimRabbitObject(Ent e, ClaimReason reason) => EntityCargoInteraction.ClaimCargo(e, reason: reason);
         internal static Bounds RabbitCarBounds(carscript car) => CarLocalBounds(car);
         internal static Ent RabbitProxyOf(Transform root) => ProxyOf(root);
 
@@ -566,7 +368,7 @@ namespace TLDRevamp.Net
         internal static bool ClaimNow(Ent e, ClaimReason reason)
         {
             float now = Time.realtimeSinceStartup;
-            if (now - e.OwnerAt < CargoClaimCooldownS) return false;
+            if (now - e.OwnerAt < EntityCargoInteraction.CargoClaimCooldownS) return false;
             e.OwnerAt = now;
             SetProxy(e, false);
             e.OwnerId = MyId;
@@ -576,7 +378,7 @@ namespace TLDRevamp.Net
         }
 
         /// A newly claimed rabbit stays with its claimer for the existing hold interval.
-        internal static void RabHold(uint net) { if (Server.TryGetValue(net, out var se) && se.Rabbit) se.RabbitHoldUntil = Time.realtimeSinceStartup + RabbitHoldS; }
+        internal static void RabHold(uint net) { if (Server.TryGetValue(net, out var se) && se.Rabbit) se.RabbitHoldUntil = Time.realtimeSinceStartup + EntityRabbits.RabbitHoldS; }
 
         /// Server, at Share: record position and root kind.
         private static void ShareFacts(byte[] rec, SEnt se)
@@ -602,7 +404,7 @@ namespace TLDRevamp.Net
                 { EntityRabbits.RabbitStatesStale++; return; }
                 se.RabbitHandoverEpoch = s.Epoch;
             }
-            se.RabbitSnapshot = FinalSnapshot(r, true);
+            se.RabbitSnapshot = EntityProxyPresentation.FinalSnapshot(r, true);
             // The host keeps the durable snapshot; returning known copies get it from StateInterestCatchUp.
             WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
             if (se.OwnerId != from) ServerSendTo(se.OwnerId, WS, true);
@@ -621,22 +423,6 @@ namespace TLDRevamp.Net
 
         public const byte BreakHit = 48, BreakFx = 49, AiState = 50, AiSound = 51, WorldBreak = 112;
         private static readonly bool _aiLookupsReady = EntityAI.InitializeAiLookups();
-        public static string AiStats() => EntityAI.AiStats();
-        internal static bool BreakRef(breakablescript br, out uint net, out int bi) => EntityAI.BreakRef(br, out net, out bi);
-        internal static float BodyR => EntityAI.BodyR;
-        internal static float SeenAt(newAiScript a, Vector3 from, Vector3 dir, float maxDist, Vector3 feet, Vector3 top, bool skipSelf) => EntityAI.SeenAt(a, from, dir, maxDist, feet, top, skipSelf);
-        internal static int TumbleweedsNear(thumbleweedMain m) => EntityAI.TumbleweedsNear(m);
-        public static long TumbleShared { get => EntityAI.TumbleShared; set => EntityAI.TumbleShared = value; }
-        public static long TumbleLimited { get => EntityAI.TumbleLimited; set => EntityAI.TumbleLimited = value; }
-        public static bool AiStickyRemote { get => EntityAI.AiStickyRemote; set => EntityAI.AiStickyRemote = value; }
-        public static int BreakTrace { get => EntityAI.BreakTrace; set => EntityAI.BreakTrace = value; }
-        public static bool BreaksKept { get => EntityAI.BreaksKept; set => EntityAI.BreaksKept = value; }
-        public static bool RagdollListHealed { get => EntityAI.RagdollListHealed; set => EntityAI.RagdollListHealed = value; }
-        public static float TumbleNearM { get => EntityAI.TumbleNearM; set => EntityAI.TumbleNearM = value; }
-        public static bool WorldBreakGibs { get => EntityAI.WorldBreakGibs; set => EntityAI.WorldBreakGibs = value; }
-        public static float WorldBreakM { get => EntityAI.WorldBreakM; set => EntityAI.WorldBreakM = value; }
-        public static float WorldBreakNearM { get => EntityAI.WorldBreakNearM; set => EntityAI.WorldBreakNearM = value; }
-        public static bool WorldBreaksKept { get => EntityAI.WorldBreaksKept; set => EntityAI.WorldBreaksKept = value; }
 
         internal static Ent BreakObjectOf(tosaveitemscript it)
         {
@@ -692,7 +478,7 @@ namespace TLDRevamp.Net
             where = default; known = false;
             if (!Server.TryGetValue(net, out var se) || se.OwnerId != from) return false;
             var a = EntityAI.AiOf(net, idx);
-            var ny = a == null && ByNet.TryGetValue(net, out var re) && Resolve(re) ? NyOf(re) : null;
+            var ny = a == null && ByNet.TryGetValue(net, out var re) && Resolve(re) ? EntityRabbits.NyOf(re) : null;
             if (a != null) { where = mainscript.GlobalFromUnityPos(a.transform.position); known = true; }
             else if (ny != null) { where = mainscript.GlobalFromUnityPos(ny.transform.position); known = true; }
             else if (se.HasState) { where = se.Pos; known = true; }
@@ -721,59 +507,8 @@ namespace TLDRevamp.Net
             return 0;
         }
 
-        internal static Transform[] Limbs(Ent e) => EntityRagdolls.Limbs(e);
-        internal static bool Limp(Ent e) => EntityRagdolls.Limp(e);
-        internal static System.Collections.Generic.IReadOnlyCollection<Ent> ObservedRagdollCopies => EntityRagdolls.ObservedRagdollCopies;
-        public static string RagdollPrefabs() => EntityRagdolls.RagdollPrefabs();
-        public static string CorpseList() => EntityRagdolls.CorpseList();
-        public static string DeathInfo() => EntityRagdolls.DeathInfo();
-        public static bool RagdollDelta { get => EntityRagdolls.RagdollDelta; set => EntityRagdolls.RagdollDelta = value; }
-        public static bool DeathCorpseStays { get => EntityRagdolls.DeathCorpseStays; set => EntityRagdolls.DeathCorpseStays = value; }
-        public static float RagdollKeyEveryS { get => EntityRagdolls.RagdollKeyEveryS; set => EntityRagdolls.RagdollKeyEveryS = value; }
-        public static bool DeathRagdollShare { get => EntityRagdolls.DeathRagdollShare; set => EntityRagdolls.DeathRagdollShare = value; }
-        public static bool CorpseOutfitSaved { get => EntityRagdolls.CorpseOutfitSaved; set => EntityRagdolls.CorpseOutfitSaved = value; }
-        public static bool CorpseWhole { get => EntityRagdolls.CorpseWhole; set => EntityRagdolls.CorpseWhole = value; }
-        public static float RagdollDeltaMaxShare { get => EntityRagdolls.RagdollDeltaMaxShare; set => EntityRagdolls.RagdollDeltaMaxShare = value; }
-        public static long RagdollStatesSent { get => EntityRagdolls.RagdollStatesSent; set => EntityRagdolls.RagdollStatesSent = value; }
-        public static long RagdollStatesApplied { get => EntityRagdolls.RagdollStatesApplied; set => EntityRagdolls.RagdollStatesApplied = value; }
-        public static long RagdollKeysSent { get => EntityRagdolls.RagdollKeysSent; set => EntityRagdolls.RagdollKeysSent = value; }
-        public static long RagdollDeltasSent { get => EntityRagdolls.RagdollDeltasSent; set => EntityRagdolls.RagdollDeltasSent = value; }
-        public static long RagdollFramesSent { get => EntityRagdolls.RagdollFramesSent; set => EntityRagdolls.RagdollFramesSent = value; }
-        public static long RagdollLimbsSent { get => EntityRagdolls.RagdollLimbsSent; set => EntityRagdolls.RagdollLimbsSent = value; }
-        public static long RagdollBlockBytes { get => EntityRagdolls.RagdollBlockBytes; set => EntityRagdolls.RagdollBlockBytes = value; }
-        public static long RagdollKeysIn { get => EntityRagdolls.RagdollKeysIn; set => EntityRagdolls.RagdollKeysIn = value; }
-        public static long RagdollDeltasIn { get => EntityRagdolls.RagdollDeltasIn; set => EntityRagdolls.RagdollDeltasIn = value; }
-        public static long RagdollDeltasNoKey { get => EntityRagdolls.RagdollDeltasNoKey; set => EntityRagdolls.RagdollDeltasNoKey = value; }
-        public static long RagdollHashMismatch { get => EntityRagdolls.RagdollHashMismatch; set => EntityRagdolls.RagdollHashMismatch = value; }
-        public static long RagdollLateKeys { get => EntityRagdolls.RagdollLateKeys; set => EntityRagdolls.RagdollLateKeys = value; }
-        public static long RagdollReleasedOnNone { get => EntityRagdolls.RagdollReleasedOnNone; set => EntityRagdolls.RagdollReleasedOnNone = value; }
-        public static long DeathCorpsesShared { get => EntityRagdolls.DeathCorpsesShared; set => EntityRagdolls.DeathCorpsesShared = value; }
-        public static uint DeathCorpseSaveId { get => EntityRagdolls.DeathCorpseSaveId; set => EntityRagdolls.DeathCorpseSaveId = value; }
-        public static uint DeathCorpseNetId { get => EntityRagdolls.DeathCorpseNetId; set => EntityRagdolls.DeathCorpseNetId = value; }
-        public static System.Collections.Generic.List<uint> DeathItemSaveIds => EntityRagdolls.DeathItemSaveIds;
-        public static System.Collections.Generic.List<uint> DeathItemNetIds => EntityRagdolls.DeathItemNetIds;
 
         public const byte Worn = 85;   // c to s: net, epoch, slot and pose; s to c: net, wearer, slot and pose
-        public static float HeldStateHz { get => EntityHands.HeldStateHz; set => EntityHands.HeldStateHz = value; }
-        public static float FastAfterReleaseS { get => EntityHands.FastAfterReleaseS; set => EntityHands.FastAfterReleaseS = value; }
-        public static float HandItemPullM { get => EntityHands.HandItemPullM; set => EntityHands.HandItemPullM = value; }
-        public static float HandItemPullDeg { get => EntityHands.HandItemPullDeg; set => EntityHands.HandItemPullDeg = value; }
-        public static float WornClaimEveryS { get => EntityHands.WornClaimEveryS; set => EntityHands.WornClaimEveryS = value; }
-        public static float WornOffHeadM { get => EntityHands.WornOffHeadM; set => EntityHands.WornOffHeadM = value; }
-        public static bool HandItemDraw { get => EntityHands.HandItemDraw; set => EntityHands.HandItemDraw = value; }
-        public static bool RidingFrames { get => EntityHands.RidingFrames; set => EntityHands.RidingFrames = value; }
-        public static bool WornSync { get => EntityHands.WornSync; set => EntityHands.WornSync = value; }
-        public static bool WornInShare { get => EntityHands.WornInShare; set => EntityHands.WornInShare = value; }
-        public static bool WornLateOk { get => EntityHands.WornLateOk; set => EntityHands.WornLateOk = value; }
-        public static int WornClaimTries { get => EntityHands.WornClaimTries; set => EntityHands.WornClaimTries = value; }
-        public static void WornLate() => EntityHands.WornLate();
-        public static string Wearables() => EntityHands.Wearables();
-        public static string WornStatus() => EntityHands.WornStatus();
-        internal static int LocalWornSlot(tosaveitemscript it) => EntityHands.LocalWornSlot(it);
-        internal static bool WornRides(Ent e) => EntityHands.WornRides(e);
-        internal static bool HandManaged(Ent e) => EntityHands.HandManaged(e);
-        internal static Transform ItemHand(Ent e) => EntityHands.ItemHand(e);
-        internal static string HandItemsJson(int owner, Transform hand) => EntityHands.HandItemsJson(owner, hand);
 
         internal static bool HasEntity(uint net) => ByNet.ContainsKey(net);
         internal static System.Collections.Generic.IEnumerable<Ent> PlacedHandItems()
@@ -788,10 +523,10 @@ namespace TLDRevamp.Net
         {
             foreach (var e in ByNet.Values) if (e.Root != null && e.Root.P != null && e.Root.P.wear != null) yield return e;
         }
-        internal static bool LooseCarriedRelease(uint previousCar, uint car, bool held, bool stored) => LooseRelease(previousCar, car, held, stored);
-        internal static bool ClaimReleasedCarried(Ent e) => ClaimCargo(e, released: true, reason: ClaimReason.CargoRelease);
+        internal static bool LooseCarriedRelease(uint previousCar, uint car, bool held, bool stored) => EntityProxyPresentation.LooseRelease(previousCar, car, held, stored);
+        internal static bool ClaimReleasedCarried(Ent e) => EntityCargoInteraction.ClaimCargo(e, released: true, reason: ClaimReason.CargoRelease);
         internal static bool TryLockedHandWorld(Ent e, out Vector3d pos, out Quaternion rot) => LockedWorld(e, out pos, out rot);
-        internal static void ExitHandPhysical(Ent e, Rigidbody body) => ExitPhysical(e, body);
+        internal static void ExitHandPhysical(Ent e, Rigidbody body) => EntityPhysics.ExitPhysical(e, body);
         internal static void ClaimWorn(Ent e)
         {
             SetProxy(e, false); e.OwnerId = MyId; e.SentWornSlot = -1;
@@ -808,7 +543,7 @@ namespace TLDRevamp.Net
         internal static void KeepWornRequest(int from, uint net, uint epoch, byte slot, Vector3 lp, Quaternion lq)
         {
             if (!Server.TryGetValue(net, out var se)) return;
-            if (slot != 255 && (slot > 15 || !Finite(lp) || lp.sqrMagnitude > 4f)) return;   // on the head: within 2 m of it
+            if (slot != 255 && (slot > 15 || !EntityNumbers.Finite(lp) || lp.sqrMagnitude > 4f)) return;   // on the head: within 2 m of it
             if (se.OwnerId != from && !WornTakesBack(se, from, slot)) return;
             if (!EntityHands.WornLateOk && !ClaimEpochOk(se, from, epoch)) return;
             se.WornBy = slot == 255 ? -1 : from; se.WornSlot = slot == 255 ? -1 : slot; se.WornLp = lp; se.WornLq = lq;
@@ -843,26 +578,6 @@ namespace TLDRevamp.Net
         public const byte IgnitionKey = 96;   // u32 net, u8 held: a non-owner holding a car's key (reliable)
         public const byte ShotgunIn = 39;
         public static int ServerObjects => Server.Count;   // the admin console's status
-        public static float DriveClaimHoldS { get => EntitySeats.DriveClaimHoldS; set => EntitySeats.DriveClaimHoldS = value; }
-        public static bool SeatLeaveOnExit { get => EntitySeats.SeatLeaveOnExit; set => EntitySeats.SeatLeaveOnExit = value; }
-        public static bool RearSeats { get => EntitySeats.RearSeats; set => EntitySeats.RearSeats = value; }
-        public static bool ItemSeats { get => EntitySeats.ItemSeats; set => EntitySeats.ItemSeats = value; }
-        public static float KeyResendS { get => EntitySeats.KeyResendS; set => EntitySeats.KeyResendS = value; }
-        public static float KeyHoldTimeoutS { get => EntitySeats.KeyHoldTimeoutS; set => EntitySeats.KeyHoldTimeoutS = value; }
-        public static float KeyTapMarginS { get => EntitySeats.KeyTapMarginS; set => EntitySeats.KeyTapMarginS = value; }
-        public static long KeyHoldsSent { get => EntitySeats.KeyHoldsSent; set => EntitySeats.KeyHoldsSent = value; }
-        public static long KeyHoldsApplied { get => EntitySeats.KeyHoldsApplied; set => EntitySeats.KeyHoldsApplied = value; }
-        public static long KeyHoldsRefused { get => EntitySeats.KeyHoldsRefused; set => EntitySeats.KeyHoldsRefused = value; }
-        public static long SeatLeavesLogged { get => EntitySeats.SeatLeavesLogged; set => EntitySeats.SeatLeavesLogged = value; }
-        public static string SeatGuardStats() => EntitySeats.SeatGuardStats();
-        internal static seatscript[] VehicleSeats(tosaveitemscript vehicle, bool always = false) => EntitySeats.VehicleSeats(vehicle, always);
-        internal static void LocalSeat(out uint net, out int idx) => EntitySeats.LocalSeat(out net, out idx);
-        internal static Transform SeatTransformCached(uint net, int idx, ref Transform carRoot, ref Transform seat) => EntitySeats.SeatTransformCached(net, idx, ref carRoot, ref seat);
-        internal static seatscript SeatScript(uint net, int idx, out carscript car) => EntitySeats.SeatScript(net, idx, out car);
-        internal static Transform SeatTransform(uint net, int idx) => EntitySeats.SeatTransform(net, idx);
-        internal static string SeatWhy(uint net, int idx) => EntitySeats.SeatWhy(net, idx);
-        internal static bool SeatAimFrame(out Transform drawn, out Rigidbody body) => EntitySeats.SeatAimFrame(out drawn, out body);
-        internal static Vector3 SeatAimPoint(Transform drawn, Rigidbody body, Vector3 p) => EntitySeats.SeatAimPoint(drawn, body, p);
 
         internal static bool DriverClaimIs(uint net) => _claimedFor == net;
         internal static void ClearDriverClaim() => _claimedFor = 0;
@@ -911,9 +626,9 @@ namespace TLDRevamp.Net
             owner = se.OwnerId;
             return true;
         }
-        internal static bool TakeKeyToken(int from) => TakeEditToken(from);
+        internal static bool TakeKeyToken(int from) => EntityEditCheck.TakeEditToken(from);
         internal static bool KeyReachAllowed(int from, uint net) => AtObject(from, Server[net]);
-        internal static void RefuseKeyReach(int from, uint net) => Refuse(ref EditsOutOfReach, "key reach", $"ignition key from player {from}: they aren't at net {net}");
+        internal static void RefuseKeyReach(int from, uint net) => EntityEditCheck.Refuse(ref EditsOutOfReach, "key reach", $"ignition key from player {from}: they aren't at net {net}");
         internal static bool TryPassengerControlOwner(int from, uint net, out int owner)
         {
             owner = 0;
@@ -923,39 +638,12 @@ namespace TLDRevamp.Net
             return true;
         }
 
-        public static void LateSample() => EntityDoors.LateSample();
-        public static string CarDoors(uint net) => EntityDoors.CarDoors(net);
-        public static string Food(uint net) => EntityDoors.Food(net);
-        public static string Rabbit(uint net) => EntityDoors.Rabbit(net);
-        internal static System.Collections.Generic.List<DoorRef> DoorsOf(Ent e) => EntityDoors.DoorsOf(e);
         internal static bool ApplyingDoorAttach { get => _applyingAttach; set => _applyingAttach = value; }
         internal static bool ApplyingDoorDetach => _applyingDetach;
-        internal static void ApplyDoorAttachPose(Ent e, attachablescript at, Vector3 position, Quaternion rotation) => ApplyAttachPose(e, at, position, rotation);
+        internal static void ApplyDoorAttachPose(Ent e, attachablescript at, Vector3 position, Quaternion rotation) => EntityAttachments.ApplyAttachPose(e, at, position, rotation);
 
         public const byte CarTune = 113;   // both: u32 net, CarTuning
         public const int MaxTuneBytes = 2048;
-        public static float CarTuneEveryS { get => EntityCarTuning.CarTuneEveryS; set => EntityCarTuning.CarTuneEveryS = value; }
-        public static float CarTuneResendS { get => EntityCarTuning.CarTuneResendS; set => EntityCarTuning.CarTuneResendS = value; }
-        public static float CopyFluidCheckS { get => EntityCarTuning.CopyFluidCheckS; set => EntityCarTuning.CopyFluidCheckS = value; }
-        public static float CopyFluidToleranceL { get => EntityCarTuning.CopyFluidToleranceL; set => EntityCarTuning.CopyFluidToleranceL = value; }
-        public static long BloodCleanedOnCopy { get => EntityCarTuning.BloodCleanedOnCopy; set => EntityCarTuning.BloodCleanedOnCopy = value; }
-        public static long BloodCleanSent { get => EntityCarTuning.BloodCleanSent; set => EntityCarTuning.BloodCleanSent = value; }
-        public static long BloodCleanApplied { get => EntityCarTuning.BloodCleanApplied; set => EntityCarTuning.BloodCleanApplied = value; }
-        public static long TunesSent { get => EntityCarTuning.TunesSent; set => EntityCarTuning.TunesSent = value; }
-        public static long TunesResent { get => EntityCarTuning.TunesResent; set => EntityCarTuning.TunesResent = value; }
-        public static long TunesApplied { get => EntityCarTuning.TunesApplied; set => EntityCarTuning.TunesApplied = value; }
-        public static long TunesReapplied { get => EntityCarTuning.TunesReapplied; set => EntityCarTuning.TunesReapplied = value; }
-        public static long TunesReplayed { get => EntityCarTuning.TunesReplayed; set => EntityCarTuning.TunesReplayed = value; }
-        public static long TunesRefused { get => EntityCarTuning.TunesRefused; set => EntityCarTuning.TunesRefused = value; }
-        public static long TunesKept { get => EntityCarTuning.TunesKept; set => EntityCarTuning.TunesKept = value; }
-        public static string TuneLast { get => EntityCarTuning.TuneLast; set => EntityCarTuning.TuneLast = value; }
-        internal static System.Collections.Generic.IReadOnlyDictionary<uint, TuneHere> ObservedTuneHere => EntityCarTuning.ObservedTuneHere;
-        internal static CarTuning CaptureTuning(carscript c) => EntityCarTuning.CaptureTuning(c);
-        internal static int ApplyTuning(carscript c, CarTuning t) => EntityCarTuning.ApplyTuning(c, t);
-        internal static int PrefabTuneKey(tosaveitemscript root) => EntityCarTuning.PrefabTuneKey(root);
-        internal static bool IsTunableCar(Ent e) => EntityCarTuning.IsTunableCar(e);
-        internal static void KnownTunings(System.Collections.Generic.Dictionary<uint, byte[]> into) => EntityCarTuning.KnownTunings(into);
-        internal static void TunedRootIds(System.Collections.Generic.HashSet<uint> into) => EntityCarTuning.TunedRootIds(into);
 
         internal static System.Collections.Generic.IEnumerable<Ent> PlacedTuningCars()
         {
@@ -968,7 +656,6 @@ namespace TLDRevamp.Net
             se.Tune = new byte[len]; System.Buffer.BlockCopy(bytes, off, se.Tune, 0, len);
         }
         internal static void MarkFeatureEdit(tosaveitemscript it, bool fromTank = false, string kind = "") => MarkEdit(it, fromTank, kind);
-        internal static void ForgetTankEditTruth(uint id) => EntityEdits.ForgetTankEditTruth(id);
         internal static bool HasPendingItemEdit(tosaveitemscript it) => EditDirty.ContainsKey(it);
         internal static bool TryTankFilledAt(tankscript tank, out float at) => _tankFilledAt.TryGetValue(tank, out at);
         internal static void SetFluidApplyingState(bool value) => _applyingState = value;
@@ -982,25 +669,11 @@ namespace TLDRevamp.Net
         }
 
         public const byte RadioSync = 54;
-        public static float RadioResendS { get => EntityRadio.RadioResendS; set => EntityRadio.RadioResendS = value; }
-        public static string RadioStatus() => EntityRadio.RadioStatus();
 
         public const byte WorldClock = 97;   // f64 st, f32 world seconds, f32 rate, u16 sleep epoch, bool snap
-        public static float SleepClockS { get => EntityWorldClock.SleepClockS; set => EntityWorldClock.SleepClockS = value; }
-        internal static void ApplyWorldTime(float wt, bool force) => EntityWorldClock.ApplyWorldTime(wt, force);
 
         public const byte StormSync = 56;
-        public static float StormResendS { get => EntityWeather.StormResendS; set => EntityWeather.StormResendS = value; }
-        public static long StormSyncsSent { get => EntityWeather.StormSyncsSent; set => EntityWeather.StormSyncsSent = value; }
-        public static long StormSyncsApplied { get => EntityWeather.StormSyncsApplied; set => EntityWeather.StormSyncsApplied = value; }
-        public static long StormsMade { get => EntityWeather.StormsMade; set => EntityWeather.StormsMade = value; }
-        public static long StormsRemoved { get => EntityWeather.StormsRemoved; set => EntityWeather.StormsRemoved = value; }
-        public static long StormSnaps { get => EntityWeather.StormSnaps; set => EntityWeather.StormSnaps = value; }
-        internal static System.Collections.Generic.IReadOnlyDictionary<sandstormscript, uint> ObservedStormIds => EntityWeather.ObservedStormIds;
-        internal static System.Collections.Generic.IReadOnlyDictionary<uint, sandstormscript> ObservedStormById => EntityWeather.ObservedStormById;
 
-        public static string CarSignals(uint net) => EntityCarSignals.CarSignals(net);
-        internal static int CarSignalKey(Ent e) => EntityCarSignals.CarSignalKey(e);
 
         internal static Ent EntOfRoot(Transform root)
         {
@@ -1023,22 +696,10 @@ namespace TLDRevamp.Net
         }
 
         public const byte PlayerSound = 57, ShotFx = 45;
-        public static long PlayerSoundsSent { get => EntityEffects.PlayerSoundsSent; set => EntityEffects.PlayerSoundsSent = value; }
-        public static long PlayerSoundsPlayed { get => EntityEffects.PlayerSoundsPlayed; set => EntityEffects.PlayerSoundsPlayed = value; }
-        public static long ModelStepsMuted { get => EntityEffects.ModelStepsMuted; set => EntityEffects.ModelStepsMuted = value; }
-        public static long[] SoundsSentBy { get => EntityEffects.SoundsSentBy; set => EntityEffects.SoundsSentBy = value; }
-        public static long[] SoundsPlayedBy { get => EntityEffects.SoundsPlayedBy; set => EntityEffects.SoundsPlayedBy = value; }
-        internal static string ObservedLastSound => EntityEffects.ObservedLastSound;
-        public static bool SprayFx { get => EntityEffects.SprayFx; set => EntityEffects.SprayFx = value; }
-        internal static bool IsSpraying(tosaveitemscript it) => EntityEffects.IsSpraying(it);
-        internal static sprayscript HeldSpray(fpscontroller pl) => EntityEffects.HeldSpray(pl);
-        public static string LampState(uint net) => EntityEffects.LampState(net);
-        public static string SprayFxState(uint net) => EntityEffects.SprayFxState(net);
-        public static string ShotFxStats() => EntityEffects.ShotFxStats();
         private static readonly bool _effectsLookupsReady = EntityEffects.InitializeLookups();
 
-        internal static bool IsFinite(Vector3d value) => Finite(value);
-        internal static bool IsFinite(Quaternion value) => Finite(value);
+        internal static bool IsFinite(Vector3d value) => EntityNumbers.Finite(value);
+        internal static bool IsFinite(Quaternion value) => EntityNumbers.Finite(value);
         internal static bool ResolveEntity(Ent entity) => Resolve(entity);
         internal static bool ItemRef(tosaveitemscript it, out uint net, out int idx)
         {
@@ -1054,7 +715,6 @@ namespace TLDRevamp.Net
         }
 
         public const byte ExplodeReq = 46, ExplosionFx = 47;
-        public static string ExplosionStats() => EntityExplosions.ExplosionStats();
 
         internal static bool TryExplosionRequestOwner(int from, uint net, out int owner)
         {
@@ -1066,10 +726,9 @@ namespace TLDRevamp.Net
         }
 
         internal static bool TryGetEntity(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
-        internal static float HostClockRate => EntityWorldClock.HostClockRate;
-        internal static bool IsFinite(Vector3 value) => Finite(value);
-        internal static bool IsFinite(float value) => Finite(value);
-        internal static bool IsFinite(double value) => Finite(value);
+        internal static bool IsFinite(Vector3 value) => EntityNumbers.Finite(value);
+        internal static bool IsFinite(float value) => EntityNumbers.Finite(value);
+        internal static bool IsFinite(double value) => EntityNumbers.Finite(value);
         internal static void SendToPeer(int playerId, NetWriter w, bool reliable) => ServerSendTo(playerId, w, reliable);
         internal static void SendToPeers(NetWriter w, bool reliable, int except, Vector3d? near = null, double range = 0) => ServerSendAll(w, reliable, except, near, range);
     }

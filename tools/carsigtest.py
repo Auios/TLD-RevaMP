@@ -77,45 +77,45 @@ with game.ProtectedSession():
             return o, c
 
         both("0 nothing pressed")
-        h(f"set {T}.TestIgnition 1")
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestIgnition 1")
         o, c = both("1 ignition on")
         verdict("1 IGNITION", o["localIgnition"] and c["localIgnition"] == o["localIgnition"] and c["ignition"],
                 f"host {o['localIgnition']} copy {c['localIgnition']}")
         # 2 gears: braking at a standstill, the automatic gearbox goes into reverse by itself (run 1) - the copy too
-        h(f"set {T}.TestBrake 1")
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestBrake 1")
         o, c = both("2 brake held at a standstill")
         g1 = o["gear"] == c["gear"]; rev = o["gear"]
-        h(f"set {T}.TestBrake 0")
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestBrake 0")
         o, c = both("2b brake let go")
         verdict("2 GEAR (THE AUTOMATIC'S OWN SHIFTS)", g1 and o["gear"] == c["gear"], f"held: host {rev} copy same {g1}; let go: host {o['gear']} copy {c['gear']}")
-        h(f"set {T}.TestHorn True")
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHorn True")
         o, c = both("4 horn held")
         hon = o["hornPlaying"] and c["hornPlaying"]
-        h(f"set {T}.TestHorn False")
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHorn False")
         o, c = both("4b horn let go")
         verdict("4 HORN", hon and not o["hornPlaying"] and not c["hornPlaying"], f"held: both sounding {hon}; let go: host {o['hornPlaying']} copy {c['hornPlaying']}")
         want = 0 if o["handbrake"] >= 0.5 else 1
-        h(f"set {T}.TestHandbrake {want}")
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHandbrake {want}")
         o, c = both(f"5 handbrake {'on' if want else 'off'}")
         ok1 = (o["handbrake"] >= 0.5) == bool(want) and (c["handbrake"] >= 0.5) == bool(want)
-        h(f"set {T}.TestHandbrake {1 - want}")
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHandbrake {1 - want}")
         o, c = both(f"5b handbrake {'off' if want else 'on'}")
         ok2 = (o["handbrake"] >= 0.5) == bool(1 - want) and (c["handbrake"] >= 0.5) == bool(1 - want)
         verdict("5 HANDBRAKE", ok1 and ok2, f"both ways {ok1} {ok2}")
         # 3 brake lights: rolling forward at 8 m/s, then the brake (at a standstill the automatic reverses instead)
-        h(f"set {T}.TestHandbrake 0"); time.sleep(1)
-        h(f"set {T}.TestRoll 8"); time.sleep(0.4)
-        h(f"set {T}.TestBrake 1"); time.sleep(0.5)
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHandbrake 0"); time.sleep(1)
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestRoll 8"); time.sleep(0.4)
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestBrake 1"); time.sleep(0.5)
         o, c = h(f"mp carsig {net}"), L(f"mp carsig {net}")
         print(f"  3 braking while rolling: host {o}\n                            copy {c}", flush=True)
         verdict("3 BRAKE LIGHTS", o["brakeLights"][0] > 0 and c["brakeLights"][0] == o["brakeLights"][0],
                 f"lit host {o['brakeLights']} copy {c['brakeLights']}")
-        h(f"set {T}.TestBrake 0")
+        h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestBrake 0")
         o, c = both("3b brake let go")
         verdict("3b BRAKE LIGHTS OFF AGAIN", c["brakeLights"][0] == o["brakeLights"][0], f"lit host {o['brakeLights']} copy {c['brakeLights']}")
     finally:
         for k, v in (("TestBrake", 0), ("TestRoll", 0), ("TestHorn", False), ("TestHandbrake", -1), ("TestIgnition", -1)):
-            try: h(f"set {T}.{k} {v}")
+            try: h(f"set TLDRevamp.Net.EntityCarSignalsTools.{k} {v}")
             except Exception as ex: print("restore", k, ex)
         try: h("driveout")
         except Exception: pass

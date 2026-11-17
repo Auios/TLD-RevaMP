@@ -57,7 +57,7 @@ namespace TLDRevamp.Net
             if (!InSession || !ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no loaded entity\"}";
             TelemetryTouch(net);
             var pl = mainscript.s.player;
-            var limbs = Limbs(e);
+            var limbs = EntityRagdolls.Limbs(e);
             if (action == "grab")
             {
                 // as a player grabs it: where it lies, at the point of its collider nearest the camera (not its centre)
@@ -70,7 +70,7 @@ namespace TLDRevamp.Net
             else if (action == "hold")
             {
                 var p = e.Root.P;
-                if (limbs != null && Limp(e) && e.Root.ragdollPos.ps != null)
+                if (limbs != null && EntityRagdolls.Limp(e) && e.Root.ragdollPos.ps != null)
                     foreach (var limb in e.Root.ragdollPos.ps) if (limb != null) { p = limb; break; }
                 if (p == null || pl == null) return "{\"error\":\"no pickupable or player\"}";
                 // PickedUpForceAdd clamps its target around this hand anchor, not the rendering camera.

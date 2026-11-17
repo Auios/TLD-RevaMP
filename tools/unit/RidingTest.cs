@@ -161,12 +161,21 @@ namespace TLDRevamp.Net
         static void TelemetryPose(Ent e, int kind, double clock, Vector3d p, Quaternion q, Vector3 v, int player, int seat, int mode) { }
         public static uint Net = 1; public static int Seat;
         public struct Footing { public uint Net; }
-        public static void LocalSeat(out uint net, out int seat) { seat = Seat; net = Seat >= 0 ? Net : 0; }
         public static void LocalFooting(out Footing f) { f = new Footing { Net = Net }; }
         public static Transform FootRootOf(uint net) => new Transform();
-        public static Transform SeatTransform(uint net, int seat) => new Transform();
-        public static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
     }
+    internal static partial class EntitySeats
+    {
+        internal static void LocalSeat(out uint net, out int seat) { seat = Entities.Seat; net = Entities.Seat >= 0 ? Entities.Net : 0; }
+        internal static Transform SeatTransform(uint net, int seat) => new Transform();
+    }
+
+
+    internal static partial class EntityNumbers
+    {
+        internal static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+    }
+
     public static class PlayerActs
     {
         public class Acts { }

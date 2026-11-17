@@ -22,7 +22,7 @@ static partial class EntitySplitTest
         void Packet(string name) { var p = Entities.Packets.Last(); Row(name, p.Peer + ":" + p.Reliable + ":" + Convert.ToHexString(p.Bytes)); }
         Entities.ByNet.Clear(); Entities.ClearServer(); Entities.Packets.Clear(); Entities.MyId = 1;
         mainscript.s = null;
-        Row("no-car", Entities.CarDiagnostics()); Row("no-lock", Entities.LockDiagnostics());
+        Row("no-car", EntityDiag.CarDiagnostics()); Row("no-lock", EntityDiag.LockDiagnostics());
         Row("empty-status", Entities.Status());
         var player = new fpscontroller(); mainscript.s = new mainscript { player = player };
         settingsscript.s = new settingsscript();
@@ -38,17 +38,17 @@ static partial class EntitySplitTest
         UnityEngine.Object.Found = new object[] { car, joint };
         var e = new Entities.Ent { NetId = 7, Epoch = 3, OwnerId = 1, Root = root, RootId = 17, LastSentPos = new Vector3d(1, 2, 3) };
         e.Items.Add(root); Entities.ByNet[7] = e;
-        Row("car", Entities.CarDiagnostics());
+        Row("car", EntityDiag.CarDiagnostics());
         Time.realtimeSinceStartup = 10;
         EntityDiag.StuckWatch(car);
-        Check(Entities.StuckCarJson == null, "stuck car waits 1.5 seconds");
+        Check(EntityDiag.StuckCarJson == null, "stuck car waits 1.5 seconds");
         Time.realtimeSinceStartup = 11.5f; EntityDiag.StuckWatch(car);
-        Row("stuck", Entities.StuckCarJson);
-        string stuck = Entities.StuckCarJson; car.gear = 3;
+        Row("stuck", EntityDiag.StuckCarJson);
+        string stuck = EntityDiag.StuckCarJson; car.gear = 3;
         Time.realtimeSinceStartup = 20; EntityDiag.StuckWatch(car);
-        Check(Entities.StuckCarJson == stuck, "stuck snapshot replacement waits ten seconds");
+        Check(EntityDiag.StuckCarJson == stuck, "stuck snapshot replacement waits ten seconds");
         Time.realtimeSinceStartup = 21.5f; EntityDiag.StuckWatch(car);
-        Check(Entities.StuckCarJson != stuck, "stuck snapshot replaces at ten seconds");
+        Check(EntityDiag.StuckCarJson != stuck, "stuck snapshot replaces at ten seconds");
         car.ithrottle = 0; EntityDiag.StuckWatch(car);
         Check((float)Field(typeof(EntityDiag), "_stuckSince") == -1, "stuck timer clears when throttle releases");
         var pick = new pickupable { dontMount = true, DroppedTime = 8, cols = new List<pickupable.ColliderLink> { null, new pickupable.ColliderLink(), new pickupable.ColliderLink { p = root.P } } };
@@ -58,7 +58,7 @@ static partial class EntitySplitTest
         Time.time = 10;
         var mount = new mountStuff { name = "seat", col = new BoxCollider { size = Vector3.one * 4 } };
         UnityEngine.Object.Found = new object[] { mount };
-        Row("lock", Entities.LockDiagnostics()); Row("lock-facts", Entities.WhyNotLock(item));
+        Row("lock", EntityDiag.LockDiagnostics()); Row("lock-facts", EntityDiag.WhyNotLock(item));
         root.transform.position = new Vector3(3.25f, -4.5f, 5.75f);
         ie.Ip = new PoseInterpolator { Ready = true, LastPos = new Vector3d(6, 7, 8), RenderTime = 12.34567, DelayMs = 123.4, JitterMs = 5.6 };
         Entities.ByNet[9] = new Entities.Ent { NetId = 9, RootId = 19, OwnerId = 2, Proxy = true };
@@ -66,15 +66,15 @@ static partial class EntitySplitTest
         player.Cam = new Component(); Physics.World = new Collider { name = "aim", ParentComponent = root };
         SessionLog.History.Trace.Nets = new uint[] { 8, 7, 42, 0, 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         player.pickedUp = new pickupable { tosave = root, name = "dragged" };
-        Row("mark-nets", string.Join(",", Entities.MarkNets(99)));
+        Row("mark-nets", string.Join(",", EntityTelemetry.MarkNets(99)));
         var state = new TelemetryState { PlayerCount = 3 };
         state.Players[0] = new StatePlayer { Id = 1, HasPos = true };
         state.Players[1] = new StatePlayer { Id = 2, HasPos = true, X = 3, Z = 4 };
         state.Players[2] = new StatePlayer { Id = 3, HasPos = true, X = 6, Z = 8 };
-        Row("mark-focus", FocusJson(Entities.CaptureMarkFocus(state)));
+        Row("mark-focus", FocusJson(EntityTelemetry.CaptureMarkFocus(state)));
         player.Bsitting = true; player.seat = new seatscript { Car = car, name = "driver" };
         root.Children.Add(player.seat);
-        Row("seated-focus", FocusJson(Entities.CaptureMarkFocus(state)));
+        Row("seated-focus", FocusJson(EntityTelemetry.CaptureMarkFocus(state)));
         Physics.World = null; player.Cam = null; player.inHandP = null; player.pickedUp = null; player.Bsitting = false;
         Entities.AnomalyLogCap = 2;
         Entities.AnomalyLine("first\"line"); Entities.AnomalyLine("second"); Entities.AnomalyLine("capped");
@@ -100,34 +100,27 @@ static partial class EntitySplitTest
         const string path = "tools/unit/EntityTelemetryRows.txt";
         GoldenRows.UpdateText(path, string.Join("\r\n", rows) + "\r\n");
         Check(File.ReadAllLines(path).SequenceEqual(rows), "complete diagnostic status focus and census rows match expected rows");
-        CoreMembers.Register();
         foreach (var owner in new[] { typeof(EntityDiag), typeof(EntityTelemetry) })
         {
             Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, owner.Name + " is internal static");
-            foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is FieldInfo || m is PropertyInfo || m is MethodInfo))
-            {
-                bool retained = typeof(Entities).GetMember(member.Name, Static).Length > 0;
-                foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                    Check(Reflect.MemberPath(prefix + member.Name) == (retained ? prefix + member.Name : owner.FullName + "." + member.Name), "telemetry historical alias " + prefix + member.Name);
-            }
         }
         Check(typeof(Entities).GetField("StuckCarJson", Static) == null && typeof(Entities).GetField("_stuckSince", Static) == null && typeof(Entities).GetField("ic", Static) == null, "diagnostic state has one owner");
-        Check(BridgeReflect.Set("Entities._stuckSince", "42") == "42" && (float)Field(typeof(EntityDiag), "_stuckSince") == 42, "short stuck timer alias writes owner");
-        Entities.StuckCarJson = "saved";
-        Check(BridgeReflect.Get("TLDRevamp.Net.Entities.StuckCarJson") == Json.Str("saved") && EntityDiag.StuckCarJson == "saved", "compiled snapshot facade and full bridge path share state");
-        Entities.StuckCarJson = null;
-        Check(EntityDiag.StuckCarJson == null, "bug report clears feature snapshot through facade");
-        BridgeReflect.Call("TLDRevamp.Net.Entities.MarkNets", new[] { "99" });
+        Check(BridgeReflect.Set("EntityDiag._stuckSince", "42") == "42" && (float)Field(typeof(EntityDiag), "_stuckSince") == 42, "short stuck timer owner path writes owner");
+        EntityDiag.StuckCarJson = "saved";
+        Check(BridgeReflect.Get("TLDRevamp.Net.EntityDiag.StuckCarJson") == Json.Str("saved") && EntityDiag.StuckCarJson == "saved", "compiled snapshot owner call and full bridge path share state");
+        EntityDiag.StuckCarJson = null;
+        Check(EntityDiag.StuckCarJson == null, "bug report clears feature snapshot through owner call");
+        BridgeReflect.Call("TLDRevamp.Net.EntityTelemetry.MarkNets", new[] { "99" });
         Check(Entities.FocusRefreshes > 0 && Entities.LastFocusForced, "marks still force focus refresh before capture");
         car.ChildComponent = root; player.seat = new seatscript { Car = car, name = "driver" }; player.Bsitting = true;
         root.transform.ChildComponent = root; player.seat.transform.parent = root.transform;
         root.transform.Children.Clear(); root.transform.Children.Add(player.seat);
-        var seated = Entities.CaptureMarkFocus(state);
+        var seated = EntityTelemetry.CaptureMarkFocus(state);
         Check(seated.Car?.Net == 7 && seated.Seat == 0, "seated focus uses kernel seat and vehicle index");
         mainscript.s = null;
-        Check(Entities.CaptureMarkFocus(state).ClosestPlayer == -1 && Entities.CarDiagnostics() == null && Entities.LockDiagnostics() == null, "focus and diagnostic missing-player guards");
+        Check(EntityTelemetry.CaptureMarkFocus(state).ClosestPlayer == -1 && EntityDiag.CarDiagnostics() == null && EntityDiag.LockDiagnostics() == null, "focus and diagnostic missing-player guards");
         Check(Entities.DiagnosticMine(e) && !Entities.DiagnosticMine(ie), "diagnostic ownership comparison remains in kernel");
-        Check(Entities.CountActive(car.whColliders) == 1 && Entities.CountActive(null) == 0, "Dev collider-count facade preserves enabled and null rules");
+        Check(EntityDiag.CountActive(car.whColliders) == 1 && EntityDiag.CountActive(null) == 0, "Dev collider-count owner call preserves enabled and null rules");
         Set(typeof(EntityDiag), "_stuckSince", -1f); Set(typeof(EntityDiag), "_stuckTaken", -100f);
         Entities.ByNet.Clear(); Entities.ClearServer(); Entities.Packets.Clear(); mainscript.s = null; UnityEngine.Object.Found = Array.Empty<object>();
     }

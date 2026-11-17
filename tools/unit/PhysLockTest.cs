@@ -24,8 +24,8 @@ namespace TLDRevamp.Net
             // The item moves less than the visible threshold after its last loose pose, then loses its body.
             var rest = new Vector3d(10.005, 0, 0);
             Check(!baseline.Moved(rest, Quaternion.identity) && baseline.Transition(true, mount, 0, 1), "locking while moving forces state even below pose threshold");
-            Check(FinalState(true, 40, true, BandwidthRules.Quiet.None, true, false) && !FinalState(true, 0, true, BandwidthRules.Quiet.None, true, false) &&
-                  !FinalState(true, 0, false, BandwidthRules.Quiet.None, true, false), "only a framed lock produces moving finals, including with waste fixes off");
+            Check(EntityProxyPresentation.FinalState(true, 40, true, BandwidthRules.Quiet.None, true, false) && !EntityProxyPresentation.FinalState(true, 0, true, BandwidthRules.Quiet.None, true, false) &&
+                  !EntityProxyPresentation.FinalState(true, 0, false, BandwidthRules.Quiet.None, true, false), "only a framed lock produces moving finals, including with waste fixes off");
             baseline.Sent(true, mount, 0, 1, rest, Quaternion.identity);
             Check(!baseline.Transition(true, mount, 0, 1) && !baseline.Moved(rest, Quaternion.identity), "confirmed world lock becomes quiet");
             Check(baseline.Moved(new Vector3d(11, 0, 0), Quaternion.identity), "unshared moving parent/push changes world pose");
@@ -143,7 +143,7 @@ namespace TLDRevamp.Net
                 Check(frame == 0, "attached-container uses world fallback");
                 if (tick > 0) Check(baseline.Moved(cargo.Root.transform.position, cargo.Root.transform.rotation), "driving and turning the vehicle requires ordinary world pose samples");
                 bool change = baseline.Transition(true, glovebox, frame, 1);
-                bool final = FinalState(true, frame, true, BandwidthRules.Quiet.None, true, false);
+                bool final = EntityProxyPresentation.FinalState(true, frame, true, BandwidthRules.Quiet.None, true, false);
                 if (change || final) reliable++;
                 baseline.Sent(true, glovebox, frame, 1, cargo.Root.transform.position, cargo.Root.transform.rotation);
                 ApplyPoseLock(cargo, true, frame, li, lm);
@@ -169,13 +169,13 @@ namespace TLDRevamp.Net
             uint worldFrame = LockedFrame(cargo, glovebox, cargo.Root.transform, out var worldLocal, out var worldRotation, out int worldItem, out int worldMount);
             Check(worldFrame == 0 && WorldLockContainer(cargo) == 42, "non-streaming attached container supplies an address without becoming a pose frame");
             var worldPacket = new NetWriter();
-            WriteStateHead(worldPacket, 41, cargo.Epoch, 1, 3, default, Quaternion.identity, Vector3.zero, false,
+            EntityCodec.WriteStateHead(worldPacket, 41, cargo.Epoch, 1, 3, default, Quaternion.identity, Vector3.zero, false,
                 localPos: worldLocal, localRot: worldRotation, locked: true, lockItem: worldItem, lockMount: worldMount, lockContainer: 42);
             worldPacket.U8(77);
-            var worldBytes = FinalSnapshot(new NetReader { Buf = worldPacket.Buf, End = worldPacket.Len }, true);
-            ReplayLockedState(worldPacket, worldBytes, new Vector3d(500, 0, 0), Quaternion.identity);
+            var worldBytes = EntityProxyPresentation.FinalSnapshot(new NetReader { Buf = worldPacket.Buf, End = worldPacket.Len }, true);
+            EntityProxyPresentation.ReplayLockedState(worldPacket, worldBytes, new Vector3d(500, 0, 0), Quaternion.identity);
             var worldReader = new NetReader { Buf = worldPacket.Buf, Pos = 1, End = worldPacket.Len };
-            ReadEntityHead(worldReader, false, out _, out _, out _, out _, out _, out _, out _, out _, out bool worldHeld, out _);
+            EntityProxyPresentation.ReadEntityHead(worldReader, false, out _, out _, out _, out _, out _, out _, out _, out _, out bool worldHeld, out _);
             Check(!worldReader.Bad && !worldHeld && EntityCodec.ReadCarriedBy == 0 && EntityCodec.ReadLockContainer == 42 &&
                 EntityCodec.ReadLockItem == worldItem && EntityCodec.ReadLockMount == worldMount && worldReader.U8() == 77, "world-lock address survives codec and cached replay without a held/carried flag");
             cargo.LockLocalPos = EntityCodec.ReadLocalPos; cargo.LockLocalRot = EntityCodec.ReadLocalRot;
@@ -189,13 +189,13 @@ namespace TLDRevamp.Net
             for (int n = 1; n < worldBytes.Length - 1; n++)
             {
                 var cut = new NetReader { Buf = worldBytes, Pos = 1, End = n };
-                ReadEntityHead(cut, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+                EntityProxyPresentation.ReadEntityHead(cut, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
                 Check(cut.Bad, "truncated world-lock address is rejected");
             }
             SetProxy(cargo, true); cargo.ReceivedStateEpoch = cargo.Epoch;
             ApplyPoseLock(cargo, true, 0, -1, -1);
-            var mounts = LockMounts(door.Root); var scans = door.Root.MountScans;
-            Check(ReferenceEquals(mounts, LockMounts(door.Root)) && door.Root.MountScans == scans, "container mount arrays are cached");
+            var mounts = EntityLocks.LockMounts(door.Root); var scans = door.Root.MountScans;
+            Check(ReferenceEquals(mounts, EntityLocks.LockMounts(door.Root)) && door.Root.MountScans == scans, "container mount arrays are cached");
             // The mount stays the same while its parent chain changes.
             glovebox.transform.parent = car.Root.transform; glovebox.parentTosave = car.Root;
             Check(LockedFrame(cargo, glovebox, cargo.Root.transform, out _, out _, out _, out _) == 0, "changed container cannot reuse an obsolete mount index");
@@ -218,23 +218,23 @@ namespace TLDRevamp.Net
             Check(Math.Abs(child.Pos.x - (5000 + offset.x)) < .001 && child.Where.x == child.Pos.x, "late join and interest use current parent world pose");
             car.FarPos = parent.Pos; car.FarRot = parent.Rot; car.Root = null;
             Check(LockedWorld(cargo, out var far, out _) && (far - child.Pos).sqrMagnitude < .0001, "far child follows stored-out parent in world space");
-            UpdateFarRecord(cargo, far, child.Rot); cargo.FarDirty = false;
-            for (int tick = 0; tick < 100; tick++) UpdateFarRecord(cargo, far, child.Rot);
+            EntityLifetimeStreaming.UpdateFarRecord(cargo, far, child.Rot); cargo.FarDirty = false;
+            for (int tick = 0; tick < 100; tick++) EntityLifetimeStreaming.UpdateFarRecord(cargo, far, child.Rot);
             Check(!cargo.FarDirty, "parked dormant locked child does not repeatedly dirty far records");
-            UpdateFarRecord(cargo, far + new Vector3d(.01, 0, 0), child.Rot);
+            EntityLifetimeStreaming.UpdateFarRecord(cargo, far + new Vector3d(.01, 0, 0), child.Rot);
             Check(cargo.FarDirty, "derived far movement dirties records");
             cargo.FarDirty = false;
-            UpdateFarRecord(cargo, cargo.FarPos, Quaternion.Euler(0, 45, 0));
+            EntityLifetimeStreaming.UpdateFarRecord(cargo, cargo.FarPos, Quaternion.Euler(0, 45, 0));
             Check(cargo.FarDirty, "derived far rotation dirties records");
 
             var w = new NetWriter();
-            WriteStateHead(w, 41, 2, 4, 5, rest, Quaternion.identity, Vector3.zero, false,
+            EntityCodec.WriteStateHead(w, 41, 2, 4, 5, rest, Quaternion.identity, Vector3.zero, false,
                            carriedBy: 40, localPos: lp, localRot: lq, final: true, locked: true, lockItem: item, lockMount: index);
             w.U8(77); // opaque visual tail must survive replay
-            var snapshot = FinalSnapshot(new NetReader { Buf = w.Buf, End = w.Len }, true);
-            ReplayLockedState(w, snapshot, child.Pos, child.Rot);
+            var snapshot = EntityProxyPresentation.FinalSnapshot(new NetReader { Buf = w.Buf, End = w.Len }, true);
+            EntityProxyPresentation.ReplayLockedState(w, snapshot, child.Pos, child.Rot);
             var r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
-            ReadEntityHead(r, false, out uint net, out uint epoch, out double stamp, out var world, out _, out var velocity, out _, out _, out bool lockHeld, out _);
+            EntityProxyPresentation.ReadEntityHead(r, false, out uint net, out uint epoch, out double stamp, out var world, out _, out var velocity, out _, out _, out bool lockHeld, out _);
             Check(!lockHeld, "physlock frame is not a held pickup");
             Check(net == 41 && epoch == 2 && stamp == 5 && EntityCodec.ReadFinalState && EntityCodec.ReadLockedState && EntityCodec.ReadCarriedBy == 40 && EntityCodec.ReadLockItem == item && EntityCodec.ReadLockMount == index, "late join replays final lock, frame and container");
             Check((world - child.Pos).sqrMagnitude < .00001 && velocity.sqrMagnitude == 0 && r.U8() == 77 && !r.Bad, "replay refreshes stale world fallback and preserves visual state");
@@ -244,29 +244,29 @@ namespace TLDRevamp.Net
             for (int n = 1; n < snapshot.Length - 1; n++)
             {
                 r = new NetReader { Buf = snapshot, Pos = 1, End = n };
-                ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+                EntityProxyPresentation.ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
                 Check(r.Bad, "truncated framed lock rejected");
             }
             WriteUnlock(w);
             r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
-            ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+            EntityProxyPresentation.ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
             Check(!EntityCodec.ReadLockedState && EntityCodec.ReadCarriedBy == 0 && EntityCodec.ReadLockContainer == 0 && EntityCodec.ReadLockItem == -1, "unlock clears wire read context");
             double previous = 5; uint previousEpoch = 2;
-            Check(NewerState(PoseStamp(5, 5, false), 2, ref previous, ref previousEpoch), "same physics-step lock/unlock has a newer millisecond stamp");
-            Check(!NewerState(5, 2, ref previous, ref previousEpoch) && NewerState(PoseStamp(1, 5, true), 3, ref previous, ref previousEpoch), "delayed final cannot overwrite motion; new owner clock is accepted");
+            Check(EntityProxyPresentation.NewerState(EntityProxyPresentation.PoseStamp(5, 5, false), 2, ref previous, ref previousEpoch), "same physics-step lock/unlock has a newer millisecond stamp");
+            Check(!EntityProxyPresentation.NewerState(5, 2, ref previous, ref previousEpoch) && EntityProxyPresentation.NewerState(EntityProxyPresentation.PoseStamp(1, 5, true), 3, ref previous, ref previousEpoch), "delayed final cannot overwrite motion; new owner clock is accepted");
 
             // Batch 9: inventory transitions must bypass quiet pose/lock rules, and lock-reader context must
             // not leak from the preceding entity into a lamp's stored/held state.
             foreach (bool stored in new[] { true, false })
             {
                 w.Reset();
-                WriteStateHead(w, 41, 2, 6, 6, rest, Quaternion.identity, Vector3.zero, false,
+                EntityCodec.WriteStateHead(w, 41, 2, 6, 6, rest, Quaternion.identity, Vector3.zero, false,
                     carriedBy: 40, localPos: lp, localRot: lq, final: true, locked: true, lockItem: item, lockMount: index);
                 r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
-                ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-                w.Reset(); WriteStateHead(w, 42, 1, 2, 6.05, rest, Quaternion.identity, Vector3.zero, false, stored: stored, held: !stored);
+                EntityProxyPresentation.ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+                w.Reset(); EntityCodec.WriteStateHead(w, 42, 1, 2, 6.05, rest, Quaternion.identity, Vector3.zero, false, stored: stored, held: !stored);
                 r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
-                ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out bool wireStored, out bool wireHeld, out _);
+                EntityProxyPresentation.ReadEntityHead(r, false, out _, out _, out _, out _, out _, out _, out _, out bool wireStored, out bool wireHeld, out _);
                 Check(!r.Bad && wireStored == stored && wireHeld != stored && !EntityCodec.ReadLockedState && EntityCodec.ReadCarriedBy == 0 && EntityCodec.ReadLockItem == -1,
                     "inventory state survives protocol 39 after another entity's framed lock");
                 tail = default;
@@ -278,8 +278,8 @@ namespace TLDRevamp.Net
             for (int tick = 0; tick < 100; tick++)
             {
                 bool carVelocity = tick < 99;
-                bool moving = StateMoving(drivenCar, tick < 99, false, tick < 99, ref carVelocity);
-                Check(!baseline.Locked && !FinalState(false, 0, true, BandwidthRules.Quiet.None, moving, true),
+                bool moving = EntityProxyPresentation.StateMoving(drivenCar, tick < 99, false, tick < 99, ref carVelocity);
+                Check(!baseline.Locked && !EntityProxyPresentation.FinalState(false, 0, true, BandwidthRules.Quiet.None, moving, true),
                     "driven car is never finalized by item release/lock policy, including its last braking sample");
                 Check(BandwidthRules.StateQuiet(ref tail, tick * .05, tick == 0, tick < 99, false, false, tick == 99,
                     moving, false, false, false, .05, driven: true) == BandwidthRules.Quiet.None,
@@ -291,7 +291,7 @@ namespace TLDRevamp.Net
 
         private static void WriteUnlock(NetWriter w)
         {
-            w.Reset(); WriteStateHead(w, 41, 2, 5, 5.001, default, Quaternion.identity, Vector3.zero, false);
+            w.Reset(); EntityCodec.WriteStateHead(w, 41, 2, 5, 5.001, default, Quaternion.identity, Vector3.zero, false);
         }
     }
 

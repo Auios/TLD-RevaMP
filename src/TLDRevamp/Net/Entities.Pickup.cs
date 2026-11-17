@@ -36,7 +36,7 @@ namespace TLDRevamp.Net
                 return;
             }
             // on its owner's head (Entities.Worn): theirs until they take it off
-            if (WornSync && ServerWornNow(se)) { RefuseClaim(from, se, "worn", reason); return; }
+            if (EntityHands.WornSync && ServerWornNow(se)) { RefuseClaim(from, se, "worn", reason); return; }
             // the first driver keeps the car: no takeover while the owner's player sits in its driver seat
             // (the owner reports it with every state; a stale report counts as not driving)
             if (se.Driven && Time.realtimeSinceStartup - se.DrivenAt < 1f)
@@ -51,7 +51,7 @@ namespace TLDRevamp.Net
             se.ClaimedBy = from; se.ClaimedAt = Time.realtimeSinceStartup; se.ClaimedFromEpoch = se.Epoch;
             OwnerLog(se, from, ClaimName(reason) + (se.Driven ? " (owner's driver report " + (Time.realtimeSinceStartup - se.DrivenAt).ToString("F1") + " s old)" : ""));
             se.OwnerId = from; se.Epoch++;
-            if (se.Rabbit) se.RabbitHoldUntil = Time.realtimeSinceStartup + RabbitHoldS;   // a car about to hit it: the nearest-player rule waits
+            if (se.Rabbit) se.RabbitHoldUntil = Time.realtimeSinceStartup + EntityRabbits.RabbitHoldS;   // a car about to hit it: the nearest-player rule waits
             W.Reset(); W.U8(Owner); W.U32(net); W.VarU32((uint)from); W.U32(se.Epoch);
             ServerSendAll(W, true, -1);
             CascadeOwner(se);

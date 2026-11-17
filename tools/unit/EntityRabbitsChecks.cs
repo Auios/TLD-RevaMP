@@ -194,7 +194,7 @@ static partial class EntitySplitTest
         var charge = new Entities.RabCharge { At = new Vector3d(10, 0, 0), Speed = 8, Until = Time.time + 1, OwnSpeed = 2 };
         EntityRabbits.SetRabbitCharge(ny.move, charge); RabbitCall("Charge", ny.move);
         Check(ny.move.speed == 8 && ny.move.moveDir.x == 1, "charge stage uses global target and requested speed");
-        Time.time += 2; RabbitCall("Charge", ny.move); Check(ny.move.speed == 2 && !Entities.ObservedRabCharges.ContainsKey(ny.move), "expired charge restores original speed");
+        Time.time += 2; RabbitCall("Charge", ny.move); Check(ny.move.speed == 2 && !EntityRabbits.ObservedRabCharges.ContainsKey(ny.move), "expired charge restores original speed");
         Time.time = 10; ny.idleSound = true; ny.lastIdle = 0; ny.currentIdle = 1; mainscript.s.player.transform.position = new Vector3(100, 0, 0);
         RabbitCall("RemoteIdle", ny); Check(ny.lastIdle == 10 && ny.GIdleSound != null, "remote player in idle range stages the same local idle sound");
     }
@@ -316,12 +316,11 @@ static partial class EntitySplitTest
         Check(physical.IndexOf("ItemNearTick(dt);") < physical.IndexOf("EntityRabbits.RabbitNearTick(dt);"), "rabbit claims stay after item claims in FixedTick");
         Check(features.Contains("W.Reset(); WriteClaim(W, e.NetId, reason); ToServer(W, true);") && features.Contains("WS.Reset(); WS.Bytes(r.Buf, 0, r.End);"), "claim and server state transactions retain shared kernel writers");
         Check(Field(typeof(Entities), "_rabbitLookupsReady") is true && TLDRevamp.GameLookups.FieldRefs.Contains("nyulscript.lastRoarTime") && TLDRevamp.GameLookups.FieldRefs.Contains("nyulscript.lastAttackTime") && TLDRevamp.GameLookups.FieldRefs.Contains("nyulscript.lastSeeTarget") && TLDRevamp.GameLookups.FieldRefs.Contains("nyulscript.alreadyEvil") && TLDRevamp.GameLookups.FieldRefs.Contains("nyulscript.GIdleSound"), "kernel warmup retains all five rabbit lookup caches");
-        TLDRevamp.CoreMembers.Register();
         foreach (string name in new[] { "RabbitStatesSent", "RabbitStatesApplied", "RabbitStatesStale", "RabbitFxSent", "RabbitFxApplied", "RabbitDamageSent", "RabbitOwnerMoves", "RabbitClaimedByCar", "RabbitClaimedObjects", "RabbitBreakHitsSent", "RabbitBreakHitsSkipped", "RabbitSizesRolled", "RabStoredSkips" })
-            Check(TLDRevamp.BridgeReflect.Get("TLDRevamp.Net.Entities." + name) == Field(RabbitOwner, name).ToString(), "bridge full counter path reads sole rabbit backing value: " + name);
-        Check(TLDRevamp.BridgeReflect.Get("TLDRevamp.Net.Entities._rabHits.Count") == "0", "bridge preserves nested historical rabbit map paths");
-        float hold = EntityRabbits.RabbitHoldS; TLDRevamp.BridgeReflect.Set("TLDRevamp.Net.Entities.RabbitHoldS", "6.25");
-        Check(EntityRabbits.RabbitHoldS == 6.25f && Entities.RabbitHoldS == 6.25f, "bridge setting and compiled facade share one backing value"); EntityRabbits.RabbitHoldS = hold;
+            Check(TLDRevamp.BridgeReflect.Get("TLDRevamp.Net.EntityRabbits." + name) == Field(RabbitOwner, name).ToString(), "bridge full counter path reads sole rabbit backing value: " + name);
+        Check(TLDRevamp.BridgeReflect.Get("TLDRevamp.Net.EntityRabbits._rabHits.Count") == "0", "bridge preserves nested historical rabbit map paths");
+        float hold = EntityRabbits.RabbitHoldS; TLDRevamp.BridgeReflect.Set("TLDRevamp.Net.EntityRabbits.RabbitHoldS", "6.25");
+        Check(EntityRabbits.RabbitHoldS == 6.25f, "bridge setting and compiled owner call share one backing value"); EntityRabbits.RabbitHoldS = hold;
     }
 }
 

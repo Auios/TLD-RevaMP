@@ -51,7 +51,7 @@ with game.ProtectedSession():
         h("mp host 27070"); L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set {T}.AttachRequests {not OLD}"); s_(f"set {T}.OwnerCascade {not OLD}")
+        for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityAttachments.AttachRequests {not OLD}"); s_(f"set {T}.OwnerCascade {not OLD}")
         print(f"  {'OLD (no attach requests)' if OLD else 'NEW'}", flush=True)
         lid = L("mp entities")["me"]
         hp = h("gpos")
@@ -67,9 +67,9 @@ with game.ProtectedSession():
         for case in [c for c in ("A", "B") if c in ONLY]:
             L(f"tpground {cp[0] + 2.5} {cp[2] + 1}"); h(f"tpground {cp[0] + 2.5} {cp[2] - 1.5}"); time.sleep(3)
             lb = set(ents(L))
-            L(f"set {T}.TestAsPlayer True")
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
             print(f"  [{case}] laptop takes the hubcap off:", L(f"mount off {net} {SLOT}"), flush=True)
-            L(f"set {T}.TestAsPlayer False")
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
             prev = hub if case != "A" else None   # bolted back in A, the same hubcap keeps its entity
             hub = until(lambda: next((n for n, e in ents(L).items() if (n not in lb or n == prev) and "Disztarcsa" in e["name"] and e["owner"] == lid), None), 10)
             if not hub: verdict(f"{case}0 THE HUBCAP CAME OFF", False, "no new hubcap entity on the laptop"); continue
@@ -82,9 +82,9 @@ with game.ProtectedSession():
             el = ents(L)[hub]
             verdict(f"{case}0 THE LAPTOP'S IS A COPY NOW (THE HOST'S)", bool(took), f"laptop sees owner {el['owner']} proxy {el['proxy']}")
             c0 = (counters(h), counters(L))
-            L(f"set {T}.TestAsPlayer True")
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
             print(f"  [{case}] laptop's player bolts the copy on:", L(f"mount on {hub} {net} {SLOT}"), flush=True)
-            L(f"set {T}.TestAsPlayer False")
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
             time.sleep(8)
             if case == "B": h(f"mp forceheld 0"); h("mp drop"); time.sleep(3)
             ph, pl = h(f"mount pose {hub} {net} {SLOT}"), L(f"mount pose {hub} {net} {SLOT}")
@@ -111,24 +111,24 @@ with game.ProtectedSession():
             ok = until(lambda: ents(h)[net]["owner"] == lid and ents(L)[net]["owner"] == lid, 10)
             verdict("C0 THE LAPTOP HAS THE HOST'S CAR", bool(ok), f"host sees owner {ents(h)[net]['owner']}, laptop {ents(L)[net]['owner']}")
             lb = set(ents(L))
-            L(f"set {T}.TestAsPlayer True")
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
             print("  [C] laptop takes the hubcap off:", L(f"mount off {net} {SLOT}"), flush=True)
-            L(f"set {T}.TestAsPlayer False")
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
             hub = until(lambda: next((n for n, e in ents(L).items() if "Disztarcsa" in e["name"] and e["owner"] == lid and (n not in lb or n == hub)), None), 10)
             if not hub: verdict("C1 THE HUBCAP CAME OFF", False, "no hubcap entity of the laptop's")
             else:
                 time.sleep(2)
-                L(f"set {T}.TestAsPlayer True")
+                L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
                 print("  [C] laptop bolts it back:", L(f"mount on {hub} {net} {SLOT}"), flush=True)
-                L(f"set {T}.TestAsPlayer False"); time.sleep(4)
+                L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False"); time.sleep(4)
                 print(f"  [C] hubcap net {hub}: owner host-side {ents(h)[hub]['owner']}, laptop-side {ents(L)[hub]['owner']}", flush=True)
                 print("  [C] host claims its car back:", h(f"mp claim {net}"), flush=True)
                 until(lambda: ents(h)[net]["owner"] == hid and ents(L)[net]["owner"] == hid, 10); time.sleep(3)
                 oh, ol = ents(h)[hub]["owner"], ents(L)[hub]["owner"]
                 verdict("C2 THE HUBCAP WENT BACK WITH THE CAR (THE HOST'S ON BOTH)", oh == hid and ol == hid, f"host sees owner {oh}, laptop {ol}; cascaded {h(f'get {T}.OwnerCascaded')['value']}")
-                h(f"set {T}.TestAsPlayer True")
+                h(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
                 print("  [C] host takes it off:", h(f"mount off {net} {SLOT}"), flush=True)
-                h(f"set {T}.TestAsPlayer False")
+                h(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
                 try: h("mp drop")
                 except RuntimeError: pass
                 time.sleep(6)
@@ -140,7 +140,7 @@ with game.ProtectedSession():
         print("  errors:", [s_("errors")["errors"] for s_ in (h, L)], flush=True)
     finally:
         for s_ in (h, L):
-            try: s_(f"set {T}.AttachRequests True"); s_(f"set {T}.OwnerCascade True"); s_(f"set {T}.TestAsPlayer False"); s_(f"mp forceheld 0")
+            try: s_(f"set TLDRevamp.Net.EntityAttachments.AttachRequests True"); s_(f"set {T}.OwnerCascade True"); s_(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False"); s_(f"mp forceheld 0")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

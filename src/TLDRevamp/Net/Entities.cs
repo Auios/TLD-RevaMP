@@ -43,7 +43,7 @@ namespace TLDRevamp.Net
             public tosaveitemscript Root;
             public List<tosaveitemscript> Items = new List<tosaveitemscript>();
             public bool Proxy;
-            public float ScanTracedAt;   // diagnostics: the cargo scan's last trace line for it (Entities.ClaimTrace)
+            public float ScanTracedAt;   // diagnostics: the cargo scan's last trace line for it (EntityCargoInteraction.ClaimTrace)
             public PoseInterpolator Ip;
             internal double RidingPreviousClock;
             public ushort SeqOut, SeqIn; public int Recv, WhyAwake, WhyPos, WhyRot, WhyStored;   // Recv: states this copy received (diagnostics)
@@ -182,7 +182,7 @@ namespace TLDRevamp.Net
             public readonly List<uint> Parts = new List<uint>();                     // parts that came off this car, in order
             public List<int> Broken;                                                  // breakables its owner broke, in order (BreaksKept)
             public readonly HashSet<int> SplitOff = new HashSet<int>();             // kept even if the detached entity is later removed
-            public int CrashReturnTo = -1; public float CrashUntil;                  // crash lease (Entities.CrashAuthority): owner to return to
+            public int CrashReturnTo = -1; public float CrashUntil;                  // crash lease (EntityPhysics.CrashAuthority): owner to return to
             public bool Hitch; public uint HitchCar; public int HitchSlot;
             public byte[] LastAttach; public uint AttachParent;                    // its last AttachSync (until a DetachSync), for later joiners
             public HashSet<uint> AttachKids;                                         // objects whose last attach is onto this one
@@ -260,7 +260,7 @@ namespace TLDRevamp.Net
             // sets, needs nothing here: ServerOnJoin starts every joiner with an empty one - rehost.py)
             EntityPhysics.ResetPhysicalCars(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); EntityAI.BreaksReset();
             EntityEdits.ResetTankEditTruth(); _tankAddsOut.Clear(); _censusFirst.Clear(); _censusDue.Clear(); _repairWait.Clear(); _repairCycle.Clear(); _repairCursor = 0; _repairRunAt.Clear(); _placeRunAt.Clear(); _placeWait.Clear();
-            ResetPoiCensus(); EntityWorldLeases.ResetLeaseSession();
+            EntityRepair.ResetPoiCensus(); EntityWorldLeases.ResetLeaseSession();
             EntitySeats.ShotgunReset();
             EntityAI.AiReset();
             EntityRabbits.RabbitReset();
@@ -294,7 +294,7 @@ namespace TLDRevamp.Net
             // and the joiner's own counter), and the new item was never shared (stackcargo, 2026-11-11)
             foreach (var e0 in ByNet.Values) if (ReferenceEquals(e0.Root, root)) return "{\"already\":" + e0.NetId + "}";
             if (PendingShare.ContainsKey(root.idInSave)) return "{\"pending\":true}";
-            RabbitBeforeShare(root);
+            EntityRabbits.RabbitBeforeShare(root);
             var items = group ?? ItemSnapshot.Group(root);
             var contents = StoredContentsApart ? StoredContents(root, items) : null;
             var perItem = new List<itemDataClass>();
@@ -316,7 +316,7 @@ namespace TLDRevamp.Net
                 cap = ItemSnapshot.CaptureGroup(items, perItem);
             }
             byte[] rec = RecordCodec.Encode(cap);
-            var ent = new Ent { Root = root, Items = items, OwnerId = MyId, ResyncHashes = StateHashes(items, perItem) };
+            var ent = new Ent { Root = root, Items = items, OwnerId = MyId, ResyncHashes = EntityResync.StateHashes(items, perItem) };
             PendingShare[root.idInSave] = ent;
             W.Reset(); W.U8(Share); W.U32(root.idInSave); W.VarU32((uint)rec.Length); W.Bytes(rec, 0, rec.Length);
             EntityHands.WriteShareWorn(W, root);   // [u8 slot, pose]: already on the local player's head (Entities.Worn)
@@ -422,7 +422,7 @@ namespace TLDRevamp.Net
 
         public static void Tick()
         {
-            CopyLodTick();
+            EntityProxyPresentation.CopyLodTick();
             if (!InSession) return;
             DevHooks.EntityWatch?.Invoke();
             AnomalyTick();
@@ -432,17 +432,17 @@ namespace TLDRevamp.Net
             EntityAI.BreakWaitTick();
             EntityCarTuning.CarTuneTick();
             EntityAI.WorldBreakTick();
-            PoiCensusTick();
+            EntityRepair.PoiCensusTick();
             float dt = Time.unscaledDeltaTime;
             EntityWorldClock.HostClockTick();
             DriveClaimTick();
             EntitySeats.ShotgunTick(dt);
-            PushTick(dt);
+            EntityCargoInteraction.PushTick(dt);
             EntityRadio.RadioTick(dt);
             EntitySeats.KeyTick(); DevHooks.KeyTestTick?.Invoke();
-            HitchTick(); EditBackTick();
+            HitchTick(); EntityEditBack.EditBackTick();
             EntityLocks.PhysLockTick(dt);
-            PushGripTick();
+            EntityCargoInteraction.PushGripTick();
             EntityWeather.StormTick(dt);
             EntityWorldClock.ServerTimeTick(dt);
             ServerInterestTick(dt);
@@ -459,12 +459,12 @@ namespace TLDRevamp.Net
             ReshareTick();
             EntityExplosions.BlastTick();
             MemberGoneTick();
-            if (IsHost) ShareQuotaTick();
+            if (IsHost) EntityAuthorityInterest.ShareQuotaTick();
             EntityAI.AiTick();
             EntityRabbits.RabbitTick();
             EntityHands.WornTick();
             EntityLocks.GentleTick();
-            ClaimTraceTick();
+            EntityCargoInteraction.ClaimTraceTick();
             ResyncFrameTick(dt);
             // the stored-away objects' far records: every DormantEveryFrames frames, not every frame (Entities.Placed)
             if (LoopPlacedOnly && Time.frameCount - _dormantFrame >= DormantEveryFrames)
@@ -483,11 +483,11 @@ namespace TLDRevamp.Net
                 // bolted on: that state was the server's last word on it)
                 // a copy stored in a container here while its owner has it elsewhere (every kind of copy: shown by its
                 // interpolator, simulated, at rest, bolted on — before the skip below: a part bolted on in a container)
-                bool wornRides = WornRides(e);   // on its wearer's head here: placed by WornLate
+                bool wornRides = EntityHands.WornRides(e);   // on its wearer's head here: placed by WornLate
                 TickPoseLock(e);
-                if (e.Proxy && !e.PoseLocked && (e.CarriedBy == 0 || (CarriedLeavesLock && e.Held)) && !wornRides) EntityLocks.CheckCopyLock(e, now);
-                if (e.ReleaseGhost && (e.Proxy || GhostEndsOnOwn)) EntityLocks.ReleaseGhostTick(e);
-                bool attachedRides = RidesBolted(e) || AttachedCarPart(e);
+                if (e.Proxy && !e.PoseLocked && (e.CarriedBy == 0 || (EntityLocks.CarriedLeavesLock && e.Held)) && !wornRides) EntityLocks.CheckCopyLock(e, now);
+                if (e.ReleaseGhost && (e.Proxy || EntityLocks.GhostEndsOnOwn)) EntityLocks.ReleaseGhostTick(e);
+                bool attachedRides = RidesBolted(e) || EntityProxyPresentation.AttachedCarPart(e);
                 if (attachedRides && e.Proxy) continue;
                 if (!e.Proxy)
                 {
@@ -500,7 +500,7 @@ namespace TLDRevamp.Net
                     e.SendAcc += dt;
                     // held, or let go less than FastAfterReleaseS ago: HeldStateHz. The copies need about one send interval of
                     // buffer to show it smoothly: at 20 Hz a held barrel was drawn ~90 ms behind and fell that late.
-                    float sendEvery = 1f / (HeldStateHz > Protocol.StateHz && (e.SentHeld || now < e.FastSendUntil) ? HeldStateHz : Protocol.StateHz);
+                    float sendEvery = 1f / (EntityHands.HeldStateHz > Protocol.StateHz && (e.SentHeld || now < e.FastSendUntil) ? EntityHands.HeldStateHz : Protocol.StateHz);
                     if (!lockChange && e.SendAcc < sendEvery) continue;
                     e.SendAcc = Mathf.Max(0f, e.SendAcc - sendEvery);
                     if (e.SendAcc > sendEvery) e.SendAcc = 0;
@@ -513,9 +513,9 @@ namespace TLDRevamp.Net
                     bool held = IsHeld(e.Root), wHeld = held != e.SentHeld;
                     bool handPose = EntityHands.LocalHandPose(e, held, stored, locked, out var handPos, out var handRot);
                     bool wHand = handPose != e.SentHandPose || handPose && ((handPos - e.SentHandPos).sqrMagnitude > .001f * .001f || Quaternion.Angle(handRot, e.SentHandRot) > .1f);
-                    bool spraying = IsSpraying(e.Root);
-                    bool ground = CompactGround(e) && !held && !stored && !spraying;
-                    bool compact = (CompactFlyer(e) || ground) && !held && !stored && !spraying;
+                    bool spraying = EntityEffects.IsSpraying(e.Root);
+                    bool ground = EntityProxyPresentation.CompactGround(e) && !held && !stored && !spraying;
+                    bool compact = (EntityProxyPresentation.CompactFlyer(e) || ground) && !held && !stored && !spraying;
                     if (compact) q = Quaternion.Euler(0, q.eulerAngles.y, 0);
                     // Resting suspension creep needs 2 cm to wake the stream; moving poses keep the 1 cm threshold.
                     bool wPos = BandwidthRules.PositionChanged((g - e.LastSentPos).sqrMagnitude, WasteFixes && e.Root.car != null && e.SentAtRest && !e.SentDriven);
@@ -538,7 +538,7 @@ namespace TLDRevamp.Net
                     bool corpseRoot = t != e.Root.transform && rb != null && rb.velocity.sqrMagnitude > RestSpeed * RestSpeed;
                     bool driven = IsLocalDriver(e.Root), wDriver = driven != e.SentDriven;
                     bool velocityMoving = poseBody != null && !poseBody.isKinematic && poseBody.velocity.sqrMagnitude > RestSpeed * RestSpeed;
-                    bool moving = StateMoving(e, wPos || wRot, limbs, wAwake, ref velocityMoving, ground);
+                    bool moving = EntityProxyPresentation.StateMoving(e, wPos || wRot, limbs, wAwake, ref velocityMoving, ground);
                     bool unlocked = e.LockPose.Locked && !locked;
                     bool released = !held && !stored && (e.SentHeld || e.SentStored || unlocked);
                     bool audience = OwnerAudience(g);
@@ -547,10 +547,10 @@ namespace TLDRevamp.Net
                     bool first = e.LastStateEpoch != e.Epoch || entered;
                     // Resume across release, ownership and unlock, including the sample before physics starts.
                     // Position/rotation above count even when the solver reports no velocity or sleeps.
-                    ReleaseMotion(ref e.ReleaseMoving, released, held, stored, ref moving, first, unlocked);
-                    if (released && e.SentHeld) e.FastSendUntil = now + FastAfterReleaseS;
+                    EntityProxyPresentation.ReleaseMotion(ref e.ReleaseMoving, released, held, stored, ref moving, first, unlocked);
+                    if (released && e.SentHeld) e.FastSendUntil = now + EntityHands.FastAfterReleaseS;
                     bool control = lockChange || wStored || wHeld || wHand || wSig || wSpray || wDriver;
-                    WS.Reset(); WriteWheels(WS, e); WriteEngine(WS, e); EntityCarSignals.WriteSignals(WS, e);
+                    WS.Reset(); EntityProxyPresentation.WriteWheels(WS, e); EntityProxyPresentation.WriteEngine(WS, e); EntityCarSignals.WriteSignals(WS, e);
                     bool visual = BandwidthRules.CarVisualChanged(e.SentState, e.SentStateLength, WS.Buf, WS.Len);
                     var quiet = BandwidthRules.StateQuiet(ref e.QuietTail, now, first || released || unlocked, wPos || wRot, limbs, visual, control, moving, e.SentAtRest,
                                                          locked, attachedRides, now - e.LastStateAt, driven, stored, e.ReleaseMoving);
@@ -563,12 +563,12 @@ namespace TLDRevamp.Net
                     }
                     if (wAwake) e.WhyAwake++; if (wPos) e.WhyPos++; if (wRot) e.WhyRot++; if (wStored) e.WhyStored++;
                     Buffer.BlockCopy(WS.Buf, 0, e.SentState, 0, WS.Len); e.SentStateLength = WS.Len;
-                    bool final = FinalState(locked, lockFrame, WasteFixes, quiet, moving, driven);
+                    bool final = EntityProxyPresentation.FinalState(locked, lockFrame, WasteFixes, quiet, moving, driven);
                     e.SentAtRest = !moving || final; e.SentMoving = velocityMoving;
                     var v = poseBody != null && moving && !final ? poseBody.velocity : Vector3.zero;
                     // stored in a container (no body of its own): the velocity of the body it rides — with none, its copies
                     // lagged the car 5-6 m at 50 km/h and the release rule took them out of the car (takeover.py A)
-                    if (poseBody == null && moving && !final && StoredRidesCar && e.Root.P != null && e.Root.P.physlock != null)
+                    if (poseBody == null && moving && !final && EntityLocks.StoredRidesCar && e.Root.P != null && e.Root.P.physlock != null)
                     {
                         var carrier = t.parent != null ? t.parent.GetComponentInParent<Rigidbody>() : null;
                         if (carrier != null && !carrier.isKinematic) v = carrier.GetPointVelocity(t.position);
@@ -582,7 +582,7 @@ namespace TLDRevamp.Net
                     // convoy, 16 players: 69 jumps, all copies in the same normal frame, interpolating; v0.57.85)
                     double stamp = Time.unscaledTimeAsDouble - (Time.timeAsDouble - Time.fixedTimeAsDouble);
                     // A lock/unlock can happen in the same physics step as the previous pose. The receiver orders ms.
-                    stamp = PoseStamp(stamp, e.LastPoseStamp, first);
+                    stamp = EntityProxyPresentation.PoseStamp(stamp, e.LastPoseStamp, first);
                     e.LastPoseStamp = stamp;
                     Vector3 lp = default; Quaternion lq = Quaternion.identity;
                     uint carriedBy = held ? EntityHands.CarriedBy(e, t, q, out lp, out lq) : !stored && !locked && !compact ? RidingCar(e, t, q, out lp, out lq, resting: final || !moving) : 0;
@@ -593,7 +593,7 @@ namespace TLDRevamp.Net
                     if (compact) CompactPoseCodec.Write(WS, e.NetId, e.Epoch, (ushort)(e.SeqOut + 1), stamp, g.x, g.y, g.z, q.eulerAngles.y, moving && !final, final);
                     else
                     {
-                        WriteStateHead(WS, e.NetId, e.Epoch, (ushort)(e.SeqOut + 1), stamp, g, q, v, driven, stored, held, spraying, carriedBy, lp, lq, final, locked, lockItem, lockMount, lockContainer, handPose, handPos, handRot);
+                        EntityCodec.WriteStateHead(WS, e.NetId, e.Epoch, (ushort)(e.SeqOut + 1), stamp, g, q, v, driven, stored, held, spraying, carriedBy, lp, lq, final, locked, lockItem, lockMount, lockContainer, handPose, handPos, handRot);
                         WS.Bytes(e.SentState, 0, e.SentStateLength);
                         int ragAt = WS.Len; ragKey = EntityRagdolls.WriteRagdoll(WS, e, first || final);
                         if (WS.Buf[ragAt] > 0) EntityRagdolls.RagdollStatesSent++;
@@ -617,7 +617,7 @@ namespace TLDRevamp.Net
                     EntityRagdolls.RagdollSent(e, poseSent);
                     e.LastSentPos = g; e.LastSentRot = q;
                 }
-                else if (HandManaged(e)) { }   // HandItemRender, after final hand targets and before IK
+                else if (EntityHands.HandManaged(e)) { }   // HandItemRender, after final hand targets and before IK
                 else if (wornRides) { }
                 else if (e.Physical || (e.MovedByBody && e.CarriedBy == 0))
                 {
@@ -625,8 +625,8 @@ namespace TLDRevamp.Net
                     // interpolated body
                     e.Observe(mainscript.GlobalFromUnityPos(e.Root.transform.position), dt);
                 }
-                else if (RidesOwnersContainer(e)) StoredRides++;   // in its owner's car's container: it rides that car's copy
-                else if (e.Ip != null && e.Ip.Ready && !(CopyLockByContainer && LockedAway(e)))   // held in a container here, its owner's far: it rides that
+                else if (EntityLocks.RidesOwnersContainer(e)) EntityLocks.StoredRides++;   // in its owner's car's container: it rides that car's copy
+                else if (e.Ip != null && e.Ip.Ready && !(EntityLocks.CopyLockByContainer && EntityLocks.LockedAway(e)))   // held in a container here, its owner's far: it rides that
                 {
                     EntityHands.EvalShown(e, now, dt, out var pos, out var rot);
                     e.ShownPos = pos;
@@ -684,7 +684,7 @@ namespace TLDRevamp.Net
                 {
                     uint localRoot = r.U32(); int n = (int)r.VarU32();
                     if (r.Bad || n < 0 || n > r.Remaining) return;
-                    if (!ShareAllowed(from, n)) return;
+                    if (!EntityAuthorityInterest.ShareAllowed(from, n)) return;
                     var rec = new byte[n]; Buffer.BlockCopy(r.Buf, r.Pos, rec, 0, n); r.Pos += n;
                     var se = new SEnt { NetId = _nextNet++, OwnerId = from, Epoch = 1, Record = rec };
                     ShareFacts(rec, se);
@@ -701,7 +701,7 @@ namespace TLDRevamp.Net
                 case CompactState:
                 case State:
                 {
-                    ReadEntityHead(r, type == CompactState, out uint net, out uint epoch, out double st, out var sp, out var sq, out var sv, out bool driven, out bool stored, out bool held, out _);
+                    EntityProxyPresentation.ReadEntityHead(r, type == CompactState, out uint net, out uint epoch, out double st, out var sp, out var sq, out var sv, out bool driven, out bool stored, out bool held, out _);
                     bool final = EntityCodec.ReadFinalState;
                     if (r.Bad || !Server.TryGetValue(net, out var se) || se.OwnerId != from || se.Epoch != epoch) { StatesStale++; return; }
                     // a ragdoll Key: forwarded reliably and never thinned (the Deltas after it need it). A tail this
@@ -716,10 +716,10 @@ namespace TLDRevamp.Net
                     {
                         if (se.CompactEpoch != epoch) { se.CompactStamp = 0; se.CompactEpoch = epoch; }
                         if (st <= se.CompactStamp) { StatesStale++; return; }
-                        sv = CompactVelocity(ReadCompactMoving, sp, st, se.Pos, se.CompactStamp);
+                        sv = EntityProxyPresentation.CompactVelocity(EntityProxyPresentation.ReadCompactMoving, sp, st, se.Pos, se.CompactStamp);
                         se.CompactStamp = st;
                     }
-                    if (!NewerState(st, epoch, ref se.ReceivedStateAt, ref se.ReceivedStateEpoch))
+                    if (!EntityProxyPresentation.NewerState(st, epoch, ref se.ReceivedStateAt, ref se.ReceivedStateEpoch))
                     {
                         // a ragdoll Key overtaken by a newer Delta: still the one the Deltas need - cached (if newer than the
                         // cached Key) and passed on reliably; the copies keep its Key only (KeepLateKey)
@@ -728,7 +728,7 @@ namespace TLDRevamp.Net
                     }
                     // an owner whose physics blew up (NaN): keep the last good state — stored, it broke distances and the far
                     // store's chunk index; relayed, everyone's copy went with it
-                    if (!Finite(sp) || !Finite(sv) || !Finite(sq)) { StatesNonFinite++; return; }
+                    if (!EntityNumbers.Finite(sp) || !EntityNumbers.Finite(sv) || !EntityNumbers.Finite(sq)) { StatesNonFinite++; return; }
                     // the owner's word about its car: speeds and jumps it couldn't have made (Plausibility)
                     // (every root object: the host's own copy of a far car is stored out, so "is it a car" can't be asked here —
                     // plausibility.py C, 2026-10-15: the teleported car wasn't checked)
@@ -753,7 +753,7 @@ namespace TLDRevamp.Net
                     // relay the same bytes to everyone else, by distance (MpServer.SendCarState); the host applies it locally
                     r.Pos = 0; int len = r.End;
                     WS.Reset(); WS.Bytes(r.Buf, 0, len);
-                    se.SettledState = FinalSnapshot(r, final || stored || held);
+                    se.SettledState = EntityProxyPresentation.FinalSnapshot(r, final || stored || held);
                     CacheLatestPose(se, r);
                     if (from != 0) Deliver(WS);
                     Mp.Server?.SendCarState(WS, from, net, se.Pos, force, reliable, type == CompactState || sv.sqrMagnitude < 0.01f);
@@ -789,7 +789,7 @@ namespace TLDRevamp.Net
                     int item = (int)r.VarU32();
                     if (r.Bad || r.Remaining != 15) { EntityAI.AiStatesStale++; break; }
                     if (se.AiSnapshotEpoch != se.Epoch) { se.AiSnapshots.Clear(); se.AiSnapshotEpoch = se.Epoch; }
-                    se.AiSnapshots[item] = FinalSnapshot(r, true);
+                    se.AiSnapshots[item] = EntityProxyPresentation.FinalSnapshot(r, true);
                     RelayCreature(se, from, r);
                     break;
                 }
@@ -803,13 +803,13 @@ namespace TLDRevamp.Net
                 case PoiUsable: ServerPoiUsable(from, r); break;
                 case RemoveItem: { uint net = r.U32(); if (!r.Bad) ServerRemoveItem(from, net); break; }
                 case Refetch: { uint net = r.U32(); bool itself = !r.Bad && r.Remaining > 0 && r.Bool(); if (!r.Bad) ServerRefetch(from, net, itself); break; }
-                case SleepSync: { float wt = r.F32(); double st = r.F64(); float sp = r.Remaining >= 4 ? r.F32() : float.NaN; if (!r.Bad && Finite(wt) && !double.IsNaN(st) && !double.IsInfinity(st)) ServerSleepSync(from, wt, st, sp); break; }
+                case SleepSync: { float wt = r.F32(); double st = r.F64(); float sp = r.Remaining >= 4 ? r.F32() : float.NaN; if (!r.Bad && EntityNumbers.Finite(wt) && !double.IsNaN(st) && !double.IsInfinity(st)) EntityWorldClock.ServerSleepSync(from, wt, st, sp); break; }
                 case ContactImpulse:
                 {
                     uint net = r.U32();
                     var imp = new Vector3(r.F32(), r.F32(), r.F32());
                     var gp = new Vector3d(r.F64(), r.F64(), r.F64());
-                    if (!r.Bad && Finite(imp) && Finite(gp)) ServerContactImpulse(from, net, imp, gp);
+                    if (!r.Bad && EntityNumbers.Finite(imp) && EntityNumbers.Finite(gp)) ServerContactImpulse(from, net, imp, gp);
                     break;
                 }
                 case DetachReq: { uint net = r.U32(); int idx = (int)r.VarU32(); if (!r.Bad) ServerDetachReq(from, net, idx); break; }
@@ -819,7 +819,7 @@ namespace TLDRevamp.Net
                 case HitchFrozen: ServerHitchFrozen(from, r); break;
                 case HitchResult: ServerHitchResult(from, r); break;
                 case CensusAsk: ServerCensusAsk(from, r); break;
-                case PoiCensus: ServerPoiCensus(from, r); break;
+                case PoiCensus: EntityRepair.ServerPoiCensus(from, r); break;
                 case Worn: EntityHands.ServerWorn(from, r); break;
                 case MemberGone: ServerMemberGone(from, r); break;
                 case CensusReply: ServerCensusReply(from, r); break;
@@ -888,7 +888,6 @@ namespace TLDRevamp.Net
         /// A player left: their cars go to the host (it keeps simulating them from the last state).
         /// Leases whose holder confirmed the spawn finished (LeaseDone): safe to keep if the holder leaves, because
         /// everything it spawned was already shared. Undone leases are freed: their buildings can be spawned again.
-        internal static System.Collections.Generic.IReadOnlyCollection<string> ObservedLeasesDone => EntityWorldLeases.ObservedLeasesDone;
 
         public static float SilentTakeoverS = 1.5f;   // Mp.Server.SilentTick; 0 = off (A/B: before v0.65.24)
         public static long SilentTakeovers;
@@ -914,14 +913,14 @@ namespace TLDRevamp.Net
         public static void ServerOnLeave(int playerId)
         {
             _hitchDeparted.Add(playerId);
-            ShareQuotaForget(playerId);
+            EntityAuthorityInterest.ShareQuotaForget(playerId);
             Known.Remove(playerId);
             InterestForget(playerId); EditCheckForget(playerId);
             // a car on loan to another player's crash, due back to the leaver: it stays with the machine simulating it.
             // Returned when the lease ran out, it went to a player who was gone, unsimulated until the hand-off pass gave
             // it to the nearest player (≤ 1 s, or whenever someone comes within 100 m) - crashlease.py
             foreach (var se in Server.Values)
-                if (se.CrashReturnTo == playerId && CrashLeaveKeep) { OwnerLog(se, se.OwnerId, "crash lease: player " + playerId + " left, kept"); se.CrashReturnTo = -1; CrashLeasesKept++; }
+                if (se.CrashReturnTo == playerId && EntityPhysics.CrashLeaveKeep) { OwnerLog(se, se.OwnerId, "crash lease: player " + playerId + " left, kept"); se.CrashReturnTo = -1; EntityPhysics.CrashLeasesKept++; }
             foreach (var se in Server.Values)
                 if (se.OwnerId == playerId && se.HitchCar == 0)
                 {
@@ -1011,7 +1010,7 @@ namespace TLDRevamp.Net
                     var d = RecordCodec.Decode(rec);
                     if (d == null || d.items.Count == 0) { AddReject(net, d == null ? "undecodable" : "empty"); return; }
                     JoinReceived(net, d.items[0].prefabID);
-                    if (FarFromHere(hasState ? pos : d.items[0].transform.pos))
+                    if (EntityLifetimeStreaming.FarFromHere(hasState ? pos : d.items[0].transform.pos))
                     {
                         var farPrefabs = new List<int>(); foreach (var r0 in d.items) farPrefabs.Add(r0.prefabID);
                         LostPartBack(AddFar(net, owner, epoch, d, hasState, pos, rot), farPrefabs); Tpa.ObjectApplied(net); break;
@@ -1023,7 +1022,7 @@ namespace TLDRevamp.Net
                     foreach (var t in d.tanks) if (t != null) tankRecs.Add(new save_tankscript(t));
                     var map = ItemSnapshot.SpawnGroup(d, order);
                     if (!map.TryGetValue(rootOld, out var rootNew) || !savedatascript.s.items.TryGetValue(rootNew, out var root) || root == null)
-                    { AddReject(net, "root did not spawn (" + PrefabName(prefabs[0]) + ")"); return; }
+                    { AddReject(net, "root did not spawn (" + EntityLifetimeStreaming.PrefabName(prefabs[0]) + ")"); return; }
                     var e = new Ent { NetId = net, OwnerId = owner, Epoch = epoch, Root = root };
                     // every record keeps its place, a part that didn't spawn here too (empty): parts are identified by
                     // their index in the group. Before v0.64.5 a missing one was skipped and every part after it moved up
@@ -1032,7 +1031,7 @@ namespace TLDRevamp.Net
                     {
                         if (savedatascript.s.items.TryGetValue(order[i], out var it) && it != null) { e.Items.Add(it); continue; }
                         e.Items.Add(null); CopyMembersMissing++;
-                        if (CopyMembersMissing <= 30) Plugin.Log.LogWarning($"copy of net {net} ({root.name}): member {i} ({PrefabName(prefabs[i])}) didn't spawn here - its place stays empty");
+                        if (CopyMembersMissing <= 30) Plugin.Log.LogWarning($"copy of net {net} ({root.name}): member {i} ({EntityLifetimeStreaming.PrefabName(prefabs[i])}) didn't spawn here - its place stays empty");
                     }
                     ByNet[net] = e;
                     // Row 5: a new copy must enter the placed list even when another left this frame (registrycheck.py, 2026-11-17).
@@ -1055,7 +1054,7 @@ namespace TLDRevamp.Net
                 case State:
                 {
                     int msgAt = r.Pos - 1;   // the type byte
-                    ReadEntityHead(r, type == CompactState, out uint net, out uint epoch, out double st, out var sp, out var sq, out var sv, out bool driven, out bool stored, out bool held, out bool spraying);
+                    EntityProxyPresentation.ReadEntityHead(r, type == CompactState, out uint net, out uint epoch, out double st, out var sp, out var sq, out var sv, out bool driven, out bool stored, out bool held, out bool spraying);
                     bool final = EntityCodec.ReadFinalState;
                     Ent e = null;
                     if (r.Bad || !ByNet.TryGetValue(net, out e) || !e.Proxy || epoch != e.Epoch)
@@ -1068,11 +1067,11 @@ namespace TLDRevamp.Net
                     {
                         if (e.CompactEpoch != epoch) { e.CompactStamp = 0; e.CompactEpoch = epoch; }
                         if (st <= e.CompactStamp) { StatesStale++; return; }
-                        sv = CompactVelocity(ReadCompactMoving, sp, st, e.CompactPos, e.CompactStamp);
+                        sv = EntityProxyPresentation.CompactVelocity(EntityProxyPresentation.ReadCompactMoving, sp, st, e.CompactPos, e.CompactStamp);
                         e.CompactPos = sp; e.CompactStamp = st;
                     }
-                    if (!NewerState(st, epoch, ref e.ReceivedStateAt, ref e.ReceivedStateEpoch)) { if (type == State) EntityRagdolls.KeepLateKey(r, msgAt, e, epoch); StatesStale++; return; }
-                    e.SettledState = FinalSnapshot(r, final);
+                    if (!EntityProxyPresentation.NewerState(st, epoch, ref e.ReceivedStateAt, ref e.ReceivedStateEpoch)) { if (type == State) EntityRagdolls.KeepLateKey(r, msgAt, e, epoch); StatesStale++; return; }
+                    e.SettledState = EntityProxyPresentation.FinalSnapshot(r, final);
                     e.Recv++;
                     EntityHands.TakeHandPose(e, sp, sq);
                     var s = new PoseInterpolator.Sample { T = st, Pos = sp, Rot = sq, Vel = sv };
@@ -1083,13 +1082,13 @@ namespace TLDRevamp.Net
                     if (stored != e.Stored) ShowStored(e, stored);
                     e.ReceivedAtRest = EntityCodec.ReadFinalState || stored;
                     bool letGo = e.Held && !held;
-                    if (letGo) { e.LetGoAt = Time.realtimeSinceStartup; if (LetGoSeen++ < 20) Plugin.Log.LogInfo($"let go: {(e.Root != null ? e.Root.name : "?")} net {e.NetId} by player {e.OwnerId} (its owner since {Time.realtimeSinceStartup - e.OwnerAt:F2} s)"); }
+                    if (letGo) { e.LetGoAt = Time.realtimeSinceStartup; if (EntityCargoInteraction.LetGoSeen++ < 20) Plugin.Log.LogInfo($"let go: {(e.Root != null ? e.Root.name : "?")} net {e.NetId} by player {e.OwnerId} (its owner since {Time.realtimeSinceStartup - e.OwnerAt:F2} s)"); }
                     if (held || held != e.Held) ShowHeld(e, held);   // every state while held: a copy placed again (streaming) gets it too
                     EntityEffects.ShowSpraying(e, spraying);
                     if (type == State)
                     {
-                        ReadWheels(r, e);
-                        ReadEngine(r, e);
+                        EntityProxyPresentation.ReadWheels(r, e);
+                        EntityProxyPresentation.ReadEngine(r, e);
                         EntityCarSignals.ReadSignals(r, e);
                         EntityRagdolls.ReadRagdoll(r, e, sp, sq);
                     }
@@ -1101,7 +1100,7 @@ namespace TLDRevamp.Net
                     if (letGo) e.Ip?.CatchUp(Time.realtimeSinceStartupAsDouble);   // the fall now, not after the held part
                     if (letGo) ClaimLetGoInCar(e, stored);   // let go in our car: ours from where it was let go, before the next physics step
                     TelemetryReceived(e, st, sp, sq, sv);
-                    if (e.Root == null) UpdateFarRecord(e, sp, sq);   // records always use world space, including framed states
+                    if (e.Root == null) EntityLifetimeStreaming.UpdateFarRecord(e, sp, sq);   // records always use world space, including framed states
                     StatesIn++;
                     SessionLog.JoinStage("firstState");
                     break;
@@ -1123,7 +1122,7 @@ namespace TLDRevamp.Net
                         if (carrierNet == 0 && had.Root != null && car.Items[idx] != null && car.Items[idx] != had.Root && (car.Split == null || !car.Split.Contains(idx)))
                         {
                             (car.Split ?? (car.Split = new HashSet<int>())).Add(idx);
-                            if (car.PartsColOff && LodKeepsPartsOff) SetPartColliders(car, true);
+                            if (car.PartsColOff && EntityPhysics.LodKeepsPartsOff) EntityPhysics.SetPartColliders(car, true);
                             var twin = car.Items[idx];
                             car.Items[idx] = had.Root;
                             if (car.ItemIds != null && idx < car.ItemIds.Count) car.ItemIds[idx] = had.Root.idInSave;
@@ -1131,7 +1130,7 @@ namespace TLDRevamp.Net
                             if (twin.attachable != null && twin.attachable.attached)
                             {
                                 _applyingDetach = true;
-                                try { Unmount(twin.attachable, true); } finally { _applyingDetach = false; }
+                                try { EntityLifetimeStreaming.Unmount(twin.attachable, true); } finally { _applyingDetach = false; }
                             }
                             SuppressDestroyEcho = true;
                             try { twin.JustDestroy(); } finally { SuppressDestroyEcho = false; }
@@ -1145,9 +1144,9 @@ namespace TLDRevamp.Net
                     // by the car's owner, who may no longer simulate it) must not re-bolt or overwrite it
                     if (car != null) (car.Split ?? (car.Split = new HashSet<int>())).Add(idx);
                     // its colliders may be off with the car copy's (the collider LOD): all back on, the LOD decides again without it
-                    if (car != null && car.PartsColOff && LodKeepsPartsOff) SetPartColliders(car, true);
+                    if (car != null && car.PartsColOff && EntityPhysics.LodKeepsPartsOff) EntityPhysics.SetPartColliders(car, true);
                     var it = car != null && idx >= 0 && idx < car.Items.Count ? car.Items[idx] : null;
-                    if (it == null && carrierNet != 0) { it = CarriedItem(carrierNet, carrierSlot, owner); if (it != null) CarriedOffApplied++; }
+                    if (it == null && carrierNet != 0) { it = EntityAttachments.CarriedItem(carrierNet, carrierSlot, owner); if (it != null) EntityAttachments.CarriedOffApplied++; }
                     LiveUsablesChanged(it);
                     if (it == null && car != null && RebindMembers(car) && idx >= 0 && idx < car.Items.Count) it = car.Items[idx];
                     if (it == null)
@@ -1187,7 +1186,7 @@ namespace TLDRevamp.Net
                     if (it.attachable != null && it.attachable.attached)
                     {
                         _applyingDetach = true;
-                        try { if (ReplayBareDetach) it.attachable.Detach(); else Unmount(it.attachable, true); } finally { _applyingDetach = false; }
+                        try { if (ReplayBareDetach) it.attachable.Detach(); else EntityLifetimeStreaming.Unmount(it.attachable, true); } finally { _applyingDetach = false; }
                     }
                     it.transform.SetPositionAndRotation(mainscript.UnityPosFromGlobal(pos), rot);
                     pe.Proxy = false;           // SetProxy(true) below makes its (possibly new) body kinematic
@@ -1222,7 +1221,7 @@ namespace TLDRevamp.Net
                 case Protocol.LiveUsable: ApplyLiveUsable(r); break;
                 case IgnitionKey: EntitySeats.ApplyKey(r); break;
                 case ShotgunIn: EntitySeats.ApplyShotgun(r); break;
-                case PushIn: ApplyPush(r); break;
+                case PushIn: EntityCargoInteraction.ApplyPush(r); break;
                 case RadioSync: EntityRadio.ApplyRadio(r); break;
                 case PhysLockSync: EntityLocks.ApplyPhysLock(r); break;
                 case StormSync: EntityWeather.ApplyStorms(r); break;
@@ -1261,7 +1260,7 @@ namespace TLDRevamp.Net
                 case SleepSync:
                 {
                     float wt = r.F32(); r.F64();
-                    if (!r.Bad && Finite(wt)) ApplyWorldTime(wt, false);   // a sleeper's jump, or the server's periodic clock
+                    if (!r.Bad && EntityNumbers.Finite(wt)) EntityWorldClock.ApplyWorldTime(wt, false);   // a sleeper's jump, or the server's periodic clock
                     break;
                 }
                 case WorldClock: EntityWorldClock.ReceiveWorldClock(r); break;
@@ -1270,7 +1269,7 @@ namespace TLDRevamp.Net
                     uint net = r.U32();
                     Vector3 imp = new Vector3(r.F32(), r.F32(), r.F32());
                     Vector3d gp = new Vector3d(r.F64(), r.F64(), r.F64());
-                    if (!r.Bad && Finite(imp) && Finite(gp)) ApplyContactImpulse(net, imp, gp);
+                    if (!r.Bad && EntityNumbers.Finite(imp) && EntityNumbers.Finite(gp)) EntityPhysics.ApplyContactImpulse(net, imp, gp);
                     break;
                 }
                 case HandoverState: ApplyHandover(r); break;
@@ -1346,7 +1345,7 @@ namespace TLDRevamp.Net
             if (!proxy && e.CarriedBy != 0) EntityHands.TakeOverCarried(e);
             if (!proxy && e.Stored) ShowStored(e, false);   // ours now: the game's own state rules its model again
             if (!proxy && e.Held) ShowHeld(e, false);
-            if (!proxy && e.ReleaseGhost && GhostEndsOnOwn) EndGhostOnOwn(e);
+            if (!proxy && e.ReleaseGhost && EntityLocks.GhostEndsOnOwn) EntityLocks.EndGhostOnOwn(e);
             if (!proxy && e.CargoGhost) { e.CargoGhost = false; ShowCarriedCollisions(e); }
             if (!proxy) { e.HandPose = false; e.HandDraw.Reset(); }
             // not loaded here (stored): only the role changes — Resolve sets the bodies up for it when it's placed.
@@ -1354,13 +1353,13 @@ namespace TLDRevamp.Net
             // A copy needs its interpolator: states only reach a copy through it (handoff run 1: the host's creature,
             // stored when it was handed away, came back frozen where it was placed — every state dropped).
             if (e.Root == null) { e.Proxy = proxy; e.Ip = proxy ? new PoseInterpolator() : null; return; }
-            DropPhysical(e);
-            StopBodyMotion(e);
-            if (e.PartsColOff) SetPartColliders(e, true);
+            EntityPhysics.DropPhysical(e);
+            EntityPhysics.StopBodyMotion(e);
+            if (e.PartsColOff) EntityPhysics.SetPartColliders(e, true);
             e.Proxy = proxy;
             if (proxy)
             {
-                DetachContact(e);
+                EntityPhysics.DetachContact(e);
                 e.MadeKinematic.Clear();
                 ApplyProxyBodies(e);
                 e.Ip = new PoseInterpolator();
@@ -1377,7 +1376,7 @@ namespace TLDRevamp.Net
                 // its joints) — and the game's crash detector must see that speed as "last frame's" too: a kinematic
                 // copy reads 0 km/h, so the first owned frame looked like 0 → full speed = a crash against nothing
                 // (seat swaps while driving: parts off, even a dead driver)
-                // keepMotion (a crash taken over mid-contact, Entities.CrashAuthority): the bodies are already moving with
+                // keepMotion (a crash taken over mid-contact, EntityPhysics.CrashAuthority): the bodies are already moving with
                 // the crash — the copy was physical — so nothing is reset, and the game's crash detector judges it
                 var root = e.Root.GetComponent<Rigidbody>();
                 var crashVel = root != null ? root.velocity : e.LastVel;
@@ -1423,7 +1422,7 @@ namespace TLDRevamp.Net
                 }
                 e.MadeKinematic.Clear();
                 e.Ip = null;
-                AttachContact(e);   // simulated here: relay contact impulses to the other machine's entity
+                EntityPhysics.AttachContact(e);   // simulated here: relay contact impulses to the other machine's entity
             }
             EntityRabbits.RabbitRole(e, proxy);
             if (proxy && e.PoseLocked && e.ReceivedStateEpoch == e.Epoch) EnsurePoseLock(e);
@@ -1455,7 +1454,7 @@ namespace TLDRevamp.Net
         {
             ForgetProxyMaps(e);
             e.Wheels = null;
-            var ws = WheelsOf(e);
+            var ws = EntityProxyPresentation.WheelsOf(e);
             for (int i = 0; i < ws.Length; i++) { ProxyWheelOwner[ws[i]] = e; ProxyWheelIndex[ws[i]] = i; }
             BindProxyEngine(e);
         }
@@ -1480,7 +1479,7 @@ namespace TLDRevamp.Net
             if (HitchTrailer(e))
             {
                 ProxyItems.Add(e.Root.attachable.gameObject);
-                foreach (var rb in HitchBodies(e)) if (!rb.isKinematic) { rb.isKinematic = true; e.MadeKinematic.Add(rb); }
+                foreach (var rb in EntityHitches.HitchBodies(e)) if (!rb.isKinematic) { rb.isKinematic = true; e.MadeKinematic.Add(rb); }
             }
             RefreshProxyMaps(e);
             if (e.Stored) ShowStored(e, true);
@@ -1499,7 +1498,7 @@ namespace TLDRevamp.Net
             e.ItemIds = new List<uint>();
             foreach (var it in e.Items) e.ItemIds.Add(it != null ? it.idInSave : 0u);   // keep positions: parts and state go by index
             RebindPoseLocks(e);
-            if (!e.Proxy) AttachContact(e);   // simulated here: relay contact impulses (owner flips re-attach via SetProxy)
+            if (!e.Proxy) EntityPhysics.AttachContact(e);   // simulated here: relay contact impulses (owner flips re-attach via SetProxy)
         }
 
         /// A single item of a group can be streamed out and placed back on its own (a part lying in the grass, a thing in
@@ -1562,10 +1561,10 @@ namespace TLDRevamp.Net
             if (e.Proxy && e.SettledState != null && e.ReceivedStateEpoch == e.Epoch)
             {
                 var r = new NetReader { Buf = e.SettledState, Pos = 1, End = e.SettledState.Length };
-                ReadEntityHead(r, e.SettledState[0] == CompactState, out _, out _, out _, out var pos, out var rot, out _, out _, out _, out _, out _);
-                if (e.CarriedBy == 0 && !e.Stored && !e.Held && !RidesBolted(e) && !AttachedCarPart(e) && !RidesOwnersContainer(e) && !LockedAway(e))
+                EntityProxyPresentation.ReadEntityHead(r, e.SettledState[0] == CompactState, out _, out _, out _, out var pos, out var rot, out _, out _, out _, out _, out _);
+                if (e.CarriedBy == 0 && !e.Stored && !e.Held && !RidesBolted(e) && !EntityProxyPresentation.AttachedCarPart(e) && !EntityLocks.RidesOwnersContainer(e) && !EntityLocks.LockedAway(e))
                     root.transform.SetPositionAndRotation(mainscript.UnityPosFromGlobal(pos), rot);
-                if (e.SettledState[0] == State) { ReadWheels(r, e); ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e); EntityRagdolls.ReadRagdoll(r, e, pos, rot); }
+                if (e.SettledState[0] == State) { EntityProxyPresentation.ReadWheels(r, e); EntityProxyPresentation.ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e); EntityRagdolls.ReadRagdoll(r, e, pos, rot); }
             }
             EntityRabbits.RestoreRabbitState(e);
             RebindPoseLocks(e);
@@ -1573,7 +1572,7 @@ namespace TLDRevamp.Net
             // which the game destroyed when it streamed out (or replaced in the same frame), so an owned object that came
             // back in no longer handed its collisions to the other machine or to the cargo/rabbit/item contact rules
             // (relaycheck.py, 2026-11-16).
-            if (!e.Proxy) AttachContact(e);
+            if (!e.Proxy) EntityPhysics.AttachContact(e);
             Rebound++;
             return true;
         }
@@ -1674,7 +1673,7 @@ namespace TLDRevamp.Net
                     if (off.magnitude > FarStrayM)
                     {
                         FarStraysPulled++;
-                        if (FarStraysPulled <= 20) Plugin.Log.LogInfo($"far store: {PrefabName(list[k].prefabID)} ({a.id}) bolted to net {e.NetId} lay {off.magnitude:F0} m from it — moved back with it");
+                        if (FarStraysPulled <= 20) Plugin.Log.LogInfo($"far store: {EntityLifetimeStreaming.PrefabName(list[k].prefabID)} ({a.id}) bolted to net {e.NetId} lay {off.magnitude:F0} m from it — moved back with it");
                         off = Vector3d.zero;
                     }
                     Vector3 r = q * new Vector3((float)off.x, (float)off.y, (float)off.z);

@@ -16,7 +16,7 @@ namespace TLDRevamp.Net
         /// Built-in building items disabled because the lease holder's copies are shared: per lease key, so a lease
         /// that ends without a spawn (its holder left mid-spawn) can give them back.
         private static readonly Dictionary<string, List<GameObject>> DisabledBuiltIn = new Dictionary<string, List<GameObject>>();
-        public static long BuiltInShared, BuiltInDisabled, BuiltInReEnabled, LeasesDone, LeasesFreed;
+        internal static long BuiltInShared, BuiltInDisabled, BuiltInReEnabled, LeasesDone, LeasesFreed;
 
         private static readonly HashSet<string> LeaseAsked = new HashSet<string>();      // this machine asked already
         private static readonly Dictionary<string, int> Leases = new Dictionary<string, int>(); // server: building → holder
@@ -29,7 +29,7 @@ namespace TLDRevamp.Net
         private sealed class Capture { public string Key; public Vector3 At; public float Until; }
         private static readonly List<Capture> Captures = new List<Capture>();
         private static HashSet<uint> _captureKnown;   // item ids seen while any capture runs
-        public static long LeasesAsked, LeasesGranted, LeaseSpawns, LeaseItemsShared, HostItemsShared;
+        internal static long LeasesAsked, LeasesGranted, LeaseSpawns, LeaseItemsShared, HostItemsShared;
 
         private static string Key(poiGenScript.poiClass p) =>
             p.posID.x.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "," + p.posID.z.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
@@ -128,7 +128,7 @@ namespace TLDRevamp.Net
 
         /// Server state for tests: which lease is whose, which are done, the counters. Plus `leasearm`: a test hook
         /// that marks a key as asked-for on this machine (a client that asked once, to see LeaseFreed clear it).
-        public static string LeaseTable()
+        internal static string LeaseTable()
         {
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>();

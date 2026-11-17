@@ -11,7 +11,7 @@ namespace TLDRevamp.Net
         private static readonly RaycastHit[] ProbeHits = new RaycastHit[32];
         internal static readonly NetWriter W = new NetWriter();
 
-        /// Test hook (bridge `call TLDRevamp.Net.Entities.TestObjectHit break|explode|shotgun net bi kind`): send the host
+        /// Test hook (bridge `call TLDRevamp.Net.EntityAiTools.TestObjectHit break|explode|shotgun net bi kind`): send the host
         /// what a hit, a set-off or a passenger's controls on object `net` would (tools/objecthits.py). Returns how many
         /// breakables the object has here.
         public static string TestObjectHit(string what, uint net, int bi, int kind)
@@ -88,7 +88,7 @@ namespace TLDRevamp.Net
                 {
                     var pv = t.body.position - a.transform.position;
                     float ang = Vector3.Angle(a.head.forward, pv);
-                    float tc = PlayerCombat.RayCapsule(new Ray(a.head.position, pv), t.feet, t.top, BodyR);
+                    float tc = PlayerCombat.RayCapsule(new Ray(a.head.position, pv), t.feet, t.top, EntityAI.BodyR);
                     string block = "";
                     int n = Physics.RaycastNonAlloc(a.head.position, pv, ProbeHits, tc > 0 ? tc : a.range, a.lm);
                     float bd = float.MaxValue;
@@ -102,7 +102,7 @@ namespace TLDRevamp.Net
                              ",\"angle\":" + ang.ToString("F0", ci) + ",\"fov\":" + a.fov.ToString("F0", ci) + ",\"rayAtBody\":" + tc.ToString("F2", ci) +
                              ",\"headY\":" + a.head.position.y.ToString("F2", ci) + ",\"feetY\":" + t.feet.y.ToString("F2", ci) + ",\"topY\":" + t.top.y.ToString("F2", ci) +
                              ",\"rootDy\":" + pv.y.ToString("F2", ci) + ",\"blockedBy\":" + Json.Str(block) + ",\"seenAt\":" +
-                             SeenAt(a, a.head.position, pv, a.range, t.feet, t.top, false).ToString("F2", ci) + ",\"kin\":" + (a.rb != null && a.rb.isKinematic ? "true" : "false") + "}");
+                             EntityAI.SeenAt(a, a.head.position, pv, a.range, t.feet, t.top, false).ToString("F2", ci) + ",\"kin\":" + (a.rb != null && a.rb.isKinematic ? "true" : "false") + "}");
                 }
             }
             return "{\"see\":[" + string.Join(",", rows) + "]}";

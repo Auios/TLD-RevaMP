@@ -70,8 +70,8 @@ namespace TLDRevamp.Net
             }
             if (r.Bad) return null;
             // sound and a particle effect on the remote player: a non-finite value (a broken sender) plays nothing
-            if (!Entities.Finite(a.HumVol) || !Entities.Finite(a.HumPitch)) a.Flags &= unchecked((byte)~FHum);
-            if (!Entities.Finite(a.PissPos) || a.PissPos.sqrMagnitude > 1e4f || !Entities.Finite(a.PissRate) || !Entities.Finite(a.PissSpeed) || !Entities.Finite(a.PissVol))
+            if (!EntityNumbers.Finite(a.HumVol) || !EntityNumbers.Finite(a.HumPitch)) a.Flags &= unchecked((byte)~FHum);
+            if (!EntityNumbers.Finite(a.PissPos) || a.PissPos.sqrMagnitude > 1e4f || !EntityNumbers.Finite(a.PissRate) || !EntityNumbers.Finite(a.PissSpeed) || !EntityNumbers.Finite(a.PissVol))
                 a.Flags &= unchecked((byte)~(FPiss | FPissSound));
             return a;
         }

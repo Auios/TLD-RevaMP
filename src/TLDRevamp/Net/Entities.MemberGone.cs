@@ -65,14 +65,14 @@ namespace TLDRevamp.Net
                 // another player deleted it on their copy (Entities.Lifecycle): its owner deletes it and
                 // tells everyone, as for a member destroyed on its own machine
                 if (se.Gone != null && se.Gone.Contains(idx)) { MembersGoneRejected++; return; }
-                WriteMemberGone(WS, net, idx);
+                EntityLifetimeStreaming.WriteMemberGone(WS, net, idx);
                 ServerSendTo(se.OwnerId, WS, true);
                 MemberDeletesForwarded++;
                 return;
             }
             (se.Gone ?? (se.Gone = new HashSet<int>())).Add(idx);
             se.ItemState.Remove(idx);   // a later joiner's resync must not bring it back
-            WriteMemberGone(WS, net, idx);
+            EntityLifetimeStreaming.WriteMemberGone(WS, net, idx);
             ServerSendAll(WS, true, from);
         }
 
@@ -80,7 +80,7 @@ namespace TLDRevamp.Net
         private static void SendGoneMembers(int playerId, SEnt se)
         {
             if (se.Gone == null) return;
-            foreach (int idx in se.Gone) { WriteMemberGone(WS, se.NetId, idx); ServerSendTo(playerId, WS, true); }
+            foreach (int idx in se.Gone) { EntityLifetimeStreaming.WriteMemberGone(WS, se.NetId, idx); ServerSendTo(playerId, WS, true); }
         }
 
         // ---------------------------------------------------------------- everyone else

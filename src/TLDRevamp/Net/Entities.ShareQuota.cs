@@ -53,6 +53,6 @@ namespace TLDRevamp.Net
 
         internal static void ShareQuotaForget(int player) => _shareBuckets.Remove(player);
 
-        public static string ShareQuotaStats() => "{\"dropped\":" + SharesDropped + ",\"kicked\":" + SharesKicked + ",\"players\":" + _shareBuckets.Count + "}";
+        internal static string ShareQuotaStats() => "{\"dropped\":" + SharesDropped + ",\"kicked\":" + SharesKicked + ",\"players\":" + _shareBuckets.Count + "}";
     }
 }

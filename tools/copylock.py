@@ -52,7 +52,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set {T}.CopyLockRelease {not OLD}")
+        for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyLockRelease {not OLD}")
         print(f"  {'OLD (no release)' if OLD else 'NEW'}", flush=True)
         time.sleep(5)
         lid = L("mp entities")["me"]
@@ -86,11 +86,11 @@ with game.ProtectedSession():
         el, eh = ent(L, lamp), ent(h, lamp)
         gap = math.dist(el["pos"], eh["pos"]) if el and eh and not eh.get("dormant") else None
         verdict("THE LAMP'S COPY WHERE THE LAPTOP HAS IT", gap is not None and gap < 1.0 or (eh or {}).get("dormant") is True,
-                f"{gap and round(gap, 2)} m apart (host copy dormant {(eh or {}).get('dormant')}); released {h(f'get {T}.CopyLocksReleased')['value']}")
+                f"{gap and round(gap, 2)} m apart (host copy dormant {(eh or {}).get('dormant')}); released {h(f'get TLDRevamp.Net.EntityLocks.CopyLocksReleased')['value']}")
         print("  errors:", [s_("errors")["errors"] for s_ in (h, L)], flush=True)
     finally:
         for s_ in (h, L):
-            try: s_(f"set {T}.CopyLockRelease True")
+            try: s_(f"set TLDRevamp.Net.EntityLocks.CopyLockRelease True")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

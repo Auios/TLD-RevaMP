@@ -292,7 +292,8 @@ recording format and the runner.
 
 **Runtime switches** are listed in one place, `src/TLDRevamp/Switches.cs`: each with its kind (a test flips it, opt-in or
 a value to tune, a player setting) and what its other value does. The bridge's `switches [text]` shows them with their
-values now, `set <path> <value>` changes one. When an experiment is finished its switch goes, with the old behaviour;
+values now, `set <path> <value>` changes one. Bridge paths name the real member owner
+shown by `switches`. When an experiment is finished its switch goes, with the old behaviour;
 `tools/unit/SwitchesListTest` fails when a listed switch no longer exists.
 
 ## Building from source

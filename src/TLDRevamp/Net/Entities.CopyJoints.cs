@@ -19,8 +19,8 @@ namespace TLDRevamp.Net
     /// own joint handling (Entities.Hitch) and are left alone. A/B: false = before (locked everywhere).
     internal static partial class EntityPhysics
     {
-        public static bool CopyJointsFree = true;
-        public static long CopyJointsFreed, CopyJointsLocked;
+        internal static bool CopyJointsFree = true;
+        internal static long CopyJointsFreed, CopyJointsLocked;
         private static readonly Dictionary<ConfigurableJoint, Entities.Ent> _freedJoints = new Dictionary<ConfigurableJoint, Entities.Ent>();
         internal static System.Collections.Generic.IReadOnlyDictionary<UnityEngine.ConfigurableJoint, TLDRevamp.Net.Entities.Ent> ObservedFreedJoints => _freedJoints;
         private static readonly List<Entities.Ent> _jointed = new List<Entities.Ent>();

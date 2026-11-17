@@ -63,7 +63,7 @@ body = '\n'.join(method(source, name) for name in ('TryModRootNet', 'ModObject',
 output.append('namespace KernelFactsFakes { internal static partial class Kernel {\n' + body + '\n} }')
 target = Path(sys.argv[1])
 target.parent.mkdir(parents=True, exist_ok=True)
-source = '\n'.join(output).replace('Entities.', 'KernelFactsFakes.Kernel.')
+source = '\n'.join(output).replace('Entities.', 'KernelFactsFakes.Kernel.').replace('internal static class EntityModApi', 'internal static partial class EntityModApi')
 mapping = dict(re.findall(r'^using (\w+) = ([\w.]+);$', aliases, re.M))
 source = re.sub(r'^using \w+ = [\w.]+;\n', '', source, flags=re.M)
 source = re.sub(r'\b(' + '|'.join(mapping) + r')\b', lambda m: mapping[m[0]], source)

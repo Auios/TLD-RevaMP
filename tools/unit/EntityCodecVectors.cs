@@ -29,21 +29,18 @@ static partial class EntitySplitTest
         var rotations = new[] { Quaternion.identity, new Quaternion(-.8f, .2f, -.4f, .4f), new Quaternion(.2f, -.8f, .4f, -.4f), new Quaternion(.2f, -.4f, -.8f, .4f), new Quaternion(.5f, -.5f, .5f, -.5f) };
         for (int i = 0; i < rotations.Length; i++)
         {
-            foreach (var owner in new[] { typeof(Entities), typeof(EntityCodec) })
-            {
-                w.Reset(); owner.GetMethod("WriteRot", Static).Invoke(null, new object[] { w, rotations[i] });
-                Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == RotationBytes[i], owner.Name + " rotation fixed bytes " + i);
-                var r = RawReader(RotationBytes[i]);
-                var q = (Quaternion)owner.GetMethod("ReadRot", Static).Invoke(null, new object[] { r });
-                Check(!r.Bad && r.Pos == r.End && Math.Abs(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w - 1) < .00001, "rotation read normalized and complete " + i);
-                w.Reset(); EntityCodec.WriteRot(w, q);
-                Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == (i == 4 ? "007EA5825A7FA5" : RotationBytes[i]), "rotation byte round trip " + i);
-            }
+            w.Reset(); EntityCodec.WriteRot(w, rotations[i]);
+            Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == RotationBytes[i], "rotation fixed bytes " + i);
+            var r = RawReader(RotationBytes[i]);
+            var q = EntityCodec.ReadRot(r);
+            Check(!r.Bad && r.Pos == r.End && Math.Abs(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w - 1) < .00001, "rotation read normalized and complete " + i);
+            w.Reset(); EntityCodec.WriteRot(w, q);
+            Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == (i == 4 ? "007EA5825A7FA5" : RotationBytes[i]), "rotation byte round trip " + i);
         }
-        w.Reset(); Entities.WriteDetachSync(w, 0x12345678, 0x89abcdef, new Vector3d(1.25, -2.5, 300.125), new Quaternion(.1f, -.2f, .3f, -.4f));
-        Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == DetachBytes, "detach facade fixed bytes");
+        w.Reset(); EntityCodec.WriteDetachSync(w, 0x12345678, 0x89abcdef, new Vector3d(1.25, -2.5, 300.125), new Quaternion(.1f, -.2f, .3f, -.4f));
+        Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == DetachBytes, "detach owner call fixed bytes");
         var detach = Reader(Convert.FromHexString(DetachBytes));
-        Check(Entities.ReadDetachSync(detach, out var dn, out var dp, out var dq) && dn == 0x12345678 && dp.x == 1.25 && dp.y == -2.5 && dp.z == 300.125 && dq.x == .1f && dq.y == -.2f && dq.z == .3f && dq.w == -.4f && detach.Pos == detach.End, "detach facade reads fixed vector");
+        Check(EntityCodec.ReadDetachSync(detach, out var dn, out var dp, out var dq) && dn == 0x12345678 && dp.x == 1.25 && dp.y == -2.5 && dp.z == 300.125 && dq.x == .1f && dq.y == -.2f && dq.z == .3f && dq.w == -.4f && detach.Pos == detach.End, "detach owner call reads fixed vector");
         w.Reset(); EntityCodec.WriteDetachSync(w, dn, 0x89abcdef, dp, dq);
         Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == DetachBytes, "detach byte round trip through owner");
         detach = Reader(Convert.FromHexString(DetachBytes));
@@ -53,16 +50,16 @@ static partial class EntitySplitTest
         for (int mode = 0; mode < 11; mode++)
         {
             w.Reset();
-            Entities.WriteStateHead(w, 300, 16384, 0xabcd, 123.4565, new Vector3d(1.2345, -2.3455, 3000000), rotations[1], new Vector3(1.235f, -2.345f, 400), true,
+            EntityCodec.WriteStateHead(w, 300, 16384, 0xabcd, 123.4565, new Vector3d(1.2345, -2.3455, 3000000), rotations[1], new Vector3(1.235f, -2.345f, 400), true,
                 stored: mode == 7, held: mode >= 5 && mode <= 8, spraying: true,
                 carriedBy: mode == 1 || mode == 2 || mode == 9 ? 129u : 0,
                 localPos: mode == 9 || mode == 10 ? new Vector3(float.NaN, 2, 3) : new Vector3(1.25f, -2.5f, 3.75f), localRot: rotations[2],
                 final: true, locked: mode == 2 || mode == 3 || mode == 4 || mode == 6 || mode == 10,
                 lockItem: 128, lockMount: 3, lockContainer: mode == 3 || mode == 10 ? 257u : 0,
                 handPose: mode >= 5 && mode <= 8, handPos: new Vector3(.1235f, -3, 1.9995f), handRot: rotations[3]);
-            Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == StateBytes[mode], "state facade fixed bytes " + mode);
+            Check(Convert.ToHexString(w.Buf.Take(w.Len).ToArray()) == StateBytes[mode], "state owner call fixed bytes " + mode);
             var r = Reader(Convert.FromHexString(StateBytes[mode]));
-            Entities.ReadStateHead(r, out uint net, out uint epoch, out double stamp, out var g, out var q, out var v, out bool driven, out bool stored, out bool held, out bool spraying);
+            EntityCodec.ReadStateHead(r, out uint net, out uint epoch, out double stamp, out var g, out var q, out var v, out bool driven, out bool stored, out bool held, out bool spraying);
             Check(!r.Bad && r.Pos == r.End && net == 300 && epoch == 16384 && stamp == 123.456 && g.x == 1.234 && g.y == -2.346 && g.z == 2147483.647 && v.x == 1.24f && v.y == -2.34f && v.z == 327.67f && driven && spraying && stored == (mode == 7) && held == (mode >= 5 && mode <= 8), "state read fixed values " + mode);
             Check(EntityCodec.ReadFinalState && EntityCodec.ReadLockedState == (mode == 2 || mode == 3 || mode == 4 || mode == 6 || mode == 10) && EntityCodec.ReadHandPose == (mode == 5 || mode == 8), "state flags reset at read " + mode);
             Check(EntityCodec.ReadCarriedBy == (mode == 1 || mode == 2 ? 129u : 0) && EntityCodec.ReadLockContainer == (mode == 3 ? 257u : 0) && EntityCodec.ReadLockItem == (mode == 2 || mode == 3 || mode == 10 ? 128 : -1) && EntityCodec.ReadLockMount == (mode == 2 || mode == 3 || mode == 10 ? 3 : -1), "state frame and lock scratch " + mode);

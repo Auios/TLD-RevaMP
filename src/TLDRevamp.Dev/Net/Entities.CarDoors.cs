@@ -14,7 +14,7 @@ namespace TLDRevamp.Net
         public static string OpenDoor(uint net, int i)
         {
             if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
-            var ds = DoorsOf(e);
+            var ds = EntityDoors.DoorsOf(e);
             if (i < 0 || i >= ds.Count) return "{\"error\":\"no door " + i + " of " + ds.Count + "\"}";
             var u = ds[i].U;
             if (u.rotateAble && u.RT1 != null && !u.slideAble)
@@ -26,7 +26,7 @@ namespace TLDRevamp.Net
             }
             else if (u.turnable) u.Turn();
             else { u.Refresh(u.slideValue > 0.5f ? 0f : 1f, u.xRot, u.yRot, u.currentTurnState); u.SyncMulti(true); }   // Refresh poses TDoor (as Slide's end does)
-            return CarDoors(net);
+            return EntityDoors.CarDoors(net);
         }
 
         /// Test: cargo. `mp putincar <car> <item> <k>`: an item this machine owns onto the car's k-th rearmost seat
@@ -99,14 +99,14 @@ namespace TLDRevamp.Net
         {
             if (!ObservedEntities.TryGetValue(item, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
             var rb = e.Root.GetComponent<Rigidbody>();
-            var under = SurfaceUnder(e, out var body);
+            var under = EntityCargoInteraction.SurfaceUnder(e, out var body);
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             return "{\"net\":" + item + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"parent\":" + Json.Str(e.Root.transform.parent != null ? e.Root.transform.parent.name : "") +
-                   ",\"root\":" + Json.Str(e.Root.transform.root.name) + ",\"loose\":" + (LooseItem(e) ? "true" : "false") +
+                   ",\"root\":" + Json.Str(e.Root.transform.root.name) + ",\"loose\":" + (EntityCargoInteraction.LooseItem(e) ? "true" : "false") +
                    ",\"rb\":" + (rb == null ? "null" : "{\"kinematic\":" + (rb.isKinematic ? "true" : "false") + ",\"sleeping\":" + (rb.IsSleeping() ? "true" : "false") +
                        ",\"collide\":" + (rb.detectCollisions ? "true" : "false") + ",\"speed\":" + rb.velocity.magnitude.ToString("F2", ci) +
-                       ",\"ride\":" + RideVelocity(e, rb).magnitude.ToString("F2", ci) + "}") +
-                   ",\"moving\":" + (MovingItemBody(e) != null ? "true" : "false") + ",\"under\":" + Json.Str(under != null ? under.name : "") +
+                       ",\"ride\":" + EntityCargoInteraction.RideVelocity(e, rb).magnitude.ToString("F2", ci) + "}") +
+                   ",\"moving\":" + (EntityCargoInteraction.MovingItemBody(e) != null ? "true" : "false") + ",\"under\":" + Json.Str(under != null ? under.name : "") +
                    ",\"underBody\":" + Json.Str(body != null ? body.name : "") + ",\"ghost\":" + (e.CargoGhost ? "true" : "false") + "}";
         }
 

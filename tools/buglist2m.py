@@ -17,8 +17,8 @@ from mplib import Agent, ensure_both, seeded_both, join_cmd
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
 # --set A=v,... : TLDRevamp field values on both machines once joined; --old66: every v0.66.x fix off (A/B)
 OLD66 = ("Net.PoseInterpolator.FreshAfterIdle=False,Net.Entities.FarMoveAttached=False,Net.Entities.StoredAttach=False,"
-         "Net.Entities.ClearHeldOnAttach=False,Net.Entities.ReshareSurvivors=False,Net.Entities.CopyContainersInert=False,"
-         "Net.Entities.ScopedEdits=False,Net.Entities.CopyStartFreezeOff=False")
+         "Net.Entities.ClearHeldOnAttach=False,Net.Entities.ReshareSurvivors=False,Net.EntityLocks.CopyContainersInert=False,"
+         "Net.Entities.ScopedEdits=False,Net.EntityLocks.CopyStartFreezeOff=False")
 SETS = [kv.split("=") for kv in ((sys.argv[sys.argv.index("--set") + 1] if "--set" in sys.argv else "") + ("," + OLD66 if "--old66" in sys.argv else "")).split(",") if kv]
 ONLY = (sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else "1,2,3,4").split(",")
 PUSH = float(sys.argv[sys.argv.index("--push") + 1]) if "--push" in sys.argv else 2.0   # 7a: the car's pace, m/s
@@ -205,7 +205,7 @@ with game.ProtectedSession():
             ok, why = calm("the lamp was dropped in and claimed", lamp)
             verdict("2- THE LAMP DROPPED IN AND CLAIMED DOESN'T MOVE OR DAMAGE THE CAR", ok, why)
             eh, el = ents(h)[lamp], ents(L)[lamp]
-            print(f"  lamp: host {eh['owner']}/{eh['proxy']} at {eh['pos']}, laptop {el['owner']}/{el['proxy']} at {el['pos']}; cargo claims {h(f'get {T}.CargoClaimed')['value']}", flush=True)
+            print(f"  lamp: host {eh['owner']}/{eh['proxy']} at {eh['pos']}, laptop {el['owner']}/{el['proxy']} at {el['pos']}; cargo claims {h(f'get TLDRevamp.Net.EntityCargoInteraction.CargoClaimed')['value']}", flush=True)
             verdict("2a THE DROPPED LAMP (BESIDE THE SEAT, WITHIN THE CAR'S MARGIN) BECOMES THE HOST'S", eh["owner"] == 0 and not eh["proxy"] and el["owner"] == 0, f"host owner {eh['owner']}, laptop sees owner {el['owner']}")
             # from outside: the laptop gets out, stands beside the car and throws a second lamp in
             out(L); time.sleep(1.5)
@@ -262,12 +262,12 @@ with game.ProtectedSession():
             print("  laptop wheel-area items:", [x for x in il if any(k in x for k in ("Tire", "Wheel", "Disztarcsa", "Felni", "Gumi"))][:20], flush=True)
             verdict("3- THE LAPTOP'S COPY HAS THE HOST'S WHEELS AND HUBCAPS", [bool(x[1]) for x in sh] == [bool(x[1]) for x in sl], "")
             lb = set(ents(L))
-            L(f"set {T}.TestAsPlayer True")
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
             try: print("  laptop dismounts the host's hubcap:", L(f"mount off {net} DisztarcsaSlotCol"), flush=True)
             except Exception as ex:
                 print("  dismount failed:", ex, "\n  slots now host", h(f"mount slots {net}")["slots"], "\n  laptop", L(f"mount slots {net}")["slots"], "\n  items laptop", L(f"mount items {net}")["items"], flush=True)
                 raise
-            L(f"set {T}.TestAsPlayer False")
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
             hub = until(lambda: next((n for n, e in ents(L).items() if n not in lb and "Disztarcsa" in e["name"]), None), 10)
             time.sleep(3)
             try: held = L("get mainscript.s.player.pickedUp.name").get("value")
@@ -282,9 +282,9 @@ with game.ProtectedSession():
             except Exception as ex: print("  drop:", ex)
             time.sleep(1)
             L(f"mount watch {hub}")
-            L(f"set {T}.TestAsPlayer True")   # the player's own bolt (fpscontroller.MountFunc in the game): a copy's goes to its owner
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")   # the player's own bolt (fpscontroller.MountFunc in the game): a copy's goes to its owner
             print("  laptop bolts it back:", L(f"mount on {hub} {net} DisztarcsaSlotCol"), flush=True)
-            L(f"set {T}.TestAsPlayer False"); time.sleep(10)   # 3+ resync passes
+            L(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False"); time.sleep(10)   # 3+ resync passes
             print("  attach requests: laptop sent", L(f"get {T}.AttachReqsSent")["value"], "host applied", h(f"get {T}.AttachReqsApplied")["value"], "refused", h(f"get {T}.AttachReqsRefused")["value"], flush=True)
             print("  laptop's watch of the hubcap:", L("mount watchlog")["log"], flush=True)
             ih, il = h(f"mount items {net}")["items"], L(f"mount items {net}")["items"]
@@ -594,7 +594,7 @@ with game.ProtectedSession():
 
     finally:
         for s_ in (h, L):
-            for k, v in ((f"{A}.TestHum", False), (f"{A}.TestPiss", False), (f"{A}.TestSleep", False), (f"{T}.TestAsPlayer", False), ("TLDRevamp.Fixes.StreamRace.Enabled", True)):
+            for k, v in ((f"{A}.TestHum", False), (f"{A}.TestPiss", False), (f"{A}.TestSleep", False), (f"TLDRevamp.Net.EntityProxyTools.TestAsPlayer", False), ("TLDRevamp.Fixes.StreamRace.Enabled", True)):
                 try: s_(f"set {k} {v}")
                 except Exception as ex: print("restore", k, ex)
             try: s_("driveout")

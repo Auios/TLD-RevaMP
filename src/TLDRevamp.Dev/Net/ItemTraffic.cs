@@ -291,7 +291,7 @@ namespace TLDRevamp.Net
             for (int i = 0; i < Rows.Count && i < n; i++)
             {
                 var r = Rows[i];
-                var go = r.Mod ? TLDRevamp.Multiplayer.MpApi.Find(r.Net)?.GameObject : Entities.GameObjectOf(r.Net);
+                var go = r.Mod ? TLDRevamp.Multiplayer.MpApi.Find(r.Net)?.GameObject : EntityModApi.GameObjectOf(r.Net);
                 if (i > 0) sb.Append(',');
                 sb.Append("{\"net\":").Append(r.Net).Append(",\"mod\":").Append(r.Mod ? "true" : "false")
                   .Append(",\"up\":").Append(r.UpBps.ToString("F2", ic)).Append(",\"down\":").Append(r.DownBps.ToString("F2", ic))

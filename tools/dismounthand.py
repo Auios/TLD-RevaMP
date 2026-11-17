@@ -47,9 +47,9 @@ with game.ProtectedSession():
         b(f"tpground {cp[0] + 2.5} {cp[2] + 1}"); time.sleep(2)
         a0 = b("mp entities")["attach"]
         known = set(ents(b))
-        b(f"set {T}.TestAsPlayer True")
+        b(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
         print("  dismount hubcap:", b(f"mount off {c_net} DisztarcsaSlotCol"), flush=True)
-        b(f"set {T}.TestAsPlayer False")
+        b(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
         time.sleep(2)
         a1 = b("mp entities")["attach"]
         held = b("get mainscript.s.player.pickedUp.name").get("value")
@@ -60,7 +60,7 @@ with game.ProtectedSession():
                 f"in hand {held}, part entity {part}, requests {a1['detachReqsSent'] - a0['detachReqsSent']}")
         b("dropheld") if False else None
     finally:
-        try: b(f"set {T}.TestAsPlayer False"); b("mp stop")
+        try: b(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False"); b("mp stop")
         except Exception: pass
         b("set TLDRevamp.Net.LegacyBots.BotCars False")
         b(f"set kaposztaleves.s.settings.god {god if god is not None else False}")

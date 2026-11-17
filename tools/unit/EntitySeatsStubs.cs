@@ -104,7 +104,7 @@ namespace TLDRevamp.Net
         private static uint _claimedFor;
         internal static bool SeatToken = true, SeatNear = true;
         internal static long EditsOutOfReach;
-        private static bool TakeEditToken(int from) => SeatToken;
+        private static bool TakeKeyTokenForFixture(int from) => SeatToken;
         private static bool AtObject(int from, SEnt se) => SeatNear;
         internal static void TestSeatClaim(uint net, int by, float at) { Server[net].ClaimedBy = by; Server[net].ClaimedAt = at; }
         internal static object TestSeatServer(uint net) => Server[net];

@@ -94,8 +94,8 @@ namespace TLDRevamp
                 Cars.Add(t);
             }
             _t0 = Time.time; _rec = true;
-            _cs0 = Net.Entities.ContactSent; _cr0 = Net.Entities.ContactRelayed; _ca0 = Net.Entities.ContactApplied;
-            Net.Entities.ContactImpulseMaxSent = Net.Entities.ContactImpulseMaxApplied = 0f;
+            _cs0 = Net.EntityPhysics.ContactSent; _cr0 = Net.EntityPhysics.ContactRelayed; _ca0 = Net.EntityPhysics.ContactApplied;
+            Net.EntityPhysics.ContactImpulseMaxSent = Net.EntityPhysics.ContactImpulseMaxApplied = 0f;
             var names = new List<string>(); foreach (var c in Cars) names.Add(Json.Str(c.Label));
             return "{\"recording\":[" + string.Join(",", names) + "]}";
         }
@@ -189,8 +189,8 @@ namespace TLDRevamp
                          ",\"endPos\":[" + last.P.x.ToString("F2", ic) + "," + last.P.y.ToString("F2", ic) + "," + last.P.z.ToString("F2", ic) + "]}");
             }
             Cars.Clear();
-            return "{\"contactSent\":" + (Net.Entities.ContactSent - _cs0) + ",\"contactRelayed\":" + (Net.Entities.ContactRelayed - _cr0) + ",\"contactApplied\":" + (Net.Entities.ContactApplied - _ca0) +
-                   ",\"impulseMaxSent\":" + Net.Entities.ContactImpulseMaxSent.ToString("F0", ic) + ",\"impulseMaxApplied\":" + Net.Entities.ContactImpulseMaxApplied.ToString("F0", ic) +
+            return "{\"contactSent\":" + (Net.EntityPhysics.ContactSent - _cs0) + ",\"contactRelayed\":" + (Net.EntityPhysics.ContactRelayed - _cr0) + ",\"contactApplied\":" + (Net.EntityPhysics.ContactApplied - _ca0) +
+                   ",\"impulseMaxSent\":" + Net.EntityPhysics.ContactImpulseMaxSent.ToString("F0", ic) + ",\"impulseMaxApplied\":" + Net.EntityPhysics.ContactImpulseMaxApplied.ToString("F0", ic) +
                    ",\"cars\":[" + string.Join(",", rows) + "]}";
         }
 

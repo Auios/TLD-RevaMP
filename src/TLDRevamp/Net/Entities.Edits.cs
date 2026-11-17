@@ -13,7 +13,7 @@ namespace TLDRevamp.Net
     /// forward, so a door opened by its owner is seen at once, not up to 3 s later.
     internal static class EntityEdits
     {
-        public static bool TankAddEdits = true;
+        internal static bool TankAddEdits = true;
         public static long TankAddsApplied;
         /// Per copy item being poured: its tanks as the owner has been told. Starts from the owner's latest record.
         private static readonly Dictionary<uint, List<save_tankscript>> _tankTold = new Dictionary<uint, List<save_tankscript>>();
@@ -108,7 +108,6 @@ namespace TLDRevamp.Net
         /// saw it: two players at one barrel each sent theirs and the owner took the last, one pour was gone (aud-two-pour:
         /// the cans lost 16.2 L, the barrel gained 8.2 L). The level still counts when the edit comes back to its sender,
         /// who has become the owner and has the fluid here already. A/B: false = the level only (before).
-        public static bool TankAddEdits { get => EntityEdits.TankAddEdits; set => EntityEdits.TankAddEdits = value; }
         public static long TankAddsSent, TankAddsRefused;
         /// Edits with changes on their way: one that comes back is ours (ServerEdit, EditsComeBack).
         private static readonly HashSet<(uint, int, double)> _tankAddsOut = new HashSet<(uint, int, double)>();
@@ -122,7 +121,7 @@ namespace TLDRevamp.Net
             if (group != null && group.Proxy)
             {
                 EditDirty[it] = Time.realtimeSinceStartup; EditsMarked++;
-                EditKinds.TryGetValue(it, out int k); EditKinds[it] = k | (ScopedEdits ? KindBit(kind) : KindAll);
+                EditKinds.TryGetValue(it, out int k); EditKinds[it] = k | (ScopedEdits ? EntityEdits.KindBit(kind) : KindAll);
                 return;
             }
             if (fromTank) return;   // own tanks change all the time (fuel burn): the regular pass is enough
@@ -158,8 +157,8 @@ namespace TLDRevamp.Net
                     if (idx < 0) continue;
                     int kinds = EditKinds.TryGetValue(it, out int kk) ? kk : KindAll;
                     // the car record only for a wash of its blood (Entities.Blood): the owner takes nothing else of it
-                    byte[] rec = StateRecord(ItemSnapshot.Capture(it), CanonMap(e.Items), out _, withCar: kinds != KindAll && (kinds & KindBlood) != 0);
-                    bool withChanges = (kinds & KindTank) != 0 && TankChangesNow(it, _tankAdds);
+                    byte[] rec = EntityResync.StateRecord(ItemSnapshot.Capture(it), EntityResync.CanonMap(e.Items), out _, withCar: kinds != KindAll && (kinds & KindBlood) != 0);
+                    bool withChanges = (kinds & KindTank) != 0 && EntityEdits.TankChangesNow(it, _tankAdds);
                     if ((kinds & KindTank) != 0 && !withChanges) EntityCarTuning.CopyTanksAreNow(it);   // our fill: the owner's record of it may come while we hold it off
                     double stamp = SessionLog.St;
                     W.Reset(); W.U8(Edit); W.U32(e.NetId); W.F64(stamp); W.VarU32((uint)idx); W.VarU32((uint)kinds); W.VarU32((uint)rec.Length); W.Bytes(rec, 0, rec.Length);
@@ -193,7 +192,7 @@ namespace TLDRevamp.Net
         {
             uint net = r.U32();
             double stamp = r.F64();
-            if (!Finite(stamp) || Math.Abs(SessionLog.St - stamp) > 10) { SessionLog.Event("edit-refused", net, from: from, result: "timestamp"); EditsRejected++; return; }
+            if (!EntityNumbers.Finite(stamp) || Math.Abs(SessionLog.St - stamp) > 10) { SessionLog.Event("edit-refused", net, from: from, result: "timestamp"); EditsRejected++; return; }
             if (r.Bad || !Server.TryGetValue(net, out var se)) { SessionLog.Event("edit-refused", net, from: from, result: "missing entity"); EditsRejected++; return; }
             if (se.OwnerId == from)
             {
@@ -208,10 +207,10 @@ namespace TLDRevamp.Net
                 return;
             }
             int idx = (int)r.VarU32(), kinds = (int)r.VarU32(), len = (int)r.VarU32();
-            if (from != 0 && !TakeEditToken(from))
+            if (from != 0 && !EntityEditCheck.TakeEditToken(from))
             {
                 EditsRejected++;
-                Refuse(ref EntityEditCheck.EditRefusedRate, "edit rate", $"edit from player {from}: over {EditRatePerS:F0} a second");
+                EntityEditCheck.Refuse(ref EntityEditCheck.EditRefusedRate, "edit rate", $"edit from player {from}: over {EntityEditCheck.EditRatePerS:F0} a second");
                 SessionLog.Event("edit-refused", net, from: from, to: se.OwnerId, result: "edit rate");
                 EditBackLater(se, idx, r.Bad);
                 return;
@@ -219,7 +218,7 @@ namespace TLDRevamp.Net
             if (from != 0 && !AtObject(from, se))
             {
                 EditsRejected++;
-                Refuse(ref EditsOutOfReach, "edit reach", $"edit from player {from}: they aren't at net {net}");
+                EntityEditCheck.Refuse(ref EditsOutOfReach, "edit reach", $"edit from player {from}: they aren't at net {net}");
                 SessionLog.Event("edit-refused", net, from: from, to: se.OwnerId, result: "edit reach");
                 EditBackLater(se, idx, r.Bad);
                 return;
@@ -238,8 +237,8 @@ namespace TLDRevamp.Net
                 {
                     SessionLog.Event("edit-refused", net, item: idx, from: from, to: se.OwnerId, result: why, count: kinds);
                     EditsRejected++;
-                    if (why.StartsWith("kinds")) Refuse(ref EntityEditCheck.EditRefusedKinds, "edit kinds", $"edit from player {from} of net {net} item {idx}: {why}");
-                    else Refuse(ref EntityEditCheck.EditRefusedValues, "edit values", $"edit from player {from} of net {net} item {idx} (kinds {kinds}): {why}");
+                    if (why.StartsWith("kinds")) EntityEditCheck.Refuse(ref EntityEditCheck.EditRefusedKinds, "edit kinds", $"edit from player {from} of net {net} item {idx}: {why}");
+                    else EntityEditCheck.Refuse(ref EntityEditCheck.EditRefusedValues, "edit values", $"edit from player {from} of net {net} item {idx} (kinds {kinds}): {why}");
                     EditBackLater(se, idx, false);
                     return;
                 }
@@ -248,7 +247,7 @@ namespace TLDRevamp.Net
             r.Pos = 0;
             WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
             ServerSendTo(se.OwnerId, WS, true);
-            if (HeldRecordsComeBack) EditBackAfterHold(se, idx);
+            if (EntityEditBack.HeldRecordsComeBack) EditBackAfterHold(se, idx);
         }
 
         private static bool AtObject(int player, SEnt se)
@@ -281,7 +280,7 @@ namespace TLDRevamp.Net
             bool useUsables = LiveRecordUsables(e, idx, stamp);
             if ((kinds & KindUsable) != 0) LiveRecordApplied(e, idx, stamp);
             ApplyState(e.Items[idx], d, kinds, useUsables);
-            if (changes) ApplyTankAdds(e.Items[idx], _tankAdds);
+            if (changes) EntityEdits.ApplyTankAdds(e.Items[idx], _tankAdds);
             e.ResyncAcc = Mathf.Max(e.ResyncAcc, ResyncInterval - 0.05f);
             EditsApplied++;
             SessionLog.Event("edit-applied", net, item: idx, to: MyId, count: kinds, epoch: e.Epoch);
@@ -415,8 +414,5 @@ namespace TLDRevamp.Net
             private static bool Prefix(busdoorscripts __instance) { if (!InSession) return true; MarkEdit(__instance.tosave, kind: "busdoor"); return false; }
         }
 
-        private static bool TankChangesNow(tosaveitemscript it, List<TankAdds.Add> adds) => EntityEdits.TankChangesNow(it, adds);
-        private static void ApplyTankAdds(tosaveitemscript it, List<TankAdds.Add> adds) => EntityEdits.ApplyTankAdds(it, adds);
-        private static int KindBit(string kind) => EntityEdits.KindBit(kind);
     }
 }

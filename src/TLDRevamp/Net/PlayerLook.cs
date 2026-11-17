@@ -44,9 +44,9 @@ namespace TLDRevamp.Net
             if (a == null || a.HHTarget == null) return false;
             var T = a.T != null ? a.T : a.transform;
             w.F64(Time.realtimeSinceStartupAsDouble);
-            Entities.LocalSeat(out uint net, out int seat);
+            EntitySeats.LocalSeat(out uint net, out int seat);
             if (net == 0) { Entities.LocalFooting(out var foot); net = foot.Net; seat = -1; }
-            var frame = net != 0 ? seat >= 0 ? Entities.SeatTransform(net, seat) : Entities.FootRootOf(net) : null;
+            var frame = net != 0 ? seat >= 0 ? EntitySeats.SeatTransform(net, seat) : Entities.FootRootOf(net) : null;
             if (frame == null || !Entities.RidingClock(net, out uint epoch, out double clock)) { net = 0; epoch = 0; clock = 0; }
             w.U32(net);
             if (net != 0)
@@ -88,7 +88,7 @@ namespace TLDRevamp.Net
             {
                 p.Epoch = r.U32(); p.Seat = r.I32(); p.Clock = r.F64();
                 p.Body = new Vector3(r.F32(), r.F32(), r.F32()); p.Facing = Quaternion.Euler(RR(r));
-                if (!Entities.Finite(p.Body) || p.Body.sqrMagnitude > 1e4f || double.IsNaN(p.Clock) || double.IsInfinity(p.Clock) || p.Seat < -1 || p.Seat > 255) return null;
+                if (!EntityNumbers.Finite(p.Body) || p.Body.sqrMagnitude > 1e4f || double.IsNaN(p.Clock) || double.IsInfinity(p.Clock) || p.Seat < -1 || p.Seat > 255) return null;
             }
             p.WheelHands = (byte)(r.U8() & 15);
             if ((p.WheelHands & 4) != 0) p.Controls[0] = RC(r);

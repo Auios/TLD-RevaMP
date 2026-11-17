@@ -32,7 +32,7 @@ namespace TLDRevamp.Net
             // State and pose packets may arrive in either order. Never put an old seat/footing pose onto a new frame.
             if (last.Seat >= 0 ? last.Net != rp.SeatNet || last.Seat != rp.SeatIdx : rp.SeatNet != 0 || last.Net != rp.Foot.Net) return;
             if (!Entities.RidingClock(last.Net, out uint epoch, out double clock) || epoch != last.Epoch) return;
-            var frame = last.Seat >= 0 ? Entities.SeatTransformCached(last.Net, last.Seat, ref rp.CachedCarRoot, ref rp.CachedSeat) : Entities.FootRootOf(last.Net);
+            var frame = last.Seat >= 0 ? EntitySeats.SeatTransformCached(last.Net, last.Seat, ref rp.CachedCarRoot, ref rp.CachedSeat) : Entities.FootRootOf(last.Net);
             if (frame == null || !rp.Riding.Sample(clock, rp.RidingSample)) return;
             var p = rp.RidingSample; var t = rp.Go.transform;
             if (RidingFrames)
@@ -52,7 +52,7 @@ namespace TLDRevamp.Net
         public const float ReachS = 0.25f, HandBlendS = 0.12f;
         private static void DriverHands(Rp rp, byte hands, PlayerLook.Pose latest, PlayerLook.Pose sample)
         {
-            var seat = Entities.SeatScript(rp.SeatNet, rp.SeatIdx, out var car);
+            var seat = EntitySeats.SeatScript(rp.SeatNet, rp.SeatIdx, out var car);
             var a = rp.Mp.anim;
             if (seat == null || !seat.driverSeat0 || car == null) { rp.HandId[0] = rp.HandId[1] = null; return; }
             for (int h = 0; h < 2; h++)
@@ -104,7 +104,7 @@ namespace TLDRevamp.Net
             foreach (var rp in All.Values)
             {
                 if (rp.SeatNet == 0 || rp.Mp == null || rp.Mp.anim == null) continue;
-                var seat = Entities.SeatScript(rp.SeatNet, rp.SeatIdx, out var seated);
+                var seat = EntitySeats.SeatScript(rp.SeatNet, rp.SeatIdx, out var seated);
                 if (seat == null || !seat.driverSeat0 || seated != car) continue;
                 var a = rp.Mp.anim;
                 float l = a.LHTarget != null ? (a.LHTarget.position - to.position).sqrMagnitude : float.MaxValue;
@@ -161,13 +161,13 @@ namespace TLDRevamp.Net
             foreach (var rp in All.Values)
             {
                 var a = rp.Mp != null ? rp.Mp.anim : null; var latest = rp.Riding.Latest;
-                var seat = Entities.SeatScript(rp.SeatNet, rp.SeatIdx, out var car);
+                var seat = EntitySeats.SeatScript(rp.SeatNet, rp.SeatIdx, out var car);
                 rows.Add("{\"id\":" + rp.Id + ",\"seatNet\":" + rp.SeatNet + ",\"seatIdx\":" + rp.SeatIdx + ",\"driver\":" + (seat != null && seat.driverSeat0 ? "true" : "false") +
                     ",\"car\":" + (car != null ? Json.Str(car.name) : "null") + ",\"wheelHands\":" + (latest != null ? latest.WheelHands : -1) + ",\"latestSeat\":" + (latest != null ? latest.Seat : -9) +
                     ",\"lh\":" + (a != null ? T(a.LHTarget) : "null") + ",\"rh\":" + (a != null ? T(a.RHTarget) : "null") +
                     ",\"lgrip\":" + (car != null ? T(car.LHDrivePos) : "null") + ",\"rgrip\":" + (car != null ? T(car.RHDrivePos) : "null") +
                     ",\"body\":" + (rp.Go != null ? V(rp.Go.transform.position) : "null") + ",\"handTargets\":[" + Json.Str(Id(rp.HandId[0])) + "," + Json.Str(Id(rp.HandId[1])) + "]" +
-                    ",\"heldItems\":" + Entities.HandItemsJson(rp.Id, a != null ? a.RHTarget : null) +
+                    ",\"heldItems\":" + EntityHands.HandItemsJson(rp.Id, a != null ? a.RHTarget : null) +
                     ",\"tYaw\":" + (a != null ? (a.T != null ? a.T : a.transform).eulerAngles.y.ToString("F2", ic) : "null") +
                     ",\"goYaw\":" + (rp.Go != null ? rp.Go.transform.eulerAngles.y.ToString("F2", ic) : "null") +
                     ",\"rhLocal\":" + (a != null ? V((a.T != null ? a.T : a.transform).InverseTransformPoint(a.RHTarget.position)) : "null") +

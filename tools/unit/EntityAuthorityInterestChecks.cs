@@ -107,17 +107,10 @@ static partial class EntitySplitTest
 
     static void AuthorityInterestBoundaryChecks()
     {
-        CoreMembers.Register();
         var owner = typeof(EntityAuthorityInterest);
         Check(owner.IsAbstract && owner.IsSealed && !owner.IsPublic, "authority/interest has an internal static owner");
-        foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly))
-        {
-            if (!(member is FieldInfo || member is PropertyInfo || member is MethodInfo) || typeof(Entities).GetMember(member.Name, Static).Length != 0) continue;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." }) Check(Reflect.MemberPath(prefix + member.Name) == owner.FullName + "." + member.Name, "authority alias " + prefix + member.Name);
-        }
-        Check(BridgeReflect.Set("Entities.ShareRefillPerS", "2.5") == "2.5" && EntityAuthorityInterest.ShareRefillPerS == 2.5f, "quota alias reaches only backing field");
-        Check(BridgeReflect.Set("Entities.StateInterestM", "1500") == "1500" && EntityAuthorityInterest.StateInterestM == 1500, "interest facade reaches only backing field");
-        Check((string)typeof(Entities).GetMethod("InterestJson", Static).Invoke(null, null) == EntityAuthorityInterest.InterestJson() && (string)typeof(Entities).GetMethod("ShareQuotaStats", Static).Invoke(null, null) == EntityAuthorityInterest.ShareQuotaStats(), "compiled status facades reach owner");
+        Check(BridgeReflect.Set("EntityAuthorityInterest.ShareRefillPerS", "2.5") == "2.5" && EntityAuthorityInterest.ShareRefillPerS == 2.5f, "quota owner path reaches only backing field");
+        Check(BridgeReflect.Set("EntityAuthorityInterest.StateInterestM", "1500") == "1500" && EntityAuthorityInterest.StateInterestM == 1500, "interest owner call reaches only backing field");
         string[] allowed = { "SendToPeers", "DeliverInterestMessage", "RecordInterestSkip", "InterestCatchUpLimit", "MarkInterestStale", "TakeInterestStale", "CountInterestStale", "WriteInterestResync", "CatchUpInterestRecords", "HasInterestPoi", "TryInterestPoi" };
         foreach (string part in new[] { "RelayInterest", "ShareQuota" })
         {
@@ -139,7 +132,7 @@ static partial class EntitySplitTest
             Check(near == before, "record catch-up uses the original inclusive distance rule at " + x);
         }
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");
-        Check(kernel.Contains("if (!ShareAllowed(from, n)) return;") && kernel.Contains("if (IsHost) ShareQuotaTick();"), "share validation and tick guards retain call sites");
+        Check(kernel.Contains("if (!EntityAuthorityInterest.ShareAllowed(from, n)) return;") && kernel.Contains("if (IsHost) EntityAuthorityInterest.ShareQuotaTick();"), "share validation and tick guards retain call sites");
         string relay = File.ReadAllText("src/TLDRevamp/Net/Entities.RelayInterest.cs");
         Check(relay.Contains("foreach (var k in ServerPoiUsables.Keys) EntityAuthorityInterest.MarkPoiStale(player, k);"), "POI all-stale map iteration stays in kernel");
         Check(relay.Contains("EntityAuthorityInterest.ForgetRelay(player); _poseNear.Remove(player); _rabbitNear.Remove(player); _interestSkips.Remove(player);") && relay.Contains("EntityAuthorityInterest.ResetRelay(); _poseNear.Clear(); _rabbitNear.Clear(); _interestSkips.Clear();"), "leave and reset preserve exact cleanup order");

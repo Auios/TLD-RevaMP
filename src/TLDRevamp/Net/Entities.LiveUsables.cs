@@ -68,12 +68,6 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        internal static usablescript[] ItemUsables(tosaveitemscript it) => EntityUsables.ItemUsables(it);
-        internal static UsableValue UsableBits(usablescript u) => EntityUsables.UsableBits(u);
-        internal static PoiState UsableState(usablescript u) => EntityUsables.UsableState(u);
-        internal static PoiState UsableState(usablescript u, UsableValue v) => EntityUsables.UsableState(u, v);
-        internal static string UN(double n) => EntityUsables.UN(n);
-        internal static string UsableValuesJson(PoiState v) => EntityUsables.UsableValuesJson(v);
     }
 
     public static partial class Entities
@@ -125,7 +119,7 @@ namespace TLDRevamp.Net
         private static void LiveUsablesChanged(tosaveitemscript it)
         {
             if (it == null) return;
-            foreach (var u in ItemUsables(it)) if (u != null) _usableBefore.Remove(u);
+            foreach (var u in EntityUsables.ItemUsables(it)) if (u != null) _usableBefore.Remove(u);
             EntityUsables.InvalidateHierarchy(it);
             _deadUsables.Clear();
             foreach (var kv in _localUsables) if (kv.Value.Item == it) _deadUsables.Add(kv.Key);
@@ -141,10 +135,10 @@ namespace TLDRevamp.Net
             u != null && LiveUsableOf(k, out var current) == u && current == e;
         internal static usablescript LiveUsableOf(UsableKey k, out Ent e)
         {
-            if (k.Building) { e = null; return PoiUsableOf(k.Poi); }
+            if (k.Building) { e = null; return EntityUsables.PoiUsableOf(k.Poi); }
             if (!ByNet.TryGetValue(k.Net, out e) || e.Epoch != k.Epoch || !Resolve(e) || k.Item < 0 || k.Item >= e.Items.Count ||
                 (e.Split != null && e.Split.Contains(k.Item)) || e.Items[k.Item] == null) return null;
-            var us = ItemUsables(e.Items[k.Item]);
+            var us = EntityUsables.ItemUsables(e.Items[k.Item]);
             return k.Usable >= 0 && k.Usable < us.Length ? us[k.Usable] : null;
         }
         /// A shared object's usable as (net, item, usable): RemotePlayers.DriverHands puts a hand on this copy's own one.
@@ -154,7 +148,7 @@ namespace TLDRevamp.Net
             var it = u != null ? ItemOf(u, u.tosaveid, u.setid) : null;
             var e = it != null ? SharedGroupOf(it) : null;
             if (e == null || e.NetId == 0) return false;
-            item = e.Items.IndexOf(it); usable = Array.IndexOf(ItemUsables(it), u); net = e.NetId;
+            item = e.Items.IndexOf(it); usable = Array.IndexOf(EntityUsables.ItemUsables(it), u); net = e.NetId;
             return item >= 0 && usable >= 0;
         }
         internal static usablescript UsableAt(uint net, int item, int usable) =>
@@ -175,7 +169,7 @@ namespace TLDRevamp.Net
             {
                 if (syncinmulti && InSession && !_applyingState && !_applyingLive && !EntityUsables.ApplyingPoi &&
                     !_localUsables.ContainsKey(__instance) && !_usableBefore.TryGetValue(__instance, out _))
-                    _usableBefore.Add(__instance, new UsableBefore { Value = UsableBits(__instance), Raw = UsableState(__instance) });
+                    _usableBefore.Add(__instance, new UsableBefore { Value = EntityUsables.UsableBits(__instance), Raw = EntityUsables.UsableState(__instance) });
             }
         }
 
@@ -194,7 +188,7 @@ namespace TLDRevamp.Net
                 if (EntityDoors.BusControl(it, u)) return true;
                 e = SharedGroupOf(it);
                 if (e == null || e.NetId == 0) return false;
-                idx = e.Items.IndexOf(it); int ui = Array.IndexOf(ItemUsables(it), u);
+                idx = e.Items.IndexOf(it); int ui = Array.IndexOf(EntityUsables.ItemUsables(it), u);
                 if (ui < 0 || (e.Split != null && e.Split.Contains(idx))) return false;
                 key = new UsableKey { Net = e.NetId, Epoch = e.Epoch, Item = idx, Usable = ui };
             }
@@ -208,7 +202,7 @@ namespace TLDRevamp.Net
                 else s.Dirty = true;
             }
             s.HookAt = Time.realtimeSinceStartup;
-            var v = UsableBits(u); var raw = UsableState(u);
+            var v = EntityUsables.UsableBits(u); var raw = EntityUsables.UsableState(u);
             if (!s.Dirty && EntityUsables.SameUsable(s.Raw, raw)) return true;
             if (!EntityUsables.SameUsable(s.Raw, raw) || !s.Final) s.ChangedAt = s.HookAt;
             s.Value = v; s.Raw = raw; s.Final = true; s.Dirty = !s.HasSent || !s.Sent.Equals(v);
@@ -254,21 +248,21 @@ namespace TLDRevamp.Net
             var go = itemdatabase.s.Item(record.prefabID);
             var it = go != null ? go.GetComponent<tosaveitemscript>() : null;
             if (it == null) return null;
-            var us = ItemUsables(it);
+            var us = EntityUsables.ItemUsables(it);
             return k.Usable >= 0 && k.Usable < us.Length ? us[k.Usable] : null;
         }
         private static void RefuseLive(ref long counter, string reason, int from, uint net)
-        { LiveUsablesRefused++; Refuse(ref counter, reason, $"live usable from player {from}, net {net}: {reason}"); }
+        { LiveUsablesRefused++; EntityEditCheck.Refuse(ref counter, reason, $"live usable from player {from}, net {net}: {reason}"); }
         private static void ServerLiveUsable(int from, NetReader r)
         {
             EntityUsables.ReadLiveUsable(r, out var k, out ushort seq, out double stamp, out var v, out var poi);
             if (k.Building) { ServerPoiMotion(from, r, k, seq, stamp, poi, false); return; }
-            if (r.Bad || r.Remaining != 0 || !Finite(stamp) || Math.Abs(SessionLog.St - stamp) > 10 || !Server.TryGetValue(k.Net, out var se) || k.Epoch != se.Epoch)
+            if (r.Bad || r.Remaining != 0 || !EntityNumbers.Finite(stamp) || Math.Abs(SessionLog.St - stamp) > 10 || !Server.TryGetValue(k.Net, out var se) || k.Epoch != se.Epoch)
             { RefuseLive(ref EntityEditCheck.EditRefusedValues, "live address/clock", from, k.Net); return; }
             if (from != 0 && !AtObject(from, se))
             { RefuseLive(ref EditsOutOfReach, "live reach", from, k.Net); return; }
             var u = ServerUsable(se, k);
-            if (u == null || v.Turn < 0 || v.Turn > u.maxTurnState || !Sane(u.minX) || !Sane(u.maxX) || !Sane(u.minY) || !Sane(u.maxY) || !Sane(u.tunedFloatMin) || !Sane(u.tunedFloatMax))
+            if (u == null || v.Turn < 0 || v.Turn > u.maxTurnState || !EntityEditCheck.Sane(u.minX) || !EntityEditCheck.Sane(u.maxX) || !EntityEditCheck.Sane(u.minY) || !EntityEditCheck.Sane(u.maxY) || !EntityEditCheck.Sane(u.tunedFloatMin) || !EntityEditCheck.Sane(u.tunedFloatMax))
             { RefuseLive(ref EntityEditCheck.EditRefusedValues, "live values", from, k.Net); return; }
             if (!LiveAfterRecord(k, stamp)) { LiveUsablesStale++; return; }
             if (!_liveServerIn.TryGetValue(from, out var orders)) _liveServerIn[from] = orders = new Dictionary<UsableKey, LiveOrder>();
@@ -286,13 +280,13 @@ namespace TLDRevamp.Net
         {
             se = EditReachEntity(se);
             var p = Mp.LocalGlobal(); double dx = p.x - se.Where.x, dz = p.z - se.Where.z;
-            return dx * dx + dz * dz <= StateInterestM * StateInterestM;
+            return dx * dx + dz * dz <= EntityAuthorityInterest.StateInterestM * EntityAuthorityInterest.StateInterestM;
         }
         private static void ApplyLiveUsable(NetReader r)
         {
             EntityUsables.ReadLiveUsable(r, out var k, out ushort seq, out double stamp, out var v, out var poi);
             if (k.Building) { ReceivePoiMotion(r, k, seq, stamp, poi, false); return; }
-            if (r.Bad || !Finite(stamp) || !LiveAfterRecord(k, stamp)) { LiveUsablesStale++; return; }
+            if (r.Bad || !EntityNumbers.Finite(stamp) || !LiveAfterRecord(k, stamp)) { LiveUsablesStale++; return; }
             if (!LiveNewer(_liveIn, k, seq, stamp)) return;
             var u = LiveUsableOf(k, out var e);
             if (u == null || LocalUsableHeld(u)) return;
@@ -300,13 +294,13 @@ namespace TLDRevamp.Net
             if (!_remoteUsables.TryGetValue(k, out var s) || s.U != u)
             {
                 s = new RemoteUsable { ClockOffset = SessionLog.St - stamp }; _remoteUsables[k] = s;
-                s.Motion.Add(stamp - LiveStepS, UsableState(u));
+                s.Motion.Add(stamp - LiveStepS, EntityUsables.UsableState(u));
             }
             s.U = u; s.Entity = e; s.At = Time.realtimeSinceStartup; s.Final = true;
-            s.Motion.Add(stamp, UsableState(u, v));
+            s.Motion.Add(stamp, EntityUsables.UsableState(u, v));
             // Switches are discrete; their input events must happen immediately, once per incoming state.
             if (u.currentTurnState != v.Turn || u.turnable && u.maxTurnState == 0)
-            { var state = UsableState(u); state.Turn = v.Turn; ApplyUsable(u, state, true); }
+            { var state = EntityUsables.UsableState(u); state.Turn = v.Turn; ApplyUsable(u, state, true); }
             LiveUsablesApplied++;
             SessionLog.Event("live-applied", k.Net, item: k.Item, slot: k.Usable, to: MyId, epoch: k.Epoch, sample: true);
         }
@@ -344,7 +338,7 @@ namespace TLDRevamp.Net
                 if (s.Item == it && s.U != null && !s.Final && !LocalUsableHeld(s.U)) ResetUsableBaseline(s);
         }
         private static void ResetUsableBaseline(LocalUsable s)
-        { s.Value = s.Sent = UsableBits(s.U); s.Raw = UsableState(s.U); s.HasSent = true; s.Dirty = false; }
+        { s.Value = s.Sent = EntityUsables.UsableBits(s.U); s.Raw = EntityUsables.UsableState(s.U); s.HasSent = true; s.Dirty = false; }
         private static void LiveUsableTick()
         {
             DevHooks.UsableDragTick?.Invoke();
@@ -362,8 +356,8 @@ namespace TLDRevamp.Net
                     s.SendAt = Math.Max(now, s.SendAt + LiveStepS); s.Dirty = false;
                     s.Sent = s.Value; s.HasSent = true;
                     _liveOut[s.Key] = ++s.Seq;
-                    EntityUsables.WriteLiveUsable(WL, s.Key, s.Seq, SessionLog.St, s.Value, s.Key.Building ? UsableState(s.U, s.Value) : default); ToServer(WL, false); LiveUsablesSent++;
-                    if (s.Key.Building) { PoiObserved(s.Key.Poi).Sent.Add(now); PoiUsablesSent++; }
+                    EntityUsables.WriteLiveUsable(WL, s.Key, s.Seq, SessionLog.St, s.Value, s.Key.Building ? EntityUsables.UsableState(s.U, s.Value) : default); ToServer(WL, false); LiveUsablesSent++;
+                    if (s.Key.Building) { PoiObserved(s.Key.Poi).Sent.Add(now); EntityUsables.PoiUsablesSent++; }
                     SessionLog.Event("live-sent", s.Key.Net, item: s.Key.Item, slot: s.Key.Usable, from: MyId, epoch: s.Key.Epoch, sample: true);
                 }
                 if (s.Final && now - s.ChangedAt >= LiveQuietS)

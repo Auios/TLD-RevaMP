@@ -66,7 +66,7 @@ namespace TLDRevamp.Net
         internal static float ItemMinSpeed = .5f;
         internal static float CargoGhostMarginM = .1f;
         internal static long LetGoInCarClaimed;
-        private static bool CargoBody(Ent e) => e.Root.P != null || Limbs(e) != null && Limp(e);
+        private static bool CargoBody(Ent e) => e.Root.P != null || EntityRagdolls.Limbs(e) != null && EntityRagdolls.Limp(e);
         private static carscript OverlappedCar(Ent e) => null;
         private static Ent CarEnt(carscript car) => ByNet.Values.FirstOrDefault(e => e.Root?.car == car);
     }

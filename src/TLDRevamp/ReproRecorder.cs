@@ -53,9 +53,9 @@ namespace TLDRevamp
             _auto = auto; _full = false; _autoSid = _sid;
             _start = Time.realtimeSinceStartupAsDouble; _next = _start; _count = _dropped = _skipped = 0; _failed = false; _ticks = _calls = _max = 0;
             _appendTicks = _appendCalls = _appendMax = 0;
-            Net.Entities.ReproReset();
+            Net.EntityReproHooks.ReproReset();
             Add(SimulationSnapshot?.Invoke() ?? new ReproRow { Kind = ReproKind.Network });
-            Net.Entities.LocalSeat(out uint seatNet, out int seat);
+            Net.EntitySeats.LocalSeat(out uint seatNet, out int seat);
             if (seatNet != 0) Add(new ReproRow { Kind = ReproKind.SeatEnter, Net = seatNet, Slot = seat });
             CopyStartWorld();
             Tick();
@@ -68,9 +68,9 @@ namespace TLDRevamp
         {
             if (!Recording || _stopping) return State();
             _stopping = true;
-            if (_data.Count < ReproData.Capacity - 64) Net.Entities.ReproFinish();
+            if (_data.Count < ReproData.Capacity - 64) Net.EntityReproHooks.ReproFinish();
             var data = _data; _data = null; _tail = null; _count = data.Count; _dropped = data.Dropped; _skipped = data.Skipped; _player = null; Bound.Clear();
-            Net.Entities.ReproClear();
+            Net.EntityReproHooks.ReproClear();
             _stopping = false;
             string folder = _folder;
             if (!save) { Plugin.Log.LogInfo("repro: automatic recording ended with the session (" + data.Count + " rows), not saved"); return State(); }
@@ -103,7 +103,7 @@ namespace TLDRevamp
             if (now >= _next)
             {
                 _next = now + 0.1;
-                Net.Entities.ReproFlush();
+                Net.EntityReproHooks.ReproFlush();
                 if (!Recording) return;
                 var pos = mainscript.GlobalFromUnityPos(_player.transform.position);
                 Add(new ReproRow { Kind = ReproKind.Pose, X = pos.x, Y = pos.y, Z = pos.z,
@@ -144,7 +144,7 @@ namespace TLDRevamp
         private static bool Bind(uint net, double t, double st)
         {
             if (net == 0 || Bound.Contains(net)) return true;
-            var row = Net.Entities.ReproBinding(net); row.T = t; row.St = st;
+            var row = Net.EntityReproHooks.ReproBinding(net); row.T = t; row.St = st;
             if (row.Unresolved || !_data.Add(row)) return false;
             Bound.Add(net); return true;
         }
@@ -164,7 +164,7 @@ namespace TLDRevamp
                 case "detach-request": action = ReproKind.Detach; break;
                 case "seat-enter": action = ReproKind.SeatEnter; break;
                 case "seat-leave": action = ReproKind.SeatLeave; break;
-                case "attach-sent": case "attach-request": Net.Entities.ReproAttach(net, other, item, slot); return;
+                case "attach-sent": case "attach-request": Net.EntityReproHooks.ReproAttach(net, other, item, slot); return;
                 case "hitch-request":
                     if (_hitchFrame == Time.frameCount && _hitchNet == net) return;
                     _hitchFrame = Time.frameCount; _hitchNet = net; action = result == "connect" ? ReproKind.Hitch : ReproKind.Unhitch; break;
@@ -177,7 +177,7 @@ namespace TLDRevamp
         private static void CopyStartWorld()
         {
             StartWorldDir = null; StartWorldFile = null;
-            string file = Net.Mp.Client == null ? Net.Entities.WorldSaveFile : null;
+            string file = Net.Mp.Client == null ? Net.EntityWorldLeases.WorldSaveFile : null;
             if (string.IsNullOrEmpty(file) || !File.Exists(file)) return;
             string dest = Path.Combine(Path.Combine(FeedbackReporter.Root, "bug-world"), _sid ?? "0000000000000000");
             StartWorldDir = dest; StartWorldFile = Path.GetFileName(file);

@@ -28,7 +28,7 @@ namespace TLDRevamp.Net
         {
             // a part fitted to a car (or bolted to its parent) sends no poses of its own: its last one is from before it was
             // fitted, minutes old and anywhere (a bus tank "3956 m off", a glovebox "884 m off" while drawn right in the car)
-            if (e.Proxy && (OverlayBolted(e) || AttachedCarPart(e)))
+            if (e.Proxy && (OverlayBolted(e) || EntityProxyPresentation.AttachedCarPart(e)))
             {
                 Add(0, "Position", "Rides its car or parent: no poses of its own to compare.");
                 return;
@@ -71,7 +71,7 @@ namespace TLDRevamp.Net
             bool ragdoll = Ragdoll(e.Root);
             // a fitted part whose slot switches its colliders off on purpose (partslotscript.disableCollidersOnCraft)
             bool offByDesign = e.Root.attachable != null && e.Root.attachable.attached && !CollidersExpected(e.Root.attachable);
-            bool worn = e.WornBy >= 0 || e.SentWornSlot >= 0 || LocalWornSlot(e.Root) >= 0;   // the game takes a worn item's body away
+            bool worn = e.WornBy >= 0 || e.SentWornSlot >= 0 || EntityHands.LocalWornSlot(e.Root) >= 0;   // the game takes a worn item's body away
             bool keptFrozen = e.Root.buried || Fixes.UnfreezeOnGround.Holding(e.Root);       // kinematic on purpose until it has ground under it
             string body = rb == null ? "no rigidbody" : (rb.isKinematic ? "kinematic" : "dynamic") + (rb.detectCollisions ? "" : ", collisions off");
             string flags = (e.Held ? " held" : "") + (e.Stored ? " stored" : "") + (worn ? " worn" : "") + (keptFrozen ? " kept-frozen" : "") + (e.ReleaseGhost ? " release-ghost" : "") + (e.CargoGhost ? " cargo-ghost" : "") + (e.Physical ? " physical-copy" : "") + (e.PartsColOff ? " part-colliders-off" : "");

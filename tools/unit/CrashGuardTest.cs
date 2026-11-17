@@ -1,7 +1,7 @@
 using System;
 using TLDRevamp.Net;
 
-/// Entities.TryTakeCrash's guard: a crash takeover only for a copy where its owner has the car.
+/// EntityPhysics.TryTakeCrash's guard: a crash takeover only for a copy where its owner has the car.
 static class CrashGuardTest
 {
     private static int _failed;

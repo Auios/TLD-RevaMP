@@ -33,7 +33,7 @@ namespace TLDRevamp.Net
         }
 
         private static bool OwnerAudience(Vector3d at) =>
-            !InterestRelay || IsHost || RemotePlayers.EntityViewerNear(at, InterestM);
+            !EntityAuthorityInterest.InterestRelay || IsHost || RemotePlayers.EntityViewerNear(at, InterestM);
 
         // Called after sampling, so suppressed poses still advance motion/rest detection. Finals therefore
         // describe the actual stop, rather than waiting for the next far-store refresh to notice it.
@@ -46,9 +46,9 @@ namespace TLDRevamp.Net
 
         private static bool RabbitReceiverNear(int player, SEnt se)
         {
-            if (player == 0 || !InterestRelay || Mp.Server == null) return true;
+            if (player == 0 || !EntityAuthorityInterest.InterestRelay || Mp.Server == null) return true;
             bool has = Mp.Server.PeerPos(player, out var pos);
-            if (InterestRules.Within(has, pos.x - se.Where.x, pos.z - se.Where.z, StateInterestM)) return true;
+            if (InterestRules.Within(has, pos.x - se.Where.x, pos.z - se.Where.z, EntityAuthorityInterest.StateInterestM)) return true;
             SkippedByInterest(player); return false;
         }
 
@@ -59,7 +59,7 @@ namespace TLDRevamp.Net
             { StatesSkippedUnknown++; SkippedByInterest(player); return false; }
             bool near = InterestRules.Within(hasPosition, viewer.x - at.x, viewer.z - at.z, MpServer.CarFarM);
             // Known far copies still need maintenance and transitions to keep their saved records current.
-            if (!InterestRelay || InterestRules.Due(near, essential, now, sentAt, MpServer.CarBeyondInterval)) return true;
+            if (!EntityAuthorityInterest.InterestRelay || InterestRules.Due(near, essential, now, sentAt, MpServer.CarBeyondInterval)) return true;
             SkippedByInterest(player); return false;
         }
 
@@ -73,7 +73,7 @@ namespace TLDRevamp.Net
             if (!pose) poses.Remove(se.NetId);
             else if (poses.Add(se.NetId)) SendSettledState(player, se);
             var rabbits = StaleOf(_rabbitNear, player);
-            bool rabbit = InterestRules.Within(true, viewer.x - se.Where.x, viewer.z - se.Where.z, StateInterestM);
+            bool rabbit = InterestRules.Within(true, viewer.x - se.Where.x, viewer.z - se.Where.z, EntityAuthorityInterest.StateInterestM);
             if (!rabbit) rabbits.Remove(se.NetId);
             else if (rabbits.Add(se.NetId)) { SendRabbitSnapshot(player, se); SendCreatureSnapshots(player, se); }
         }
@@ -134,7 +134,7 @@ namespace TLDRevamp.Net
 
         private static void SendPoseReplay(int playerId, SEnt se, byte[] state)
         {
-            if (se.LockFrame != 0) ReplayLockedState(WS, state, se.Pos, se.Rot);
+            if (se.LockFrame != 0) EntityProxyPresentation.ReplayLockedState(WS, state, se.Pos, se.Rot);
             else { WS.Reset(); WS.Bytes(state, 0, state.Length); }
             ServerSendTo(playerId, WS, true);
         }

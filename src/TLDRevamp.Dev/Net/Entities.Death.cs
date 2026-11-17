@@ -17,10 +17,10 @@ namespace TLDRevamp.Net
             if (!InSession) return "{\"error\":\"join a multiplayer world first\"}";
             if (!pl.died && (mainscript.s == null || !mainscript.s.died)) return "{\"error\":\"not dead\"}";
             string beforeStats = SessionRules.DeathStats();   // the stats are the observable, not a copy of it
-            long corpsesBefore = DeathCorpsesShared;
+            long corpsesBefore = EntityRagdolls.DeathCorpsesShared;
             try { pl.Death(); }
             catch (System.Exception e) { return "{\"error\":\"" + e.Message + "\"}"; }
-            return "{\"died\":true,\"corpsesBefore\":" + corpsesBefore + ",\"corpsesAfter\":" + DeathCorpsesShared +
+            return "{\"died\":true,\"corpsesBefore\":" + corpsesBefore + ",\"corpsesAfter\":" + EntityRagdolls.DeathCorpsesShared +
                    ",\"statsBefore\":" + beforeStats + ",\"statsAfter\":" + SessionRules.DeathStats() + "}";
         }
 
@@ -40,18 +40,18 @@ namespace TLDRevamp.Net
             catch { }
             pl.godModeTillGrounded = false;
             var v = new Vector3(vx, vy, vz);
-            if (!Finite(v)) return "{\"error\":\"non-finite velocity\"}";
+            if (!EntityNumbers.Finite(v)) return "{\"error\":\"non-finite velocity\"}";
             var before = mainscript.GlobalFromUnityPos(pl.transform.position);
             var spawned = new System.Collections.Generic.List<int>();
             // this death's own things: the ids a test asserts on, not "any item nearby"
-            DeathItemSaveIds.Clear(); DeathItemNetIds.Clear();
+            EntityRagdolls.DeathItemSaveIds.Clear(); EntityRagdolls.DeathItemNetIds.Clear();
             if (prefabs != null)
                 foreach (int id in prefabs)
                 {
                     if (id < 0 || itemdatabase.s == null || id >= itemdatabase.s.items.Length || itemdatabase.s.items[id] == null) continue;
                     var go = UnityEngine.Object.Instantiate(itemdatabase.s.items[id], pl.transform.position + pl.transform.forward * 0.8f + Vector3.up, pl.transform.rotation);
                     var ts = go.GetComponent<tosaveitemscript>();
-                    if (ts != null) { ts.FStart(); ShareSpawn(go); DeathItemSaveIds.Add(ts.idInSave); DeathItemNetIds.Add(NetIdOf(go)); }
+                    if (ts != null) { ts.FStart(); ShareSpawn(go); EntityRagdolls.DeathItemSaveIds.Add(ts.idInSave); EntityRagdolls.DeathItemNetIds.Add(EntityModApi.NetIdOf(go)); }
                     var pk = go.GetComponent<pickupable>();
                     if (pk != null) Carry(pl, pk);
                     spawned.Add(id);
@@ -67,11 +67,11 @@ namespace TLDRevamp.Net
             var ids = new System.Text.StringBuilder();
             // [save id, network id] pairs, as `mp deathinfo` writes them (the old "save:net" was not JSON: every reply
             // with carried things failed to parse)
-            for (int i = 0; i < DeathItemSaveIds.Count; i++) { if (i > 0) ids.Append(','); ids.Append('[').Append(DeathItemSaveIds[i]).Append(',').Append(DeathItemNetIds[i]).Append(']'); }
+            for (int i = 0; i < EntityRagdolls.DeathItemSaveIds.Count; i++) { if (i > 0) ids.Append(','); ids.Append('[').Append(EntityRagdolls.DeathItemSaveIds[i]).Append(',').Append(EntityRagdolls.DeathItemNetIds[i]).Append(']'); }
             return "{\"died\":" + (pl.died ? "true" : "false") + ",\"flung\":" + (flung ? "true" : "false") + ",\"seated\":" + (pl.Bsitting ? "true" : "false") +
                    ",\"velocity\":[" + v.x.ToString("F3", ic) + "," + v.y.ToString("F3", ic) + "," + v.z.ToString("F3", ic) +
                    "],\"before\":[" + before.x.ToString("F3", ic) + "," + before.y.ToString("F3", ic) + "," + before.z.ToString("F3", ic) + "],\"spawned\":[" + string.Join(",", spawned) +
-                   "],\"itemIds\":[" + ids + "],\"corpseSaveId\":" + DeathCorpseSaveId + ",\"corpseNetId\":" + DeathCorpseNetId +
+                   "],\"itemIds\":[" + ids + "],\"corpseSaveId\":" + EntityRagdolls.DeathCorpseSaveId + ",\"corpseNetId\":" + EntityRagdolls.DeathCorpseNetId +
                    "," + SessionRules.DeathStats().TrimStart('{');
         }
 

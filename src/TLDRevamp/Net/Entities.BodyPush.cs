@@ -60,8 +60,6 @@ namespace TLDRevamp.Net
     }
     public static partial class Entities
     {
-        private static void BodyNearTick(float dt) => EntityCargoInteraction.BodyNearTick(dt);
-        private static bool Pushable(Ent e) => EntityCargoInteraction.Pushable(e);
     }
 
     /// On the local player's body: its collisions with copies (Entities.BodyContact).

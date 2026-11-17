@@ -36,7 +36,7 @@ namespace TLDRevamp.Net
                     if (p.Th != null) p.Th.localEulerAngles = new Vector3(p.FyRot, p.FxRot, 0);
                     return "{\"ok\":true}";
                 case ReproKind.SeatEnter:
-                    LocalSeat(out uint seatedNet, out int seatedSlot);
+                    EntitySeats.LocalSeat(out uint seatedNet, out int seatedSlot);
                     return seatedNet == r.Net && seatedSlot == r.Slot ? "{\"ok\":true}" : SitSeat(r.Slot, false, r.Net);
                 case ReproKind.SeatLeave:
                     if (!p.Bsitting) return "{\"error\":\"not seated\"}";
@@ -67,10 +67,10 @@ namespace TLDRevamp.Net
                 case ReproKind.Usable: case ReproKind.PoiUsable:
                     usablescript u = null;
                     if (r.Kind == ReproKind.Usable && it != null)
-                    { var us = ItemUsables(it); if (r.Slot >= 0 && r.Slot < us.Length) u = us[r.Slot]; }
+                    { var us = EntityUsables.ItemUsables(it); if (r.Slot >= 0 && r.Slot < us.Length) u = us[r.Slot]; }
                     else if (r.Kind == ReproKind.PoiUsable)
                     {
-                        u = PoiUsableOf(new PoiKey { Gen = r.Item, X = r.E, Y = r.F, Z = r.G, U = r.Slot });
+                        u = EntityUsables.PoiUsableOf(new PoiKey { Gen = r.Item, X = r.E, Y = r.F, Z = r.G, U = r.Slot });
                     }
                     if (u == null) return "{\"error\":\"usable absent\"}";
                     u.Refresh((float)r.X, (float)r.Y, (float)r.Z, (int)r.A); u.tunedFloat = (float)r.B; u.SyncMulti(true); return "{\"ok\":true}";
@@ -86,11 +86,11 @@ namespace TLDRevamp.Net
                 case ReproKind.Detach:
                     if (it == null || it.attachable == null) return "{\"error\":\"detach target absent\"}";
                     if (PartIsProxy(it.attachable)) return RequestDetach(it.attachable) ? "{\"requested\":true}" : "{\"error\":\"detach request refused\"}";
-                    return Unmount(it.attachable, false) ? "{\"ok\":true}" : "{\"error\":\"unmount refused\"}";
+                    return EntityLifetimeStreaming.Unmount(it.attachable, false) ? "{\"ok\":true}" : "{\"error\":\"unmount refused\"}";
                 case ReproKind.PhysLock:
                     var parent = ReproTarget(r.Other, (int)r.A);
                     if (it == null || it.P == null || parent == null || !ObservedEntities.TryGetValue(r.Net, out var own)) return "{\"error\":\"physlock target or mount absent\"}";
-                    var mounts = LockMounts(parent);
+                    var mounts = EntityLocks.LockMounts(parent);
                     if (r.Slot < 0 || r.Slot >= mounts.Length) return "{\"error\":\"mount absent\"}";
                     if (own.Proxy || own.OwnerId != MyId) return ReproNotOwner();
                     mounts[r.Slot].Store(it.P, false); return "{\"ok\":true}";
@@ -108,7 +108,7 @@ namespace TLDRevamp.Net
             if (!ObservedEntities.TryGetValue(r.Net, out var tr) || !ObservedEntities.TryGetValue(r.Other, out var car) || !Resolve(tr) || !Resolve(car) ||
                 !HitchTrailer(tr) || car.Root == null || r.Slot < 0 || r.Slot >= car.Root.partslotscripts.Count)
                 return "{\"error\":\"recorded hitch target or slot absent\"}";
-            RequestHitch(tr, car, car.Root.partslotscripts[r.Slot], r.Kind == ReproKind.Hitch);
+            EntityHitches.RequestHitch(tr, car, car.Root.partslotscripts[r.Slot], r.Kind == ReproKind.Hitch);
             return "{\"requested\":true}";
         }
         private static string ReproAttachAction(ReproRow r)
@@ -148,7 +148,7 @@ namespace TLDRevamp.Net
                 if (it == null) { sb.Append("null"); continue; }
                 sb.Append("{\"attached\":").Append(it.attachable != null && it.attachable.attached ? "true" : "false")
                     .Append(",\"locked\":").Append(it.P != null && it.P.physlock != null ? "true" : "false").Append(",\"usables\":[");
-                var us = ItemUsables(it);
+                var us = EntityUsables.ItemUsables(it);
                 for (int j = 0; j < us.Length; j++)
                 {
                     if (j > 0) sb.Append(','); var u = us[j]; if (u == null) { sb.Append("null"); continue; }
@@ -163,7 +163,7 @@ namespace TLDRevamp.Net
         }
         internal static string ReproPoiCheck(int gen, double x, double y, double z, int index)
         {
-            var u = PoiUsableOf(new PoiKey { Gen = gen, X = x, Y = y, Z = z, U = index });
+            var u = EntityUsables.PoiUsableOf(new PoiKey { Gen = gen, X = x, Y = y, Z = z, U = index });
             return u == null ? "{\"error\":\"repro POI usable absent\"}" : "{\"state\":[" + Json.Num(u.slideValue) + "," + Json.Num(u.xRot) + "," + Json.Num(u.yRot) + "," + u.currentTurnState + "," + Json.Num(u.tunedFloat) + "]}";
         }
     }
@@ -174,7 +174,7 @@ namespace TLDRevamp.Net
             var p = mainscript.s != null ? mainscript.s.player : null;
             var peers = RemotePlayers.ObservedReproPlayers;
             if (p == null || peers.Count != 1) return "{\"error\":\"repro needs one local player and one peer\"}";
-            Entities.LocalSeat(out uint net, out int seat);
+            EntitySeats.LocalSeat(out uint net, out int seat);
             var g = mainscript.GlobalFromUnityPos(p.transform.position);
             string local = ReproPlayer(g, net, seat), remote = "null";
             foreach (var rp in peers) if (rp.Has) remote = ReproPlayer(rp.Target, rp.SeatNet, rp.SeatIdx);

@@ -44,9 +44,9 @@ namespace TLDRevamp.Net
                     srv.Add("{\"net\":" + se.NetId + ",\"owner\":" + se.OwnerId + ",\"where\":[" + se.Where.x.ToString("F0", ic) + "," + se.Where.z.ToString("F0", ic) + "],\"hasState\":" + (se.HasState ? "true" : "false") +
                             ",\"records\":" + (d != null ? d.items.Count : -1) + ",\"recId\":" + (d != null && d.items.Count > 0 ? d.items[0].id : -1) + ",\"recBytes\":" + (se.Record != null ? se.Record.Length : -1) + ",\"peers\":[" + string.Join(",", known) + "]}");
                 }
-            return "{\"server\":[" + string.Join(",", srv) + "],\"did\":" + did + ",\"tumbleweeds\":[" + string.Join(",", rows) + "],\"listed\":" + m.thumbleweeds.Count + ",\"near\":" + TumbleweedsNear(m) +
+            return "{\"server\":[" + string.Join(",", srv) + "],\"did\":" + did + ",\"tumbleweeds\":[" + string.Join(",", rows) + "],\"listed\":" + m.thumbleweeds.Count + ",\"near\":" + EntityAI.TumbleweedsNear(m) +
                    ",\"limit\":" + m.thumbleweedLimit + ",\"dist\":[" + m.spawnMinDist.ToString("F0", ic) + "," + m.spawnMaxDist.ToString("F0", ic) + "]" +
-                   ",\"next\":" + (m.spawnTime - Time.time).ToString("F0", ic) + ",\"shared\":" + TumbleShared + ",\"limited\":" + TumbleLimited +
+                   ",\"next\":" + (m.spawnTime - Time.time).ToString("F0", ic) + ",\"shared\":" + EntityAI.TumbleShared + ",\"limited\":" + EntityAI.TumbleLimited +
                    ",\"biome\":" + (mainscript.s != null ? mainscript.s.GetCurrentBiome() : -1) + "}";
         }
     }

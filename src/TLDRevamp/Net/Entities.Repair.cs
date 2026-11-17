@@ -144,7 +144,7 @@ namespace TLDRevamp.Net
                 }
                 var it = e.Items[i];
                 if (it == null) { rows.Add("m" + i + "=none"); continue; }
-                string state = RepairState(it);
+                string state = EntityRepair.RepairState(it);
                 if (state.Length > 0) rows.Add("s" + i + "=" + state);
                 if (it == e.Root) { rows.Add("self=" + RepairSelf(e, it)); continue; }
                 var at = it.attachable;
@@ -153,7 +153,7 @@ namespace TLDRevamp.Net
                 var owner = Fixes.SlotOwnerSave.Owner(at);
                 string on = owner != null && index.TryGetValue(owner, out int pi) ? pi.ToString() : "*";
                 rows.Add("m" + i + "=" + (at.slot != null && owner != null && owner.partslotscripts != null ? "on" + on + "#" + owner.partslotscripts.IndexOf(at.slot) : "glue" + on));
-                if (at.slot == null && CensusGluedPlaces) { string place = GluedPlace(at); if (place != null) rows.Add("g" + i + "=" + place); }
+                if (at.slot == null && CensusGluedPlaces) { string place = EntityRepair.GluedPlace(at); if (place != null) rows.Add("g" + i + "=" + place); }
             }
             rows.Sort(System.StringComparer.Ordinal);
             double ms = sw.Elapsed.TotalMilliseconds; if (ms > RepairRowsMsMax) RepairRowsMsMax = ms;
@@ -186,7 +186,7 @@ namespace TLDRevamp.Net
         {
             float now = Time.realtimeSinceStartup;
             uint net = e.NetId;
-            var ours = RowMap(RepairRows(e)); var owner = RowMap(theirs.Split('\n'));
+            var ours = EntityRepair.RowMap(RepairRows(e)); var owner = EntityRepair.RowMap(theirs.Split('\n'));
             var diff = new List<string>();
             byte flags = 0;
             var off = new List<int>(); var missing = new List<uint>();

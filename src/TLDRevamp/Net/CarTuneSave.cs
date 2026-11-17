@@ -37,7 +37,7 @@ namespace TLDRevamp.Net
             _world = id;
             _saved.Clear(); _done.Clear();
             if (!OwnsWorld) return;
-            var save = Entities.WorldSaveFile;
+            var save = EntityWorldLeases.WorldSaveFile;
             if (save == null) return;
             var f = ReadFile(save + ".tune");
             if (f == null) return;
@@ -54,7 +54,7 @@ namespace TLDRevamp.Net
             if (mainscript.s == null || savedatascript.s == null) return;
             EnsureWorld();
             if (_saved.Count == 0) return;
-            _session.Clear(); Entities.TunedRootIds(_session);
+            _session.Clear(); EntityCarTuning.TunedRootIds(_session);
             foreach (var kv in _saved)
             {
                 if (_session.Contains(kv.Key)) continue;
@@ -63,7 +63,7 @@ namespace TLDRevamp.Net
                 _done[kv.Key] = it.transform;
                 var t = CarTuning.FromBytes(kv.Value, 0, kv.Value.Length);
                 if (t == null) continue;
-                Entities.ApplyTuning(it.car, t);
+                EntityCarTuning.ApplyTuning(it.car, t);
                 Applied++;
             }
         }
@@ -72,15 +72,15 @@ namespace TLDRevamp.Net
         private static void Refresh()
         {
             EnsureWorld();
-            _session.Clear(); Entities.TunedRootIds(_session);
-            Entities.KnownTunings(_saved);   // shared cars: what the session keeps, loaded here or not
+            _session.Clear(); EntityCarTuning.TunedRootIds(_session);
+            EntityCarTuning.KnownTunings(_saved);   // shared cars: what the session keeps, loaded here or not
             if (savedatascript.s == null) return;
             foreach (var kv in savedatascript.s.items)
             {
                 var it = kv.Value;
                 if (it == null || it.car == null || _session.Contains(kv.Key)) continue;
-                var t = Entities.CaptureTuning(it.car);
-                if (t.Key() == Entities.PrefabTuneKey(it)) { _saved.Remove(kv.Key); continue; }
+                var t = EntityCarTuning.CaptureTuning(it.car);
+                if (t.Key() == EntityCarTuning.PrefabTuneKey(it)) { _saved.Remove(kv.Key); continue; }
                 if (_saved.Count < MaxCars || _saved.ContainsKey(kv.Key)) _saved[kv.Key] = t.ToBytes();
                 _done[kv.Key] = it.transform;
             }

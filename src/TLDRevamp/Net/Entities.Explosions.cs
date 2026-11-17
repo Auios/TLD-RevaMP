@@ -184,7 +184,7 @@ namespace TLDRevamp.Net
             return -1;
         }
 
-        public static string ExplosionStats() => "{\"sent\":" + ExplosionsSent + ",\"applied\":" + ExplosionsApplied + ",\"reqSent\":" + ExplodeReqsSent +
+        internal static string ExplosionStats() => "{\"sent\":" + ExplosionsSent + ",\"applied\":" + ExplosionsApplied + ",\"reqSent\":" + ExplodeReqsSent +
                                                  ",\"reqRun\":" + ExplodeReqsRun + ",\"copySkipped\":" + CopyBlastsSkipped + "}";
     }
 }

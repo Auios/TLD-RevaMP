@@ -206,19 +206,11 @@ static partial class EntitySplitTest
     }
     static void PhysicsBoundaryChecks()
     {
-        CoreMembers.Register();
         var owner = typeof(EntityPhysics);
         Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, "physics has an internal static owner");
-        foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly))
-        {
-            if (!(member is FieldInfo || member is PropertyInfo || member is MethodInfo)) continue;
-            bool retained = typeof(Entities).GetMember(member.Name, Static).Length != 0;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                Check(Reflect.MemberPath(prefix + member.Name) == (retained ? prefix + member.Name : owner.FullName + "." + member.Name), "physics alias " + prefix + member.Name);
-        }
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.CrashApartCheckS", "0.5") == "0.5" && EntityPhysics.CrashApartCheckS == .5f, "physics compiled setting has one backing field");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityPhysics.CrashApartCheckS", "0.5") == "0.5" && EntityPhysics.CrashApartCheckS == .5f, "physics compiled setting has one backing field");
         EntityPhysics.CrashApartCheckS = .25f;
-        Check(BridgeReflect.Set("Entities.LodPartsOffKept", "12") == "12" && EntityPhysics.LodPartsOffKept == 12, "physics alias writes a field without a facade");
+        Check(BridgeReflect.Set("EntityPhysics.LodPartsOffKept", "12") == "12" && EntityPhysics.LodPartsOffKept == 12, "physics owner path writes a field without a owner call");
         Check(!ReferenceEquals(Field(owner, "W"), Field(typeof(Entities), "W")), "physics owns its writer");
         string[] allowed = { "Ent", "InSession", "ContactImpulse", "CrashClaim", "CrashRelease", "PhysicsRoot", "PhysicsNetOf", "PhysicsTrailer", "PhysicsWheels", "PhysicsPartCameOff", "PhysicsLimbs", "PhysicsIsProxy", "PhysicsSnap", "SetCrashProxy", "SendPhysicsRequest", "TryPhysicsContact", "ResolvePhysics", "PhysicsFootingNet", "TryPhysicsStand", "PhysicsContacts" };
         foreach (string part in new[] { "Contact", "CopyJoints", "CrashAuthority", "Footing", "Physical" })
@@ -230,7 +222,7 @@ static partial class EntitySplitTest
             foreach (Match call in Regex.Matches(code, @"Entities\.(\w+)")) Check(allowed.Contains(call.Groups[1].Value), "narrow physics dependency " + call.Value);
         }
         string boundary = File.ReadAllText("src/TLDRevamp/Net/Entities.Features.cs").Split("// Physics boundary.")[1].Split("// End physics boundary.")[0];
-        Check(boundary.Contains("CargoContact(net, collision); RabbitContact(net, collision); ItemContact(net, collision);"), "collision claim order remains cargo rabbit item");
+        Check(boundary.Contains("EntityCargoInteraction.CargoContact(net, collision); EntityRabbits.RabbitContact(net, collision); EntityCargoInteraction.ItemContact(net, collision);"), "collision claim order remains cargo rabbit item");
         Check(boundary.Contains("=> SetProxy(entity, proxy, keepMotion);") && boundary.Contains("=> ToServer(writer, reliable);"), "crash proxy transition and capture-before-dispatch transport stay on kernel");
         Check(!boundary.Contains("IEnumerable<Ent>") && !boundary.Contains("Dictionary<uint, Ent>") && !boundary.Contains("Dictionary<uint, SEnt>"), "physics boundary does not hand out kernel tables or enumerators");
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");

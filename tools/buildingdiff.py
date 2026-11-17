@@ -56,7 +56,7 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, s_("get kaposztaleves.s.settings.god").get("value")); s_("set kaposztaleves.s.settings.god True")
-            s_(f"set {T}.PoiCensusOn {not OLD}")
+            s_(f"set TLDRevamp.Net.EntityRepair.PoiCensusOn {not OLD}")
         print(f"  {'OLD (no building check)' if OLD else 'CURRENT BUILD'}", flush=True)
         time.sleep(10)
         ph, pl = pois(h), pois(L)
@@ -74,12 +74,12 @@ with game.ProtectedSession():
         hit = [x for x in new if b["name"].replace("(Clone)", "") in x and "player 1" in x and "no building there" in x]
         verdict("THE HOST NAMED THE BUILDING THE LAPTOP HASN'T", bool(hit), str(new[:2]))
         verdict("NOTHING ELSE LOGGED (BUILDINGS BOTH HAVE)", len(new) == len(hit), str([x for x in new if x not in hit][:2]))
-        print("  sent/in:", h(f"get {T}.PoiCensusIn"), L(f"get {T}.PoiCensusSent"), flush=True)
+        print("  sent/in:", h(f"get TLDRevamp.Net.EntityRepair.PoiCensusIn"), L(f"get TLDRevamp.Net.EntityRepair.PoiCensusSent"), flush=True)
         er = [x_("errors") for x_ in (h, L)]
         verdict("NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er), str([(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er]))
     finally:
         for s_, v in gods.values():
-            try: s_(f"set kaposztaleves.s.settings.god {v}"); s_(f"set {T}.PoiCensusOn True")
+            try: s_(f"set kaposztaleves.s.settings.god {v}"); s_(f"set TLDRevamp.Net.EntityRepair.PoiCensusOn True")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

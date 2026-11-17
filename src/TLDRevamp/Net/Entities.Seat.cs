@@ -69,7 +69,7 @@ namespace TLDRevamp.Net
                 if (RemotePlayers.AnyRemoteInSeat(__instance)) __result = false;
             }
         }
-        public static float DriveClaimHoldS = 1.5f;
+        internal static float DriveClaimHoldS = 1.5f;
         public static long DriverSeatRefused, DriverSeatMoved, DriverSeatOut;
         private static readonly List<KeyValuePair<int, int>> _seatedIn = new List<KeyValuePair<int, int>>();
 
@@ -119,7 +119,7 @@ namespace TLDRevamp.Net
             Plugin.Log.LogInfo($"driver seat of net {e.NetId}: {note} Moved {(to != null ? "to " + to.name : "out of the car")}.");
         }
 
-        public static string SeatGuardStats() =>
+        internal static string SeatGuardStats() =>
             "{\"refused\":" + DriverSeatRefused + ",\"moved\":" + DriverSeatMoved + ",\"out\":" + DriverSeatOut + "}";
 
         /// The game calls GetOut every frame a passenger sits with a place to get out to (fpscontroller.Update); it only
@@ -127,8 +127,8 @@ namespace TLDRevamp.Net
         /// restore of the car's collisions came on every one of those calls: 19 seat-leave events in 0.2 s in a playtest's
         /// black box, and a seated passenger's capsule colliding with the car copy again from the frame after it sat down.
         /// Both now come only when the player is out.
-        public static bool SeatLeaveOnExit = true;   // A/B: false = before v0.69.2 (on every call)
-        public static long SeatLeavesLogged, LocalGetOutCalls;
+        internal static bool SeatLeaveOnExit = true;   // A/B: false = before v0.69.2 (on every call)
+        internal static long SeatLeavesLogged, LocalGetOutCalls;
 
         [HarmonyLib.HarmonyPatch(typeof(fpscontroller), nameof(fpscontroller.GetOut), new[] { typeof(Vector3), typeof(bool) })]
         private static class SeatExitCollisionRestore

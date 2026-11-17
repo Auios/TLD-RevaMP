@@ -55,15 +55,12 @@ namespace TLDRevamp.Net
     // The entity/Unity/transport surfaces only; frame selection, visibility and relay methods are production code.
     public static partial class Entities
     {
-        public static double StateInterestM = 1000;
         static readonly Dictionary<int, HashSet<uint>> Known = new Dictionary<int, HashSet<uint>>();
         static readonly NetWriter WS = new NetWriter();
         static int delivered;
         static void SkippedByInterest(int player) { }
         internal class Ent { public TestRoot Root = new TestRoot(); public Transform[] TestLimbs; public bool IsLimp; }
         internal class TestRoot { public object car; public Transform transform = new Transform(); }
-        static Transform[] Limbs(Ent e) => e.TestLimbs;
-        static bool Limp(Ent e) => e.IsLimp;
         class SEnt { public uint NetId; public Vector3d Where; }
         static void ServerFwdAll(int from, NetReader r, bool reliable) { Mp.Server.Sends = 3; }
         static void Deliver(NetWriter w) { delivered++; }
@@ -114,6 +111,18 @@ namespace TLDRevamp.Net
             BandwidthTest.Check(GC.GetAllocatedBytesForCurrentThread() == allocated, "warmed frame, visibility and snapshot checks allocate nothing");
         }
     }
+    internal static partial class EntityAuthorityInterest
+    {
+        internal static double StateInterestM = 1000;
+    }
+
+
+    internal static partial class EntityRagdolls
+    {
+        internal static Transform[] Limbs(Entities.Ent e) => e.TestLimbs;
+        internal static bool Limp(Entities.Ent e) => e.IsLimp;
+    }
+
     public class MpServer
     {
         public struct PeerSpot { public int Id; public bool HasPos; public Vector3d Pos; }

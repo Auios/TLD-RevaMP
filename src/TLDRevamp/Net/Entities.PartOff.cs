@@ -42,7 +42,7 @@ namespace TLDRevamp.Net
 
         private static string CheckPartOff(SEnt car, int idx, Vector3d pos, Quaternion rot)
         {
-            if (!Finite(pos) || !Finite(rot)) return "non-finite pose";
+            if (!EntityNumbers.Finite(pos) || !EntityNumbers.Finite(rot)) return "non-finite pose";
             double reach = 50;
             if (car.HasState && car.ReceivedStateEpoch == car.Epoch)
             {
@@ -51,11 +51,11 @@ namespace TLDRevamp.Net
                 // including acceleration since the sample, for at most 6 s (refresh + delivery), never over 500 m.
                 double age = Time.realtimeSinceStartup - car.DrivenAt;
                 double cap = mainscript.s != null ? mainscript.s.maxCarVelocity : 70;
-                if (!Finite(cap) || cap <= 1) cap = 70;
-                if (Finite(age)) reach = System.Math.Min(500, reach + cap * System.Math.Min(6, System.Math.Max(0, age)));
+                if (!EntityNumbers.Finite(cap) || cap <= 1) cap = 70;
+                if (EntityNumbers.Finite(age)) reach = System.Math.Min(500, reach + cap * System.Math.Min(6, System.Math.Max(0, age)));
             }
             double dx = pos.x - car.Where.x, dy = pos.y - car.Where.y, dz = pos.z - car.Where.z;
-            if ((!Finite(car.Where) || dx * dx + dy * dy + dz * dz > reach * reach) && !NearSplitPart(car, pos, reach)) return "pose too far";
+            if ((!EntityNumbers.Finite(car.Where) || dx * dx + dy * dy + dz * dz > reach * reach) && !NearSplitPart(car, pos, reach)) return "pose too far";
             double q = (double)rot.x * rot.x + (double)rot.y * rot.y + (double)rot.z * rot.z + (double)rot.w * rot.w;
             if (q < 0.25 || q > 4) return "invalid rotation";
             var group = GroupRecord(car);
@@ -127,7 +127,7 @@ namespace TLDRevamp.Net
             if (!CarriedPartsShared) return false;
             foreach (uint pn in car.Parts)
             {
-                if (!Server.TryGetValue(pn, out var part) || !Finite(part.Where)) continue;
+                if (!Server.TryGetValue(pn, out var part) || !EntityNumbers.Finite(part.Where)) continue;
                 double dx = pos.x - part.Where.x, dy = pos.y - part.Where.y, dz = pos.z - part.Where.z;
                 if (dx * dx + dy * dy + dz * dz <= reach * reach) return true;
             }
@@ -199,7 +199,7 @@ namespace TLDRevamp.Net
             int idx = car != null ? CarriedMember(car, carrier.PartIndex, slot) : -1;
             string why = r.Bad || r.Remaining != 0 ? "malformed" : carrier == null ? "missing carrier" : car == null ? "carrier has no group"
                 : carrier.OwnerId != from && !(carrier.PrevOwnerId == from && Time.realtimeSinceStartup - carrier.PrevOwnerAt <= HandoverAcceptS) ? "wrong owner"
-                : !Finite(pos) || !Finite(rot) ? "non-finite pose" : idx < 0 ? "no such part on the carrier" : null;
+                : !EntityNumbers.Finite(pos) || !EntityNumbers.Finite(rot) ? "non-finite pose" : idx < 0 ? "no such part on the carrier" : null;
             if (why != null) { RefusePartOff(from, carrierNet, slot, epoch, why); return; }
             SplitPart(car, idx, from, pos, rot, carrierNet, slot);
         }

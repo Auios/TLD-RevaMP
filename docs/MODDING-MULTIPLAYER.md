@@ -59,7 +59,8 @@ are not object state.
 
 Limits, checked by the host before anything is passed on: records up to `MaxRecordBytes` (8 KB by default), edits
 and events up to 1 KB, 60 messages a second per player (bursts of 120), 1,000 objects per player, finite positions,
-records and poses only from the current owner. Bridge: `mp mods` (counters, objects).
+records and poses only from the current owner. Bridge: `mp mods` (counters, objects). Reflection paths name the real member
+owner; `switches` shows the paths for runtime switches.
 
 Two things about this game that every BepInEx mod meets (found with the head unit example mod):
 - The game destroys BepInEx's manager object when its scene loads, so a plugin's own `Update`, `OnGUI` and the like

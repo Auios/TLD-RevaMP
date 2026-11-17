@@ -399,12 +399,12 @@ namespace TLDRevamp.Net
         {
             uint net = r.U32(), epoch = r.U32(), token = r.U32(); bool loaded = r.Bool();
             var p = loaded ? new Vector3d(r.F64(), r.F64(), r.F64()) : default;
-            var q = loaded ? ReadRot(r) : Quaternion.identity;
+            var q = loaded ? EntityCodec.ReadRot(r) : Quaternion.identity;
             var v = loaded ? new Vector3(r.F32(), r.F32(), r.F32()) : Vector3.zero;
             bool hasGrip = loaded && r.Bool();
             var gripPos = loaded ? new Vector3(r.F32(), r.F32(), r.F32()) : Vector3.zero;
-            var gripRot = loaded ? ReadRot(r) : Quaternion.identity;
-            if (r.Bad || !Finite(p) || !Finite(q) || !Finite(v) || !Finite(gripPos) || !Finite(gripRot) || !Server.TryGetValue(net, out var tr) || tr.Epoch != epoch || tr.OwnerId != from ||
+            var gripRot = loaded ? EntityCodec.ReadRot(r) : Quaternion.identity;
+            if (r.Bad || !EntityNumbers.Finite(p) || !EntityNumbers.Finite(q) || !EntityNumbers.Finite(v) || !EntityNumbers.Finite(gripPos) || !EntityNumbers.Finite(gripRot) || !Server.TryGetValue(net, out var tr) || tr.Epoch != epoch || tr.OwnerId != from ||
                 !_hitchTransfers.TryGetValue(net, out var transfer) || !transfer.Confirm(from, epoch, token)) return;
             CompleteHitchTransfer(tr, loaded, p, q, v, hasGrip, gripPos, gripRot);
         }
@@ -438,9 +438,9 @@ namespace TLDRevamp.Net
             if (loaded || tr.HasState)
             {
                 if (!loaded) { p = tr.Pos; q = tr.Rot; v = Vector3.zero; }
-                w.F64(p.x); w.F64(p.y); w.F64(p.z); WriteRot(w, q); w.F32(v.x); w.F32(v.y); w.F32(v.z);
+                w.F64(p.x); w.F64(p.y); w.F64(p.z); EntityCodec.WriteRot(w, q); w.F32(v.x); w.F32(v.y); w.F32(v.z);
                 w.Bool(hasGrip);
-                w.F32(gripPos.x); w.F32(gripPos.y); w.F32(gripPos.z); WriteRot(w, gripRot);
+                w.F32(gripPos.x); w.F32(gripPos.y); w.F32(gripPos.z); EntityCodec.WriteRot(w, gripRot);
             }
             SessionLog.Event("hitch-ownership-claim", net, tr.HitchCar, from: from, to: target, epoch: tr.Epoch);
             ServerSendTo(target, w, true);
@@ -542,7 +542,7 @@ namespace TLDRevamp.Net
             // Invalidate queued commands and late acknowledgements, and release either simulator's frozen bodies.
             CompleteHitchTransfer(tr, false, default, Quaternion.identity, Vector3.zero, false, Vector3.zero, Quaternion.identity);
             var w = new NetWriter();
-            WriteDetachSync(w, tr.NetId, tr.Epoch, tr.HasState ? tr.Pos : tr.Where, tr.HasState ? tr.Rot : Quaternion.identity);
+            EntityCodec.WriteDetachSync(w, tr.NetId, tr.Epoch, tr.HasState ? tr.Pos : tr.Where, tr.HasState ? tr.Rot : Quaternion.identity);
             ServerSendAll(w, true, -1);   // loaded and far-store copies use the ordinary clean unmount path
         }
 

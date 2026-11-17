@@ -361,7 +361,12 @@ namespace TLDRevamp.Net
     class Transport { public List<int> Connections = new List<int> {1}; public long BytesIn; public Quality Status(int conn) => new Quality {Ping=34}; }
     struct Quality { public int Ping; }
     static class SteamCompat { public static string Route(int conn) => "{\"ok\":true,\"relayed\":true}"; }
-    static class Entities { public static bool TpaInboxEmpty = true; public static int Applied; public static int JoinApplied(HashSet<uint> ids) => Applied; }
+    static class Entities {  public static int Applied; public static int JoinApplied(HashSet<uint> ids) => Applied; }
+    internal static partial class EntityTeleportRefresh
+    {
+        internal static bool TpaInboxEmpty = true;
+    }
+
 }
 
 namespace TLDRevamp { static class DevHooks { internal static System.Func<Net.IJoinLoadingPreview> JoinPreview; internal static System.Action JoinPreviewEnd; internal static bool Testing => Plugin.BridgeEnabled; } }

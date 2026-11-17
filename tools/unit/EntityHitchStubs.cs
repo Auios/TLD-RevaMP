@@ -8,9 +8,9 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         private static System.Collections.Generic.Dictionary<uint, HitchOp> _hitchCommands => (System.Collections.Generic.Dictionary<uint, HitchOp>)typeof(EntityHitches).GetField("_hitchCommands", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
-        internal static bool IsFinite(Vector3d v) => Finite(v);
-        internal static bool IsFinite(UnityEngine.Vector3 v) => Finite(v);
-        internal static bool IsFinite(UnityEngine.Quaternion v) => Finite(v);
+        internal static bool IsFinite(Vector3d v) => EntityNumbers.Finite(v);
+        internal static bool IsFinite(UnityEngine.Vector3 v) => EntityNumbers.Finite(v);
+        internal static bool IsFinite(UnityEngine.Quaternion v) => EntityNumbers.Finite(v);
         internal static void HitchFixedChecks()
         {
             for (int bits = 0; bits < 256; bits++)

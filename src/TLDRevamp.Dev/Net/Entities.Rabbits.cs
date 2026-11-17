@@ -13,8 +13,8 @@ namespace TLDRevamp.Net
         /// rabbit does it the game's way (test staging).
         public static string RabbitDo(string[] a)
         {
-            if (a.Length < 3 || !uint.TryParse(a[1], out uint net) || !ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || NyOf(e) == null) return "{\"error\":\"no rabbit\"}";
-            var ny = NyOf(e);
+            if (a.Length < 3 || !uint.TryParse(a[1], out uint net) || !ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || EntityRabbits.NyOf(e) == null) return "{\"error\":\"no rabbit\"}";
+            var ny = EntityRabbits.NyOf(e);
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             switch (a[2])
             {
@@ -30,15 +30,15 @@ namespace TLDRevamp.Net
                 {
                     var m = ny.move;
                     if (m == null) return "{\"error\":\"no move\"}";
-                    TLDRevamp.Net.Entities.ObservedRabCharges.TryGetValue(m, out var was);
-                    SetRabbitCharge(m, new RabCharge { At = new Vector3d(double.Parse(a[3], ci), 0, double.Parse(a[4], ci)), Speed = float.Parse(a[5], ci),
+                    TLDRevamp.Net.EntityRabbits.ObservedRabCharges.TryGetValue(m, out var was);
+                    EntityRabbits.SetRabbitCharge(m, new RabCharge { At = new Vector3d(double.Parse(a[3], ci), 0, double.Parse(a[4], ci)), Speed = float.Parse(a[5], ci),
                                                     Until = Time.time + float.Parse(a[6], ci), OwnSpeed = was != null ? was.OwnSpeed : m.speed });
                     break;
                 }
                 case "aim": if (ny.AI != null) ny.AI.interestPos = mainscript.UnityPosFromGlobal(new Vector3d(double.Parse(a[3], ci), mainscript.GlobalFromUnityPos(ny.transform.position).y, double.Parse(a[4], ci))); break;
                 default: return "{\"error\":\"what?\"}";
             }
-            return RabbitJson(e);
+            return EntityRabbits.RabbitJson(e);
         }
 
         /// Bridge `mp body <net>`: the object's root body here - for crash checks (velocity, spin, which way is up).

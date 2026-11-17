@@ -26,11 +26,11 @@ static class ItemTrafficTest
     static NetWriter State(uint id, bool extras = false)
     {
         var w = new NetWriter();
-        Entities.WriteStateHead(w, id, 300, 7, 1.5, new Vector3d(1, 2, 3), new Quaternion(0, 0, 0, 1), new Vector3(4, 5, 6), true,
+        EntityCodec.WriteStateHead(w, id, 300, 7, 1.5, new Vector3d(1, 2, 3), new Quaternion(0, 0, 0, 1), new Vector3(4, 5, 6), true,
                                 held: extras, carriedBy: extras ? 999u : 0u, handPose: extras, handRot: Quaternion.identity);
         w.U8(extras ? (byte)0x82 : (byte)0); if (extras) Z(w, 12);   // wheel travel/steer/rpm and torques
         w.U8(extras ? (byte)7 : (byte)0); if (extras) w.U16(2500);
-        w.U8(extras ? (byte)1 : (byte)0); if (extras) Z(w, 3);   // car signals: flags, then gear, horn, steer (Entities.CarSignals)
+        w.U8(extras ? (byte)1 : (byte)0); if (extras) Z(w, 3);   // car signals: flags, then gear, horn, steer (EntityCarSignals.CarSignals)
         w.U8(extras ? (byte)2 : (byte)0); if (extras) { w.U8(RagdollWire.Frame); Z(w, 38); }
         return w;
     }
@@ -99,7 +99,7 @@ static class ItemTrafficTest
         foreach (bool framed in new[] { false, true })
         {
             Fresh(); var locked = new NetWriter();
-            Entities.WriteStateHead(locked, 500, 1, 1, 1, default, new Quaternion(0, 0, 0, 1), default, false,
+            EntityCodec.WriteStateHead(locked, 500, 1, 1, 1, default, new Quaternion(0, 0, 0, 1), default, false,
                 carriedBy: framed ? 999u : 0u, locked: true, lockItem: 130, lockMount: 2, lockContainer: framed ? 0u : 999u);
             locked.U8(0); locked.U8(0); locked.U8(0); locked.U8(0); Send(locked); Sample();
             Check("locked pose attribution includes container indices and world address framed=" + framed, Near(Row(500).UpBps, locked.Len) && Rows.Count == 1);
@@ -141,7 +141,7 @@ static class ItemTrafficTest
         Fresh(); var attach = Head(Entities.AttachSync, 60); attach.U8(1); attach.U8(2); attach.VarU32(300); attach.U32(61); attach.VarU32(0); attach.VarU32(1); Z(attach, 72); attach.U8(1); attach.VarI32(-20); attach.VarI32(3); attach.VarI32(4); Z(attach, 7);
         Send(attach); Sample(); Check("Attach splits relationship bytes once", Near(Row(60).UpBps + Row(61).UpBps, attach.Len) && Math.Abs(Row(60).UpBps - Row(61).UpBps) <= 1);
         Fresh(); var shot = new NetWriter(); shot.U8(Entities.ShotFx); shot.U8(4); shot.U32(80); shot.VarU32(0); Z(shot, 37); shot.U8(2); int header = shot.Len;
-        shot.U8(1); shot.U8(0); shot.U8(255); shot.U32(81); shot.Str("body"); Z(shot, 24); 
+        shot.U8(1); shot.U8(0); shot.U8(255); shot.U32(81); shot.Str("body"); Z(shot, 24);
         shot.U8(4); shot.U8(0); shot.U8(255); shot.U32(81); shot.VarU32(0); Z(shot, 24);
         Send(shot); Sample();
         Check("ShotFx shares header and charges actual hit records", Near(Row(80).UpBps, header / 3 + (header % 3 > 0 ? 1 : 0)) && Near(Row(80).UpBps + Row(81).UpBps, shot.Len));
@@ -243,9 +243,7 @@ namespace TLDRevamp.Net
         public const byte BreakHit = 48, BreakFx = 49, AiState = 50, AiSound = 51, PoiUsable = 52, PushIn = 53;
         public const byte Refetch = 58, HandoverState = 59, AttachReq = 62, CensusAsk = 65, CensusReply = 66, CensusRepair = 63, Worn = 85, MemberGone = 86, RabbitState = 90, RabbitFx = 91, IgnitionKey = 96;
         public static readonly Dictionary<uint, GameObject> Objects = new Dictionary<uint, GameObject>();
-        internal static GameObject GameObjectOf(uint id) => Objects.TryGetValue(id, out var go) ? go : null;
-        internal static bool IsFinite(Vector3 value) => Finite(value);
-        internal static bool Finite(Vector3 p) => true;
+        internal static bool IsFinite(Vector3 value) => EntityNumbers.Finite(value);
         internal static int TelemetryPacketCategory(byte type, byte[] bytes, int at, int length, out uint net) { net = 0; return -1; }
         internal static bool TelemetryAtRest(uint net) => false;
         internal static void TelemetryCensus(TLDRevamp.EntityCensus[] into) => Array.Clear(into, 0, into.Length);
@@ -253,6 +251,17 @@ namespace TLDRevamp.Net
         internal static void BandwidthSnapshot(long[] into) => Array.Clear(into, 0, into.Length);
         internal static int InterestSkipSnapshot(int[] players, long[] counts) => 0;
     }
+    internal static partial class EntityModApi
+    {
+        internal static GameObject GameObjectOf(uint id) => Entities.Objects.TryGetValue(id, out var go) ? go : null;
+    }
+
+
+    internal static partial class EntityNumbers
+    {
+        internal static bool Finite(Vector3 p) => true;
+    }
+
     public static class ModObjects
     {
         public const byte ModShare = 70, ModAssigned = 71, ModAdd = 72, ModRecord = 73, ModEdit = 74, ModOwner = 75, ModRemove = 76, ModPose = 77, ModEvent = 78, ModClaim = 79, ModState = 87, ModStore = 88;

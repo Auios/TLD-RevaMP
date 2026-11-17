@@ -69,7 +69,7 @@ namespace TLDRevamp.Net
                 if (d < best) { best = d; item = it; }
             }
             if (item == null) return "{\"error\":\"no loose item within 15 m\"}";
-            BotItemCar = Entities.NearestCar();
+            BotItemCar = EntityLookup.NearestCar();
             if (BotItemCar == null) return "{\"error\":\"no car near\"}";
             BotItemRecord = Entities.CaptureRecord(item);
             BotItemOffset = new Vector3(float.Parse(a[0], ic), float.Parse(a[1], ic), float.Parse(a[2], ic));
@@ -82,7 +82,7 @@ namespace TLDRevamp.Net
         public static int BotDriverSeat;
         public static string CaptureBotCar()
         {
-            var root = Entities.NearestCar();
+            var root = EntityLookup.NearestCar();
             if (root == null) return "{\"error\":\"no car near\"}";
             BotCarRecord = Entities.CaptureRecord(root);
             var seats = root.GetComponentsInChildren<seatscript>(true);

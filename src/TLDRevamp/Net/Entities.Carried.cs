@@ -31,7 +31,7 @@ namespace TLDRevamp.Net
         /// that car's frame too. Sent in world positions, its copies were interpolated on their own curve while the car's
         /// copy ran on another: in a Car01 at 8-13 m/s the other player saw the cargo 1-3.6 m off its seat, sliding through
         /// the car as the driver sped up, braked or turned (stress campaign 2026-10-25, mpstress C).
-        public static bool RidingFrames = true;
+        internal static bool RidingFrames = true;
         public static long RidingSent, RidingSwitches;
 
         /// Copy, a state just read: in the car's frame, the interpolator runs on car-frame poses (a fresh one when the

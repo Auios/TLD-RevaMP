@@ -52,7 +52,7 @@ namespace TLDRevamp.Net
             Array.Clear(TelemetryFocus, 0, TelemetryFocus.Length);
             _telemetryFocusAt = now + .1;
             var p = mainscript.s != null ? mainscript.s.player : null;
-            LocalSeat(out uint seated, out _);
+            EntitySeats.LocalSeat(out uint seated, out _);
             TelemetryFocus[0] = seated;
             TelemetryFocus[1] = p != null && !p.Bsitting && p.grounded != null && p.grounded.sensed ? TelemetryNet(p.grounded.T) : 0;
             if (TelemetryFocus[1] == 0 && p != null && !p.Bsitting) TelemetryFocus[1] = _telemetryFooting;
@@ -75,7 +75,7 @@ namespace TLDRevamp.Net
             if (!InSession) return;
             double now = Time.realtimeSinceStartupAsDouble;
             TelemetryFocusTick(now);
-            LocalSeat(out uint seated, out int seat);
+            EntitySeats.LocalSeat(out uint seated, out int seat);
             uint footing = seated != 0 ? seated : _telemetryFooting;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             for (int i = 0; i < MotionTrace.FocusLimit; i++)
@@ -175,7 +175,7 @@ namespace TLDRevamp.Net
                 e.TelemetryRoot = r;
                 e.TelemetryCategory = TelemetryRootCategory(r);
             }
-            if (r.car == null && r.ragdollPos != null && Limbs(e) != null && Limp(e) || r.npc != null && r.npc.died || r.nyul != null && r.nyul.AI != null && !r.nyul.AI.alive || e.Rag != null && e.Rag.Act != null && e.Rag.Act.ragdoll) return e.TelemetryCategory = 5;
+            if (r.car == null && r.ragdollPos != null && EntityRagdolls.Limbs(e) != null && EntityRagdolls.Limp(e) || r.npc != null && r.npc.died || r.nyul != null && r.nyul.AI != null && !r.nyul.AI.alive || e.Rag != null && e.Rag.Act != null && e.Rag.Act.ragdoll) return e.TelemetryCategory = 5;
             return e.TelemetryCategory == 5 && r.nyul != null ? 3 : e.TelemetryCategory == 5 && r.npc != null ? 4 : e.TelemetryCategory;
         }
         private static int TelemetryRootCategory(tosaveitemscript r) => r == null ? 7 : r.GetComponentInChildren<utanfutoscript>(true) != null ? 1 : r.car != null ? 0 : r.nyul != null ? 3 : r.npc != null ? 4 : r.ragdollPos != null ? 5 : r.P != null ? 2 : 7;
@@ -223,7 +223,7 @@ namespace TLDRevamp.Net
                 var r = e.Root;
                 if (r == null) { c.Dormant++; continue; }
                 c.Loaded++;
-                bool limp = r.car == null && Limbs(e) != null && Limp(e);
+                bool limp = r.car == null && EntityRagdolls.Limbs(e) != null && EntityRagdolls.Limp(e);
                 bool dead = r.nyul != null && r.nyul.AI != null && !r.nyul.AI.alive || r.npc != null && r.npc.died || r.nyul == null && r.npc == null && limp;
                 if (dead) c.Dead++; else if (limp) c.Limp++; else if (r.nyul != null || r.npc != null) c.Alive++;
                 if (e.Proxy ? e.ReceivedAtRest : e.SentAtRest) c.Resting++; else c.Moving++;
@@ -231,12 +231,12 @@ namespace TLDRevamp.Net
                 foreach (var kv in Known)
                 {
                     if (kv.Key == 0 || kv.Key == se.OwnerId || !kv.Value.Contains(se.NetId)) continue;
-                    if (!InterestRelay || Mp.Server.PeerPos(kv.Key, out var pos) && InterestRules.Within(true, pos.x - se.Where.x, pos.z - se.Where.z, StateInterestM)) c.Receivers++;
+                    if (!EntityAuthorityInterest.InterestRelay || Mp.Server.PeerPos(kv.Key, out var pos) && InterestRules.Within(true, pos.x - se.Where.x, pos.z - se.Where.z, EntityAuthorityInterest.StateInterestM)) c.Receivers++;
                 }
                 if (se.OwnerId != 0 && !DedicatedServer.Enabled && mainscript.s != null && mainscript.s.player != null)
                 {
                     var host = mainscript.GlobalFromUnityPos(mainscript.s.player.transform.position);
-                    if (InterestRules.Within(true, host.x - se.Where.x, host.z - se.Where.z, StateInterestM)) c.Receivers++;
+                    if (InterestRules.Within(true, host.x - se.Where.x, host.z - se.Where.z, EntityAuthorityInterest.StateInterestM)) c.Receivers++;
                 }
             }
         }

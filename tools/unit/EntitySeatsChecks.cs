@@ -92,7 +92,7 @@ static partial class EntitySplitTest
         SeatValue(se, "CrashReturnTo", -1); SeatValue(se, "HitchCar", 10u); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, "HitchCar", 0u);
         foreach (string flag in new[] { "Held", "Stored" })
         { SeatValue(se, flag, true); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, flag, false); }
-        Entities.WornSync = true; SeatValue(se, "WornBy", 2); KernelSeatCall("ServerClaim", 1, Reader(claim)); Entities.WornSync = false; SeatValue(se, "WornBy", -1);
+        EntityHands.WornSync = true; SeatValue(se, "WornBy", 2); KernelSeatCall("ServerClaim", 1, Reader(claim)); EntityHands.WornSync = false; SeatValue(se, "WornBy", -1);
         SeatValue(se, "Driven", true); SeatValue(se, "DrivenAt", Time.realtimeSinceStartup); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, "Driven", false);
         Check(EntitySeats.DriverSeatRefused == refused && Entities.RefusedHeld == 1 && Entities.RefusedStored == 1 && EntityHands.WornRefused == 1, "authority guards retain their own counters before seat arbitration");
         KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatVector("driver refusal owner reply", "192D0100000200000000");
@@ -234,9 +234,8 @@ static partial class EntitySplitTest
         foreach (string name in new[] { "_keySeen", "_keyCar", "_keyNet", "_keySentAt", "_keyFirstAt", "_keyLastAt", "_keyHolds", "_keyDone", "_ignoredPairs", "_seatedIn", "_seats", "_seatsOwn", "RemoteShot", "_shotCar", "_shotSteer", "_shotHandbrake", "_shotSendAcc", "_shotHeld", "_shotEdges", "_shotWasActive", "DriverSeatRefused", "DriverSeatMoved", "DriverSeatOut", "LocalGetOutCalls", "ItemSeatsSent", "ShotgunSent", "ShotgunApplied", "SeatAimFrames" })
             Check(typeof(Entities).GetField(name, Static) == null && SeatsOwner.GetField(name, Static) != null, name + " has one feature field owner");
         Check(!ReferenceEquals(Field(SeatsOwner, "W"), Field(typeof(Entities), "W")) && !ReferenceEquals(Field(SeatsOwner, "WS"), Field(typeof(Entities), "WS")) && !ReferenceEquals(Field(SeatsOwner, "W"), Field(SeatsOwner, "WS")), "seats owns separate client/key and raw relay writers");
-        CoreMembers.Register();
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.KeyResendS", "0.6") == "0.6" && EntitySeats.KeyResendS == .6f, "key facade writes one owner"); EntitySeats.KeyResendS = .5f;
-        Check(BridgeReflect.Get("TLDRevamp.Net.Entities.RemoteShot.Count") == "0" && BridgeReflect.Get("TLDRevamp.Net.Entities._keyHolds.Count") == "0", "full private cache aliases resolve feature owner");
-        Check(BridgeReflect.Call("TLDRevamp.Net.Entities.SeatGuardStats", Array.Empty<string>()).Contains("refused"), "compiled seatguard facade remains callable");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntitySeats.KeyResendS", "0.6") == "0.6" && EntitySeats.KeyResendS == .6f, "key owner call writes one owner"); EntitySeats.KeyResendS = .5f;
+        Check(BridgeReflect.Get("TLDRevamp.Net.EntitySeats.RemoteShot.Count") == "0" && BridgeReflect.Get("TLDRevamp.Net.EntitySeats._keyHolds.Count") == "0", "full private cache owner paths resolve feature owner");
+        Check(BridgeReflect.Call("TLDRevamp.Net.EntitySeats.SeatGuardStats", Array.Empty<string>()).Contains("refused"), "compiled seatguard owner call remains callable");
     }
 }

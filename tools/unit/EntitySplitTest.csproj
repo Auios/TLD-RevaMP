@@ -99,10 +99,9 @@
     <Compile Include="EntityCodecVectors.cs" />
     <Compile Include="EntityCarSignalsChecks.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.CarSignals.cs" />
-    <Compile Include="../../src/TLDRevamp/CoreMembers.cs" />
     <Compile Include="../../src/TLDRevamp/Reflect.cs" />
     <Compile Include="../../src/TLDRevamp.Dev/BridgeReflect.cs" />
-    <Compile Include="../../src/TLDRevamp/Net/Entities.Features.cs" />
+    <Compile Include="$(IntermediateOutputPath)FeatureWire.gFeatures.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Radio.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Clock.cs" />
     <Compile Include="../../src/TLDRevamp/Net/Entities.Storms.cs" />

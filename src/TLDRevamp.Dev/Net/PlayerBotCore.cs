@@ -12,7 +12,7 @@ namespace TLDRevamp.Net
     ///   - the player state (Protocol.State) at the players' rate, with the seat it sits in;
     ///   - a car or item becomes its own only through the server: a Claim with the reason a real client gives (Driver,
     ///     DriverRetry 2 s later, Pickup, Contents for what lies in the car it just took), then the Owner answer;
-    ///   - what it owns, it moves with State messages (Entities.WriteStateHead, the same tail as an owner's: wheels,
+    ///   - what it owns, it moves with State messages (EntityCodec.WriteStateHead, the same tail as an owner's: wheels,
     ///     engine, car signals, limbs) at Protocol.StateHz while it moves, a final (reliable) state when it comes to rest,
     ///     held items flagged held, a seated driver's car flagged driven;
     ///   - told it lost something (Owner to another player), it sends the HandoverState for the new epoch — the records
@@ -302,7 +302,7 @@ namespace TLDRevamp.Net
         private void WriteRest(uint net, Vector3d g, Quaternion q, int wheels)
         {
             _w.Reset();
-            Entities.WriteStateHead(_w, net, EpochOf(net), ++_seq, Stamp(net), g, q, Vector3.zero, false, final: true);
+            EntityCodec.WriteStateHead(_w, net, EpochOf(net), ++_seq, Stamp(net), g, q, Vector3.zero, false, final: true);
             int n = Math.Min(wheels, 16); _w.U8((byte)n);
             for (int i = 0; i < n; i++) { _w.U8(0); _w.U8(0); _w.U16(0); }
             _w.U8(1); _w.U16(0);                                            // engine off
@@ -383,13 +383,13 @@ namespace TLDRevamp.Net
         {
             if (_send == null || !Owns(_car) || !_carSeeded) return;
             _w.Reset();
-            Entities.WriteStateHead(_w, _car, EpochOf(_car), ++_seq, Stamp(_car), _carPos, _carRot, CarVelocity(), driven && SeatNet == _car, final: final);
+            EntityCodec.WriteStateHead(_w, _car, EpochOf(_car), ++_seq, Stamp(_car), _carPos, _carRot, CarVelocity(), driven && SeatNet == _car, final: final);
             int n = Math.Min(_carInfo.Wheels, 16);
             _w.U8((byte)n);                                                 // the owner's wheels: hanging mid-travel, no steer
             short rpm = (short)Mathf.Clamp(_speed / 0.35f * 60f / (2f * Mathf.PI), 0f, 32767f);
             for (int i = 0; i < n; i++) { _w.U8(0); _w.U8(0); _w.U16((ushort)rpm); }
             _w.U8(1 | 2); _w.U16((ushort)(800 + _speed * 90f));            // engine running, its rpm with the speed
-            _w.U8(0);                                                       // no car signals (Entities.CarSignals)
+            _w.U8(0);                                                       // no car signals (EntityCarSignals.CarSignals)
             _w.U8(0);                                                       // no limbs (Entities.Ragdoll)
             _send(_w, final); StatesSent++; if (final) FinalsSent++;
         }
@@ -413,12 +413,12 @@ namespace TLDRevamp.Net
             if (lk.Locked && !lk.Known) return;   // stored where it can't say how: the copies keep riding the container
             _w.Reset();
             if (lk.Locked && lk.Frame != 0)
-                Entities.WriteStateHead(_w, net, EpochOf(net), ++_seq, Stamp(net), g, q, v, false, carriedBy: lk.Frame, localPos: lk.LocalPos, localRot: lk.LocalRot,
+                EntityCodec.WriteStateHead(_w, net, EpochOf(net), ++_seq, Stamp(net), g, q, v, false, carriedBy: lk.Frame, localPos: lk.LocalPos, localRot: lk.LocalRot,
                                         final: final, locked: true, lockItem: lk.Item, lockMount: lk.Mount);
             else if (lk.Locked)
-                Entities.WriteStateHead(_w, net, EpochOf(net), ++_seq, Stamp(net), g, q, v, false, localPos: lk.LocalPos, localRot: lk.LocalRot,
+                EntityCodec.WriteStateHead(_w, net, EpochOf(net), ++_seq, Stamp(net), g, q, v, false, localPos: lk.LocalPos, localRot: lk.LocalRot,
                                         final: final, locked: true, lockItem: lk.Item, lockMount: lk.Mount, lockContainer: lk.Container);
-            else Entities.WriteStateHead(_w, net, EpochOf(net), ++_seq, Stamp(net), g, q, v, false, held: held, final: final);
+            else EntityCodec.WriteStateHead(_w, net, EpochOf(net), ++_seq, Stamp(net), g, q, v, false, held: held, final: final);
             _w.U8(0); _w.U8(0); _w.U8(0); _w.U8(0);                          // no wheels, no engine, no car signals, no limbs
             _send?.Invoke(_w, final);
         }

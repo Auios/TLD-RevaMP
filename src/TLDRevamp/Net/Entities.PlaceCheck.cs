@@ -32,13 +32,13 @@ namespace TLDRevamp.Net
 
         /// Placed by something other than its own position on both machines: not compared.
         private static bool PlaceFollowsElse(Ent e) =>
-            e.Root == null || e.Root.nyul != null || e.Root.npc != null || e.Root.ragdollPos != null || e.Rag != null || CompactFlyer(e) || e.HitchWaiting ||
-            e.Root.attachable != null && e.Root.attachable.attached || RidesBolted(e) || AttachedCarPart(e);
+            e.Root == null || e.Root.nyul != null || e.Root.npc != null || e.Root.ragdollPos != null || e.Rag != null || EntityProxyPresentation.CompactFlyer(e) || e.HitchWaiting ||
+            e.Root.attachable != null && e.Root.attachable.attached || RidesBolted(e) || EntityProxyPresentation.AttachedCarPart(e);
 
         /// Copy, the ask: its position when it has one to compare.
         private static void WriteCopyPlace(Ent e, byte attempt)
         {
-            if (!CensusPlaces || attempt != 1 || e.Held || e.Stored || WornRides(e) || e.ReleaseGhost || HandManaged(e) || PlaceFollowsElse(e)) return;
+            if (!CensusPlaces || attempt != 1 || e.Held || e.Stored || EntityHands.WornRides(e) || e.ReleaseGhost || EntityHands.HandManaged(e) || PlaceFollowsElse(e)) return;
             var g = mainscript.GlobalFromUnityPos(e.Root.transform.position);
             W.U16(PlaceDigest.Of(g.x)); W.U16(PlaceDigest.Of(g.y)); W.U16(PlaceDigest.Of(g.z));
             PlacesAsked++;
@@ -88,7 +88,7 @@ namespace TLDRevamp.Net
             PlacesTold++;
             var rb = e.Root.GetComponent<Rigidbody>();
             string here = facts + "; copy: physical " + e.Physical + ", moved by body " + e.MovedByBody + ", kinematic " + (rb != null && rb.isKinematic) + ", locked " + e.PoseLocked +
-                          ", away " + LockedAway(e) + ", rides " + RidesOwnersContainer(e) + ", carried by " + e.CarriedBy + ", interpolating " + (e.Ip != null && e.Ip.Ready) + ", at rest " + e.ReceivedAtRest + ", states " + e.Recv + ", in our hand " + (mainscript.s != null && mainscript.s.player != null && mainscript.s.player.pickedUp != null && mainscript.s.player.pickedUp == e.Root.P);
+                          ", away " + EntityLocks.LockedAway(e) + ", rides " + EntityLocks.RidesOwnersContainer(e) + ", carried by " + e.CarriedBy + ", interpolating " + (e.Ip != null && e.Ip.Ready) + ", at rest " + e.ReceivedAtRest + ", states " + e.Recv + ", in our hand " + (mainscript.s != null && mainscript.s.player != null && mainscript.s.player.pickedUp != null && mainscript.s.player.pickedUp == e.Root.P);
             RepairLine("place of " + e.Root.name + " net " + e.NetId + ": " + here);
             _placeWait.TryGetValue(e.NetId, out var told);
             if (told.Told >= 2)
@@ -131,7 +131,7 @@ namespace TLDRevamp.Net
             for (int i = 0; i < e.Items.Count; i++)
             {
                 var at = e.Items[i] != null && e.Items[i] != e.Root && (e.Split == null || !e.Split.Contains(i)) ? e.Items[i].attachable : null;
-                var f = at != null && at.attached && at.slot == null ? AttachFrame(at) : null;
+                var f = at != null && at.attached && at.slot == null ? EntityAttachments.AttachFrame(at) : null;
                 if (f == null) continue;
                 var iq = Quaternion.Inverse(f.rotation);
                 var lp = iq * (at.transform.position - f.position); var lq = iq * at.transform.rotation;
@@ -154,7 +154,7 @@ namespace TLDRevamp.Net
                 var a = line.Split(' ');
                 if (a.Length != 8 || !int.TryParse(a[0], System.Globalization.NumberStyles.Integer, ic, out int i) || i <= 0 || i >= e.Items.Count) continue;
                 var at = e.Items[i] != null && (e.Split == null || !e.Split.Contains(i)) ? e.Items[i].attachable : null;
-                var f = at != null && at.attached && at.slot == null ? AttachFrame(at) : null;
+                var f = at != null && at.attached && at.slot == null ? EntityAttachments.AttachFrame(at) : null;
                 if (f == null) continue;
                 var v = new float[7];
                 bool ok = true;

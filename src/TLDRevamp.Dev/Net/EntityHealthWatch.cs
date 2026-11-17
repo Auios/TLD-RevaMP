@@ -125,7 +125,7 @@ namespace TLDRevamp.Net
         private static void HealthWatchFound(Ent e, string key, string title, string why)
         {
             HealthWatchFlags++;
-            string name = e.Root != null ? PrefabName(e.Root.id) : "net " + e.NetId;
+            string name = e.Root != null ? EntityLifetimeStreaming.PrefabName(e.Root.id) : "net " + e.NetId;
             HealthWatchLast = name + " net " + e.NetId + ": " + title + " — " + (why.Length > 240 ? why.Substring(0, 240) + "…" : why);
             if (key == HealthWatchRules.OwnerLeft) _hwActive[e.NetId] = "health: owner left";
             SessionLog.Event("health-problem", e.NetId, from: e.OwnerId, epoch: e.Epoch, result: key);
@@ -180,7 +180,7 @@ namespace TLDRevamp.Net
         internal static void RepairFailedNote(Ent e, uint net, string diff)
         {
             _repairFails.TryGetValue(net, out int n); _repairFails[net] = ++n;
-            string name = e != null && e.Root != null ? PrefabName(e.Root.id) : "net " + net;
+            string name = e != null && e.Root != null ? EntityLifetimeStreaming.PrefabName(e.Root.id) : "net " + net;
             if (n == 1) { SessionLog.Event("repair-failed", net, result: diff.Length > 120 ? diff.Substring(0, 120) : diff); Plugin.Log.LogWarning("repair did not take: " + name + " net " + net + " — " + diff); }
             if (n == 3 && e != null) HealthWatchFound(e, HealthWatchRules.RepairLoop, "Repair keeps failing", "The census found this copy different from its owner's three times and the owner's resend did not fix it: " + diff);
         }
@@ -224,10 +224,10 @@ namespace TLDRevamp.Net
                         for (int i = 0; i < ps.parts.Count; i++)
                         {
                             var part = ps.parts[i]; if (part == null) continue;
-                            if (part.slot != ps) bad.Add(PrefabName(part.tosave != null ? part.tosave.id : -1) + " is in slot " + ps.name + " but names " + (part.slot != null ? part.slot.name : "no slot"));
+                            if (part.slot != ps) bad.Add(EntityLifetimeStreaming.PrefabName(part.tosave != null ? part.tosave.id : -1) + " is in slot " + ps.name + " but names " + (part.slot != null ? part.slot.name : "no slot"));
                             for (int j = i + 1; j < ps.parts.Count; j++)
                                 if (ps.parts[j] == part || !ps.attachTarget && ps.parts[j] != null && part.tosave != null && ps.parts[j].tosave != null && ps.parts[j].tosave.id == part.tosave.id)
-                                    bad.Add(PrefabName(part.tosave != null ? part.tosave.id : -1) + " twice in slot " + ps.name);
+                                    bad.Add(EntityLifetimeStreaming.PrefabName(part.tosave != null ? part.tosave.id : -1) + " twice in slot " + ps.name);
                         }
                     }
                 }
@@ -257,7 +257,7 @@ namespace TLDRevamp.Net
         /// The ground's surface over a point (NaN: no ground there, or not loaded).
         internal static double GroundOver(Vector3 p)
         {
-            if (_groundMask < 0) _groundMask = LayerMask.GetMask(GroundLayers.Split(','));
+            if (_groundMask < 0) _groundMask = LayerMask.GetMask(EntityGround.GroundLayers.Split(','));
             if (_groundMask == 0) return double.NaN;
             // 2000 m (as FallRescue): a 1000 m ray from 1000 m up ended at the object itself, so the ground under anything
             // resting on it was "none" and nothing was ever seen above the ground (_hwAbove): every fall through the world

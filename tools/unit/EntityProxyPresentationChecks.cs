@@ -132,13 +132,6 @@ static partial class EntitySplitTest
         var path = "tools/unit/EntityProxyPresentationRows.txt";
         GoldenRows.UpdateText(path, string.Join("\r\n", rows) + "\r\n");
         Check(File.ReadAllLines(path).SequenceEqual(rows), "presentation decisions, counters, timers and wire bytes match expected rows");
-        CoreMembers.Register();
-        foreach (var m in typeof(EntityProxyPresentation).GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is MethodInfo || m is FieldInfo || m is PropertyInfo))
-        {
-            bool retained = typeof(Entities).GetMember(m.Name, Static).Length > 0;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                Check(Reflect.MemberPath(prefix + m.Name) == (retained ? prefix + m.Name : typeof(EntityProxyPresentation).FullName + "." + m.Name), "presentation alias " + prefix + m.Name);
-        }
         Check(typeof(EntityProxyPresentation).IsNotPublic && typeof(EntityProxyPresentation).IsAbstract && typeof(EntityProxyPresentation).IsSealed, "presentation owner is internal static");
         foreach (string part in new[] { "CopyLod", "Proxy", "VisibleState" })
         {
@@ -157,11 +150,11 @@ static partial class EntitySplitTest
         Check(kernel.Contains("e.MadeKinematic.Clear();\n                ApplyProxyBodies(e);\n                e.Ip = new PoseInterpolator();"), "copy body setup stays in the original transition slot");
         Check(kernel.IndexOf("ProxyWheelOwner.Remove(w); ProxyWheelIndex.Remove(w);") < kernel.IndexOf("BindProxyEngine(e);"), "promotion removes wheel bindings before engine rebinding");
         Check(kernel.Contains("DamageGraceUntil[carS] = Time.time + 0.5f;") && kernel.Contains("if (!keepMotion) rb.velocity = e.LastVel;"), "promotion retains grace timer and keep-motion guard");
-        Check(kernel.Contains("WriteWheels(WS, e); WriteEngine(WS, e); EntityCarSignals.WriteSignals(WS, e);") && kernel.Contains("ReadWheels(r, e); ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e);"), "presentation tail call order remains wheels then engine then signals");
-        BridgeReflect.Set("TLDRevamp.Net.Entities.CopyFarShadowsM", "17");
-        Check(Entities.CopyFarShadowsM == 17 && EntityProxyPresentation.CopyFarShadowsM == 17, "bridge facade has one LOD setting");
+        Check(kernel.Contains("EntityProxyPresentation.WriteWheels(WS, e); EntityProxyPresentation.WriteEngine(WS, e); EntityCarSignals.WriteSignals(WS, e);") && kernel.Contains("EntityProxyPresentation.ReadWheels(r, e); EntityProxyPresentation.ReadEngine(r, e); EntityCarSignals.ReadSignals(r, e);"), "presentation tail call order remains wheels then engine then signals");
+        BridgeReflect.Set("TLDRevamp.Net.EntityProxyPresentation.CopyFarShadowsM", "17");
+        Check(EntityProxyPresentation.CopyFarShadowsM == 17, "bridge owner call has one LOD setting");
         EntityProxyPresentation.CopyFarShadowsM = 0;
-        BridgeReflect.Set("TLDRevamp.Net.Entities.ReadCompactMoving", "True");
+        BridgeReflect.Set("TLDRevamp.Net.EntityProxyPresentation.ReadCompactMoving", "True");
         Check(EntityProxyPresentation.ReadCompactMoving, "historical compact scratch path remains writable");
         EntityProxyPresentation.ReadCompactMoving = false;
         // Leave shared fixture inputs as the older fixtures expect them.

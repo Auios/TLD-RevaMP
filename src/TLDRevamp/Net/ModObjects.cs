@@ -133,9 +133,9 @@ namespace TLDRevamp.Net
             return true;
         }
 
-        public uint WorldObjectId(GameObject go) => Entities.NetIdOf(go);
-        public GameObject FindWorldObject(uint id) => Entities.GameObjectOf(id);
-        public bool ShareWorldObject(GameObject go) => Entities.ShareGameObject(go);
+        public uint WorldObjectId(GameObject go) => EntityModApi.NetIdOf(go);
+        public GameObject FindWorldObject(uint id) => EntityModApi.GameObjectOf(id);
+        public bool ShareWorldObject(GameObject go) => EntityModApi.ShareGameObject(go);
 
         // ------------------------------------------------------------------ local side
 
@@ -457,7 +457,7 @@ namespace TLDRevamp.Net
                     uint id = r.U32(), epoch = r.U32(); double stamp = Protocol.ReadStamp(r);
                     var g = new Vector3d(r.F64(), r.F64(), r.F64()); var rot = ReadRot(r); var vel = new Vector3(r.F32(), r.F32(), r.F32());
                     var so = MpApi.Find(id);
-                    if (r.Bad || so == null || so.IsMine || epoch < so.Epoch || !Entities.Finite(vel)) return;
+                    if (r.Bad || so == null || so.IsMine || epoch < so.Epoch || !EntityNumbers.Finite(vel)) return;
                     var l = L(so);
                     if (l.Ip == null) MakeCopy(so);
                     l.Ip.Add(new PoseInterpolator.Sample { T = stamp, Pos = g, Rot = rot, Vel = vel }, Time.realtimeSinceStartupAsDouble);
@@ -661,7 +661,7 @@ namespace TLDRevamp.Net
                     uint id = r.U32(), epoch = r.U32(); double stamp = Protocol.ReadStamp(r);
                     var g = new Vector3d(r.F64(), r.F64(), r.F64()); var rot = ReadRot(r); var vel = new Vector3(r.F32(), r.F32(), r.F32());
                     if (r.Bad || !Server.TryGetValue(id, out var so) || so.Owner != from || epoch != so.Epoch) return;
-                    if (!FinitePose(g, rot) || !Entities.Finite(vel)) { Drop($"player {from}: non-finite pose for {so.Key}#{id}"); return; }
+                    if (!FinitePose(g, rot) || !EntityNumbers.Finite(vel)) { Drop($"player {from}: non-finite pose for {so.Key}#{id}"); return; }
                     so.Pos = g; so.Rot = rot;
                     W.Reset(); W.U8(ModPose); W.U32(id); W.U32(epoch); Protocol.WriteStamp(W, stamp);
                     W.F64(g.x); W.F64(g.y); W.F64(g.z); WriteRot(W, rot); W.F32(vel.x); W.F32(vel.y); W.F32(vel.z);
@@ -1005,7 +1005,7 @@ namespace TLDRevamp.Net
         }
 
         private static bool FinitePose(Vector3d p, Quaternion q) =>
-            Entities.Finite(p) && Entities.Finite(q) && Math.Abs(p.x) < 1e8 && Math.Abs(p.y) < 1e6 && Math.Abs(p.z) < 1e8;
+            EntityNumbers.Finite(p) && EntityNumbers.Finite(q) && Math.Abs(p.x) < 1e8 && Math.Abs(p.y) < 1e6 && Math.Abs(p.z) < 1e8;
 
         private static void WriteBytes(NetWriter w, byte[] b, int n) { w.VarU32((uint)n); if (n > 0) w.Bytes(b, 0, n); }
 

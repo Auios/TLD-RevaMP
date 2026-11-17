@@ -144,10 +144,10 @@ def work_on(owner, other, onm, xnm, car, label):
         verdict(f"{label}: {xnm.upper()} USED A CAP ON {onm.upper()}'S CAR — THE SAME ON BOTH", "error" not in r and cap_key(a) == cap_key(b), f"{r} → {onm} {a['usable']} | {xnm} {b['usable']}")
     # the hubcap: off by the other player (in hand), dropped, the owner picks it up and drops it, the other bolts it back
     lb = set(ents(other))
-    other(f"set {T}.TestAsPlayer True")
+    other(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
     try: off = other(f"mount off {car} {HUBSLOT}")
     except RuntimeError as ex: off = {"error": str(ex)}
-    other(f"set {T}.TestAsPlayer False")
+    other(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
     # the part comes off on its owner's machine; it lands in our hand only near that wheel — take it either way
     hub = until(lambda: next((n for n, e in ents(other).items() if "Disztarcsa" in e["name"] and n not in lb), None), 10)
     def drop(s_):
@@ -169,10 +169,10 @@ def work_on(owner, other, onm, xnm, car, label):
         time.sleep(1); drop(other); time.sleep(2)
         until(lambda: hub in ents(owner), 10)
         pick(owner, onm); until(lambda: ents(other)[hub]["proxy"], 10); drop(owner); time.sleep(2)
-        other(f"set {T}.TestAsPlayer True")
+        other(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
         try: on = other(f"mount on {hub} {car} {HUBSLOT}")
         except RuntimeError as ex: on = {"error": str(ex)}
-        other(f"set {T}.TestAsPlayer False"); time.sleep(6)
+        other(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False"); time.sleep(6)
         po, px = owner(f"mount pose {hub} {car} {HUBSLOT}"), other(f"mount pose {hub} {car} {HUBSLOT}")
         verdict(f"{label}: {xnm.upper()} BOLTED {onm.upper()}'S HUBCAP BACK (AFTER {onm.upper()} HELD IT) — IN THE SLOT ON BOTH", bool(po.get("inSlot")) and bool(px.get("inSlot")),
                 f"off {off}, on {on}; {onm} in slot {po.get('inSlot')} {po.get('dist')} m, {xnm} in slot {px.get('inSlot')} {px.get('dist')} m")
@@ -236,7 +236,7 @@ with game.ProtectedSession():
         L("set settingsscript.s.S.BAutoShift True")
         for s_ in (h, L): s_(f"set {T}.StoreOutTrace 60")   # log every shared root streamed out (where, the call stack)
         if "--old-copylock" in sys.argv:   # A/B: the container release rule as in v0.66.7
-            for s_ in (h, L): s_(f"set {T}.CopyLockSafe False"); s_(f"set {T}.CopyLockByContainer False"); s_(f"set {T}.DriveClaimRootOnly False")
+            for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe False"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer False"); s_(f"set {T}.DriveClaimRootOnly False")
             print("  OLD COPYLOCK (v0.66.7)", flush=True)
         time.sleep(8)
         hid, lid = h("mp entities")["me"], L("mp entities")["me"]
@@ -391,7 +391,7 @@ with game.ProtectedSession():
                         f"owner host {(ent(h, lcar) or {}).get('owner')}, laptop {(ent(L, lcar) or {}).get('owner')}")
                 time.sleep(8)
                 checks(f"{tag} HOME", lc[0], lc[2], ((L, h, lcar, "laptop"),))
-                rel = h(f"get {T}.CopyLocksReleased")["value"]; dro = h(f"get {T}.CopyLocksDroppedAttached")["value"]
+                rel = h(f"get TLDRevamp.Net.EntityLocks.CopyLocksReleased")["value"]; dro = h(f"get TLDRevamp.Net.EntityLocks.CopyLocksDroppedAttached")["value"]
                 print(f"  {tag}: host copies taken out of containers {rel}, locks dropped on bolted parts {dro}", flush=True)
         elif FOCUS == "flicker":
             # only what the flicker needs: drive off, the host walks up to the car — placed, and it stays — and back home
@@ -490,7 +490,7 @@ with game.ProtectedSession():
         for n_, s_ in (("L", L), ("h", h)):
             try:
                 if GOD.get(n_) is not None: s_(f"set kaposztaleves.s.settings.god {GOD[n_]}")
-                s_(f"set {T}.TestAsPlayer False")
+                s_(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
             except Exception: pass
         try: L("autodrive off"); L(f"set settingsscript.s.S.BAutoShift {SHIFT}")
         except Exception: pass

@@ -70,9 +70,6 @@ namespace TLDRevamp.Net
         internal static List<Ent> Placed() => new List<Ent>(ByNet.Values);   // Entities.Placed: every object here is placed
         private static bool AtObject(int from, SEnt e) => Near;
         private static HitchFakes.Record EditItemRecord(SEnt e, int idx) => new HitchFakes.Record();
-        private static bool Finite(Vector3d v) => double.IsFinite(v.x) && double.IsFinite(v.y) && double.IsFinite(v.z);
-        private static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
-        private static bool Finite(Quaternion q) => float.IsFinite(q.w);
         private static byte[] Copy(NetWriter w) { var b = new byte[w.Len]; Array.Copy(w.Buf, b, b.Length); return b; }
         private static void ToServer(NetWriter w, bool reliable) => Requests.Add(Copy(w));
         private static void ServerSendTo(int target, NetWriter w, bool reliable) => Packets.Add((target, Copy(w)));
@@ -80,9 +77,8 @@ namespace TLDRevamp.Net
         { ServerSendTo(0, w, reliable); ServerSendTo(1, w, reliable); if (Known.ContainsKey(2)) ServerSendTo(2, w, reliable); }
         private static void OwnerLog(SEnt e, int target, string reason) { }
         private static void CascadeOwner(SEnt e) => CascadeHitches(e);
-        private static void ApplyProxyBodies(Ent e) { foreach (var rb in HitchBodies(e)) rb.isKinematic = true; }
+        private static void ApplyProxyBodies(Ent e) { foreach (var rb in EntityHitches.HitchBodies(e)) rb.isKinematic = true; }
         private static void SendDetachSync(Ent tr) { Server[tr.NetId].HitchCar = Server[tr.NetId].AttachParent = 0; }
-        private static bool Unmount(attachablescript at, bool fallOff) { at.Detach(); return true; }
         private static void SendAttach(Ent tr, attachablescript at)
         {
             if (!Server.TryGetValue(tr.NetId, out var se)) return;
@@ -121,7 +117,7 @@ namespace TLDRevamp.Net
         private static void Grant(Ent tr, int target, uint epoch)
         {
             HitchBeforeOwner(tr, target, epoch); tr.OwnerId = tr.HitchAuthorityOwner = target; tr.Epoch = epoch; tr.Proxy = target != MyId;
-            foreach (var rb in HitchBodies(tr)) rb.isKinematic = tr.Proxy;
+            foreach (var rb in EntityHitches.HitchBodies(tr)) rb.isKinematic = tr.Proxy;
             if (tr.HitchWaiting) EntityHitches.HitchFreezeBodies(tr);
         }
         internal static void Tests()
@@ -175,7 +171,7 @@ namespace TLDRevamp.Net
                         case HitchCommand: EntityHitches.ApplyHitchCommand(r); break;
                     }
                 }
-                Packets.Clear(); HitchCommandTick();
+                Packets.Clear(); EntityHitches.HitchCommandTick();
                 check(tr.Root.attachable.attached && tr.Root.attachable.J != null, "common owner creates joint and broadcasts");
                 check(DamageGraceUntil[car.Root.car] > Time.time, "coupler alignment guards the car's speed-change damage path");
                 ServerPacket(Requests[0], MyId); Requests.Clear();
@@ -309,9 +305,9 @@ namespace TLDRevamp.Net
                     case HitchCommand: EntityHitches.ApplyHitchCommand(r); break;
                     case DetachSync:
                         // The receiver's own read of what ReleaseHitch wrote; what it then does: SyncControlsTest.
-                        if (!ReadDetachSync(r, out uint detached, out _, out _) || r.Remaining != 0) throw new Exception("DetachSync doesn't read back as written");
+                        if (!EntityCodec.ReadDetachSync(r, out uint detached, out _, out _) || r.Remaining != 0) throw new Exception("DetachSync doesn't read back as written");
                         var tr = ByNet[detached];
-                        if (tr.Root.attachable.attached) Unmount(tr.Root.attachable, true);
+                        if (tr.Root.attachable.attached) EntityLifetimeStreaming.Unmount(tr.Root.attachable, true);
                         break;
                 }
             }
@@ -341,7 +337,7 @@ namespace TLDRevamp.Net
             fallback.U32(); fallback.U32(); fallback.U32();
             check(fallback.Bool() && fallback.F64() == 40 && fallback.F64() == 0 && fallback.F64() == 3,
                 "timeout delivers the last server pose reliably after the grant");
-            ReadRot(fallback);
+            EntityCodec.ReadRot(fallback);
             check(fallback.F32() == 0 && fallback.F32() == 0 && fallback.F32() == 0, "timeout never replays stale motion");
             var ack = new NetWriter(); ack.U8(HitchFrozen); ack.U32(20); ack.U32(transfer.Epoch); ack.U32(transfer.Token); ack.Bool(false);
             int sent = Packets.Count; ServerPacket(Copy(ack), 1);
@@ -368,7 +364,7 @@ namespace TLDRevamp.Net
             // A distant destination can still have only stored copies and never run its command. Release on deadline.
             Server[20].AttachParent = 10; Server[20].LastAttach = new byte[] { 1 }; Server[10].AttachKids.Add(20);
             EntityHitches.ApplyHitchCommand(Reader(toOwner[toOwner.Count - 1].data));
-            ByNet.Remove(10); Time.realtimeSinceStartup = HitchTimeoutS; HitchCommandTick();
+            ByNet.Remove(10); Time.realtimeSinceStartup = HitchTimeoutS; EntityHitches.HitchCommandTick();
             check(_hitchCommands.Count == 0, "missing command dependencies cannot leave a permanent local queue");
             ServerHitchTick();
             check(!_hitchOps.ContainsKey(20) && Server[20].HitchCar == 0 && Server[20].AttachParent == 0 && Server[20].LastAttach == null && Server[20].Epoch == 3,
@@ -389,7 +385,7 @@ namespace TLDRevamp.Net
                 check(_hitchTransfers.Count == 0 && _hitchOps.Count == 0 && Server[20].OwnerId == 1, "deletion cancels pending transfer and retains the live trailer owner");
                 // A queued old-epoch hitch must not reattach after the deletion recovery.
                 _hitchCommands[20] = new HitchOp { Trailer = 20, Car = 10, TrailerEpoch = 1, CarEpoch = 1, Connect = true, Until = 5 };
-                RecoverPackets(1); HitchCommandTick();
+                RecoverPackets(1); EntityHitches.HitchCommandTick();
                 check(!tr.Root.attachable.attached && tr.Root.attachable.slot == null && tr.Root.attachable.J == null && !tr.HitchWaiting && !tr.Root.RB.isKinematic,
                     "deletion unmounts and thaws the trailer without executing the stale command");
                 Server.Remove(10);
@@ -417,8 +413,8 @@ namespace TLDRevamp.Net
                 tr.Root.gameObject.Extra = new attachgripscript { GripPos = new Transform {
                     position = tr.Root.transform.TransformPoint(lp), rotation = tr.Root.transform.rotation } };
                 var pose = new NetWriter(); pose.U8(HitchFrozen); pose.U32(20); pose.U32(1); pose.U32(0); pose.Bool(true);
-                pose.F64(100); pose.F64(30); pose.F64(-40); WriteRot(pose, q); pose.F32(0); pose.F32(0); pose.F32(0);
-                pose.Bool(receivedGrip); pose.F32(lp.x); pose.F32(lp.y); pose.F32(lp.z); WriteRot(pose, Quaternion.identity);
+                pose.F64(100); pose.F64(30); pose.F64(-40); EntityCodec.WriteRot(pose, q); pose.F32(0); pose.F32(0); pose.F32(0);
+                pose.Bool(receivedGrip); pose.F32(lp.x); pose.F32(lp.y); pose.F32(lp.z); EntityCodec.WriteRot(pose, Quaternion.identity);
                 EntityHitches.ApplyHitchFrozen(Reader(Copy(pose)));
                 var expected = new Vector3(100, 30, -40) + q * lp;
                 bool correct = (tr.Root.attachable.transform.position - expected).sqrMagnitude < 0.0001f;
@@ -427,6 +423,19 @@ namespace TLDRevamp.Net
             Time.realtimeSinceStartup = 0;
         }
     }
+    internal static partial class EntityNumbers
+    {
+        internal static bool Finite(Vector3d v) => double.IsFinite(v.x) && double.IsFinite(v.y) && double.IsFinite(v.z);
+        internal static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+        internal static bool Finite(Quaternion q) => float.IsFinite(q.w);
+    }
+
+
+    internal static partial class EntityLifetimeStreaming
+    {
+        internal static bool Unmount(attachablescript at, bool fallOff) { at.Detach(); return true; }
+    }
+
 }
 
 namespace HitchFakes

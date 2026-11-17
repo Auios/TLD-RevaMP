@@ -154,7 +154,7 @@ namespace TLDRevamp.Net
         /// A stored-away object's far record: a copy riding a container follows it there, and a pose waiting goes out.
         private static void DormantTick(Ent e)
         {
-            if (e.Proxy && e.PoseLocked && e.ReceivedStateEpoch == e.Epoch && LockedWorld(e, out var lockedPos, out var lockedRot)) UpdateFarRecord(e, lockedPos, lockedRot);
+            if (e.Proxy && e.PoseLocked && e.ReceivedStateEpoch == e.Epoch && LockedWorld(e, out var lockedPos, out var lockedRot)) EntityLifetimeStreaming.UpdateFarRecord(e, lockedPos, lockedRot);
             if (e.FarDirty && Time.realtimeSinceStartup >= e.FarFlushAt) { e.FarFlushAt = Time.realtimeSinceStartup + 1f; FlushFarRecords(e); }
         }
     }

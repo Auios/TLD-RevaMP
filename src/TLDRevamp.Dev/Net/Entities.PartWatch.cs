@@ -37,7 +37,7 @@ namespace TLDRevamp.Net
                 if (part == null || part.tosave == null || part.tosave.P == null || pl.pickedUp == part.tosave.P) return;
                 var r = Reach(part, pl);
                 if (!PartWatchRules.Broken(r.Visible, r.Targetable, r.Expected, r.Held)) return;
-                broken++; if (first == null) first = PrefabName(part.tosave.id);
+                broken++; if (first == null) first = EntityLifetimeStreaming.PrefabName(part.tosave.id);
             }
             if (e.Root.attachable != null && e.Root.attachable.attached && e.Root.attachable.slot != null) Check(e.Root.attachable);
             if (e.Items != null)

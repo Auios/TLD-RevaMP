@@ -121,14 +121,13 @@ static partial class EntitySplitTest
         ReproPatch("ReproPickup", "Postfix", p, pick); ReproPatch("ReproDriveInput", "Postfix", car);
         Check(ReproRecorder.Rows.Count == n, "idle recorder leaves hooks inactive without Dev");
         ReproRecorder.Recording = true;
-        CoreMembers.Register();
         Check(typeof(Entities).GetField("_reproDriveNext", Static) == null && typeof(Entities).GetField("ReproUsables", Static) == null, "repro state has one owner");
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities._reproDriveNext", "42") == "42" && (float)Field(ReproOwner, "_reproDriveNext") == 42, "full drive timer alias writes owner");
-        BridgeReflect.Call("Entities.ResetDriveSample", Array.Empty<string>());
-        Check(BridgeReflect.Get("Entities._reproDriveNext") == "0", "Dev compiled reset facade resets moved timer");
-        Check(BridgeReflect.Set("Entities._reproInventoryDepth", "3") == "3", "short inventory depth alias writes owner");
-        BridgeReflect.Call("TLDRevamp.Net.Entities.ReproReset", Array.Empty<string>());
-        Check((int)Field(ReproOwner, "_reproInventoryDepth") == 0 && BridgeReflect.Get("Entities._reproUsed") == "0", "recorder reset facade clears moved state");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityReproHooks._reproDriveNext", "42") == "42" && (float)Field(ReproOwner, "_reproDriveNext") == 42, "full drive timer owner path writes owner");
+        BridgeReflect.Call("EntityReproHooks.ResetDriveSample", Array.Empty<string>());
+        Check(BridgeReflect.Get("EntityReproHooks._reproDriveNext") == "0", "Dev compiled reset owner call resets moved timer");
+        Check(BridgeReflect.Set("EntityReproHooks._reproInventoryDepth", "3") == "3", "short inventory depth owner path writes owner");
+        BridgeReflect.Call("TLDRevamp.Net.EntityReproHooks.ReproReset", Array.Empty<string>());
+        Check((int)Field(ReproOwner, "_reproInventoryDepth") == 0 && BridgeReflect.Get("EntityReproHooks._reproUsed") == "0", "recorder reset owner call clears moved state");
         ReproRecorder.Recording = false; Entities.ByNet.Clear(); mainscript.s = null;
     }
 

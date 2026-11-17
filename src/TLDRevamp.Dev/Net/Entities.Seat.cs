@@ -14,9 +14,9 @@ namespace TLDRevamp.Net
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || !pl.Bsitting) return "{\"error\":\"not seated\"}";
-            long logged = SeatLeavesLogged;
+            long logged = EntitySeats.SeatLeavesLogged;
             for (int i = 0; i < n; i++) pl.GetOut(pl.transform.position + pl.transform.right, false);
-            return "{\"calls\":" + n + ",\"seated\":" + (pl.Bsitting ? "true" : "false") + ",\"seatLeavesLogged\":" + (SeatLeavesLogged - logged) + "}";
+            return "{\"calls\":" + n + ",\"seated\":" + (pl.Bsitting ? "true" : "false") + ",\"seatLeavesLogged\":" + (EntitySeats.SeatLeavesLogged - logged) + "}";
         }
     }
 }

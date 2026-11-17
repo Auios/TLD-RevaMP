@@ -34,8 +34,8 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPrefix]
             private static bool Prefix(attachablescript __instance)
             {
-                if (!HitchDetach(__instance)) return false;
-                NoteCarrier(__instance);
+                if (!EntityHitches.HitchDetach(__instance)) return false;
+                EntityAttachments.NoteCarrier(__instance);
                 if (_applyingDetach || !PartIsProxy(__instance)) return true;
                 // a non-owner is taking something off someone else's car: forward the request to the owner, whose
                 // real detach flows through the PartOff broadcast. Suppress the local proxy detach.
@@ -57,7 +57,7 @@ namespace TLDRevamp.Net
                 if (!__runOriginal || _applyingDetach || !InSession) return;
                 var ts = __instance.tosave;
                 // before PartIsProxy: its slot is gone now, so a copy of the far group would answer for it
-                if (SentCarriedOff(ts)) return;
+                if (EntityAttachments.SentCarriedOff(ts)) return;
                 if (PartIsProxy(__instance) || ts == null) return;
                 // its own shared object (spawned loose, or a part that came off before and was bolted back on): it
                 // comes off everyone's copy — a PartOff would make a second entity for the same item
@@ -88,7 +88,7 @@ namespace TLDRevamp.Net
             {
                 if (_applyingDetach || !InSession) return true;
                 var part = __instance.part();
-                if (!HitchDetach(part)) { __result = false; return false; }
+                if (!EntityHitches.HitchDetach(part)) { __result = false; return false; }
                 if (part == null || !PartIsProxy(part)) return true;
                 if (PlayerActing) { if (RequestDetach(part)) { _handFor = part.tosave; _handAt = Time.realtimeSinceStartup; } }
                 else AutoDetachesIgnored++;
@@ -108,14 +108,14 @@ namespace TLDRevamp.Net
             var at = it.attachable;
             if (at == null || !at.attached) return;
             // the game's own dismount (un-bolt, then Detach): DetachHook's postfix reports the PartOff to everyone
-            if (Unmount(at, false)) DetachReqsApplied++;
+            if (EntityLifetimeStreaming.Unmount(at, false)) DetachReqsApplied++;
         }
         /// The simulating machine took its own shared object off what it was attached to (a crash, the wrench, a
         /// player's grab): everyone's copy comes off the same way and follows its pose stream again.
         private static void SendDetachSync(Ent pe)
         {
             var t = pe.Root.transform; var g = mainscript.GlobalFromUnityPos(t.position); var q = t.rotation;
-            W.Reset(); WriteDetachSync(W, pe.NetId, pe.Epoch, g, q);
+            W.Reset(); EntityCodec.WriteDetachSync(W, pe.NetId, pe.Epoch, g, q);
             ToServer(W, true);
             pe.SentAtRest = false;
             DetachSyncsSent++;
@@ -124,7 +124,7 @@ namespace TLDRevamp.Net
 
         internal static void ApplyDetachSync(NetReader r)
         {
-            if (!ReadDetachSync(r, out uint net, out var pos, out var rot) || !ByNet.TryGetValue(net, out var pe)) return;
+            if (!EntityCodec.ReadDetachSync(r, out uint net, out var pos, out var rot) || !ByNet.TryGetValue(net, out var pe)) return;
             if (!Resolve(pe) || pe.Root == null)
             {
                 // our copy is in the far store: it comes off there (placed back loose where it landed)
@@ -135,7 +135,7 @@ namespace TLDRevamp.Net
             if (at != null && at.attached)
             {
                 _applyingDetach = true;
-                try { Unmount(at, true); } finally { _applyingDetach = false; }
+                try { EntityLifetimeStreaming.Unmount(at, true); } finally { _applyingDetach = false; }
             }
             pe.Root.transform.SetPositionAndRotation(mainscript.UnityPosFromGlobal(pos), rot);
             if (pe.Proxy) { ApplyProxyBodies(pe); pe.Ip = new PoseInterpolator(); }

@@ -264,7 +264,7 @@ namespace TLDRevamp.Net
             foreach (var it in list)
             {
                 if (it == null || it.gameObject == null) { if (!ReferenceEquals(it, null)) _reshareWaits.Remove(it); continue; }
-                if (!SaveReady(it))
+                if (!EntityLifetimeStreaming.SaveReady(it))
                 {
                     _reshareWaits.TryGetValue(it, out int waited);
                     if (waited < 120) { _reshareWaits[it] = waited + 1; _reshare.Add(it); ReshareWaited++; continue; }

@@ -21,7 +21,7 @@ namespace TLDRevamp.Net
                 if (rab != null) { rab.Die(_playSound: true); return "{\"died\":\"ai\"}"; }
                 return "{\"error\":\"no creature\"}";
             }
-            var ls = Limbs(e);
+            var ls = EntityRagdolls.Limbs(e);
             var rp = e.Root.ragdollPos;
             if (ls == null || rp.ps == null || rp.ps.Length == 0) return "{\"error\":\"no limbs\"}";
             var pl = mainscript.s.player;
@@ -40,7 +40,7 @@ namespace TLDRevamp.Net
         public static string RagdollStatus(uint net)
         {
             if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null) return "{\"error\":\"no such entity\"}";
-            var ls = Limbs(e);
+            var ls = EntityRagdolls.Limbs(e);
             if (ls == null) return "{\"error\":\"no limbs\"}";
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>(); var rest = new List<string>();
@@ -60,12 +60,12 @@ namespace TLDRevamp.Net
                 rows.Add("[" + g.x.ToString("F3", ic) + "," + g.y.ToString("F3", ic) + "," + g.z.ToString("F3", ic) + "," + (rb != null && rb.isKinematic ? "true" : "false") + "," + Json.Str(l.name) + "," + par + "," + (l == e.Root.transform ? "true" : "false") + "]");
             }
             var root = mainscript.GlobalFromUnityPos(e.Root.transform.position);
-            return "{\"name\":" + Json.Str(e.Root.name) + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"limp\":" + (Limp(e) ? "true" : "false") +
+            return "{\"name\":" + Json.Str(e.Root.name) + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"limp\":" + (EntityRagdolls.Limp(e) ? "true" : "false") +
                    ",\"root\":[" + root.x.ToString("F3", ic) + "," + root.y.ToString("F3", ic) + "," + root.z.ToString("F3", ic) + "]" +
-                   ",\"following\":" + (TLDRevamp.Net.Entities.ObservedRagdollCopies.Contains(e) ? "true" : "false") + ",\"sent\":" + RagdollStatesSent + ",\"applied\":" + RagdollStatesApplied +
-                   ",\"keys\":" + RagdollKeysSent + ",\"deltas\":" + RagdollDeltasSent + ",\"frames\":" + RagdollFramesSent + ",\"limbsSent\":" + RagdollLimbsSent +
-                   ",\"blockBytes\":" + RagdollBlockBytes + ",\"keysIn\":" + RagdollKeysIn + ",\"deltasIn\":" + RagdollDeltasIn + ",\"deltasNoKey\":" + RagdollDeltasNoKey +
-                   ",\"hashMismatch\":" + RagdollHashMismatch + ",\"lateKeys\":" + RagdollLateKeys + ",\"releasedOnNone\":" + RagdollReleasedOnNone +
+                   ",\"following\":" + (TLDRevamp.Net.EntityRagdolls.ObservedRagdollCopies.Contains(e) ? "true" : "false") + ",\"sent\":" + EntityRagdolls.RagdollStatesSent + ",\"applied\":" + EntityRagdolls.RagdollStatesApplied +
+                   ",\"keys\":" + EntityRagdolls.RagdollKeysSent + ",\"deltas\":" + EntityRagdolls.RagdollDeltasSent + ",\"frames\":" + EntityRagdolls.RagdollFramesSent + ",\"limbsSent\":" + EntityRagdolls.RagdollLimbsSent +
+                   ",\"blockBytes\":" + EntityRagdolls.RagdollBlockBytes + ",\"keysIn\":" + EntityRagdolls.RagdollKeysIn + ",\"deltasIn\":" + EntityRagdolls.RagdollDeltasIn + ",\"deltasNoKey\":" + EntityRagdolls.RagdollDeltasNoKey +
+                   ",\"hashMismatch\":" + EntityRagdolls.RagdollHashMismatch + ",\"lateKeys\":" + EntityRagdolls.RagdollLateKeys + ",\"releasedOnNone\":" + EntityRagdolls.RagdollReleasedOnNone +
                    ",\"limbs\":[" + string.Join(",", rows) + "],\"restPose\":[" + string.Join(",", rest) + "]}";
         }
     }

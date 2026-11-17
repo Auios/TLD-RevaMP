@@ -28,7 +28,7 @@ def main():
     target.parent.mkdir(parents=True, exist_ok=True)
     if '--validation' in sys.argv:
         s = read('LeaseValidation').replace('internal static partial class EntityWorldLeases', 'public static partial class Entities')
-        for before, after in [('Entities.IsFinite(', 'Finite('), ('Entities.LeaseAnomaly(', 'Anomaly('),
+        for before, after in [('Entities.IsFinite(', 'EntityNumbers.Finite('), ('Entities.LeaseAnomaly(', 'Anomaly('),
                               ('Entities.SendToPeer(', 'ServerSendTo('), ('Entities.SendToPeers(', 'ServerSendAll('),
                               ('Entities.TryLeasePlayerPosition(from, out pos)', 'LeasePlayerPositionOriginal(from, out pos)')]:
             s = s.replace(before, after)
@@ -37,6 +37,7 @@ def main():
             old = method(read('Features'), 'TryLeasePlayerPosition').replace('TryLeasePlayerPosition(', 'LeasePlayerPositionOriginal(')
             s = s.rsplit('    }', 1)[0] + old + '\n    }\n}\n'
         s = re.sub(r'Entities\.(LeaseGrant|LeaseTaken|LeaseFreed)', r'\1', s)
+        s = re.sub(r'(?<![\w.])(LeasesFreed|LeasesGranted)\b', r'EntityWorldLeases.\1', s)
         target.write_text(s, encoding='utf-8')
         return
     s = 'using System.Globalization;\n' + read('Leases').split('    public static partial class Entities')[0] + '}\n'

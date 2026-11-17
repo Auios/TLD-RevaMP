@@ -33,7 +33,7 @@ namespace TLDRevamp.Net
                 var root = h.collider.transform.root;
                 var item = root.GetComponent<tosaveitemscript>();
                 bool vehicle = item != null && (item.car != null || (item.attachable != null && item.attachable.utanfuto != null));
-                bool atRest = Entities.TpaFloorReady(item);
+                bool atRest = EntityProxyPresentation.TpaFloorReady(item);
                 atRest &= rb == null || (rb.velocity.sqrMagnitude < .04f && rb.angularVelocity.sqrMagnitude < .04f);
                 if (!TpaArrival.Surface(rb != null, vehicle, atRest, Tpa.MovingRoot(root), vehicles)) continue;
                 TpaArrival.TerrainHeight(h.collider.GetType().Name == "TerrainCollider", h.point.y, ref terrainY);

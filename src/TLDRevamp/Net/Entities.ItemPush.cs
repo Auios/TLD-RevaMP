@@ -71,9 +71,9 @@ namespace TLDRevamp.Net
             if (!ItemClaims || !InSession) return;
             foreach (var e in Placed())
             {
-                var rb = MovingItemBody(e);
+                var rb = EntityCargoInteraction.MovingItemBody(e);
                 if (rb == null) continue;
-                var v = RideVelocity(e, rb);
+                var v = EntityCargoInteraction.RideVelocity(e, rb);
                 if (v.sqrMagnitude < ItemMinSpeed * ItemMinSpeed) continue;
                 bool any = false; var b = default(Bounds);
                 foreach (var c in e.Root.GetComponentsInChildren<Collider>(false))
@@ -90,7 +90,7 @@ namespace TLDRevamp.Net
                     var orb = _itemNear[i].attachedRigidbody;
                     if (orb == null || !orb.isKinematic || orb.transform.root == own || Vector3.Dot(v, orb.worldCenterOfMass - rb.worldCenterOfMass) <= 0f) continue;   // only what it moves toward
                     var other = ProxyOf(orb.transform.root);
-                    if (Pushable(other) && NyOf(other) == null && ClaimCargo(other, reason: ClaimReason.ItemNear)) ItemClaimedNear++;
+                    if (EntityCargoInteraction.Pushable(other) && EntityRabbits.NyOf(other) == null && EntityCargoInteraction.ClaimCargo(other, reason: ClaimReason.ItemNear)) ItemClaimedNear++;
                 }
             }
         }
@@ -105,8 +105,5 @@ namespace TLDRevamp.Net
             return e;
         }
 
-        internal static void ItemContact(uint net, Collision c) => EntityCargoInteraction.ItemContact(net, c);
-        internal static Vector3 RideVelocity(Ent e, Rigidbody rb) => EntityCargoInteraction.RideVelocity(e, rb);
-        internal static Rigidbody MovingItemBody(Ent e) => EntityCargoInteraction.MovingItemBody(e);
     }
 }

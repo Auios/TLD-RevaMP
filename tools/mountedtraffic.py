@@ -54,10 +54,10 @@ def on(s, net, slot):
     return None if rows is None else sum(1 for r in rows if r[0] == slot and r[1] and r[2])
 
 def as_player(s, cmd):
-    s(f"set {T}.TestAsPlayer True")
+    s(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer True")
     try: return s(cmd)
     except RuntimeError as ex: return {"error": str(ex)}
-    finally: s(f"set {T}.TestAsPlayer False")
+    finally: s(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False")
 
 def drop(s):
     try: s("mp drop")

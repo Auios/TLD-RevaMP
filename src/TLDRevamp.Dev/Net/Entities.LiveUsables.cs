@@ -17,7 +17,7 @@ namespace TLDRevamp.Net
             {
                 var it = e.Items[i];
                 if (it == null || (e.Split != null && e.Split.Contains(i))) continue;
-                var us = ItemUsables(it);
+                var us = EntityUsables.ItemUsables(it);
                 for (int j = 0; j < us.Length; j++)
                 {
                     var u = us[j]; if (u == null) continue;
@@ -26,31 +26,31 @@ namespace TLDRevamp.Net
                     for (var t = u.transform.parent; t != null && t != it.transform; t = t.parent) path = t.name + "/" + path;
                     var g = mainscript.GlobalFromUnityPos(u.transform.position);
                     rows.Add("{\"item\":" + i + ",\"usable\":" + j + ",\"itemName\":" + Json.Str(it.name) + ",\"name\":" + Json.Str(path) +
-                        ",\"kind\":" + Json.Str(kind.Trim()) + ",\"value\":" + UsableValuesJson(UsableState(u)) + ",\"at\":[" + UN(g.x) + "," + UN(g.y) + "," + UN(g.z) + "]}");
+                        ",\"kind\":" + Json.Str(kind.Trim()) + ",\"value\":" + EntityUsables.UsableValuesJson(EntityUsables.UsableState(u)) + ",\"at\":[" + EntityUsables.UN(g.x) + "," + EntityUsables.UN(g.y) + "," + EntityUsables.UN(g.z) + "]}");
                 }
             }
-            return "{\"net\":" + net + ",\"owner\":" + e.OwnerId + ",\"st\":" + UN(SessionLog.St) + ",\"usables\":[" + string.Join(",", rows) + "]}";
+            return "{\"net\":" + net + ",\"owner\":" + e.OwnerId + ",\"st\":" + EntityUsables.UN(SessionLog.St) + ",\"usables\":[" + string.Join(",", rows) + "]}";
         }
         public static string DragUsable(uint net, int item, int usable, float seconds, float hz)
         {
-            if (!Finite(seconds) || !Finite(hz) || seconds <= 0 || seconds > 60 || hz < 1 || hz > 240 || !TLDRevamp.Net.EntityDoorAttachmentsTools.UsableArgs(net, item, usable, out _, out var u))
+            if (!EntityNumbers.Finite(seconds) || !EntityNumbers.Finite(hz) || seconds <= 0 || seconds > 60 || hz < 1 || hz > 240 || !TLDRevamp.Net.EntityDoorAttachmentsTools.UsableArgs(net, item, usable, out _, out var u))
                 return "{\"error\":\"loaded net/item/usable, seconds (0,60], hz [1,240] required\"}";
             TelemetryTouch(net);
             return StartUsableDrag(u, seconds, hz);
         }
         internal static string StartUsableDrag(usablescript u, float seconds, float hz)
         {
-            if (u == null || !Finite(seconds) || !Finite(hz) || seconds <= 0 || seconds > 60 || hz < 1 || hz > 240)
+            if (u == null || !EntityNumbers.Finite(seconds) || !EntityNumbers.Finite(hz) || seconds <= 0 || seconds > 60 || hz < 1 || hz > 240)
                 return "{\"error\":\"loaded usable, seconds (0,60], hz [1,240] required\"}";
             if (!(u.rotateAble || u.slideAble || u.turnable || u.tuneAble)) return "{\"error\":\"usable has no input action\"}";
             u.FStart();
             double start = SessionLog.St;
             ObservedDragUsable = new UsableDrag { U = u, Start = start, End = start + seconds, Next = start, Hz = hz };
-            ObservedDragUsable.From = UsableState(u);
+            ObservedDragUsable.From = EntityUsables.UsableState(u);
             ObservedDragUsable.To = new PoiState { XRot = u.xRot < (u.minX + u.maxX) * .5f ? u.maxX : u.minX,
                 YRot = u.yRot < (u.minY + u.maxY) * .5f ? u.maxY : u.minY, Slide = u.slideValue < .5f ? 1 : 0,
                 Tuned = u.tunedFloat < (u.tunedFloatMin + u.tunedFloatMax) * .5f ? u.tunedFloatMax : u.tunedFloatMin };
-            return "{\"start\":" + UN(start) + ",\"end\":" + UN(start + seconds) + ",\"hz\":" + UN(hz) + "}";
+            return "{\"start\":" + EntityUsables.UN(start) + ",\"end\":" + EntityUsables.UN(start + seconds) + ",\"hz\":" + EntityUsables.UN(hz) + "}";
         }
         /// Monotonic motion makes the sender/receiver traces unambiguous when measuring delay offline.
         internal static void DragUsableTick()
@@ -91,26 +91,26 @@ namespace TLDRevamp.Net
         /// Sampling runs in Entities.Tick, independent of bridge polling, for both the old and live paths.
         public static string ProbeUsable(uint net, int item, int usable, float seconds)
         {
-            if (!Finite(seconds) || seconds <= 0 || seconds > 90 || !TLDRevamp.Net.EntityDoorAttachmentsTools.UsableArgs(net, item, usable, out _, out var u))
+            if (!EntityNumbers.Finite(seconds) || seconds <= 0 || seconds > 90 || !TLDRevamp.Net.EntityDoorAttachmentsTools.UsableArgs(net, item, usable, out _, out var u))
                 return "{\"error\":\"loaded net/item/usable and seconds (0,90] required\"}";
             TelemetryTouch(net);
             return StartUsableProbe(u, seconds);
         }
         internal static string StartUsableProbe(usablescript u, float seconds)
         {
-            if (u == null || !Finite(seconds) || seconds <= 0 || seconds > 90) return "{\"error\":\"loaded usable and seconds (0,90] required\"}";
-            ObservedUsableProbe = new UsableProbe { U = u, Start = SessionLog.St, End = SessionLog.St + seconds, Last = UsableBits(u) };
-            return "{\"start\":" + UN(ObservedUsableProbe.Start) + ",\"end\":" + UN(ObservedUsableProbe.End) + "}";
+            if (u == null || !EntityNumbers.Finite(seconds) || seconds <= 0 || seconds > 90) return "{\"error\":\"loaded usable and seconds (0,90] required\"}";
+            ObservedUsableProbe = new UsableProbe { U = u, Start = SessionLog.St, End = SessionLog.St + seconds, Last = EntityUsables.UsableBits(u) };
+            return "{\"start\":" + EntityUsables.UN(ObservedUsableProbe.Start) + ",\"end\":" + EntityUsables.UN(ObservedUsableProbe.End) + "}";
         }
         internal static void UsableProbeTick()
         {
             var p = ObservedUsableProbe;
             if (p == null || p.U == null || SessionLog.St > p.End) return;
-            p.Frames++; var v = UsableBits(p.U);
+            p.Frames++; var v = EntityUsables.UsableBits(p.U);
             if (!v.Equals(p.Last)) { p.Updates++; p.Last = v; }
             if (p.Samples.Count < 8192)
             {
-                var sample = new UsableSample { St = SessionLog.St, Value = UsableState(p.U) };
+                var sample = new UsableSample { St = SessionLog.St, Value = EntityUsables.UsableState(p.U) };
                 if (p.U.setidPoi)
                 {
                     var key = PoiLiveKey(p.U);
@@ -127,10 +127,10 @@ namespace TLDRevamp.Net
             var p = ObservedUsableProbe;
             if (p == null) return "{\"error\":\"start mp usableprobe net item usable seconds first\"}";
             var rows = new List<string>();
-            foreach (var s in p.Samples) rows.Add("[" + UN(s.St) + "," + UsableValuesJson(s.Value) +
+            foreach (var s in p.Samples) rows.Add("[" + EntityUsables.UN(s.St) + "," + EntityUsables.UsableValuesJson(s.Value) +
                 (p.U != null && p.U.setidPoi ? "," + s.ReceiveHz + "," + (s.Interpolating ? "true" : "false") + "," + s.Received : "") + "]");
             double elapsed = Math.Max(1e-3, Math.Min(SessionLog.St, p.End) - p.Start);
-            return "{\"start\":" + UN(p.Start) + ",\"end\":" + UN(p.End) + ",\"frames\":" + p.Frames + ",\"updates\":" + p.Updates + ",\"updatesPerS\":" + UN(p.Updates / elapsed) +
+            return "{\"start\":" + EntityUsables.UN(p.Start) + ",\"end\":" + EntityUsables.UN(p.End) + ",\"frames\":" + p.Frames + ",\"updates\":" + p.Updates + ",\"updatesPerS\":" + EntityUsables.UN(p.Updates / elapsed) +
                 ",\"truncated\":" + (p.Truncated ? "true" : "false") + ",\"samples\":[" + string.Join(",", rows) + "]}";
         }
         internal static void Reset() { _dragUsable = null; _usableProbe = null; }

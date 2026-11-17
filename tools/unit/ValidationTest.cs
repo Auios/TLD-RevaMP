@@ -54,7 +54,7 @@ namespace TLDRevamp.Net
         const uint CanonBase = 0xF0000000u;
         const float HandoverAcceptS = 5f;
         static uint _nextNet = 100;
-        static long PartOffRejected, LeasesFreed, LeasesGranted, LeaseTypeMismatches;
+        static long PartOffRejected,LeaseTypeMismatches;
         static string PartRejects = "";
         static int Broadcasts, Sent, LastTarget;
         static byte LastMessage;
@@ -65,9 +65,6 @@ namespace TLDRevamp.Net
         static void WritePartDetached(NetWriter w, SEnt e) { w.Reset(); w.U8(27); }
         static void ServerSendAll(NetWriter w, bool reliable, int except) { Broadcasts++; LastMessage = w.Buf[0]; }
         static void ServerSendTo(int from, NetWriter w, bool reliable) { Sent++; LastTarget = from; LastMessage = w.Buf[0]; }
-        static bool Finite(double n) => !double.IsNaN(n) && !double.IsInfinity(n);
-        static bool Finite(Vector3d p) => Finite(p.x) && Finite(p.y) && Finite(p.z);
-        static bool Finite(Quaternion q) => Finite(q.x) && Finite(q.y) && Finite(q.z) && Finite(q.w);
 
         static SEnt Car()
         {
@@ -459,6 +456,19 @@ namespace TLDRevamp.Net
                 check(refusals.GetProperty(reason).GetInt64() == 1, "refusal reason counted and exported: " + reason);
         }
     }
+    internal static partial class EntityWorldLeases
+    {
+        internal static long LeasesFreed,LeasesGranted;
+    }
+
+
+    internal static partial class EntityNumbers
+    {
+        internal static bool Finite(double n) => !double.IsNaN(n) && !double.IsInfinity(n);
+        internal static bool Finite(Vector3d p) => EntityNumbers.Finite(p.x) && EntityNumbers.Finite(p.y) && EntityNumbers.Finite(p.z);
+        internal static bool Finite(Quaternion q) => EntityNumbers.Finite(q.x) && EntityNumbers.Finite(q.y) && EntityNumbers.Finite(q.z) && EntityNumbers.Finite(q.w);
+    }
+
     static class Mp { internal static TestServer Server; }
     sealed class TestServer
     {

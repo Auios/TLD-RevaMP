@@ -11,7 +11,7 @@ namespace TLDRevamp.Net
     internal static partial class EntityDoors
     {
         /// Plugin LateUpdate: the car-frame positions `mp relpos` asked for, as they will be drawn this frame.
-        public static void LateSample()
+        internal static void LateSample()
         {
             RestoreStoredDoorAttaches();
             Entities.TelemetryRender();
@@ -42,7 +42,7 @@ namespace TLDRevamp.Net
         }
 
         /// `mp cardoors <net>`: each door — its name, the usable's state (turn state, slide value) and the door's.
-        public static string CarDoors(uint net)
+        internal static string CarDoors(uint net)
         {
             if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
             var ci = System.Globalization.CultureInfo.InvariantCulture;
@@ -69,7 +69,7 @@ namespace TLDRevamp.Net
             return sb.Append("}").ToString();
         }
 
-        public static string Food(uint net)
+        internal static string Food(uint net)
         {
             if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"gone\":true}";
             var ed = e.Root.GetComponentInChildren<ediblescript>(true);
@@ -82,12 +82,12 @@ namespace TLDRevamp.Net
         }
 
         /// Test: a rabbit (aiscript). `mp rabbit <net>`: fleeing?, its stimulus balance, global position and facing.
-        public static string Rabbit(uint net)
+        internal static string Rabbit(uint net)
         {
             if (!Entities.TryGetEntity(net, out var e) || e.Root == null) return "{\"error\":\"no entity\"}";
             var a = e.Root.GetComponentInChildren<aiscript>(true);
             if (a == null) return "{\"error\":\"no aiscript\"}";
-            if (Entities.NyOf(e) != null) return Entities.RabbitJson(e);   // fleeing, ff, stimuli, pos, fwd are in it (rabbitflee.py)
+            if (EntityRabbits.NyOf(e) != null) return EntityRabbits.RabbitJson(e);   // fleeing, ff, stimuli, pos, fwd are in it (rabbitflee.py)
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             var g = mainscript.GlobalFromUnityPos(a.transform.position); var f = a.transform.forward;
             return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"fleeing\":" + (a.fleeing ? "true" : "false") + ",\"ff\":" + a.flightFight.ToString("F2", ci) +

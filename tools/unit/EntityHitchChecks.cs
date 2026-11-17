@@ -32,17 +32,10 @@ static partial class EntitySplitTest
 {
     static void HitchChecks()
     {
-        CoreMembers.Register();
         var owner = typeof(EntityHitches);
         Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, "hitches has an internal static owner");
-        foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is FieldInfo || m is PropertyInfo || m is MethodInfo))
-        {
-            bool retained = typeof(Entities).GetMember(member.Name, Static).Length != 0;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                Check(Reflect.MemberPath(prefix + member.Name) == (retained ? prefix + member.Name : owner.FullName + "." + member.Name), "hitch alias " + prefix + member.Name);
-        }
-        BridgeReflect.Set("TLDRevamp.Net.Entities.ProxyGripsMoved", "17");
-        Check(EntityHitches.ProxyGripsMoved == 17 && BridgeReflect.Get("Entities.ProxyGripsMoved") == "17", "hitch counter aliases share the real field");
+        BridgeReflect.Set("TLDRevamp.Net.EntityHitches.ProxyGripsMoved", "17");
+        Check(EntityHitches.ProxyGripsMoved == 17 && BridgeReflect.Get("EntityHitches.ProxyGripsMoved") == "17", "hitch counter owner paths share the real field");
         EntityHitches.ProxyGripsMoved = 0;
 
         var op = new EntityHitches.HitchOp { Trailer = 20, Car = 10, TrailerEpoch = 0x10203040, CarEpoch = 0x50607080,
@@ -59,8 +52,8 @@ static partial class EntitySplitTest
         Check(EntityHitches.HasCommand(20), "command queue belongs to feature");
         EntityHitches.RemoveCommand(20); Check(!EntityHitches.HasCommand(20), "one command removal leaves no pending command");
         EntityHitches.ApplyHitchCommand(Reader(w.Buf.Take(w.Len).ToArray()));
-        BridgeReflect.Call("Entities.ClearCommands", Array.Empty<string>());
-        Check(!EntityHitches.HasCommand(20), "command reset alias clears the actual queue");
+        BridgeReflect.Call("EntityHitches.ClearCommands", Array.Empty<string>());
+        Check(!EntityHitches.HasCommand(20), "command reset owner path clears the actual queue");
 
         var e = new Entities.Ent { Root = new tosaveitemscript { attachable = new attachablescript() } };
         Entities.ByNet[20] = e; Entities.PlayerActing = true;

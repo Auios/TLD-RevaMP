@@ -26,8 +26,8 @@ namespace TLDRevamp.Net
                 if (what == "tank" ? it.tanks != null && it.tanks.Count > 0 : what == "colourstate" ? it.partconditions != null && it.partconditions.Count > 0 : it.usables != null && it.usables.Count > 0) idx = i;
             }
             if (idx < 0) return "{\"error\":\"no item of it has what that needs\"}";
-            var map = CanonMap(e.Items);
-            var d = StateOnly(ItemSnapshot.Capture(e.Items[idx]));
+            var map = EntityResync.CanonMap(e.Items);
+            var d = EntityResync.StateOnly(ItemSnapshot.Capture(e.Items[idx]));
             d.car = new List<save_carscript>();
             int kinds = KindUsable;
             switch (what)
@@ -54,11 +54,11 @@ namespace TLDRevamp.Net
         {
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             var k = new PoiKey { Gen = int.Parse(a[1]), X = double.Parse(a[2], ci), Y = double.Parse(a[3], ci), Z = double.Parse(a[4], ci), U = int.Parse(a[5]) };
-            var u = PoiUsableOf(k);
+            var u = EntityUsables.PoiUsableOf(k);
             var st = u != null ? new PoiState { XRot = u.xRot, YRot = u.yRot, Slide = u.slideValue, Turn = u.currentTurnState, Tuned = u.tunedFloat } : new PoiState();
             st.Slide = float.Parse(a[6], ci);
             int n = a.Length > 7 ? int.Parse(a[7]) : 1;
-            for (int i = 0; i < n; i++) { W.Reset(); W.U8(PoiUsable); WritePoi(W, k, st); var key = new UsableKey { Building = true, Poi = k }; ushort seq = NextUsableSequence(key); W.U16(seq); W.F64(SessionLog.St); ToServer(W, true); }
+            for (int i = 0; i < n; i++) { W.Reset(); W.U8(PoiUsable); EntityUsables.WritePoi(W, k, st); var key = new UsableKey { Building = true, Poi = k }; ushort seq = NextUsableSequence(key); W.U16(seq); W.F64(SessionLog.St); ToServer(W, true); }
             return "{\"sent\":" + n + ",\"spawnedHere\":" + (u != null ? "true" : "false") + "}";
         }
     }

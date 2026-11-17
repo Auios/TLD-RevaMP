@@ -61,7 +61,7 @@ namespace TLDRevamp.Net
                 if (Mounted(se)) { HandoffKeptMounted++; continue; }   // goes with what it's on
                 if (se.Driven && Time.realtimeSinceStartup - se.DrivenAt < 1f) continue;        // its driver keeps it
                 if (HandoffKeepCarried && (se.Held || se.Stored)) { HandoffKeptCarried++; continue; }   // in someone's hands or inventory: theirs, wherever it was last seen
-                if (WornSync && ServerWornNow(se)) { HandoffKeptCarried++; continue; }   // on its owner's head (Entities.Worn)
+                if (EntityHands.WornSync && ServerWornNow(se)) { HandoffKeptCarried++; continue; }   // on its owner's head (Entities.Worn)
                 double ownerD2 = double.MaxValue, bestD2 = nearM * nearM;              // owner not playing: as far as it gets
                 int best = -1;
                 foreach (var p in _handPlayers)

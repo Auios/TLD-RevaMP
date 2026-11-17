@@ -44,6 +44,5 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        internal static void MountFacts(partslotscript ps, attachablescript part, pickupable P, fpscontroller pl, System.Text.StringBuilder b, int index) => EntityMountFacts.MountFacts(ps, part, P, pl, b, index);
     }
 }

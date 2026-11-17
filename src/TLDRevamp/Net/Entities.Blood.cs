@@ -15,7 +15,7 @@ namespace TLDRevamp.Net
     /// the car record, of which the owner takes only "clean").
     internal static partial class EntityCarTuning
     {
-        public static long BloodCleanedOnCopy, BloodCleanSent, BloodCleanApplied;
+        internal static long BloodCleanedOnCopy, BloodCleanSent, BloodCleanApplied;
 
         /// The record says clean, this car is bloody: wash it (the game's own way, as a sponge would).
         internal static void BloodFollow(tosaveitemscript it, itemDataClass d)

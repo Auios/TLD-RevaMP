@@ -24,7 +24,7 @@ def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv
 RELAY, OLD, KMH = arg("--relay", "iad"), "--old" in sys.argv, arg("--kmh", 50.0, float)
 OLD_SHARE = "--old-share" in sys.argv   # before v0.68.5: a rejoin's hat shared loose, its Worn message after the network id
 T = "TLDRevamp.Net.Entities"; CC = "TLDRevamp.Diagnostics.CrashCause"
-SWITCHES = [f"{T}.WornSync", "TLDRevamp.Net.RecordCodec.StripWorn", "TLDRevamp.Net.PlayerSave.KeepWorn", "TLDRevamp.Net.ItemSnapshot.SkipPlayersThings"]
+SWITCHES = [f"TLDRevamp.Net.EntityHands.WornSync", "TLDRevamp.Net.RecordCodec.StripWorn", "TLDRevamp.Net.PlayerSave.KeepWorn", "TLDRevamp.Net.ItemSnapshot.SkipPlayersThings"]
 VERDICTS = []
 def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok)); print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
@@ -49,7 +49,7 @@ def speed(s): return abs(float(g(s, "mainscript.s.player.Car.speed") or 0))
 def crashes(s): return int(s(f"get {CC}.Logged")["value"])
 def setall(s, v):
     for k in SWITCHES: s(f"set {k} {v}")
-    for k in (f"{T}.WornInShare", "TLDRevamp.Net.PlayerSave.ShareWornLate"): s(f"set {k} {v and not OLD_SHARE}")
+    for k in (f"TLDRevamp.Net.EntityHands.WornInShare", "TLDRevamp.Net.PlayerSave.ShareWornLate"): s(f"set {k} {v and not OLD_SHARE}")
 
 L = Agent()
 ensure_both("--no-build" not in sys.argv)

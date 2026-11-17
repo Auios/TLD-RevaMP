@@ -11,7 +11,7 @@ namespace TLDRevamp.Net
     /// A new item started during one of these is shared once the action is done (worn, picked up: finished).
     internal static partial class EntityLifetimeStreaming
     {
-        public static long PlayerMadeShared;
+        internal static long PlayerMadeShared;
         private static int _playerAction;
         private static readonly List<tosaveitemscript> _playerMade = new List<tosaveitemscript>();
 

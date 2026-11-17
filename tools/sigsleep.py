@@ -53,7 +53,7 @@ with game.ProtectedSession():
         net = next(n for n, e in ents(b).items() if n not in before and e["car"])
         cp = ents(b)[net]["pos"]; b(f"tpground {cp[0] + 3} {cp[2] + 3}"); time.sleep(2)
         print("  sits:", b(f"sitseat {seat_idx(b)} redirect"), flush=True)
-        b(f"set {T}.TestHandbrake 1"); time.sleep(2); b(f"set {T}.TestHandbrake -1")
+        b(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHandbrake 1"); time.sleep(2); b(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHandbrake -1")
         print("  gets out:", b("driveout"), flush=True)
         # a car's body stays awake parked (sigsleep run 3: 1,859 'awake' states at 0 m/s) and the owner keeps sending
         # it; a car goes quiet when the game freezes it (itemFreezeDist, 200 m from every player; stored at 300 m)
@@ -68,7 +68,7 @@ with game.ProtectedSession():
             verdict(f"IGNITION {step} AT REST: STATES SENT AT ONCE", s1 - s0 >= 3 and sig["ignition"] == bool(val), f"{s1 - s0} states")
     finally:
         for k, v in (("TestIgnition", -1), ("TestHandbrake", -1)):
-            try: b(f"set {T}.{k} {v}")
+            try: b(f"set TLDRevamp.Net.EntityCarSignalsTools.{k} {v}")
             except Exception as ex: print("restore", k, ex)
         try: b("driveout"); b("mp stop")
         except Exception: pass

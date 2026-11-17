@@ -43,7 +43,7 @@ with game.ProtectedSession():
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L):
-            s_(f"set {T}.CopyLockSafe {not OLD}"); s_(f"set {T}.CopyLockByContainer {not OLD}"); s_(f"set {T}.DriveClaimRootOnly {not OLD}")
+            s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe {not OLD}"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer {not OLD}"); s_(f"set {T}.DriveClaimRootOnly {not OLD}")
         print(f"  {'OLD (v0.66.7 release)' if OLD else 'CURRENT BUILD'}", flush=True)
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
@@ -69,7 +69,7 @@ with game.ProtectedSession():
             if not it: verdict(f"{tag} SETUP: THE LAPTOP'S ITEM", False); break
             until(lambda: (ent(h, it) or {}).get("dormant") is False, 20); time.sleep(4)
             print(f"  {tag}: host car {car}, laptop's item {it} on the ground behind it", flush=True)
-            c0, r_0 = int(h(f"get {CC}.Logged")["value"]), int(h(f"get {T}.CopyLocksReleased")["value"])
+            c0, r_0 = int(h(f"get {CC}.Logged")["value"]), int(h(f"get TLDRevamp.Net.EntityLocks.CopyLocksReleased")["value"])
             spot = ent(L, it)["pos"]
             print(f"  {tag}: [host] its copy into the host's own car: {h(f'mp copystore {it} {car}')}", flush=True)
             time.sleep(1)
@@ -77,18 +77,18 @@ with game.ProtectedSession():
             vmax, vmin_after, released_at, t0 = 0.0, None, None, time.monotonic()
             while time.monotonic() - t0 < 20:
                 v = abs(float(g(h, "mainscript.s.player.Car.speed") or 0)); vmax = max(vmax, v)
-                if released_at is None and int(h(f"get {T}.CopyLocksReleased")["value"]) > r_0: released_at = time.monotonic() - t0
+                if released_at is None and int(h(f"get TLDRevamp.Net.EntityLocks.CopyLocksReleased")["value"]) > r_0: released_at = time.monotonic() - t0
                 if released_at is not None: vmin_after = v if vmin_after is None else min(vmin_after, v)
                 if released_at is not None and time.monotonic() - t0 > released_at + 6: break
                 if int((time.monotonic() - t0) * 4) % 12 == 0:
                     e_, c_ = ent(h, it) or {}, ent(h, car) or {}
                     print(f"    t {time.monotonic() - t0:4.1f}: host's copy owner {e_.get('owner')} "
-                          f"{(round(math.dist(e_['pos'], c_['pos']), 1) if e_.get('pos') and c_.get('pos') else '?')} m from the car, byBody {e_.get('byBody')} dormant {e_.get('dormant')}, released {h(f'get {T}.CopyLocksReleased')['value']}", flush=True)
+                          f"{(round(math.dist(e_['pos'], c_['pos']), 1) if e_.get('pos') and c_.get('pos') else '?')} m from the car, byBody {e_.get('byBody')} dormant {e_.get('dormant')}, released {h(f'get TLDRevamp.Net.EntityLocks.CopyLocksReleased')['value']}", flush=True)
                 time.sleep(0.25)
             h("autodrive off"); time.sleep(2)
             crashes = int(h(f"get {CC}.Logged")["value"]) - c0
             last = h(f"get {CC}.Last")["value"] if crashes else ""
-            rel = int(h(f"get {T}.CopyLocksReleased")["value"]) - r_0
+            rel = int(h(f"get TLDRevamp.Net.EntityLocks.CopyLocksReleased")["value"]) - r_0
             verdict(f"{tag}: THE COPY WAS TAKEN OUT OF THE HOST'S CAR", rel > 0, f"{rel} released, top {vmax:.0f} km/h")
             verdict(f"{tag}: THE HOST'S CAR DROVE ON, NO CRASH", crashes == 0 and vmax > KMH * 0.6,
                     f"crash causes {crashes} {last[:300]}; top {vmax:.0f} km/h")
@@ -97,7 +97,7 @@ with game.ProtectedSession():
                     el is not None and el["owner"] == lid and math.dist(el["pos"], spot) < 1.0, f"owner {el and el['owner']}, {el and round(math.dist(el['pos'], spot), 1)} m from where it lay")
             gap = math.dist(el["pos"], eh["pos"]) if el and eh and not eh.get("dormant") else None
             verdict(f"{tag}: THE COPY WHERE THE LAPTOP HAS IT", gap is not None and gap < 1.0 or (eh or {}).get("dormant") is True,
-                    f"{gap and round(gap, 2)} m apart; placed {h(f'get {T}.ReleasesPlaced')['value']}, ghosts cleared {h(f'get {T}.ReleaseGhostsCleared')['value']}")
+                    f"{gap and round(gap, 2)} m apart; placed {h(f'get TLDRevamp.Net.EntityLocks.ReleasesPlaced')['value']}, ghosts cleared {h(f'get TLDRevamp.Net.EntityLocks.ReleaseGhostsCleared')['value']}")
         er = [x_("errors") for x_ in (h, L)]
         print("  errors:", [(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er], flush=True)
     finally:
@@ -106,7 +106,7 @@ with game.ProtectedSession():
         for s_, v in gods.values(): s_(f"set kaposztaleves.s.settings.god {v}")
         h(f"set settingsscript.s.S.BAutoShift {shift_h}")
         for s_ in (h, L):
-            try: s_(f"set {T}.CopyLockSafe True"); s_(f"set {T}.CopyLockByContainer True"); s_(f"set {T}.DriveClaimRootOnly True")
+            try: s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe True"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer True"); s_(f"set {T}.DriveClaimRootOnly True")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

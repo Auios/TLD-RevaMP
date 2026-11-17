@@ -57,11 +57,11 @@ static partial class EntitySplitTest
         object[] cp = { e, root.transform, Quaternion.identity, null, null };
         uint car = (uint)HandsCall("CarriedBy", cp);
         object[] hp = { e, true, false, false, null, null }; bool hand = (bool)HandsCall("LocalHandPose", hp);
-        w.Reset(); Entities.WriteStateHead(w, 301, 7, 42, 12.5, new Vector3d(10.25, 20.5, 29.25), Quaternion.identity, new Vector3(1, 2, 3), false,
+        w.Reset(); EntityCodec.WriteStateHead(w, 301, 7, 42, 12.5, new Vector3d(10.25, 20.5, 29.25), Quaternion.identity, new Vector3(1, 2, 3), false,
             held: true, carriedBy: car, localPos: (Vector3)cp[3], localRot: (Quaternion)cp[4], handPose: hand, handPos: (Vector3)hp[4], handRot: (Quaternion)hp[5]);
         HandsVector("carried-hand-state", w);
         var state = Reader(w.Buf.Take(w.Len).ToArray());
-        Entities.ReadStateHead(state, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+        EntityCodec.ReadStateHead(state, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
         Check(EntityCodec.ReadCarriedBy == 401 && EntityCodec.ReadHandPose && state.Pos == state.End, "car and hand extensions precede state tail without changing scratch lifetime");
         var writer = Field(HandsOwner, "W");
         Check(!ReferenceEquals(writer, Field(typeof(Entities), "W")), "hands owns its worn writer");
@@ -78,22 +78,21 @@ static partial class EntitySplitTest
         HandDrawChecks(e, pl);
         CarriedChecks(e, carRoot);
         HandsBoundaryChecks(e);
-        HandsCall("WornReset"); Entities.Cascades = 0; Entities.ClaimsSent = 0; Entities.WornSync = true; Entities.ByNet.Clear(); Entities.ClearServer(); Entities.Packets.Clear(); mainscript.s = null;
+        HandsCall("WornReset"); Entities.Cascades = 0; Entities.ClaimsSent = 0; EntityHands.WornSync = true; Entities.ByNet.Clear(); Entities.ClearServer(); Entities.Packets.Clear(); mainscript.s = null;
     }
 
     static void HandsBoundaryChecks(Entities.Ent e)
     {
-        e.SentHeld = true; e.FastSendUntil = 0; Entities.HeldStateHz = 50; Entities.FastAfterReleaseS = 1.5f;
+        e.SentHeld = true; e.FastSendUntil = 0; EntityHands.HeldStateHz = 50; EntityHands.FastAfterReleaseS = 1.5f;
         Check(Entities.TestHeldInterval(e, 10) == .02f, "held item uses 50 Hz interval from real Tick expression");
         Entities.TestHeldRelease(e, 10, false); Check(e.FastSendUntil == 0, "ordinary state leaves fast release timer alone");
         Entities.TestHeldRelease(e, 10, true); e.SentHeld = false;
         Check(e.FastSendUntil == 11.5 && Entities.TestHeldInterval(e, 11.49) == .02f && Entities.TestHeldInterval(e, 11.5) == .05f, "release window keeps fast rate and ends at exact boundary");
-        Entities.HeldStateHz = 20; e.SentHeld = true;
-        Check(Entities.TestHeldInterval(e, 10) == .05f, "held stream setting at protocol rate disables boost"); Entities.HeldStateHz = 50;
-        CoreMembers.Register();
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.WornClaimTries", "4") == "4" && EntityHands.WornClaimTries == 4, "full worn setting forwards to sole owner"); EntityHands.WornClaimTries = 3;
-        Check(BridgeReflect.Get("TLDRevamp.Net.Entities.CarriedSent") == EntityHands.CarriedSent.ToString() && BridgeReflect.Get("TLDRevamp.Net.Entities._wornOwn.Count") == "0", "full counter and cache aliases reach feature");
-        Check(BridgeReflect.Call("TLDRevamp.Net.Entities.WornStatus", Array.Empty<string>()).Contains("sharedWorn"), "historical full diagnostic call forwards");
+        EntityHands.HeldStateHz = 20; e.SentHeld = true;
+        Check(Entities.TestHeldInterval(e, 10) == .05f, "held stream setting at protocol rate disables boost"); EntityHands.HeldStateHz = 50;
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityHands.WornClaimTries", "4") == "4" && EntityHands.WornClaimTries == 4, "full worn setting forwards to sole owner"); EntityHands.WornClaimTries = 3;
+        Check(BridgeReflect.Get("TLDRevamp.Net.EntityHands.CarriedSent") == EntityHands.CarriedSent.ToString() && BridgeReflect.Get("TLDRevamp.Net.EntityHands._wornOwn.Count") == "0", "full counter and cache owner paths reach feature");
+        Check(BridgeReflect.Call("TLDRevamp.Net.EntityHands.WornStatus", Array.Empty<string>()).Contains("sharedWorn"), "real owner diagnostic call forwards");
         foreach (string name in new[] { "CarriedSent", "RidingSent", "HeldStateHz", "HandItemDraw", "WornSync", "_wornOwn", "WornSent", "WornTooLate" })
             Check(typeof(Entities).GetField(name, Static) == null, "no second hands field owner " + name);
         foreach (string part in new[] { "Carried", "HandItems", "Worn" })

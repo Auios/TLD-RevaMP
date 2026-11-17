@@ -355,7 +355,7 @@ namespace TLDRevamp.Net
             {
                 // `mount whynot <item net>`: why the game's physics lock does or doesn't store this item (WhyNotLock)
                 var it = MountRootOf(uint.Parse(a[1], ic));
-                return it == null || it.P == null ? "{\"error\":\"no item\"}" : WhyNotLock(it);
+                return it == null || it.P == null ? "{\"error\":\"no item\"}" : EntityDiag.WhyNotLock(it);
             }
             if (a[0] == "areas" && a.Length > 1)
             {
@@ -371,7 +371,7 @@ namespace TLDRevamp.Net
                     var size = c != null ? Vector3.Scale(c.size, t.lossyScale) : Vector3.zero;
                     var g = mainscript.GlobalFromUnityPos(center);
                     var cars = new List<string>();
-                    foreach (var sc in m.storedcars) if (sc != null) cars.Add(NetIdOf(sc.gameObject).ToString(ic));
+                    foreach (var sc in m.storedcars) if (sc != null) cars.Add(EntityModApi.NetIdOf(sc.gameObject).ToString(ic));
                     rows.Add("{\"i\":" + i++ + ",\"name\":" + Json.Str(m.name) + ",\"type\":" + Json.Str(m.sType.ToString()) + ",\"manual\":" + (m.onlyManual ? "true" : "false") +
                              ",\"noLock\":" + (m.noPhysicsLock ? "true" : "false") + ",\"store\":" + (m.cstore ? "true" : "false") +
                              ",\"pos\":[" + g.x.ToString("F2", ic) + "," + g.y.ToString("F2", ic) + "," + g.z.ToString("F2", ic) + "],\"size\":[" +
@@ -742,7 +742,7 @@ namespace TLDRevamp.Net
                     }
                 var cs = car.car;
                 string eng = cs == null ? "{}" : "{\"throttle\":" + cs.throttle.ToString("F2", ic) + ",\"brake\":" + cs.brake.ToString("F2", ic) + ",\"handbrake\":" + cs.handbrake.ToString("F2", ic) + ",\"clutch\":" + cs.clutch.ToString("F2", ic) + ",\"gear\":" + cs.gear + ",\"running\":" + (cs.Engine != null && cs.Engine.running ? "true" : "false") +
-                    ",\"whlocked\":" + (cs.whlocked ? "true" : "false") + ",\"lockBoxesOn\":\"" + CountActive(cs.whColliders) + "/" + (cs.whColliders != null ? cs.whColliders.Count : 0) + "\"" +
+                    ",\"whlocked\":" + (cs.whlocked ? "true" : "false") + ",\"lockBoxesOn\":\"" + EntityDiag.CountActive(cs.whColliders) + "/" + (cs.whColliders != null ? cs.whColliders.Count : 0) + "\"" +
                     ",\"speed\":" + cs.speed.ToString("F2", ic) + ",\"rbVel\":" + (cs.RB != null ? cs.RB.velocity.magnitude.ToString("F2", ic) : "-1") +
                     ",\"rbSleeping\":" + (cs.RB != null && cs.RB.IsSleeping() ? "true" : "false") + ",\"constraints\":" + Json.Str(cs.RB != null ? cs.RB.constraints.ToString() : "") + "}";
                 return "{\"rootSeats\":" + root.GetComponentsInChildren<seatscript>(true).Length + ",\"bodies\":[" + string.Join(",", rows) + "],\"wheels(name,en,active,motor,brake,rpm,grounded,rb)\":[" + string.Join(",", wrows) + "],\"car\":" + eng + "}";

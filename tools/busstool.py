@@ -127,14 +127,14 @@ def passenger():
         r = L(f"mp sitpassenger {BUS}"); time.sleep(1.5)
         if L("get mainscript.s.player.Bsitting")["value"] is True: break
     print("  joiner sits in a passenger seat:", r, flush=True); time.sleep(2)
-    try: p0 = L(f"get {T}.SeatIgnoredPairs")["value"]; c0 = L(f"get {T}.LocalGetOutCalls")["value"]
+    try: p0 = L(f"get TLDRevamp.Net.EntitySeats.SeatIgnoredPairs")["value"]; c0 = L(f"get TLDRevamp.Net.EntitySeats.LocalGetOutCalls")["value"]
     except RuntimeError: p0 = c0 = None
     for yaw in (-150, -110, -80, -40, 40, 80, 110, 150, 0):
         for pitch in (0, 25):
             L(f"set mainscript.s.player.FxRot {yaw}"); L(f"set mainscript.s.player.FyRot {pitch}"); time.sleep(0.4)
     # the game's own per-frame call while the get-out prompt shows (in this hidden window it didn't show): 20 frames of it
     print("  20 frames of the game's GetOut without the use key:", L("mp getouttry 20"), flush=True)
-    try: p1 = L(f"get {T}.SeatIgnoredPairs")["value"]; c1 = L(f"get {T}.LocalGetOutCalls")["value"]
+    try: p1 = L(f"get TLDRevamp.Net.EntitySeats.SeatIgnoredPairs")["value"]; c1 = L(f"get TLDRevamp.Net.EntitySeats.LocalGetOutCalls")["value"]
     except RuntimeError: p1 = c1 = None
     print(f"  the game's GetOut calls while it sat and looked around: {c1 - c0 if c0 is not None else 'n/a'}", flush=True)
     seated = L("get mainscript.s.player.Bsitting")["value"]
@@ -245,7 +245,7 @@ def katana():
         return math.dist(kp, body) if kp and body else None, kp
     g0, _ = gap(h, rid); print(f"  at rest: the host's katana copy {g0} m from the joiner", flush=True)
     worst, jump, last, vmax = 0.0, 0.0, None, 0.0
-    tp0 = h(f"get {T}.CopyTeleports")["value"]
+    tp0 = h(f"get TLDRevamp.Net.EntityPhysics.CopyTeleports")["value"]
     print("  autodrive:", L(f"autodrive on {SPEED}"), flush=True)
     try:
         for i in range(SECS * 2):
@@ -263,7 +263,7 @@ def katana():
     finally:
         L("autodrive on 0"); until(lambda: bus_speed(L, BUS) < 0.3, 15, 1.0); L("autodrive off")
     verdict("K: THE BUS DROVE", vmax > SPEED * 0.5, f"top speed {vmax:.1f} m/s")
-    tps = h(f"get {T}.CopyTeleports")["value"] - tp0
+    tps = h(f"get TLDRevamp.Net.EntityPhysics.CopyTeleports")["value"] - tp0
     # it is hidden: what matters is that it follows the joiner's stream (about as far behind as the stream's delay while the
     # bus speeds up) and is never put 50 m on at once (CopyTeleports: the copies this machine teleported)
     verdict("K: THE HOST'S COPY OF THE STORED KATANA STAYS WITH THE JOINER", worst < 5.0 and jump < 5.0 and tps == 0,
@@ -341,8 +341,8 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L):
             s_("set kaposztaleves.s.settings.god True")
-            for f in ("ItemSeats", "WorldBreakGibs", "SeatLeaveOnExit", "StoredByTransform"):
-                try: s_(f"set {T}.{f} {not OLD}")
+            for f, field_path in (("ItemSeats", "TLDRevamp.Net.EntitySeats.ItemSeats"), ("WorldBreakGibs", "TLDRevamp.Net.EntityAI.WorldBreakGibs"), ("SeatLeaveOnExit", "TLDRevamp.Net.EntitySeats.SeatLeaveOnExit"), ("StoredByTransform", "TLDRevamp.Net.EntityPhysics.StoredByTransform")):
+                try: s_(f"set {field_path} {not OLD}")
                 except RuntimeError as ex: print(f"  {f}:", ex, flush=True)   # not in the build before the fix
         h("set settingsscript.s.S.BAutoShift True")
         plock = h("get settingsscript.s.S.IPhysicsLock")["value"]

@@ -32,7 +32,7 @@ namespace TLDRevamp.Net
                         var span = leaf.opened - leaf.closed;
                         if (span.sqrMagnitude > .0001f) { fraction += UnityEngine.Mathf.Clamp01(UnityEngine.Vector3.Dot(leaf.current - leaf.closed, span) / span.sqrMagnitude); n++; }
                     }
-                    rows.Add("{\"item\":" + i + ",\"index\":" + j + ",\"open\":" + (d.Bopened ? "true" : "false") + ",\"powered\":" + (bus.Electronics() ? "true" : "false") + ",\"fraction\":" + TLDRevamp.Net.Entities.UN(n > 0 ? fraction / n : 0) + "}");
+                    rows.Add("{\"item\":" + i + ",\"index\":" + j + ",\"open\":" + (d.Bopened ? "true" : "false") + ",\"powered\":" + (bus.Electronics() ? "true" : "false") + ",\"fraction\":" + TLDRevamp.Net.EntityUsables.UN(n > 0 ? fraction / n : 0) + "}");
                 }
             }
             return "{\"doors\":[" + string.Join(",", rows) + "]}";

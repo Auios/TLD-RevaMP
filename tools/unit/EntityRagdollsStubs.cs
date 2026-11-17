@@ -55,6 +55,7 @@ namespace TLDRevamp.Net
     internal static class PlayerLook { internal static uint OutfitHash(int sel, bool[] en, Color[] col) => (uint)sel; }
     public static partial class Entities
     {
+        internal static uint DeathRootNet(GameObject go) => TestSharePendingNet ? 0 : ByNet.Values.FirstOrDefault(e => e.Root?.gameObject == go)?.NetId ?? 0;
         public sealed partial class Ent { public Rag Rag; public bool ReleaseGhost, CargoGhost; public List<Rigidbody> MadeKinematic = new List<Rigidbody>(); }
         public const byte RemoveItem = 35, CompactState = 98;
         internal static readonly HashSet<GameObject> ProxyItems = new HashSet<GameObject>();
@@ -62,7 +63,14 @@ namespace TLDRevamp.Net
         internal static bool TestDeleteDormant, TestShareMiss, TestDeleteThrow, TestSharePendingNet;
         internal static Transform RagdollFrame(Ent e) => e.Root.transform;
         internal static void ShareSpawn(GameObject go) { if (TestTumbleWire) { TestTumbleShareSpawn(go); return; } if (TestShareMiss || ByNet.Values.Any(e => e.Root?.gameObject == go)) return; SpawnShared++; var ts = go.GetComponent<tosaveitemscript>(); ByNet[301] = new Ent { NetId = 301, RootId = ts.idInSave, Root = ts }; }
-        internal static uint NetIdOf(GameObject go) => TestSharePendingNet ? 0 : ByNet.Values.FirstOrDefault(e => e.Root?.gameObject == go)?.NetId ?? 0;
         internal static string DeleteShared(uint net) { if (TestDeleteThrow) throw new Exception("fixture"); if (!TestDeleteDormant) { W.Reset(); W.U8(RemoveItem); W.U32(net); ToServer(W, true); ByNet.Remove(net); } return "ok"; }
+    }
+}
+
+namespace TLDRevamp.Net
+{
+    internal static partial class EntityModApi
+    {
+        internal static uint NetIdOf(GameObject go) => Entities.DeathRootNet(go);
     }
 }

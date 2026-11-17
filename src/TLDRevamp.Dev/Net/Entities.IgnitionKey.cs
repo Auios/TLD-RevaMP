@@ -14,7 +14,7 @@ namespace TLDRevamp.Net
             if (secs > 0f) { ObservedKeyTestCar = c; ObservedKeyTestUntil = Time.time + secs; }
             var eng = c.Engine;
             return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"ignition\":" + (c.ignition ? "true" : "false") + ",\"running\":" + (eng != null && eng.running ? "true" : "false") +
-                   ",\"key\":" + (c.ignitionUsable != null ? "true" : "false") + ",\"sent\":" + KeyHoldsSent + ",\"applied\":" + KeyHoldsApplied + ",\"refused\":" + KeyHoldsRefused + "}";
+                   ",\"key\":" + (c.ignitionUsable != null ? "true" : "false") + ",\"sent\":" + EntitySeats.KeyHoldsSent + ",\"applied\":" + EntitySeats.KeyHoldsApplied + ",\"refused\":" + EntitySeats.KeyHoldsRefused + "}";
         }
 
         /// Test (bridge `mp key <net> <seconds>`): the local player holds car <net>'s ignition key for that long, as

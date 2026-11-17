@@ -51,7 +51,7 @@ namespace TLDRevamp.Net
                 MoveRecord(list, k, pt.pos, pt.rot.Load());   // stored with its parent: placed back together
             }
             else if (attachType > 0) MoveRecord(list, k, gpos, list[k].transform.rot.Load());
-            if (CopyLockSafe) { DropFromLockRecords(data.itemData, pe.RootId); pe.Ip = new PoseInterpolator(); }   // bolted on: in no container, no stale pose
+            if (EntityLocks.CopyLockSafe) { DropFromLockRecords(data.itemData, pe.RootId); pe.Ip = new PoseInterpolator(); }   // bolted on: in no container, no stale pose
             data.itemData.attachable.RemoveAll(a => a != null && a.id == pe.RootId);
             _boltIdx.Invalidate();
             data.itemData.attachable.Add(new save_attachable { id = pe.RootId, attachType = attachType, indexType = indexType, index = index, parentid = parentId,
@@ -76,7 +76,7 @@ namespace TLDRevamp.Net
                 var ids = new List<uint>(rec.IDs); ids.RemoveAt(i); rec.IDs = ids.ToArray();
                 if (rec.poss != null && i < rec.poss.Length) { var l = new List<vector3>(rec.poss); l.RemoveAt(i); rec.poss = l.ToArray(); }
                 if (rec.rots != null && i < rec.rots.Length) { var l = new List<vector3>(rec.rots); l.RemoveAt(i); rec.rots = l.ToArray(); }
-                LockRecordsDropped++;
+                EntityLocks.LockRecordsDropped++;
             }
         }
 
@@ -143,7 +143,7 @@ namespace TLDRevamp.Net
             W.F64(rec.poiid.x); W.F64(rec.poiid.y); W.F64(rec.poiid.z);
             W.F64(rec.lpos.x); W.F64(rec.lpos.y); W.F64(rec.lpos.z);
             W.F64(rec.gpos.x); W.F64(rec.gpos.y); W.F64(rec.gpos.z);
-            WriteAttachPose(W, at);
+            EntityAttachments.WriteAttachPose(W, at);
             ToServer(W, true);
             if (type == AttachReq) AttachReqsSent++; else AttachesSent++;
             SessionLog.Event(type == AttachReq ? "attach-request" : "attach-sent", pe.NetId, parentNet, item: parentIdx, slot: rec.index, from: MyId, epoch: pe.Epoch);
@@ -240,7 +240,7 @@ namespace TLDRevamp.Net
             var poiid = new Vector3d(r.F64(), r.F64(), r.F64());
             var lpos = new Vector3d(r.F64(), r.F64(), r.F64());
             var gpos = new Vector3d(r.F64(), r.F64(), r.F64());
-            bool hasPose = ReadAttachPose(r, out var poseLp, out var poseLq, out var framePath, out var pointLp);
+            bool hasPose = EntityAttachments.ReadAttachPose(r, out var poseLp, out var poseLq, out var framePath, out var pointLp);
             if (r.Bad) return;
             if (framePath != null) EntityDoors.KeepDoorAttach(partNet, framePath, pointLp, poseLp, poseLq);
             else EntityDoors.ForgetStoredDoorAttach(partNet);
@@ -251,7 +251,7 @@ namespace TLDRevamp.Net
             if (!ByNet.TryGetValue(partNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null)
             { SessionLog.Event("attach-refused", partNet, parentNet, slot: index, result: "part absent"); AttachesFailed++; if (AttachFails.Length < 400) AttachFails += "nopart" + partNet + " "; return; }
             var at = pe.Root.attachable;
-            if (at.utanfuto != null) HitchRemoveJoint(at);
+            if (at.utanfuto != null) EntityHitches.HitchRemoveJoint(at);
             uint parentId = 0;
             tosaveitemscript pt = null;
             if (attachType == 1)
@@ -265,25 +265,25 @@ namespace TLDRevamp.Net
                 {
                     LiveUsablesChanged(pe.Root);
                     // already on it here (our own requested attach coming back, a replay on arrival): only the pose
-                    if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) ApplyAttachPose(pe, at, poseLp, poseLq);
+                    if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) EntityAttachments.ApplyAttachPose(pe, at, poseLp, poseLq);
                     SessionLog.Event("attach-applied", partNet, parentNet, item: parentIdx, slot: index, result: "already attached");
                     AttachesSame++; return;
                 }
             }
             // a copy a container here holds: out of it first (its body back), then attached the normal way — attached in
             // the container it kept the lock, and the release rule later took it off the car (partsfar.py near)
-            if (CopyLockSafe && pe.Proxy && pe.Root.P != null && pe.Root.P.physlock != null) { pe.Root.P.UnPhysicsLock(); LocksOpenedForAttach++; }
+            if (EntityLocks.CopyLockSafe && pe.Proxy && pe.Root.P != null && pe.Root.P.physlock != null) { pe.Root.P.UnPhysicsLock(); LocksOpenedForAttach++; }
             if (at.attached)
             {
                 _applyingDetach = true;
-                try { Unmount(at, true); } finally { _applyingDetach = false; }
+                try { EntityLifetimeStreaming.Unmount(at, true); } finally { _applyingDetach = false; }
             }
             if (attachType == 1 && indexType == 2) ClearSlotFor(at, pt, index);
             _applyingAttach = true;
             try { save_attachable.Load(at, indexType, attachType, parentId, poigen, poiid, index, lpos, gpos); }
             finally { _applyingAttach = false; }
             if (!at.attached) { SessionLog.Event("attach-refused", partNet, parentNet, slot: index, result: "loader did not attach"); AttachesFailed++; AttachFails += "load" + partNet + " "; return; }
-            if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) ApplyAttachPose(pe, at, poseLp, poseLq);
+            if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) EntityAttachments.ApplyAttachPose(pe, at, poseLp, poseLq);
             if (pe.Proxy) { ApplyProxyBodies(pe); pe.Ip = new PoseInterpolator(); }
             if (ClearHeldOnAttach && pe.Held) ShowHeld(pe, false);   // bolted on: no more states come — its copy collides again
             if (ClearHeldOnAttach && pe.Stored) ShowStored(pe, false);
@@ -308,7 +308,7 @@ namespace TLDRevamp.Net
                 if (old == null || old == at) continue;
                 bool copy = PartIsProxy(old);
                 _applyingDetach = copy;
-                try { Unmount(old, true); } finally { _applyingDetach = false; }
+                try { EntityLifetimeStreaming.Unmount(old, true); } finally { _applyingDetach = false; }
                 SlotPartsReplaced++;
                 SessionLog.Event("slot-part-replaced", 0, slot: index, result: old.name + " by " + at.name + (copy ? " (copy)" : ""));
                 Plugin.Log.LogWarning($"slot {index} of {parent.name} still had {old.name} here when {at.name} was bolted into it: {old.name} comes off");
@@ -409,16 +409,16 @@ namespace TLDRevamp.Net
         }
 
         public static string AttachStats() => "{\"attachesStored\":" + AttachesStored + ",\"detachesStored\":" + DetachesStored + ",\"placedForAttach\":" + PartsPlacedForAttach + ",\"heldClearedOnAttach\":" + HeldClearedOnAttach + ",\"sent\":" + AttachesSent + ",\"applied\":" + AttachesApplied + ",\"same\":" + AttachesSame + ",\"failed\":" + AttachesFailed
-                                              + ",\"slotPosesSkipped\":" + SlotPosesSkipped + ",\"boltedGroupSkips\":" + BoltedGroupSkips +",\"posesSent\":" + AttachPosesSent + ",\"posesApplied\":" + AttachPosesApplied + ",\"posesBad\":" + AttachPosesBad
-                                              + ",\"poseOffLast\":" + Json.Num(AttachPoseOffLast) + ",\"poseOffMax\":" + Json.Num(AttachPoseOffMax) + ",\"poseAngLast\":" + Json.Num(AttachPoseAngLast)
+                                              + ",\"slotPosesSkipped\":" + SlotPosesSkipped + ",\"boltedGroupSkips\":" + BoltedGroupSkips +",\"posesSent\":" + EntityAttachments.AttachPosesSent + ",\"posesApplied\":" + EntityAttachments.AttachPosesApplied + ",\"posesBad\":" + EntityAttachments.AttachPosesBad
+                                              + ",\"poseOffLast\":" + Json.Num(EntityAttachments.AttachPoseOffLast) + ",\"poseOffMax\":" + Json.Num(EntityAttachments.AttachPoseOffMax) + ",\"poseAngLast\":" + Json.Num(EntityAttachments.AttachPoseAngLast)
                                               + ",\"fails\":" + Json.Str(AttachFails) + ",\"detachSent\":" + DetachSyncsSent + ",\"detachApplied\":" + DetachSyncsApplied + ",\"unmountTrace\":" + Json.Str(UnmountTrace) + "}";
     }
 
     internal static partial class EntityAttachments
     {
-        public static float AttachPoseOffLast, AttachPoseOffMax, AttachPoseAngLast;   // copy vs. the attacher's pose when it arrived (m, °)
+        internal static float AttachPoseOffLast, AttachPoseOffMax, AttachPoseAngLast;   // copy vs. the attacher's pose when it arrived (m, °)
 
-        public static long AttachPosesSent, AttachPosesApplied, AttachPosesBad;
+        internal static long AttachPosesSent, AttachPosesApplied, AttachPosesBad;
 
         public static bool AttachRequests = true;   // A/B: false = before v0.66.4 (a copy bolted by the player stays local)
 

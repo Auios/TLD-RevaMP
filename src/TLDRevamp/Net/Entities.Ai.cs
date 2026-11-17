@@ -36,7 +36,7 @@ namespace TLDRevamp.Net
         /// A/B: false = before: a creature that was ever locked in a car could not die. The lock destroys its limbs' bodies
         /// (ragdollchildpos.Freeze) and the unlock makes new ones, but ragdollactivatescript.RBs still lists the destroyed ones:
         /// SetRagdol throws out of aiscript.Die, on every machine. Not ours to leave: a break made again would throw each time.
-        public static bool RagdollListHealed = true;
+        internal static bool RagdollListHealed = true;
         public static long RagdollListsHealed;
 
         [HarmonyPatch(typeof(ragdollactivatescript), nameof(ragdollactivatescript.SetRagdol))]
@@ -82,7 +82,7 @@ namespace TLDRevamp.Net
             private static bool Prefix(breakablescript __instance, float force)
             {
                 if (!Entities.InSession || _breakFxReplay || !Entities.IsProxy(__instance)) return true;
-                if (Entities.RabbitBreakOnCopy(__instance, force)) return false;   // a rabbit's bite: summed (Entities.Rabbits)
+                if (EntityRabbits.RabbitBreakOnCopy(__instance, force)) return false;   // a rabbit's bite: summed (Entities.Rabbits)
                 // nothing to break: TryBreak(0) on the owner only woke and turned its creature (DamageFrom)
                 if (force <= 0f) { ZeroHitsIgnored++; return false; }
                 if (EntityExplosions.BlastDepth == 0) ForwardHit(__instance, 2, force, _hitDir);   // inside a blast the owner replays the blast
@@ -167,7 +167,7 @@ namespace TLDRevamp.Net
             if (_breakThrewLogs++ < 5) Plugin.Log.LogWarning("[breakable] " + BreakThrewLast);
         }
 
-        public static int BreakTrace;   // test: log the next N breaks with their call stack
+        internal static int BreakTrace;   // test: log the next N breaks with their call stack
         public static int HitTrace;     // test: log the next N hits forwarded to an object's owner, with their call stack
 
         /// The owner's (or a lone machine's) break goes out to the copies.
@@ -218,12 +218,12 @@ namespace TLDRevamp.Net
         /// tools/busstool.py C). Now the gib is shared as objects of their own (as a shared breakable's is), and the others
         /// break their own copy of that piece of the world - the same name within WorldBreakM of where it stood - without
         /// a gib of their own.
-        public static bool WorldBreakGibs = true;   // A/B: false = before v0.69.2
-        public static float WorldBreakM = 1.5f;
+        internal static bool WorldBreakGibs = true;   // A/B: false = before v0.69.2
+        internal static float WorldBreakM = 1.5f;
         public static long WorldBreaksSent, WorldBreaksApplied, WorldBreaksMissed, WorldGibsShared;
         /// A/B: false = before: a piece not generated here when it broke, or a player who joined later, kept it standing.
-        public static bool WorldBreaksKept = true;
-        public static float WorldBreakNearM = 400f;
+        internal static bool WorldBreaksKept = true;
+        internal static float WorldBreakNearM = 400f;
         public const int MaxWorldBreaks = 4096;
         public static long WorldBreaksReplayed, WorldBreaksLate, WorldBreakScans;
         private sealed class KeptBreak { public Vector3d G; public string Name; public float NextTry; public float Wait = 2f; }
@@ -451,7 +451,7 @@ namespace TLDRevamp.Net
 
         /// A/B: false = before: a break reached whoever had the object loaded then. A copy stored far, or a player who got the
         /// object later, stayed unbroken: a break is in no record and no census row.
-        public static bool BreaksKept = true;
+        internal static bool BreaksKept = true;
         public const int MaxBreaksPerObject = 256;
         private const byte BreakKeep = 1, BreakLate = 2;   // BreakFx's last byte
         public static long BreaksReplayed, BreaksAppliedLate;
@@ -595,7 +595,7 @@ namespace TLDRevamp.Net
 
         /// Which remote player each creature here chases (set when it sees them; kept through frames it doesn't).
         private static readonly Dictionary<newAiScript, int> AiChasing = new Dictionary<newAiScript, int>();
-        public static bool AiStickyRemote = true;
+        internal static bool AiStickyRemote = true;
         public static long AiKeptOnRemote;
 
         [HarmonyPatch(typeof(newAiScript), "Update")]
@@ -848,7 +848,7 @@ namespace TLDRevamp.Net
 
         internal static void AiReset() { AiViews.Clear(); AiLastSent.Clear(); AiAll.Clear(); _aiDmgAcc.Clear(); _aiDmgDir.Clear(); _aiDmgFrom.Clear(); AiChasing.Clear(); }
 
-        public static string AiStats() => "{\"breakHitsSent\":" + BreakHitsSent + ",\"breakHitsRun\":" + BreakHitsRun + ",\"copyTouchesIgnored\":" + CopyTouchesIgnored + ",\"zeroHitsIgnored\":" + ZeroHitsIgnored + ",\"breakFxSent\":" + BreakFxSent +
+        internal static string AiStats() => "{\"breakHitsSent\":" + BreakHitsSent + ",\"breakHitsRun\":" + BreakHitsRun + ",\"copyTouchesIgnored\":" + CopyTouchesIgnored + ",\"zeroHitsIgnored\":" + ZeroHitsIgnored + ",\"breakFxSent\":" + BreakFxSent +
                                           ",\"breakFxApplied\":" + BreakFxApplied + ",\"statesSent\":" + AiStatesSent + ",\"statesApplied\":" + AiStatesApplied +
                                           ",\"soundsSent\":" + AiSoundsSent + ",\"soundsApplied\":" + AiSoundsApplied + ",\"remoteSeen\":" + AiRemoteSeen + ",\"keptOnRemote\":" + AiKeptOnRemote +
                                           ",\"remoteAttackFrames\":" + AiRemoteAttackFrames + ",\"damageSent\":" + AiDamageSent +

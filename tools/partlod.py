@@ -72,7 +72,7 @@ def bot_run():
     with game.ProtectedSession():
         game.launch(); game.newgame(20261108); h = Bridge()
         try:
-            h(f"set {T}.LodKeepsPartsOff {not OLD}")
+            h(f"set TLDRevamp.Net.EntityPhysics.LodKeepsPartsOff {not OLD}")
             h("set kaposztaleves.s.settings.god True"); h("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             print(f"  {'OLD (LodKeepsPartsOff off)' if OLD else 'CURRENT BUILD'}", flush=True)
             print("  host:", h("mp host 27070"), flush=True); time.sleep(4); h("mp policy everyone")
@@ -104,9 +104,9 @@ def bot_run():
             print("  A: lift the wheel:", h(f"mp moveitem {wa} 0.3 0"), flush=True)
             y0, low = watch(h, wa, 10)
             verdict("A: THE WHEEL STAYS ON THE GROUND ON THE HOST", g - low < 1.0, f"on the ground at y {g:.2f}, lifted to {y0:.2f}, lowest {low:.2f} in 10 s")
-            print(f"  host: kept {h(f'get {T}.LodPartsOffKept')['value']}, parts' colliders off {h(f'get {T}.PartCollidersOff')['value']}", flush=True)
+            print(f"  host: kept {h(f'get TLDRevamp.Net.EntityPhysics.LodPartsOffKept')['value']}, parts' colliders off {h(f'get TLDRevamp.Net.EntityPhysics.PartCollidersOff')['value']}", flush=True)
         finally:
-            try: h(f"set {T}.LodKeepsPartsOff True"); h("mp stop")
+            try: h(f"set TLDRevamp.Net.EntityPhysics.LodKeepsPartsOff True"); h("mp stop")
             except Exception: pass
             game.quit_game()
     print(f"{sum(ok for _, ok in V)}/{len(V)} passed", flush=True)
@@ -122,7 +122,7 @@ with game.ProtectedSession():
     if not join_both(h, L): sys.exit("THE SECOND PLAYER NEVER JOINED")
     try:
         for s in (h, L):
-            s(f"set {T}.LodKeepsPartsOff {not OLD}")
+            s(f"set TLDRevamp.Net.EntityPhysics.LodKeepsPartsOff {not OLD}")
             s("set kaposztaleves.s.settings.god True"); s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         h("mp policy everyone")
         lid = L("mp entities")["me"]
@@ -176,10 +176,10 @@ with game.ProtectedSession():
         y0, low = watch(h, wb, 10)
         verdict("B: THE WHEEL STAYS ON THE GROUND ON THE HOST", g - low < 1.0, f"on the ground at y {g:.2f}, lifted to {y0:.2f}, lowest {low:.2f} in 10 s")
         for s, who in ((h, "host"), (L, "joiner")):
-            print(f"  {who}: kept {s(f'get {T}.LodPartsOffKept')['value']}, parts' colliders off {s(f'get {T}.PartCollidersOff')['value']} on {s(f'get {T}.PartCollidersOn')['value']}", flush=True)
+            print(f"  {who}: kept {s(f'get TLDRevamp.Net.EntityPhysics.LodPartsOffKept')['value']}, parts' colliders off {s(f'get TLDRevamp.Net.EntityPhysics.PartCollidersOff')['value']} on {s(f'get TLDRevamp.Net.EntityPhysics.PartCollidersOn')['value']}", flush=True)
     finally:
         for s in (h, L):
-            try: s(f"set {T}.LodKeepsPartsOff True")
+            try: s(f"set TLDRevamp.Net.EntityPhysics.LodKeepsPartsOff True")
             except Exception: pass
         try: L("mp stop"); h("mp stop")
         except Exception: pass

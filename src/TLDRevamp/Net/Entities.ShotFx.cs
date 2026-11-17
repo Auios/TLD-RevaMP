@@ -347,7 +347,7 @@ namespace TLDRevamp.Net
         private static Vector3 RV3(NetReader r) => new Vector3(r.F32(), r.F32(), r.F32());
         private static Quaternion RQ(NetReader r) => new Quaternion(r.F32(), r.F32(), r.F32(), r.F32());
 
-        public static string ShotFxStats() => "{\"sent\":" + ShotFxSent + ",\"applied\":" + ShotFxApplied + ",\"decals\":" + ShotFxDecals +
+        internal static string ShotFxStats() => "{\"sent\":" + ShotFxSent + ",\"applied\":" + ShotFxApplied + ",\"decals\":" + ShotFxDecals +
                                               ",\"holes\":" + ShotFxHoles + ",\"unplaced\":" + ShotFxUnplaced + ",\"noGun\":" + ShotFxNoGun + ",\"displayHoles\":" + DisplayHoles.Count + "}";
     }
 }

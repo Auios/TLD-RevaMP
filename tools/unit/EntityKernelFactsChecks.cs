@@ -42,7 +42,7 @@ static partial class EntitySplitTest
         KF.Kernel.ByNet[10] = new KF.Kernel.Ent { NetId = 10, Root = far };
         KF.Kernel.ByNet[11] = new KF.Kernel.Ent { NetId = 11 };
         var leaf = new KF.GameObject(); leaf.transform.parent = child.transform;
-        Row("mod-null", EntityModApi.NetIdOf(null)); Row("mod-nearest-shared-ancestor", EntityModApi.NetIdOf(leaf));
+        Row("mod-null", EntityModApi.NetIdOf((KF.GameObject)null)); Row("mod-nearest-shared-ancestor", EntityModApi.NetIdOf(leaf));
         Row("mod-missing", EntityModApi.GameObjectOf(12) == null); Row("mod-dormant", EntityModApi.GameObjectOf(11) == null);
         Row("mod-find", ReferenceEquals(EntityModApi.GameObjectOf(8), first.gameObject));
         KF.Kernel.InSession = false; Row("mod-share-no-session", EntityModApi.ShareGameObject(leaf));
@@ -71,17 +71,11 @@ static partial class EntitySplitTest
         string path = "tools/unit/EntityKernelFactsRows.txt";
         GoldenRows.UpdateText(path, string.Join("\r\n", rows) + "\r\n");
         Check(rows.SequenceEqual(File.ReadAllLines(path)), "slice 30 fixed rows match expected rows");
-        CoreMembers.Register();
         foreach (var owner in new[] { typeof(EntityLookup), typeof(EntityNumbers), typeof(EntityMountFacts), typeof(EntityGround), typeof(EntityModApi), typeof(EntityPlayerSave) })
         {
             Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, owner.Name + " is internal static");
-            foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is FieldInfo || m is PropertyInfo || m is MethodInfo))
-            {
-                bool retained = typeof(Entities).GetMember(member.Name, Static).Length > 0;
-                foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." }) Check(Reflect.MemberPath(prefix + member.Name) == (retained ? prefix + member.Name : owner.FullName + "." + member.Name), "kernel helper alias " + prefix + member.Name);
-            }
         }
-        Check(BridgeReflect.Set("Entities.GroundLayers", "road,sand") == "\"road,sand\"" && EntityGround.GroundLayers == "road,sand", "historical ground setting writes the sole owner");
+        Check(BridgeReflect.Set("EntityGround.GroundLayers", "road,sand") == "\"road,sand\"" && EntityGround.GroundLayers == "road,sand", "real owner ground setting writes the sole owner");
         EntityGround.GroundLayers = "sand,sand2,sand3,road";
         KernelBoundaryChecks();
     }

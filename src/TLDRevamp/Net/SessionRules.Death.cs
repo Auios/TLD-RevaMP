@@ -100,7 +100,7 @@ namespace TLDRevamp.Net
                 if (anchor)
                 {
                     try { g = DeathAnchorPoint(__instance, seated); } catch { Death.Reject(DeathReject.NotFinite); return; }
-                    if (!Entities.Finite(g)) { Death.Reject(DeathReject.NotFinite); return; }
+                    if (!EntityNumbers.Finite(g)) { Death.Reject(DeathReject.NotFinite); return; }
                     yaw = __instance.BodyRot != null ? __instance.BodyRot.eulerAngles.y : __instance.transform.eulerAngles.y;
                     if (double.IsNaN(yaw) || double.IsInfinity(yaw)) yaw = 0;
                 }
@@ -281,7 +281,7 @@ namespace TLDRevamp.Net
                     Plugin.Log.LogWarning("death anchor: not restorable: " + e.Message);
                     return;
                 }
-                if (!Entities.Finite(at)) { _pending = AnchorOutcome.NotRestorable; return; }
+                if (!EntityNumbers.Finite(at)) { _pending = AnchorOutcome.NotRestorable; return; }
 
                 // Respawn runs Revive then DropAll. Put the player and every carry frame at the anchor first; the
                 // original DropAll then performs the only item release. Revive resets the ragdoll in between, so

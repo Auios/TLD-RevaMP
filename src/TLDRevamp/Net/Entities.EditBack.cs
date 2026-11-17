@@ -8,12 +8,12 @@ namespace TLDRevamp.Net
         /// An edit the server refused is already on its sender's screen, and the owner's record hasn't changed, so its next
         /// resync skips it, and the census doesn't compare a knob's or a door's value: the two stayed different until the owner
         /// moved it. The server asks the owner for that record again, after the sender's EditHold (a record inside it is ignored).
-        public static bool RefusedEditsComeBack = true;   // A/B: false = before
+        internal static bool RefusedEditsComeBack = true;   // A/B: false = before
         public static long RefusedEditsAsked, RefusedEditsResent;
         /// The same hole for an edit that went through: a record that reaches the sender inside its EditHold is ignored, and the
         /// owner counts it as sent. The owner changing another knob while a copy's edit is on its way left that knob different
         /// for good (aud-fight, 2 of 10 rounds; --only aud-held). So every edit gets one record after its sender's hold.
-        public static bool HeldRecordsComeBack = true;   // A/B: false = before
+        internal static bool HeldRecordsComeBack = true;   // A/B: false = before
         private const int EditBackMax = 256;
         private static readonly Dictionary<ulong, float> _editBack = new Dictionary<ulong, float>();
         private static readonly List<ulong> _editBackDue = new List<ulong>();
@@ -47,10 +47,7 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        public static bool RefusedEditsComeBack { get => EntityEditBack.RefusedEditsComeBack; set => EntityEditBack.RefusedEditsComeBack = value; }
-        public static bool HeldRecordsComeBack { get => EntityEditBack.HeldRecordsComeBack; set => EntityEditBack.HeldRecordsComeBack = value; }
         private static void EditBackLater(SEnt se, int idx, bool malformed) => EntityEditBack.EditBackLater(se.NetId, idx, malformed);
         private static void EditBackAfterHold(SEnt se, int idx) => EntityEditBack.EditBackAfterHold(se.NetId, idx);
-        internal static void EditBackTick() => EntityEditBack.EditBackTick();
     }
 }

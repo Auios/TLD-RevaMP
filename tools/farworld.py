@@ -149,8 +149,8 @@ def farstore(label, sides, sx, sz):
 # --set A=v,B=v : TLDRevamp field values set on both machines before every session (re-applied after the restart);
 # --old66 : every v0.66.x fix off (A/B)
 OLD66 = ("Net.PoseInterpolator.FreshAfterIdle=False,Net.Entities.FarMoveAttached=False,Net.Entities.StoredAttach=False,"
-         "Net.Entities.ClearHeldOnAttach=False,Net.Entities.ReshareSurvivors=False,Net.Entities.CopyContainersInert=False,"
-         "Net.Entities.ScopedEdits=False,Net.Entities.CopyStartFreezeOff=False")
+         "Net.Entities.ClearHeldOnAttach=False,Net.Entities.ReshareSurvivors=False,Net.EntityLocks.CopyContainersInert=False,"
+         "Net.Entities.ScopedEdits=False,Net.EntityLocks.CopyStartFreezeOff=False")
 SETS = [kv.split("=") for kv in ((sys.argv[sys.argv.index("--set") + 1] if "--set" in sys.argv else "") + ("," + OLD66 if "--old66" in sys.argv else "")).split(",") if kv]
 
 def host_and_join(b, L):

@@ -19,7 +19,7 @@ namespace TLDRevamp.Net
     /// the owner's to count.
     internal static partial class EntityCarTuning
     {
-        public static float CopyFluidCheckS = 1f, CopyFluidToleranceL = 0.01f;
+        internal static float CopyFluidCheckS = 1f, CopyFluidToleranceL = 0.01f;
         public static long CopyFluidLossSkipped, CopyFluidsRestored, CopyFluidChecks;
         private static readonly HashSet<mainscript.fluidcontainer> CopyFluidContainers = new HashSet<mainscript.fluidcontainer>();
         /// Per copy item (local idInSave: it survives the game streaming the item out and back in): its tanks as the owner's
@@ -64,7 +64,7 @@ namespace TLDRevamp.Net
             foreach (var it in e.Items)
             {
                 if (it == null) continue;
-                if (!proxy) { CopyTankTruth.Remove(it.idInSave); Entities.ForgetTankEditTruth(it.idInSave); }
+                if (!proxy) { CopyTankTruth.Remove(it.idInSave); EntityEdits.ForgetTankEditTruth(it.idInSave); }
                 else if (!CopyTankTruth.ContainsKey(it.idInSave)) CopyTanksAreNow(it);
             }
         }
@@ -102,7 +102,7 @@ namespace TLDRevamp.Net
                         CopyFluidContainers.Add(t.F);
                         if (Entities.TryTankFilledAt(t, out float at) && Time.realtimeSinceStartup - at < 2f) pending = true;   // a player filling it: an edit is on its way
                     }
-                    if (!pending) Entities.ForgetTankEditTruth(it.idInSave);
+                    if (!pending) EntityEdits.ForgetTankEditTruth(it.idInSave);
                     if (pending || !it.loaded || !CopyTankTruth.TryGetValue(it.idInSave, out var truth)) continue;
                     CopyFluidChecks++;
                     for (int i = 0; i < it.tanks.Count; i++)

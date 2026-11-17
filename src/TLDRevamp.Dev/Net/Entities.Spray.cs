@@ -12,7 +12,7 @@ namespace TLDRevamp.Net
         public static string SprayHold(float secs)
         {
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            var sp = HeldSpray(pl);
+            var sp = EntityEffects.HeldSpray(pl);
             if (sp == null) return "{\"error\":\"no spray can in hand\"}";
             ObservedHoldUntil = Time.time + secs;
             return "{\"holding\":" + secs.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"paint\":" + (sp.hasPaint ? "true" : "false") + "}";
@@ -42,14 +42,14 @@ namespace TLDRevamp.Net
             if (u == null) foreach (var x in e.Root.GetComponentsInChildren<usablescript>(true)) if (x.turnable) { u = x; break; }
             if (u == null) return "{\"error\":\"no switch\"}";
             u.Turn();
-            return LampState(net);
+            return EntityEffects.LampState(net);
         }
         internal static void SprayHoldTick()
         {
             if (_holdUntil <= 0f) return;
             if (Time.time > _holdUntil) { _holdUntil = 0f; return; }
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            var sp = HeldSpray(pl);
+            var sp = EntityEffects.HeldSpray(pl);
             if (sp != null) sp.Fire(pl.Th);
         }
 

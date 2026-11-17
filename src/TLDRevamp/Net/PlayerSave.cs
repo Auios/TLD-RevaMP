@@ -245,7 +245,7 @@ namespace TLDRevamp.Net
                     var m = ItemSnapshot.SpawnGroup(d);
                     if (!m.TryGetValue(rootOld, out uint rootNew) || !savedatascript.s.items.TryGetValue(rootNew, out var root) || root == null) continue;
                     map[oldId] = rootNew;
-                    // what they wore is shared once it is on their head again (the share then says so: Entities.WornInShare)
+                    // what they wore is shared once it is on their head again (the share then says so: EntityHands.WornInShare)
                     if (ShareWornLate && !dead && wornOld.Contains(oldId)) shareAfterWear.Add(root);
                     else Entities.ShareItem(root, null);
                     ItemsRestored++;
@@ -314,7 +314,7 @@ namespace TLDRevamp.Net
             _recsScene = _sceneLoads;
             _recs.Clear();
             if (!Enabled) return;
-            var save = Entities.WorldSaveFile;
+            var save = EntityWorldLeases.WorldSaveFile;
             if (save == null) { Plugin.Log.LogInfo("player save: new world, no records"); return; }
             try
             {
@@ -353,7 +353,7 @@ namespace TLDRevamp.Net
         {
             if (!Enabled || steam == 0) return;   // no player save without an authenticated Steam account (MpServer.Identify)
             string json = r.Str(); var g = Protocol.ReadPos(r); bool dead = r.U8() == 1; int n = (int)r.VarU32();
-            if (r.Bad || n < 0 || n > MaxItems || !Entities.Finite(g)) { RecordsRefused++; return; }
+            if (r.Bad || n < 0 || n > MaxItems || !EntityNumbers.Finite(g)) { RecordsRefused++; return; }
             var rec = new Rec { Name = name ?? "", Json = json ?? "", G = g, Dead = dead, Present = true, PlayerId = from };
             for (int i = 0; i < n; i++)
             {
@@ -550,7 +550,7 @@ namespace TLDRevamp.Net
                         if (rec.Present)
                             foreach (var it in rec.Items)
                                 if (it.Net != 0 && Entities.ServerInPocket(it.Net, rec.PlayerId)) Entities.LocalIdsOf(it.Net, drop);
-                    if (drop.Count > 0) SaveFiltered += Entities.DropFromSave(_data.itemData, drop);
+                    if (drop.Count > 0) SaveFiltered += EntityPlayerSave.DropFromSave(_data.itemData, drop);
                 }
                 catch (Exception e) { Plugin.Log.LogWarning("player save: pocket items not kept out of the save: " + e.Message); }
                 if (!WithSaveFile) WriteFile(SeedFilePath(_seed));

@@ -38,12 +38,12 @@ namespace TLDRevamp.Net
                 if (!ObservedEntities.TryGetValue(net, out var e) || e.Root == null || e.Root.car == null || e.PartIndex >= 0)
                     return _cars.TryGetValue(net, out car) && (Mp.Server == null || ObservedServerEntity(net));
                 var t = e.Root.transform;
-                var seats = VehicleSeats(e.Root);
+                var seats = EntitySeats.VehicleSeats(e.Root);
                 int d = System.Array.FindIndex(seats, s => s != null && s.driverSeat0);
                 if (d < 0) return false;
                 // in the car's frame without its scale (the bot rotates and adds, as a world pose does)
                 var sp = seats[d].sitPos != null ? seats[d].sitPos.position : seats[d].transform.position;
-                car.DriverSeat = d; car.Wheels = WheelsOf(e).Length;
+                car.DriverSeat = d; car.Wheels = EntityProxyPresentation.WheelsOf(e).Length;
                 car.SeatLocal = Quaternion.Inverse(t.rotation) * (sp - t.position);
                 // the door: beside the seat, outward (a player gets in and out there)
                 car.DoorLocal = car.SeatLocal + new Vector3(car.SeatLocal.x <= 0f ? -1.3f : 1.3f, -0.4f, 0f);
@@ -57,7 +57,7 @@ namespace TLDRevamp.Net
                 if (!ObservedEntities.TryGetValue(carNet, out var ce) || ce.Root == null || ce.Root.car == null) return;
                 var car = ce.Root.car;
                 foreach (var e in ObservedEntities.Values)
-                    if (e.Root != null && e.Root.car == null && LooseItem(e) && CargoBody(e) && !e.Held && !e.Stored && e.WornBy < 0 && !e.CrashTaking && InCar(car, e, out _))
+                    if (e.Root != null && e.Root.car == null && EntityCargoInteraction.LooseItem(e) && EntityProxyPresentation.CargoBody(e) && !e.Held && !e.Stored && e.WornBy < 0 && !e.CrashTaking && EntityCargoInteraction.InCar(car, e, out _))
                         into.Add(e.NetId);
             }
 

@@ -64,7 +64,7 @@ namespace TLDRevamp.Net
         }
         internal static string OverlayAge(Ent e, double age)
         {
-            bool rides = e.PoseLocked || OverlayBolted(e) || AttachedCarPart(e) || RidesOwnersContainer(e) || e.CarriedBy != 0;
+            bool rides = e.PoseLocked || OverlayBolted(e) || EntityProxyPresentation.AttachedCarPart(e) || EntityLocks.RidesOwnersContainer(e) || e.CarriedBy != 0;
             uint parent = e.LockFrame != 0 ? e.LockFrame : e.CarriedBy != 0 ? e.CarriedBy : e.ParentNet;
             bool held = e.Proxy ? e.Held : IsHeld(e.Root), stored = e.Proxy ? e.Stored : IsStored(e.Root);
             if (!e.Proxy && !held && !stored && !rides && !e.SentAtRest) return "simulated locally";
@@ -77,7 +77,7 @@ namespace TLDRevamp.Net
             if (OverlayRest == null) OverlayRest = new OverlayRestProbe();
             // Observe already-produced states only. Visual/control changes, quiet tails and driven keepalives are expected.
             bool rest = !e.Proxy && e.SentAtRest && !e.Driven && !e.Held && !e.Stored && !e.PoseLocked && !e.QuietTail.Active &&
-                !IsHeld(e.Root) && !IsStored(e.Root) && !OverlayBolted(e) && !AttachedCarPart(e) && !RidesOwnersContainer(e) && now - e.OwnerAt > 2;
+                !IsHeld(e.Root) && !IsStored(e.Root) && !OverlayBolted(e) && !EntityProxyPresentation.AttachedCarPart(e) && !EntityLocks.RidesOwnersContainer(e) && now - e.OwnerAt > 2;
             int signature = e.SentSigKey ^ e.LastSentPos.x.GetHashCode() ^ e.LastSentPos.y.GetHashCode() ^ e.LastSentPos.z.GetHashCode() ^
                 e.LastSentRot.x.GetHashCode() ^ e.LastSentRot.y.GetHashCode() ^ e.LastSentRot.z.GetHashCode() ^ e.LastSentRot.w.GetHashCode();
             unchecked { for (int i = 0; i < e.SentStateLength; i++) signature = signature * 31 + e.SentState[i]; }
@@ -88,10 +88,10 @@ namespace TLDRevamp.Net
         internal static string OverlaySendState(Ent e)
         {
             if (e.HitchWaiting) return "waiting for hitch";
-            if (OverlayBolted(e) || AttachedCarPart(e)) return "attached (no states)";
+            if (OverlayBolted(e) || EntityProxyPresentation.AttachedCarPart(e)) return "attached (no states)";
             var t = OverlayFrame(e);
             var q = t.rotation;
-            if ((CompactGround(e) || CompactFlyer(e)) && !IsHeld(e.Root) && !IsStored(e.Root) && !IsSpraying(e.Root))
+            if ((EntityProxyPresentation.CompactGround(e) || EntityProxyPresentation.CompactFlyer(e)) && !IsHeld(e.Root) && !IsStored(e.Root) && !EntityEffects.IsSpraying(e.Root))
                 q = Quaternion.Euler(0, q.eulerAngles.y, 0);
             bool changed = (mainscript.GlobalFromUnityPos(t.position) - e.LastSentPos).sqrMagnitude > BandwidthRules.PositionM * BandwidthRules.PositionM ||
                            Quaternion.Angle(q, e.LastSentRot) > BandwidthRules.RotationDeg;
@@ -103,7 +103,7 @@ namespace TLDRevamp.Net
         {
             if (e.TelemetrySnapFrame == Time.frameCount) return "snap";
             if (e.PoseLocked) return "in frame";
-            if (OverlayBolted(e) || AttachedCarPart(e) || RidesOwnersContainer(e)) return "rides parent";
+            if (OverlayBolted(e) || EntityProxyPresentation.AttachedCarPart(e) || EntityLocks.RidesOwnersContainer(e)) return "rides parent";
             if (e.Physical) return "physical";
             string mode = e.Ip == null || !e.Ip.Ready ? "waiting for sample" : WorldOverlayLogic.Mode(e.Ip.TelemetryMode);
             return e.CarriedBy != 0 ? "in frame / " + mode : mode;
@@ -132,7 +132,7 @@ namespace TLDRevamp.Net
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl != null)
             {
-                LocalSeat(out uint seated, out _);
+                EntitySeats.LocalSeat(out uint seated, out _);
                 OverlayRider(pl.transform, MyId, seated != 0 ? seated : ObservedFooting, seated != 0, null);
             }
             RemoteOverlays.OverlayLinks();

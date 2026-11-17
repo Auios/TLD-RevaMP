@@ -841,7 +841,7 @@ The nine fixed coarse columns add 5.625 MiB across the live frame ring and its f
 
 `default` is the game's hottest scripts in the profiled scenes (car, wheel, item, AI, world generation, player) and
 RevaMP's own per-frame work (`Runner.Update/FixedUpdate/LateUpdate/OnGUI`, `Net.Mp.Tick`, `Net.Entities.FixedTick`,
-`Net.Entities.LateSample`, `TinyRendererCull.Tick`); `ScriptProfiler.DefaultTimers` holds the list. `all` is every
+`Net.EntityDoors.LateSample`, `TinyRendererCull.Tick`); `ScriptProfiler.DefaultTimers` holds the list. `all` is every
 Update/LateUpdate/FixedUpdate/OnGUI and physics callback (OnCollision*/OnTrigger*) declared in the game.
 Each timed method gets a Harmony prefix (first of all patches) and postfix (last), so a fix's own prefix, including
 one that skips the original, counts in that method's time. Times are inclusive (a timed method called by another

@@ -74,12 +74,11 @@ static class MessageTableTest
             return Regex.Match(bodies, @"void " + name + @"\(.*?\n        \}\n", RegexOptions.Singleline).Value;
         }
         string server = Method("Entities", "ServerReceive"), client = Method("Entities", "ClientReceive");
-        Check("ContactImpulse: kernel keeps byte decoding and finite guard", client.Contains("if (!r.Bad && Finite(imp) && Finite(gp)) ApplyContactImpulse(net, imp, gp);") && server.Contains("if (!r.Bad && Finite(imp) && Finite(gp)) ServerContactImpulse(from, net, imp, gp);"));
-        Check("ContactImpulse: facade reaches physics owner", src.Values.Any(s => s.Contains("private static void ApplyContactImpulse(uint net, Vector3 impulse, Vector3d globalPoint) => EntityPhysics.ApplyContactImpulse(net, impulse, globalPoint);")) && Method("EntityPhysics", "ApplyContactImpulse").Contains("rb.AddForceAtPosition(impulse, point, ForceMode.Impulse)"));
+        Check("ContactImpulse: kernel keeps byte decoding and finite guard", client.Contains("if (!r.Bad && EntityNumbers.Finite(imp) && EntityNumbers.Finite(gp)) EntityPhysics.ApplyContactImpulse(net, imp, gp);") && server.Contains("if (!r.Bad && EntityNumbers.Finite(imp) && EntityNumbers.Finite(gp)) ServerContactImpulse(from, net, imp, gp);"));
+        Check("ContactImpulse: physics owner applies impulse", Method("EntityPhysics", "ApplyContactImpulse").Contains("rb.AddForceAtPosition(impulse, point, ForceMode.Impulse)"));
         Check("crash arbitration remains kernel owned", Method("Entities", "ServerCrashClaim").Contains("Server.TryGetValue(net") && Method("Entities", "ServerCrashRelease").Contains("ReturnCrash(se)"));
-        Check("lifetime: member-gone handlers retain kernel authority", server.Contains("ServerMemberGone(from, r);") && client.Contains("ApplyMemberGone(r);") && Method("Entities", "ServerMemberGone").Contains("Server.TryGetValue(net") && Method("Entities", "ApplyMemberGone").Contains("ByNet.TryGetValue(net"));
-        Check("lifetime: member-gone writer belongs to streaming owner", Method("EntityLifetimeStreaming", "WriteMemberGone").Contains("w.U8(Entities.MemberGone)") && src.Values.Any(s => s.Contains("private static void WriteMemberGone(NetWriter writer, uint net, int index) => EntityLifetimeStreaming.WriteMemberGone(writer, net, index);")));
-        Check("PushIn: retained client facade routes to cargo owner", client.Contains("case PushIn: ApplyPush(r);") && src.Values.Any(s => s.Contains("private static void ApplyPush(NetReader r) => EntityCargoInteraction.ApplyPush(r);")) && Method("EntityCargoInteraction", "ApplyPush").Contains("r.F32()"));
+        Check("lifetime: member-gone writer belongs to streaming owner", Method("EntityLifetimeStreaming", "WriteMemberGone").Contains("w.U8(Entities.MemberGone)"));
+        Check("PushIn: client routes to cargo owner", client.Contains("case PushIn: EntityCargoInteraction.ApplyPush(r);") && Method("EntityCargoInteraction", "ApplyPush").Contains("r.F32()"));
         Check("PushIn: raw owner relay stays on kernel", server.Contains("case PushIn: ServerPush(from, r);") && Method("Entities", "ServerPush").Contains("Server.TryGetValue(net"));
         Check("attachments: wire handlers retain kernel authority", new[] { "ServerAttach", "ServerAttachReq", "ServerDetachSync", "ServerPartOff" }.All(name => server.Contains(name + "(") && Method("Entities", name).Contains("r.U32()")));
         Check("attachments: client sync and request retain kernel lookup", new[] { "ApplyAttachSync", "ApplyAttachReq" }.All(name => client.Contains(name + "(") && Method("Entities", name).Contains("ByNet.TryGetValue")));
@@ -174,7 +173,7 @@ static class MessageTableTest
         }
         foreach (string gap in KnownGaps) Check("the known gap is in the table: " + gap, rows.Any(r => r.Name == gap));
 
-        Check("PoiCensus: original dispatch reaches repair owner", server.Contains("case PoiCensus: ServerPoiCensus(from, r);") && src.Values.Any(s => s.Contains("internal static void ServerPoiCensus(int from, NetReader r) => EntityRepair.ServerPoiCensus(from, r);")));
+        Check("PoiCensus: dispatch reaches repair owner", server.Contains("case PoiCensus: EntityRepair.ServerPoiCensus(from, r);"));
         Check("PoiCensus: repair owner decodes and validates reports", Method("EntityRepair", "ServerPoiCensus").Contains("X = r.F64()") && Method("EntityRepair", "ServerPoiCensus").Contains("if (r.Bad || !Entities.IsFinite("));
         Check("CensusRepair: handlers retain kernel authority and copy lookup", server.Contains("case CensusRepair: ServerCensusRepair(from, r);") && client.Contains("case CensusRepair: ApplyCensusRepair(r);") && Method("Entities", "ServerCensusRepair").Contains("Server.TryGetValue(net") && Method("Entities", "ApplyCensusRepair").Contains("ByNet.TryGetValue(net"));
 

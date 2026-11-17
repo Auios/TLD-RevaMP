@@ -88,13 +88,11 @@ static partial class EntitySplitTest
         Check(!ReferenceEquals(Field(effects, "W"), Field(blasts, "W")) && !ReferenceEquals(Field(effects, "WS"), Field(blasts, "WS")) && !ReferenceEquals(Field(effects, "W"), Field(effects, "WS")), "effects and explosions own distinct capture and relay writers");
         Check(typeof(Entities).GetField("_replaying", Static) == null && typeof(Entities).GetField("_blastDepth", Static) == null && typeof(Entities).GetField("_spraying", Static) == null && typeof(Entities).GetField("GunHits", Static) == null, "effect and blast state has one owner");
 
-        CoreMembers.Register();
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.ShotFxSent", "23") == "23" && EntityEffects.ShotFxSent == 23, "shot counter alias writes its owner");
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.ExplosionsSent", "29") == "29" && EntityExplosions.ExplosionsSent == 29, "blast counter alias writes its owner");
-        Check(BridgeReflect.Get("TLDRevamp.Net.Entities._blastDepth") == "0", "private blast guard alias");
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.SprayFx", "False") == "false" && !EntityEffects.SprayFx, "spray switch forwards to its owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityEffects.ShotFxSent", "23") == "23" && EntityEffects.ShotFxSent == 23, "shot counter owner path writes its owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityExplosions.ExplosionsSent", "29") == "29" && EntityExplosions.ExplosionsSent == 29, "blast counter owner path writes its owner");
+        Check(BridgeReflect.Get("TLDRevamp.Net.EntityExplosions._blastDepth") == "0", "private blast guard owner path");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityEffects.SprayFx", "False") == "false" && !EntityEffects.SprayFx, "spray switch forwards to its owner");
         EntityEffects.SprayFx = true;
-        Check(Entities.ShotFxStats() == EntityEffects.ShotFxStats() && Entities.ExplosionStats() == EntityExplosions.ExplosionStats(), "compiled stats forwarders preserve JSON");
 
         foreach (var row in new[] { ("sound0", effects, "ServerPlayerSound"), ("sound1", effects, "ServerPlayerSound"), ("shotObject", effects, "ServerShotFx"), ("explosion", blasts, "ServerExplosionFx") })
         {
@@ -146,8 +144,8 @@ static partial class EntitySplitTest
 
         var can = new tosaveitemscript { Held = true, ChildComponent = new sprayscript { valve = .2f, hasPaint = true } };
         var spray = (sprayscript)can.ChildComponent; var e = new Entities.Ent { Root = can, Proxy = true };
-        Check(Entities.IsSpraying(can), "held spray above valve threshold is captured");
-        can.Held = false; Check(!Entities.IsSpraying(can), "unheld spray is not captured");
+        Check(EntityEffects.IsSpraying(can), "held spray above valve threshold is captured");
+        can.Held = false; Check(!EntityEffects.IsSpraying(can), "unheld spray is not captured");
         long shown = EntityEffects.SprayShown; EntityEffects.ShowSpraying(e, true); EntityEffects.ShowSpraying(e, true);
         int devTicks = 0; DevHooks.SprayTick = () => devTicks++;
         EntityEffects.SprayTick(.1f); Check(devTicks == 1 && spray.firing && spray.valve > .2f && EntityEffects.SprayShown == shown + 1, "spray hook precedes copy valve display and duplicate starts do not count twice");

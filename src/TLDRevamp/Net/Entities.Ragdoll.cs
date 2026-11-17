@@ -17,7 +17,7 @@ namespace TLDRevamp.Net
     /// game's way first (newAiScript / aiscript.Die). Grabbing a limb of a copy takes the body (pickup claim).
     internal static partial class EntityRagdolls
     {
-        public static long RagdollStatesSent, RagdollStatesApplied, ModLimpErrors;
+        internal static long RagdollStatesSent, RagdollStatesApplied, ModLimpErrors;
         private static readonly HashSet<Ent> RagdollCopies = new HashSet<Ent>();
         internal static System.Collections.Generic.IReadOnlyCollection<TLDRevamp.Net.Entities.Ent> ObservedRagdollCopies => RagdollCopies;
         private static readonly Dictionary<GameObject, Ent> RagdollLimbOwner = new Dictionary<GameObject, Ent>();
@@ -28,11 +28,11 @@ namespace TLDRevamp.Net
         /// and a lost Delta costs nothing). Before (false): every limb in every state whenever one moved 1 cm / 0.3 deg -
         /// a dead rabbit lying still sent 3.6 KB/s (14 limbs, 12.6 states a second) as an ear twitched (user, 2026-10-22).
         /// Vehicles' limb sets keep the frame-relative form (their frame is the moving car).
-        public static bool RagdollDelta = true;
-        public static float RagdollKeyEveryS = 2f;          // a fresh Key while streaming: bounds what a lost Key costs a copy
-        public static float RagdollDeltaMaxShare = 0.5f;    // a Delta bigger than this share of a Key goes as a Key (twitching rabbit, 2026-10-22: 0.25 2.6 KB/s, 0.5 1.1, 0.75 1.9)
-        public static long RagdollKeysSent, RagdollDeltasSent, RagdollFramesSent, RagdollLimbsSent, RagdollBlockBytes;
-        public static long RagdollDeltasNoKey, RagdollHashMismatch, RagdollKeysIn, RagdollDeltasIn, RagdollLateKeys, RagdollReleasedOnNone;
+        internal static bool RagdollDelta = true;
+        internal static float RagdollKeyEveryS = 2f;          // a fresh Key while streaming: bounds what a lost Key costs a copy
+        internal static float RagdollDeltaMaxShare = 0.5f;    // a Delta bigger than this share of a Key goes as a Key (twitching rabbit, 2026-10-22: 0.25 2.6 KB/s, 0.5 1.1, 0.75 1.9)
+        internal static long RagdollKeysSent, RagdollDeltasSent, RagdollFramesSent, RagdollLimbsSent, RagdollBlockBytes;
+        internal static long RagdollDeltasNoKey, RagdollHashMismatch, RagdollKeysIn, RagdollDeltasIn, RagdollLateKeys, RagdollReleasedOnNone;
         private static readonly RagdollWire.Block _ragBlock = new RagdollWire.Block();
 
         /// The limbs' names in order, hashed: both machines must mean the same limbs by the same index.
@@ -329,7 +329,7 @@ namespace TLDRevamp.Net
                         _ragDrop.Add(e); continue;
                     }
                 }
-                var g = e.Rag; var t = e.Root.transform; bool byBody = Entities.LimbsByBody(e);
+                var g = e.Rag; var t = e.Root.transform; bool byBody = EntityPhysics.LimbsByBody(e);
                 var framePos = t.position; var frameRot = t.rotation;
                 if (e.Root.car == null && g.FrameHas)
                 {
@@ -393,7 +393,7 @@ namespace TLDRevamp.Net
 
         /// Diagnostics (bridge `mp ragdolls`): every item prefab with limbs (tosaveitemscript.ragdollPos) or a creature
         /// ragdoll (ragdollactivatescript): [index, name, limbs, limb pickupables, creature bodies, kind].
-        public static string RagdollPrefabs()
+        internal static string RagdollPrefabs()
         {
             var rows = new List<string>();
             var db = itemdatabase.s != null ? itemdatabase.s.items : null;

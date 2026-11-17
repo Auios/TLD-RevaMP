@@ -91,9 +91,9 @@ namespace TLDRevamp.Diagnostics
             _gapSum += gap; if (gap > _gapMax) _gapMax = gap;
             Vector3 from = p.Cam.transform.position;
             // the ray as the game casts it now: from the vehicle's physics frame while seated in a copy (Entities.SeatAim)
-            if (Net.Entities.SeatAimFrame(out var frame, out var body))
+            if (Net.EntitySeats.SeatAimFrame(out var frame, out var body))
             {
-                from = Net.Entities.SeatAimPoint(frame, body, from); drawn = Net.Entities.SeatAimPoint(frame, body, drawn);
+                from = Net.EntitySeats.SeatAimPoint(frame, body, from); drawn = Net.EntitySeats.SeatAimPoint(frame, body, drawn);
                 _remapped++;
             }
             _frames++;

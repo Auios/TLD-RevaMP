@@ -19,7 +19,7 @@ namespace TLDRevamp.Net
     /// records directly.
     internal static partial class EntityLifetimeStreaming
     {
-        public static long FarResyncItems;
+        internal static long FarResyncItems;
 
         internal static string PrefabName(int prefabID)
         {
@@ -68,7 +68,7 @@ namespace TLDRevamp.Net
             FarResyncItems++;
         }
 
-        /// Lists a resync may replace in the far store (Entities.StateOnly's lists). `attachable` stays out: the
+        /// Lists a resync may replace in the far store (EntityResync.StateOnly's lists). `attachable` stays out: the
         /// resync carries it stripped of the world attach point (gpos), and the stored one must keep it.
         private static readonly HashSet<string> FarStateLists = new HashSet<string>
             { "partconditions", "tanks", "usable", "colors", "door_rots", "car", "ammo", "ginlamp", "busdoorscript", "painting", "food", "rendszam" };
@@ -161,7 +161,7 @@ namespace TLDRevamp.Net
                     if (++n >= InterestPerTick) break;
                 }
             }
-            ServerCatchUpTick();   // states that changed while a player was away from an object (Entities.RelayInterest)
+            EntityAuthorityInterest.ServerCatchUpTick();   // states that changed while a player was away from an object (Entities.RelayInterest)
         }
 
         /// Hosting starts: everything in the host's far store becomes a shared object too (owned by the server), not
@@ -190,7 +190,7 @@ namespace TLDRevamp.Net
                 foreach (var o in list)
                 {
                     if (o == null) continue;
-                    if (idf == null) idf = _idField(o);
+                    if (idf == null) idf = EntityLifetimeStreaming._idField(o);
                     if (idf == null) break;
                     uint id = (uint)idf.GetValue(o);
                     if (!ix.TryGetValue(id, out var l)) ix[id] = l = new List<object>();
@@ -251,8 +251,8 @@ namespace TLDRevamp.Net
                 if (FarGroupLog && (kv.Value.Count > 1 || parentOf.ContainsKey(kv.Key)))
                 {
                     var names = new List<string>();
-                    foreach (var id in kv.Value) names.Add(PrefabName(recs[id].prefabID));
-                    Plugin.Log.LogInfo($"far group: root {PrefabName(recs[kv.Key].prefabID)} #{kv.Key} at {recs[kv.Key].transform.pos.x:F0},{recs[kv.Key].transform.pos.z:F0} " +
+                    foreach (var id in kv.Value) names.Add(EntityLifetimeStreaming.PrefabName(recs[id].prefabID));
+                    Plugin.Log.LogInfo($"far group: root {EntityLifetimeStreaming.PrefabName(recs[kv.Key].prefabID)} #{kv.Key} at {recs[kv.Key].transform.pos.x:F0},{recs[kv.Key].transform.pos.z:F0} " +
                                        $"{(parentOf.TryGetValue(kv.Key, out var rp) ? "parent #" + rp + (recs.ContainsKey(rp) ? " (stored)" : savedatascript.s.items.ContainsKey(rp) ? " (loaded)" : " (gone)") : "no parent")}, {kv.Value.Count} items: {string.Join(" ", names)}");
                 }
                 var se = new SEnt { NetId = _nextNet++, OwnerId = 0, Epoch = 1, Record = RecordCodec.Encode(d), Where = recs[kv.Key].transform.pos, TelemetryCategory = TelemetryPrefabCategory(recs[kv.Key].prefabID) };
@@ -293,7 +293,7 @@ namespace TLDRevamp.Net
             if (FarGroupLog && d.items.Count > 1)
             {
                 var names = new List<string>();
-                foreach (var it in d.items) names.Add(PrefabName(it.prefabID));
+                foreach (var it in d.items) names.Add(EntityLifetimeStreaming.PrefabName(it.prefabID));
                 int att = 0; foreach (var a in d.attachable) if (a != null) att++;
                 Plugin.Log.LogInfo($"far add: net {net} root {names[0]} {d.items.Count} items, {att} attach records: {string.Join(" ", names)}");
             }

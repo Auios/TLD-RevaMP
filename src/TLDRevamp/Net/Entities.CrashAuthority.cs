@@ -16,19 +16,19 @@ namespace TLDRevamp.Net
     /// the crash machine decides the crash (fairness: could be restricted to the host).
     internal static partial class EntityPhysics
     {
-        public static bool CrashAuthority = true;       // default since v0.57.67 (the user's call after the A/B and relay runs); false = approach A
-        public static float CrashMinRelMps = 4f;        // softer contacts (shoving, touching) stay with approach A
-        public static float CrashMinHoldS = 1.0f, CrashMaxHoldS = 3.0f, CrashLeaseS = 4.0f;
-        public static long CrashClaims, CrashGranted, CrashRefused, CrashReleases, CrashAutoReturned;
+        internal static bool CrashAuthority = true;       // default since v0.57.67 (the user's call after the A/B and relay runs); false = approach A
+        internal static float CrashMinRelMps = 4f;        // softer contacts (shoving, touching) stay with approach A
+        internal static float CrashMinHoldS = 1.0f, CrashMaxHoldS = 3.0f, CrashLeaseS = 4.0f;
+        internal static long CrashClaims, CrashGranted, CrashRefused, CrashReleases, CrashAutoReturned;
         public static string LastCrash = "";
-        public static bool CrashLeaveKeep = true;       // A/B: false = before v0.65.56 (crashlease.py)
-        public static long CrashLeasesKept;
+        internal static bool CrashLeaveKeep = true;       // A/B: false = before v0.65.56 (crashlease.py)
+        internal static long CrashLeasesKept;
         private static readonly List<HeldCrash> _held = new List<HeldCrash>();
-        public static float CrashApartCheckS = 0.25f;   // how often a waiting car's bounds are compared (they walk every collider)
+        internal static float CrashApartCheckS = 0.25f;   // how often a waiting car's bounds are compared (they walk every collider)
         public static long CrashRetakesSkipped;
         private static readonly List<AfterCrash> _after = new List<AfterCrash>();
         public static long CrashTowingSkipped;
-        public static bool CrashCopyCheck = true;   // A/B: false = before 2026-11-06, any copy could be taken over (CrashGuard)
+        internal static bool CrashCopyCheck = true;   // A/B: false = before 2026-11-06, any copy could be taken over (CrashGuard)
         public static long CrashStaleRefused;
 
         private sealed class HeldCrash { public Entities.Ent E; public Transform Partner; public float Since, CalmSince = -1f; }
@@ -141,7 +141,7 @@ namespace TLDRevamp.Net
             if (e.Root != null && e.Root.car != null && PhysicalCars.TryGetValue(e.Root.car, out var pe) && pe == e && !e.Physical) PhysicalCars.Remove(e.Root.car);
         }
 
-        public static string CrashAuthorityStatus() =>
+        internal static string CrashAuthorityStatus() =>
             "{\"enabled\":" + (CrashAuthority ? "true" : "false") + ",\"claims\":" + CrashClaims + ",\"granted\":" + CrashGranted + ",\"refused\":" + CrashRefused +
             ",\"staleRefused\":" + CrashStaleRefused + ",\"releases\":" + CrashReleases + ",\"autoReturned\":" + CrashAutoReturned + ",\"held\":" + _held.Count + ",\"waitingApart\":" + _after.Count + ",\"retakesSkipped\":" + CrashRetakesSkipped + ",\"last\":" + Json.Str(LastCrash) + "}";
 
@@ -164,7 +164,7 @@ namespace TLDRevamp.Net
                           || (partnerNet != 0 && Server.TryGetValue(partnerNet, out var pe) && pe.CrashReturnTo == from);   // the other machine claimed first
             if (refuse)
             {
-                CrashRefused++;
+                EntityPhysics.CrashRefused++;
                 W.Reset(); W.U8(Owner); W.U32(net); W.VarU32((uint)se.OwnerId); W.U32(se.Epoch);
                 ServerSendTo(from, W, true);
                 // the owner too (no change for it): it sends a fresh state. The claimer dropped the owner's states while it
@@ -174,13 +174,13 @@ namespace TLDRevamp.Net
                 return;
             }
             if (se.OwnerId == from) return;
-            se.CrashReturnTo = se.OwnerId; se.CrashUntil = Time.realtimeSinceStartup + CrashLeaseS;
+            se.CrashReturnTo = se.OwnerId; se.CrashUntil = Time.realtimeSinceStartup + EntityPhysics.CrashLeaseS;
             OwnerLog(se, from, "crash claim");
             // a claim like any other: the crash machine's part-offs stamped with the old epoch, sent before this reply
             // reached it, still count (ClaimEpochOk) — a wheel thrown off in the first round trip was refused ("epoch")
             se.ClaimedBy = from; se.ClaimedAt = Time.realtimeSinceStartup; se.ClaimedFromEpoch = se.Epoch;
             se.OwnerId = from; se.Epoch++;
-            CrashGranted++;
+            EntityPhysics.CrashGranted++;
             W.Reset(); W.U8(Owner); W.U32(net); W.VarU32((uint)from); W.U32(se.Epoch);
             ServerSendAll(W, true, -1);
             CascadeOwner(se);
@@ -210,7 +210,7 @@ namespace TLDRevamp.Net
             if (now - _crashTickAt < 0.5f) return;
             _crashTickAt = now;
             foreach (var se in Server.Values)
-                if (se.CrashReturnTo >= 0 && now > se.CrashUntil) { ReturnCrash(se); CrashAutoReturned++; }
+                if (se.CrashReturnTo >= 0 && now > se.CrashUntil) { ReturnCrash(se); EntityPhysics.CrashAutoReturned++; }
         }
 
         internal static bool InCrashLease(uint net) => Server.TryGetValue(net, out var se) && se.CrashReturnTo >= 0;

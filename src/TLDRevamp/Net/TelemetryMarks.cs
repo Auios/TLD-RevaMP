@@ -26,7 +26,7 @@ namespace TLDRevamp.Net
         internal static string Note(string note) => TelemetryPrivacy.Note(note);
         internal static string Local(string note, uint subject = 0)
         {
-            note = Note(note); var nets = Entities.MarkNets(subject);
+            note = Note(note); var nets = EntityTelemetry.MarkNets(subject);
             if (Mp.Server != null) return Server(0, 0, note, nets) ? "{\"ok\":true}" : "{\"error\":\"one mark per 10 seconds\"}";
             if (!Limit.Try(0, Time.realtimeSinceStartupAsDouble)) return "{\"error\":\"one mark per 10 seconds\"}";
             if (Mp.Client != null)
@@ -82,12 +82,12 @@ namespace TLDRevamp.Net
                 var item = hit.collider.GetComponentInParent<tosaveitemscript>();
                 focus.Crosshair = FocusTarget(item, hit.collider.name, hit.distance);
             }
-            Entities.LocalSeat(out uint net, out int seat);
+            EntitySeats.LocalSeat(out uint net, out int seat);
             if (pl.Bsitting && pl.seat != null)
             {
                 var car = pl.seat.Car != null ? pl.seat.Car.GetComponent<tosaveitemscript>() : null;
                 focus.Car = FocusTarget(car, pl.seat.name, 0);
-                focus.Seat = car != null ? Array.IndexOf(Entities.VehicleSeats(car), pl.seat) : net != 0 ? seat : -1;
+                focus.Seat = car != null ? Array.IndexOf(EntitySeats.VehicleSeats(car), pl.seat) : net != 0 ? seat : -1;
             }
             if (focus.Car.HasValue) { var car = focus.Car.Value; car.Net = net; focus.Car = car; }
             if (pl.inHandP != null) focus.Held = FocusTarget(pl.inHandP.tosave != null ? pl.inHandP.tosave : pl.inHandP.GetComponentInParent<tosaveitemscript>(), pl.inHandP.name, 0);
@@ -157,7 +157,7 @@ namespace TLDRevamp.Net
             s.HasCenter = pl != null;
             var center = pl != null ? mainscript.GlobalFromUnityPos(pl.transform.position) : default;
             s.X = center.x; s.Y = center.y; s.Z = center.z;
-            LocalSeat(out uint localNet, out int localSeat);
+            EntitySeats.LocalSeat(out uint localNet, out int localSeat);
             TelemetryPrivacy.Name(Session.MyName());
             s.Add(new StatePlayer { Id = MyId, Name = Session.MyName(), X = center.x, Y = center.y, Z = center.z, HasPos = pl != null, St = s.St, PoseSt = Time.realtimeSinceStartupAsDouble, Net = localNet, Seat = localSeat });
             RemotePlayers.CaptureTelemetry(s);
@@ -219,7 +219,7 @@ namespace TLDRevamp.Net
                 if (!s.Add(row)) continue;
                 if (car == null || e.Items == null) continue;
                 if (root == null) { CaptureStoredSlots(s, e, data); continue; }
-                var seats = VehicleSeats(root);
+                var seats = EntitySeats.VehicleSeats(root);
                 for (int i = 0; i < seats.Length; i++) if (seats[i] != null)
                     s.Add(new StateSeat { Net = e.NetId, Index = i, Name = seats[i].name, InUse = seats[i].inUse, InUseMulti = seats[i].inUseMulti });
                 for (int i = 0; i < e.Items.Count; i++)
@@ -274,7 +274,7 @@ namespace TLDRevamp.Net
                 for (int j = 0; j < e.Items.Count; j++)
                 {
                     var it = e.Items[j]; if (it == null || e.Split != null && e.Split.Contains(j)) continue;
-                    var list = ItemUsables(it);
+                    var list = EntityUsables.ItemUsables(it);
                     for (int k = 0; k < list.Length; k++) if (list[k] != null)
                     { var u = CaptureUsable(list[k]); u.Net = e.NetId; u.Item = j; u.Index = k; s.Add(u); }
                     var bus = it.busdoorscript;
@@ -381,7 +381,7 @@ namespace TLDRevamp.Net
         {
             if (!text.Equals("/mark", StringComparison.OrdinalIgnoreCase) && !text.StartsWith("/mark ", StringComparison.OrdinalIgnoreCase)) return false;
             ulong who = ById(from, out var p) ? p.SaveId : 0;
-            if (!TelemetryMarks.Server(from, who, text.Length > 5 ? text.Substring(6) : "", from == 0 ? Entities.MarkNets() : Array.Empty<uint>())) Tell(from, "One /mark per player every 10 seconds.");
+            if (!TelemetryMarks.Server(from, who, text.Length > 5 ? text.Substring(6) : "", from == 0 ? EntityTelemetry.MarkNets() : Array.Empty<uint>())) Tell(from, "One /mark per player every 10 seconds.");
             return true;
         }
         internal void MarkRequest(int from, ulong account, NetReader r)

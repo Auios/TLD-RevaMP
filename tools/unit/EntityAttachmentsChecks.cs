@@ -123,15 +123,9 @@ static partial class EntitySplitTest
 
     static void AttachmentsBoundaryChecks()
     {
-        CoreMembers.Register(); var owner = typeof(EntityAttachments);
+        var owner = typeof(EntityAttachments);
         Check(owner.IsAbstract && owner.IsSealed && !owner.IsPublic, "attachments have an internal static owner");
-        foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly))
-        {
-            if (!(member is FieldInfo || member is PropertyInfo || member is MethodInfo) || typeof(Entities).GetMember(member.Name, Static).Length != 0) continue;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                Check(Reflect.MemberPath(prefix + member.Name) == owner.FullName + "." + member.Name, "attachment alias " + prefix + member.Name);
-        }
-        Check(BridgeReflect.Set("Entities.AttachRequests", "False") == "false" && !EntityAttachments.AttachRequests, "attach request switch alias writes feature storage");
+        Check(BridgeReflect.Set("EntityAttachments.AttachRequests", "False") == "false" && !EntityAttachments.AttachRequests, "attach request switch owner path writes feature storage");
         EntityAttachments.AttachRequests = true;
         Check(!ReferenceEquals(Field(owner, "W"), Field(typeof(Entities), "W")), "carried messages own their writer");
         string all = "";

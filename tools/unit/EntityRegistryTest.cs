@@ -40,8 +40,8 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<tosaveitemscript, Ent> _byItem = new(); private static readonly Dictionary<Transform, Ent> _byOwn = new();
         private static bool _placedDirty = true; private static int _placedFrame = -1, _fullFrame = -1000, _itemsSeen = -1, _netsSeen = -1;
         private static int LockBindingRevision;
-        private static bool _applyingDetach, _tpaSending, _tpaSendFailed;
-        public static bool SuppressDestroyEcho, StoredContentsApart = true, SplitPartsApart = true, FarMoveAttached = true, FarPartsByAttach = true, FarGroupLog, RemoveFarMembers = true, ReshareSurvivors = true, RefetchParts = true, RefetchLater = true, AnomalyWatch, LodKeepsPartsOff = true, ReplayBareDetach, GhostEndsOnOwn = true, CrashLeaveKeep = true, LoopPlacedOnly = true, HitchReleaseOnRemove = true, OwnerCascade = true;
+        internal static bool _applyingDetach, _tpaSending, _tpaSendFailed;
+        public static bool SuppressDestroyEcho,StoredContentsApart = true,SplitPartsApart = true,FarMoveAttached = true,FarPartsByAttach = true,FarGroupLog,RemoveFarMembers = true,ReshareSurvivors = true,RefetchParts = true,RefetchLater = true,AnomalyWatch,ReplayBareDetach,LoopPlacedOnly = true,HitchReleaseOnRemove = true,OwnerCascade = true;
         public static long AttachesKept, OwnerCascaded;
         private static readonly FarBoltIndex<save_attachable> _boltIdx = new(a => a != null && a.attachType == 1 ? a.parentid : 0);
         private static readonly Queue<uint> _boltQ = new();
@@ -58,41 +58,26 @@ namespace TLDRevamp.Net
         public static int StoreOutTrace, FullEveryFrames = 30, PlacedCount;
         public static float FarStrayM = 15, RefetchEveryS = 30;
         public static double InterestM = 3000;
-        public static bool WornSync = true;
-        public static long Spawned, StoredContentsShared, ShareMembersDropped, StoredShown, MembersRebound, Rebound, FarRecordUpdates, FarRechunked, FarAttachedMoved, FarStraysPulled, GameFrozenReleased, RagdollLimbsRestored, CopyMembersMissing, PartsApplied, PartsAppliedStored, PartsDeduped, CarriedOffApplied, FarShared, FarAdds, InterestSent, FarMembersRemoved, PartsKeptOnRemove, PartsOrphaned, PartsOrphanedNoRecord, SpawnShared, DestroyTraces, PlayerDeletesSent, MemberDeletesSent, Replaced, CopiesLost, OrphansCleared, CrashLeasesKept, AddRejects, PlacedRebuilds, PlacedFullPasses;
+        public static long Spawned,StoredContentsShared,ShareMembersDropped,StoredShown,MembersRebound,Rebound,FarRecordUpdates,FarRechunked,FarAttachedMoved,FarStraysPulled,GameFrozenReleased,RagdollLimbsRestored,CopyMembersMissing,PartsApplied,PartsAppliedStored,PartsDeduped,FarShared,FarAdds,InterestSent,FarMembersRemoved,PartsKeptOnRemove,PartsOrphaned,PartsOrphanedNoRecord,SpawnShared,DestroyTraces,PlayerDeletesSent,MemberDeletesSent,Replaced,CopiesLost,OrphansCleared,AddRejects,PlacedRebuilds,PlacedFullPasses;
         public static string PartRejects = "", UnmountTrace = "", AddRejectLast = "";
         public static bool InSession => Mp.Server != null || Mp.Client != null && Mp.Client.MyId > 0; public static bool IsHost => Mp.Server != null; public static int MyId => IsHost ? 0 : Mp.Client?.MyId ?? -1;
         public static bool ApplyingDetach => _applyingDetach;
         public static string Bytes(NetWriter w) => Convert.ToHexString(w.Buf.AsSpan(0, w.Len));
-        static void Note(string s) => RegistryFakes.Trace.Add(s);
-        static bool ShareAllowed(int p, int n) => n > 0;
+        internal static void Note(string s) => RegistryFakes.Trace.Add(s);
         static void ShareFacts(byte[] rec, SEnt e) { e.Where = RecordRootPos(rec); Note("share-facts:" + e.NetId); }
         static void ReadShareWorn(NetReader r, SEnt e, int p) { if (r.Remaining > 0) r.U8(); Note("read-share-worn:" + e.NetId); }
-        static ulong[] StateHashes(List<tosaveitemscript> items, List<itemDataClass> per) => items.Select(i => (ulong)(i?.idInSave ?? 0)).ToArray();
-        static void RabbitBeforeShare(tosaveitemscript it) => Note("rabbit-before:" + it.name);
-        static string PrefabName(int id) => "prefab-" + id;
         static int TelemetryPrefabCategory(int id) => id == 10 ? 1 : 7;
-        static bool FarFromHere(Vector3d p) => Math.Abs(p.x) > 3000;
         static bool TpaDuplicate(uint n) => false;
         static void JoinReceived(uint n, int p, bool part = false) => Note("join-received:" + n + ":" + p + ":" + part);
-        static void AttachContact(Ent e) => EntityPhysics.AttachContact(e);
-        static void DetachContact(Ent e) => EntityPhysics.DetachContact(e);
-        static wheelgraphicsscript[] WheelsOf(Ent e) => e.Wheels ??= e.Root.GetComponentsInChildren<wheelgraphicsscript>(true);
         static bool HitchTrailer(Ent e) => e.Root?.attachable?.utanfuto != null;
-        static IEnumerable<Rigidbody> HitchBodies(Ent e) => e.Root.GetComponentsInChildren<Rigidbody>(true);
         static void ShowHeld(Ent e, bool p) { e.Held = p; Note("held:" + e.NetId + ":" + p); }
         static void ShowCarriedCollisions(Ent e) => Note("collisions:" + e.NetId);
-        static void EndGhostOnOwn(Ent e) { e.ReleaseGhost = false; Note("end-ghost:" + e.NetId); }
-        static void DropPhysical(Ent e) { e.Physical = false; Note("drop-physical:" + e.NetId); }
-        static void StopBodyMotion(Ent e) { e.MovedByBody = false; Note("stop-motion:" + e.NetId); }
-        static void SetPartColliders(Ent e, bool on) { e.PartsColOff = false; Note("part-colliders:" + e.NetId + ":" + on); }
         static void EnsurePoseLock(Ent e) => Note("ensure-lock:" + e.NetId);
         static void RecoverWorldLock(Ent e) => Note("recover-lock:" + e.NetId);
         static void AnomalyPlaced(Ent e) => Note("anomaly-placed:" + e.NetId);
         static void ClaimIfPlacedInOwnCar(Ent e) => Note("claim-placed:" + e.NetId);
-        static bool RidesBolted(Ent e) => false; static bool AttachedCarPart(Ent e) => false; static bool RidesOwnersContainer(Ent e) => false; static bool LockedAway(Ent e) => false;
-        static void ReadEntityHead(NetReader r, bool compact, out uint n, out uint ep, out double t, out Vector3d p, out Quaternion q, out Vector3 v, out bool driven, out bool stored, out bool held, out bool spray) { n = ep = 0; t = 0; p = new(5, 0, 6); q = Quaternion.identity; v = default; driven = stored = held = spray = false; Note("state-head"); }
-        static void ReadWheels(NetReader r, Ent e) => Note("wheels-read"); static void ReadEngine(NetReader r, Ent e) => Note("engine-read");
+        static bool RidesBolted(Ent e) => false;
+
         static void ServerLockedPose(SEnt e) => Note("server-locked-pose:" + e.NetId);
         static void SendTpaState(int p, SEnt e) => Note("tpa-state:" + p + ":" + e.NetId);
         static void WriteResyncAll(NetWriter w, SEnt e) { w.Reset(); w.U8(40); w.U32(e.NetId); Note("resync-all"); }
@@ -105,8 +90,6 @@ namespace TLDRevamp.Net
         static void SendBreaksTo(int p, SEnt e) => Note("breaks-replay:" + p + ":" + e.NetId);
         static void RemoveRecord(uint id) { RegistryFakes.Save.s.items.Remove(id); var d = RegistryFakes.Save.s.data.itemData; if (RegistryFakes.Save.IndexOfID(d.items, id, out int k)) d.items.RemoveAt(k); Note("remove-record:" + id); }
         static void ReleaseHitch(SEnt e, string why) { Note("release-hitch:" + e.NetId + ":" + why); DropAttach(e); }
-        static void Unmount(attachablescript a, bool fall) { Note("unmount:" + a.gameObject.name + ":" + _applyingDetach); a.attached = false; }
-        static tosaveitemscript CarriedItem(uint n, int s, int p) => null;
         static void LiveUsablesChanged(tosaveitemscript it) => Note("usables-changed:" + (it?.name ?? "null"));
         static void HandOver(tosaveitemscript it) => Note("handover:" + it.name);
         static void NoteMemberDestroyed(tosaveitemscript it) => Note("member-destroyed:" + it.name);
@@ -114,11 +97,10 @@ namespace TLDRevamp.Net
         static List<Hung> HangingOn(uint n, int i, tosaveitemscript it) => new();
         static void WriteLostPart(NetWriter w, uint n) => w.Bool(false);
         static void OwnerLog(SEnt e, int p, string why) => Note("owner-log:" + e.NetId + ":" + p + ":" + why);
-        static void ShareQuotaForget(int p) => Note("quota-forget:" + p); static void EditCheckForget(int p) => Note("edit-forget:" + p);
+         static void EditCheckForget(int p) => Note("edit-forget:" + p);
         static void BeginHitchTransfer(SEnt e, int p) => Note("hitch-transfer:" + e.NetId + ":" + p);
         static void ServerPoiUsablesTo(int p) => Note("poi-join:" + p);
-        static void ResetTpaSync() => Note("tpa-sync-reset"); static void ResetPoiCensus() => Note("poi-census-reset"); static void PoiUsablesReset() => Note("poi-reset"); static void LiveUsablesReset(bool keepPoiSequences = false) => Note("usables-reset:" + keepPoiSequences); static void EditCheckReset() => Note("edit-reset");
-        static System.Reflection.FieldInfo _idField(object o) => o.GetType().GetField("id");
+        static void ResetTpaSync() => Note("tpa-sync-reset");  static void PoiUsablesReset() => Note("poi-reset"); static void LiveUsablesReset(bool keepPoiSequences = false) => Note("usables-reset:" + keepPoiSequences); static void EditCheckReset() => Note("edit-reset");
         enum ClaimReason : byte { None = 0 }
         static string ClaimName(ClaimReason r) => r.ToString();
         public static void DestroyHook(tosaveitemscript it) => ItemDestroyed.PostfixForTest(it);
@@ -128,10 +110,15 @@ namespace TLDRevamp.Net
         static string Index(Dictionary<int, HashSet<uint>> d) => string.Join(";", d.Select(k => k.Key + ":" + string.Join(",", k.Value)));
         static string Local(Ent e) => $"{e.NetId}:{e.OwnerId}:{e.Epoch}:root={e.Root?.name ?? "null"}/{e.RootId}:items={string.Join(",", e.Items.Select(i => i?.name ?? "null"))}:ids={string.Join(",", e.ItemIds ?? new())}:split={string.Join(",", e.Split ?? new())}:proxy={e.Proxy}:ip={e.Ip != null}:stored={e.Stored}:far={e.FarPos}/{e.FarDirty}:hitch={e.HitchAuthorityOwner}/{e.HitchWaiting}:lock={e.PoseLocked}/{e.LockFrame}/{e.ReceivedStateEpoch}:physical={e.Physical}/{e.MovedByBody}:made={string.Join(",", e.MadeKinematic.Select(RegistryFakes.Label))}";
         static string Authority(SEnt e) => $"{e.NetId}:{e.OwnerId}:{e.Epoch}:prev={e.PrevOwnerId}/{e.PrevOwnerAt}/{e.HandoverOpen}:key={e.RagdollKeyState != null}/{e.RagdollKeyEpoch}:part={e.ParentNet}/{e.PartIndex}:parts={string.Join(",", e.Parts)}:split={string.Join(",", e.SplitOff)}:stored={e.Stored}:attach={e.AttachParent}/{e.LastAttach != null}/{string.Join(",", e.AttachKids ?? new())}:hitch={e.HitchCar}:record={Convert.ToHexString(e.Record ?? Array.Empty<byte>())}";
+        static System.Collections.Generic.IEnumerable<System.Reflection.FieldInfo> SnapshotCounters() =>
+            typeof(Entities).GetFields(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
+                .SelectMany(f => f.Name == "PartsDeduped" ? new[] { f, typeof(EntityAttachments).GetField("CarriedOffApplied", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic) }
+                    : f.Name == "OrphansCleared" ? new[] { f, typeof(EntityPhysics).GetField("CrashLeasesKept", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic) } : new[] { f });
+
         static string Snapshot()
         {
             var s = RegistryFakes.Save.s;
-            string counters = string.Join(",", typeof(Entities).GetFields(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public).Where(f => f.FieldType == typeof(long)).Select(f => f.Name + "=" + f.GetValue(null)));
+            string counters = string.Join(",", SnapshotCounters().Where(f => f.FieldType == typeof(long)).Select(f => f.Name + "=" + f.GetValue(null)));
             return "by=[" + string.Join(";", ByNet.Select(k => k.Key + "=" + Local(k.Value))) + "] server=[" + string.Join(";", Server.Select(k => k.Key + "=" + Authority(k.Value))) + "] pending=[" + string.Join(";", PendingShare.Select(k => k.Key + "=" + Local(k.Value))) + "] next=" + _nextNet +
                 " placed=" + string.Join(",", _placed.Select(e => e.NetId)) + " all=" + string.Join(",", _all.Select(e => e.NetId)) + " item=" + string.Join(",", _byItem.Select(k => k.Key.name + ":" + k.Value.NetId)) + " own=" + string.Join(",", _byOwn.Select(k => k.Key.gameObject.name + ":" + k.Value.NetId)) + " dirty=" + _placedDirty + " frames=" + _placedFrame + "," + _fullFrame + "," + _itemsSeen + "," + _netsSeen +
                 " proxy=" + string.Join(",", ProxyItems.Select(g => g.name)) + " wheelOwner=" + string.Join(",", ProxyWheelOwner.Select(k => k.Key.gameObject.name + ":" + k.Value.NetId)) + " wheelIndex=" + string.Join(",", ProxyWheelIndex.Select(k => k.Key.gameObject.name + ":" + k.Value)) + " engine=" + string.Join(",", ProxyEngineOwner.Values.Select(e => e.NetId)) + " locks=" + LockBindingRevision + " serverLocked=" + string.Join(",", _serverLocked.Select(e => e.NetId)) +
@@ -153,12 +140,13 @@ namespace TLDRevamp.Net
                 var value = f.GetValue(null); if (value != null && value is not string && value is not NetWriter && value is not Array) value.GetType().GetMethod("Clear", Type.EmptyTypes)?.Invoke(value, null);
             }
             RegistryFakes.Save.s = new(); RegistryFakes.Main.s = null; RegistryFakes.Deferred.Clear(); RegistryFakes.Trace.Clear();
+            EntityAttachments.CarriedOffApplied = EntityPhysics.CrashLeasesKept = 0;
             PlayerSave.Fresh(); Mp.PendingSceneStop = false;
             EntityRagdolls.RagdollCopies.Clear(); EntityRagdolls.RagdollLimbOwner.Clear(); EntityLifetimeStreaming.Deleted.Clear();
             Mp.Server = host ? new() : null; Mp.Client = host ? null : new(); Mp.SceneTearingDown = false; EntityTeleportRefresh.Deferred = false;
             _nextNet = 100; _placedDirty = true; _placedFrame = -1; _fullFrame = -1000; _itemsSeen = _netsSeen = -1; LockBindingRevision = 0;
             SuppressDestroyEcho = _applyingDetach = _tpaSending = _tpaSendFailed = false; W.Reset(); WS.Reset();
-            StoredContentsApart = SplitPartsApart = FarMoveAttached = FarPartsByAttach = RemoveFarMembers = ReshareSurvivors = RefetchParts = RefetchLater = LodKeepsPartsOff = GhostEndsOnOwn = CrashLeaveKeep = LoopPlacedOnly = HitchReleaseOnRemove = OwnerCascade = true;
+            StoredContentsApart = SplitPartsApart = FarMoveAttached = FarPartsByAttach = RemoveFarMembers = ReshareSurvivors = RefetchParts = RefetchLater = EntityPhysics.LodKeepsPartsOff = EntityLocks.GhostEndsOnOwn = EntityPhysics.CrashLeaveKeep = LoopPlacedOnly = HitchReleaseOnRemove = OwnerCascade = true;
             FarGroupLog = AnomalyWatch = ReplayBareDetach = false; StoreOutTrace = 0; PartRejects = UnmountTrace = AddRejectLast = "";
             Time.frameCount = 1; Time.realtimeSinceStartup = Time.time = 10;
         }
@@ -301,6 +289,101 @@ namespace TLDRevamp.Net
             Console.WriteLine(Rows.Count + " registry rows match expected rows");
         }
     }
+    internal static partial class EntityPhysics
+    {
+        internal static bool LodKeepsPartsOff = true,CrashLeaveKeep = true;
+        internal static long CrashLeasesKept;
+    }
+
+
+    internal static partial class EntityLocks
+    {
+        internal static bool GhostEndsOnOwn = true;
+    }
+
+
+    internal static partial class EntityAttachments
+    {
+        internal static long CarriedOffApplied;
+    }
+
+    internal static partial class EntityHands
+    {
+        internal static bool WornSync = true;
+    }
+
+
+    internal static partial class EntityAuthorityInterest
+    {
+        internal static bool ShareAllowed(int p, int n) => n > 0;
+        internal static void ShareQuotaForget(int p) => Entities.Note("quota-forget:" + p);
+    }
+
+
+    internal static partial class EntityResync
+    {
+        internal static ulong[] StateHashes(List<tosaveitemscript> items, List<itemDataClass> per) => items.Select(i => (ulong)(i?.idInSave ?? 0)).ToArray();
+    }
+
+
+    internal static partial class EntityRabbits
+    {
+        internal static void RabbitBeforeShare(tosaveitemscript it) => Entities.Note("rabbit-before:" + it.name);
+    }
+
+
+    internal static partial class EntityLifetimeStreaming
+    {
+        internal static string PrefabName(int id) => "prefab-" + id;
+        internal static bool FarFromHere(Vector3d p) => Math.Abs(p.x) > 3000;
+        internal static void Unmount(attachablescript a, bool fall) { Entities.Note("unmount:" + a.gameObject.name + ":" + Entities._applyingDetach); a.attached = false; }
+        internal static System.Reflection.FieldInfo _idField(object o) => o.GetType().GetField("id");
+    }
+
+
+    internal static partial class EntityPhysics
+    {
+        internal static void DropPhysical(Entities.Ent e) { e.Physical = false; Entities.Note("drop-physical:" + e.NetId); }
+        internal static void StopBodyMotion(Entities.Ent e) { e.MovedByBody = false; Entities.Note("stop-motion:" + e.NetId); }
+        internal static void SetPartColliders(Entities.Ent e, bool on) { e.PartsColOff = false; Entities.Note("part-colliders:" + e.NetId + ":" + on); }
+    }
+
+
+    internal static partial class EntityProxyPresentation
+    {
+        internal static wheelgraphicsscript[] WheelsOf(Entities.Ent e) => e.Wheels ??= e.Root.GetComponentsInChildren<wheelgraphicsscript>(true);
+        internal static bool AttachedCarPart(Entities.Ent e) => false;
+        internal static void ReadEntityHead(NetReader r, bool compact, out uint n, out uint ep, out double t, out Vector3d p, out Quaternion q, out Vector3 v, out bool driven, out bool stored, out bool held, out bool spray) { n = ep = 0; t = 0; p = new(5, 0, 6); q = Quaternion.identity; v = default; driven = stored = held = spray = false; Entities.Note("state-head"); }
+        internal static void ReadWheels(NetReader r, Entities.Ent e) => Entities.Note("wheels-read");
+        internal static void ReadEngine(NetReader r, Entities.Ent e) => Entities.Note("engine-read");
+    }
+
+
+    internal static partial class EntityHitches
+    {
+        internal static IEnumerable<Rigidbody> HitchBodies(Entities.Ent e) => e.Root.GetComponentsInChildren<Rigidbody>(true);
+    }
+
+
+    internal static partial class EntityLocks
+    {
+        internal static void EndGhostOnOwn(Entities.Ent e) { e.ReleaseGhost = false; Entities.Note("end-ghost:" + e.NetId); }
+        internal static bool RidesOwnersContainer(Entities.Ent e) => false;
+        internal static bool LockedAway(Entities.Ent e) => false;
+    }
+
+
+    internal static partial class EntityAttachments
+    {
+        internal static tosaveitemscript CarriedItem(uint n, int s, int p) => null;
+    }
+
+
+    internal static partial class EntityRepair
+    {
+        internal static void ResetPoiCensus() => Entities.Note("poi-census-reset");
+    }
+
 }
 static class EntityRegistryTest
 {

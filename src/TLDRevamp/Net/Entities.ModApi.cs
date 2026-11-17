@@ -36,8 +36,5 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        internal static uint NetIdOf(GameObject go) => EntityModApi.NetIdOf(go);
-        internal static GameObject GameObjectOf(uint net) => EntityModApi.GameObjectOf(net);
-        internal static bool ShareGameObject(GameObject go) => EntityModApi.ShareGameObject(go);
     }
 }

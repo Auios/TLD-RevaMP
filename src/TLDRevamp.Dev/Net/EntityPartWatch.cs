@@ -94,7 +94,7 @@ namespace TLDRevamp.Net
             uint partNet = own != null ? own.NetId : 0, groupNet = group != null ? group.NetId : 0;
             var so = part.slot != null ? part.slot.tosaveitem : null;
             int slot = so != null && so.partslotscripts != null ? so.partslotscripts.IndexOf(part.slot) : -1;
-            string kind = PrefabName(ts.id), on = so != null ? PrefabName(so.id) : "?";
+            string kind = EntityLifetimeStreaming.PrefabName(ts.id), on = so != null ? EntityLifetimeStreaming.PrefabName(so.id) : "?";
             PartWatchLast = kind + " net " + (partNet != 0 ? partNet : groupNet) + " on " + on + " #" + slot + ": " + why + " — (" + how + ", colliders " + r.Live + "/" + r.Cols + " on, " + r.UseLayer + " on the use layer, "
                             + r.Held + " on the held layer" + (blocker != null ? ", in front: " + blocker : "") + ", " + (own != null ? (own.Proxy ? "a copy" : "ours") : group != null ? (group.Proxy ? "a copy's part" : "our part") : "not shared") + ")";
             SessionLog.Event("part-untargetable", partNet != 0 ? partNet : groupNet, other: groupNet, slot: slot, count: r.Cols, value: r.Live, dx: r.UseLayer, dy: r.Held, result: why);

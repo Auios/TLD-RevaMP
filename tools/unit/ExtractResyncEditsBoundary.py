@@ -9,8 +9,9 @@ net = root / 'src/TLDRevamp/Net'
 def method(source, name):
     match = re.search(r'^        (?:public|private|internal) static [^\n=]*?\b' + name + r'\(', source, re.M)
     start = match.start()
-    brace = source.index('{', start)
-    arrow = source.find('=>', start, brace)
+    brace = source.find('{', start)
+    arrow = source.find('=>', start)
+    if brace >= 0 and arrow > brace: arrow = -1
     if arrow >= 0:
         return source[start:source.index(';', arrow) + 1]
     depth, end = 1, brace + 1
@@ -37,15 +38,8 @@ if __name__ == '__main__':
         target.with_name(target.stem + part + '.cs').write_text(source[:source.index('    public static partial class Entities')] + '}\n', encoding='utf-8')
     resync = src['Resync']
     body = method(resync, 'ResyncTick')
-    server_edit = method(src['Edits'], 'ServerEdit')
+    server_edit = method(src['Edits'], 'ServerEdit').replace('EntityEditCheck.TakeEditToken(from)', 'TakeKeyTokenForFixture(from)')
     body += '\n' + server_edit
-    facades = []
-    for source in sources().values():
-        retained = source[source.index('    public static partial class Entities'):]
-        for line in retained.splitlines():
-            if 'static ' not in line or not re.search(r'(?:=> Entity(?:EditBack|EditCheck|Edits|Resync)\.|get => Entity)', line):
-                continue
-            if re.search(r'\b(?:TakeEditToken|TankChangesNow|StateHashes)\(', line):
-                continue  # These are supplied by the older seat/edit-flush source-including fixtures.
-            facades.append(line)
-    target.write_text('using System; using System.Collections.Generic; using UnityEngine; namespace TLDRevamp.Net { public static partial class Entities {\n' + body + '\n' + '\n'.join(facades) + '\n} }', encoding='utf-8')
+    retained = src['EditBack'].split('    public static partial class Entities')[1]
+    body += '\n' + '\n'.join(method(retained, name) for name in ('EditBackLater', 'EditBackAfterHold'))
+    target.write_text('using System; using System.Collections.Generic; using UnityEngine; namespace TLDRevamp.Net { public static partial class Entities {\n' + body + '\n} }', encoding='utf-8')

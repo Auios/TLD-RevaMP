@@ -98,20 +98,13 @@ static partial class EntitySplitTest
 
     static void LocksSourceChecks()
     {
-        CoreMembers.Register();
         var owner = typeof(EntityLocks);
         Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, "locks has one internal static owner");
-        foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is FieldInfo || m is PropertyInfo || m is MethodInfo))
-        {
-            bool retained = typeof(Entities).GetMember(member.Name, Static).Length != 0;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                Check(Reflect.MemberPath(prefix + member.Name) == (retained ? prefix + member.Name : owner.FullName + "." + member.Name), "lock alias " + prefix + member.Name);
-        }
         foreach (string name in new[] { "PhysLockReads", "CopyLocksReleased", "StoreTrace", "CopyLockReleaseM" })
         {
             var field = owner.GetField(name, Static); var before = field.GetValue(null);
-            BridgeReflect.Set("TLDRevamp.Net.Entities." + name, "17");
-            Check(Convert.ToDouble(field.GetValue(null)) == 17 && BridgeReflect.Get("Entities." + name) == "17", "lock aliases share state " + name);
+            BridgeReflect.Set("TLDRevamp.Net.EntityLocks." + name, "17");
+            Check(Convert.ToDouble(field.GetValue(null)) == 17 && BridgeReflect.Get("EntityLocks." + name) == "17", "lock owner paths share state " + name);
             field.SetValue(null, before);
         }
         Check(!ReferenceEquals(Field(owner, "W"), Field(typeof(Entities), "W")), "locks owns its writer");

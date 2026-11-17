@@ -100,12 +100,11 @@ static partial class EntitySplitTest
         Entities.HostReceive = null; Entities.IsHost = false; Entities.TestDeleteThrow = false;
         Entities.TestDeleteDormant = false; Set(RagOwner, "DeathCorpseStays", true);
         RagdollOutfitChecks();
-        CoreMembers.Register();
         foreach (string field in new[] { "RagdollDelta", "RagdollKeyEveryS", "RagdollDeltaMaxShare" })
         {
             string value = field == "RagdollDelta" ? "False" : "0.75";
-            BridgeReflect.Set("TLDRevamp.Net.Entities." + field, value);
-            Check(BridgeReflect.Get("TLDRevamp.Net.Entities." + field) == BridgeReflect.Get("TLDRevamp.Net.EntityRagdolls." + field), field + " full script path reaches sole backing value");
+            BridgeReflect.Set("TLDRevamp.Net.EntityRagdolls." + field, value);
+            Check(BridgeReflect.Get("TLDRevamp.Net.EntityRagdolls." + field) == (field == "RagdollDelta" ? "false" : "0.75"), field + " real owner setting roundtrips");
         }
         EntityRagdolls.RagdollDelta = true; EntityRagdolls.RagdollKeyEveryS = 2; EntityRagdolls.RagdollDeltaMaxShare = .5f;
         Check(!ReferenceEquals(Field(RagOwner, "W"), Field(typeof(Entities), "W")), "death fallback owns its writer");

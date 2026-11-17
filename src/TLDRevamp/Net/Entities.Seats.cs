@@ -10,13 +10,13 @@ namespace TLDRevamp.Net
         /// A vehicle's seats: its own hierarchy's (indices as before), then those of every body outside it that carries its
         /// part slots — Bus01's rear section (BusBack: its own body on a joint, 33 of the bus's 81 seats). Before, a player
         /// in the back of a bus counted as not seated: the other machines showed them standing, trailing the bus.
-        public static bool RearSeats = true;   // off: the old behaviour (A/B in tools/busrear.py)
+        internal static bool RearSeats = true;   // off: the old behaviour (A/B in tools/busrear.py)
         /// An object's seats are those in its own hierarchy, not its root's, and not those of an object locked into it. A
         /// bar stool locked into a bus is parented to the bus's mount (mountStuff.Store): its seat is in the bus's
         /// hierarchy, the bus's seat list (cached before the stool came) didn't have it and the stool's own list was the
         /// bus's. Its sitter was sent as standing and drawn from late world positions on the other machines: sliding back
         /// through the bus while it drove, snapping onto the stool when it stopped (playtest 2026-10-24, tools/busstool.py).
-        public static bool ItemSeats = true;   // A/B: false = before v0.69.2
+        internal static bool ItemSeats = true;   // A/B: false = before v0.69.2
         public static long ItemSeatsSent;
         private static readonly Dictionary<Transform, seatscript[]> _seats = new Dictionary<Transform, seatscript[]>();
         private static readonly Dictionary<Transform, seatscript[]> _seatsOwn = new Dictionary<Transform, seatscript[]>();

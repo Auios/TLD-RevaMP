@@ -99,7 +99,7 @@ namespace TLDRevamp.Net
                     r.Kind = ReproKind.PoiUsable; r.Net = 0; r.Item = u.poigenid; r.Slot = u.usableid;
                     r.E = u.poiid.x; r.F = u.poiid.y; r.G = u.poiid.z;
                 }
-                else r.Slot = it != null ? Array.IndexOf(Entities.ItemUsables(it), u) : -1;
+                else r.Slot = it != null ? Array.IndexOf(EntityUsables.ItemUsables(it), u) : -1;
                 QueueReproUsable(u, r);
             }
         }
@@ -201,7 +201,7 @@ namespace TLDRevamp.Net
                     var e = Entities.ReproEntityOf(_p.tosave); if (!Entities.ReproOwns(e)) return;
                     if (__instance.parentTosave == null) { ReproRecorder.Skip(); return; }
                     var r = ReproItem(ReproKind.PhysLock, _p.tosave); var c = Entities.ReproEntityOf(__instance.parentTosave);
-                    r.Other = c != null ? c.NetId : 0; r.Slot = Array.IndexOf(Entities.LockMounts(__instance.parentTosave), __instance);
+                    r.Other = c != null ? c.NetId : 0; r.Slot = Array.IndexOf(EntityLocks.LockMounts(__instance.parentTosave), __instance);
                     r.A = c != null ? c.Items.IndexOf(__instance.parentTosave) : -1; ReproRecorder.Add(r);
                 }
                 catch { ReproRecorder.Skip(); }

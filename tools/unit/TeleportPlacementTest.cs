@@ -350,15 +350,29 @@ namespace TLDRevamp.Net
     public static class Entities
     {
         public const int MyId=1;
-        public static bool Finite(double d) => double.IsFinite(d);
         public static bool RootNetOf(tosaveitemscript it,out uint net) { net=1;return true; }
-        public static bool TpaFloorReady(tosaveitemscript it) => it == null || it.ProxyReady;
-        public static void DrainTpaInbox() { }
-        public static bool TpaInboxEmpty => true;
-        public static void BeginTpaRefresh() { }
         public static void ServerTpaTick() { }
         public static void ServerTpaBegin(int player,Vector3d pos) { }
     }
+    internal static partial class EntityNumbers
+    {
+        internal static bool Finite(double d) => double.IsFinite(d);
+    }
+
+
+    internal static partial class EntityProxyPresentation
+    {
+        internal static bool TpaFloorReady(tosaveitemscript it) => it == null || it.ProxyReady;
+    }
+
+
+    internal static partial class EntityTeleportRefresh
+    {
+        internal static void DrainTpaInbox() { }
+        internal static bool TpaInboxEmpty => true;
+        internal static void BeginTpaRefresh() { }
+    }
+
     public static class ItemSnapshot { public static List<tosaveitemscript> Group(tosaveitemscript car) => new List<tosaveitemscript> { car }; }
     public static class Mp
     {

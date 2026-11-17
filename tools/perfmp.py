@@ -17,20 +17,20 @@ SRC_NAME = os.environ.get("TLD_PLAYSAVE", "autosave1")
 SAVE = "perfmp"
 T = "TLDRevamp.Net.Entities"
 
-FIXED = ("HitchTick EditBackTick HitchPhysicsTelemetry TraceTick TelemetryPhysicsTick CrashHoldTick ServerCrashTick CarCargoTick "
-         "RefreshOwnCars RefreshJointed ClaimContents ColliderLodTick CopyJointTick LinkedDelayTick TowTick CargoNearTick BodyNearTick "
-         "ItemNearTick RabbitNearTick WatchTick BodyMotionTick StandInterpTick EnterPhysical ExitPhysical Servo").split()
-TICK = ("CopyLodTick AnomalyTick PartWatchTick HealthWatchTick GrabRefusedTick RefetchLaterTick BreakWaitTick WorldBreakTick PoiCensusTick "
-        "HostClockTick DriveClaimTick ShotgunTick PushTick RadioTick KeyTick KeyTestTick PhysLockTick PushGripTick StormTick ServerTimeTick "
-        "ServerInterestTick ServerHandoffTick ServerRabbitTick LeaseTick LiveUsableTick EditTick CopyFluidTick ReshareTick BlastTick "
-        "MemberGoneTick ShareQuotaTick AiTick RabbitTick WornTick GentleTick ClaimTraceTick ResyncFrameTick FlushFarRecords SprayTick "
-        "RagdollTick PartWatchScan PartWatchLook ItemWatchScan ItemWatchLook HealthWatchCycle HealthWatchOne").split()
+FIXED = ("HitchTick TLDRevamp.Net.EntityEditBack.EditBackTick HitchPhysicsTelemetry TLDRevamp.Net.EntityMountLab.TraceTick TelemetryPhysicsTick TLDRevamp.Net.EntityPhysics.CrashHoldTick ServerCrashTick CarCargoTick "
+         "RefreshOwnCars RefreshJointed ClaimContents ColliderLodTick TLDRevamp.Net.EntityPhysics.CopyJointTick TLDRevamp.Net.EntityLifetimeStreaming.LinkedDelayTick TLDRevamp.Net.EntityCarDoorsTools.TowTick CargoNearTick TLDRevamp.Net.EntityCargoInteraction.BodyNearTick "
+         "ItemNearTick TLDRevamp.Net.EntityRabbits.RabbitNearTick TLDRevamp.Net.EntityMountLab.WatchTick BodyMotionTick TLDRevamp.Net.EntityPhysics.StandInterpTick TLDRevamp.Net.EntityPhysics.EnterPhysical TLDRevamp.Net.EntityPhysics.ExitPhysical TLDRevamp.Net.EntityPhysics.Servo").split()
+TICK = ("TLDRevamp.Net.EntityProxyPresentation.CopyLodTick AnomalyTick TLDRevamp.Net.EntityPartWatch.PartWatchTick TLDRevamp.Net.EntityHealthWatch.HealthWatchTick GrabRefusedTick RefetchLaterTick TLDRevamp.Net.EntityAI.BreakWaitTick TLDRevamp.Net.EntityAI.WorldBreakTick TLDRevamp.Net.EntityRepair.PoiCensusTick "
+        "TLDRevamp.Net.EntityWorldClock.HostClockTick DriveClaimTick TLDRevamp.Net.EntitySeats.ShotgunTick TLDRevamp.Net.EntityCargoInteraction.PushTick TLDRevamp.Net.EntityRadio.RadioTick TLDRevamp.Net.EntitySeats.KeyTick TLDRevamp.Net.EntityIgnitionKeyTools.KeyTestTick TLDRevamp.Net.EntityLocks.PhysLockTick TLDRevamp.Net.EntityCargoInteraction.PushGripTick TLDRevamp.Net.EntityWeather.StormTick TLDRevamp.Net.EntityWorldClock.ServerTimeTick "
+        "ServerInterestTick ServerHandoffTick TLDRevamp.Net.EntityRabbits.ServerRabbitTick TLDRevamp.Net.EntityWorldLeases.LeaseTick LiveUsableTick EditTick TLDRevamp.Net.EntityCarTuning.CopyFluidTick ReshareTick TLDRevamp.Net.EntityExplosions.BlastTick "
+        "MemberGoneTick TLDRevamp.Net.EntityAuthorityInterest.ShareQuotaTick TLDRevamp.Net.EntityAI.AiTick TLDRevamp.Net.EntityRabbits.RabbitTick TLDRevamp.Net.EntityHands.WornTick TLDRevamp.Net.EntityLocks.GentleTick TLDRevamp.Net.EntityCargoInteraction.ClaimTraceTick ResyncFrameTick FlushFarRecords TLDRevamp.Net.EntityEffects.SprayTick "
+        "TLDRevamp.Net.EntityRagdolls.RagdollTick TLDRevamp.Net.EntityPartWatch.PartWatchScan TLDRevamp.Net.EntityPartWatch.PartWatchLook TLDRevamp.Net.EntityItemWatch.ItemWatchScan TLDRevamp.Net.EntityItemWatch.ItemWatchLook TLDRevamp.Net.EntityHealthWatch.HealthWatchCycle TLDRevamp.Net.EntityHealthWatch.HealthWatchOne").split()
 E = "TLDRevamp.Net.Entities"
-TIMERS = [f"{E}.FixedTick", "Mp.Tick", f"{E}.Tick", f"{E}.LateSample", f"{E}+ItemDestroyed.Postfix"] + [f"{E}.{m}" for m in FIXED + TICK]
+TIMERS = [f"{E}.FixedTick", "Mp.Tick", f"{E}.Tick", f"TLDRevamp.Net.EntityDoors.LateSample", f"{E}+ItemDestroyed.Postfix"] + [m if "." in m else f"{E}.{m}" for m in FIXED + TICK]
 # (label, the switch, its value when off)
-SWITCHES = [("HealthWatch", f"{T}.HealthWatch", "False"), ("PartWatch", f"{T}.PartWatch", "False"),
-            ("ItemWatch", f"{T}.ItemWatch", "False"), ("CopyJointsFree", f"{T}.CopyJointsFree", "False"),
-            ("LodKeepsPartsOff", f"{T}.LodKeepsPartsOff", "False"), ("HandItemDraw", f"{T}.HandItemDraw", "False")]
+SWITCHES = [("HealthWatch", f"TLDRevamp.Net.EntityHealthWatch.HealthWatch", "False"), ("PartWatch", f"TLDRevamp.Net.EntityPartWatch.PartWatch", "False"),
+            ("ItemWatch", f"TLDRevamp.Net.EntityItemWatch.ItemWatch", "False"), ("CopyJointsFree", f"TLDRevamp.Net.EntityPhysics.CopyJointsFree", "False"),
+            ("LodKeepsPartsOff", f"TLDRevamp.Net.EntityPhysics.LodKeepsPartsOff", "False"), ("HandItemDraw", f"TLDRevamp.Net.EntityHands.HandItemDraw", "False")]
 
 def measure(h, label):
     """SECS of whole 5 s windows (the session log resets the timers' window every 5 s; `timers show` reads it): the

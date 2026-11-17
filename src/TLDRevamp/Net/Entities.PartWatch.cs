@@ -88,7 +88,7 @@ namespace TLDRevamp.Net
 
         /// The bug report's parts.json: every fitted part within PartWatchNearbyM as the player can reach it — shown,
         /// reachable by the use ray, whether the game keeps its colliders on, the dismount conditions, its colliders and
-        /// their layers (Entities.MountFacts) — and what the crosshair's rays hit. A part whose colliders were off was in no
+        /// their layers (EntityMountFacts.MountFacts) — and what the crosshair's rays hit. A part whose colliders were off was in no
         /// file before: lock.json starts from what the crosshair hits, and that part is what it can't hit (10:57's hood).
         internal static string PartsDiagnostics()
         {
@@ -124,7 +124,7 @@ namespace TLDRevamp.Net
                 var so = ps != null ? ps.tosaveitem : null;
                 var group = EditEntityOf(part.tosave);
                 if (i > 0) b.Append(',');
-                b.Append("{\"holder\":").Append(Json.Str(so != null ? PrefabName(so.id) : "?")).Append(",\"entity\":").Append(group != null ? group.NetId : 0)
+                b.Append("{\"holder\":").Append(Json.Str(so != null ? EntityLifetimeStreaming.PrefabName(so.id) : "?")).Append(",\"entity\":").Append(group != null ? group.NetId : 0)
                  .Append(",\"copy\":").Append(group != null && group.Proxy ? "true" : "false")
                  .Append(",\"slotIndex\":").Append(so != null && so.partslotscripts != null ? so.partslotscripts.IndexOf(ps) : -1)
                  .Append(",\"slot\":").Append(Json.Str(ps != null ? ps.name : "")).Append(",\"m\":").Append(Json.Num((part.transform.position - pl.transform.position).magnitude))
@@ -137,7 +137,7 @@ namespace TLDRevamp.Net
                      .Append(",\"disableCollidersOnCraft\":").Append(ps.disableCollidersOnCraft ? "true" : "false");
                     b.Append(",\"slotState\":{\"slot\":").Append(Json.Str(ps.name)).Append(",\"cantCraft\":").Append(ps.cantCraft ? "true" : "false")
                      .Append(",\"cantUnCraft\":").Append(ps.cantUnCraft ? "true" : "false").Append(",\"attachTarget\":").Append(ps.attachTarget ? "true" : "false");
-                    MountFacts(ps, part, P, pl, b, -1);
+                    EntityMountFacts.MountFacts(ps, part, P, pl, b, -1);
                     b.Append('}');
                 }
                 b.Append('}');

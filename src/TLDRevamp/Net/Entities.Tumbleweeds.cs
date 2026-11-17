@@ -15,8 +15,8 @@ namespace TLDRevamp.Net
     /// (a copy is moved by its owner).
     internal static partial class EntityAI
     {
-        public static long TumbleShared, TumbleLimited;
-        public static float TumbleNearM = 300f;   // the others' tumbleweeds this near the player count for its limit
+        internal static long TumbleShared, TumbleLimited;
+        internal static float TumbleNearM = 300f;   // the others' tumbleweeds this near the player count for its limit
 
         [HarmonyPatch(typeof(thumbleweedMain), nameof(thumbleweedMain.Spawn))]
         private static class TumbleSpawn

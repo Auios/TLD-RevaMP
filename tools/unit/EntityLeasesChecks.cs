@@ -130,19 +130,11 @@ static partial class EntitySplitTest
 
     static void LeaseBoundaryChecks()
     {
-        CoreMembers.Register();
         var owner = typeof(EntityWorldLeases);
         Check(owner.IsAbstract && owner.IsSealed && !owner.IsPublic, "world leases have an internal static owner");
-        foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly))
-        {
-            if (!(member is FieldInfo || member is PropertyInfo || member is MethodInfo) || typeof(Entities).GetMember(member.Name, Static).Length != 0) continue;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                Check(Reflect.MemberPath(prefix + member.Name) == owner.FullName + "." + member.Name, "lease alias " + prefix + member.Name);
-        }
-        Check(BridgeReflect.Set("Entities.LeaseRetryS", "3.5") == "3.5" && EntityWorldLeases.LeaseRetryS == 3.5f, "lease setting alias writes its only backing field");
+        Check(BridgeReflect.Set("EntityWorldLeases.LeaseRetryS", "3.5") == "3.5" && EntityWorldLeases.LeaseRetryS == 3.5f, "lease setting owner path writes its only backing field");
         EntityWorldLeases.LeaseRetryS = 2;
         Check(!ReferenceEquals(Field(owner, "W"), Field(typeof(Entities), "W")), "leases own a writer");
-        Check(Entities.LeasesDone == EntityWorldLeases.LeasesDone && Entities.LeaseTable() == EntityWorldLeases.LeaseTable(), "compiled facade reads lease owner");
         string leases = File.ReadAllText("src/TLDRevamp/Net/Entities.Leases.cs");
         string feature = leases.Substring(0, leases.IndexOf("    public static partial class Entities"));
         string validation = File.ReadAllText("src/TLDRevamp/Net/Entities.LeaseValidation.cs");
@@ -156,7 +148,7 @@ static partial class EntitySplitTest
             Check(!feature.Contains("class " + name) && !Regex.IsMatch(feature, @"\b" + name + @"\("), name + " stays with kernel authority");
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");
         Check(kernel.IndexOf("EntityWorldLeases.RestoreBuiltIns();") < kernel.IndexOf("HitchReset(wasHost);") && kernel.IndexOf("HitchReset(wasHost);") < kernel.IndexOf("EntityWorldLeases.ResetLeaseSession();"), "built-in restoration and lease clear keep reset slots");
-        Check(kernel.Contains("ResetPoiCensus(); EntityWorldLeases.ResetLeaseSession();") && kernel.Replace("\r\n", "\n").Contains("EntityWorldLeases.LeaseTick();\n            LiveUsableTick();"), "lease reset and tick neighbors are unchanged");
+        Check(kernel.Contains("EntityRepair.ResetPoiCensus(); EntityWorldLeases.ResetLeaseSession();") && kernel.Replace("\r\n", "\n").Contains("EntityWorldLeases.LeaseTick();\n            LiveUsableTick();"), "lease reset and tick neighbors are unchanged");
         EntityWorldLeases.LeaseTypeMismatches = 19; EntityWorldLeases.LeaseRetryS = 7;
         Set(owner, "_leaseSpawning", true);
         long done = EntityWorldLeases.LeasesDone, mismatches = EntityWorldLeases.LeaseTypeMismatches;

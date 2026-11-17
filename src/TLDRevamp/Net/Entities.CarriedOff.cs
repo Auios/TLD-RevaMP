@@ -7,7 +7,7 @@ namespace TLDRevamp.Net
     {
         private static readonly NetWriter W = new NetWriter();
         // a part on a member carried away from its group: Entities.PartOff
-        public static long CarriedOffSent, CarriedOffApplied;
+        internal static long CarriedOffSent, CarriedOffApplied;
         private static readonly Dictionary<(uint, int), tosaveitemscript> _carriedOff = new Dictionary<(uint, int), tosaveitemscript>();
         private static Entities.Ent _detachCarrier;
         private static int _detachCarrierSlot;

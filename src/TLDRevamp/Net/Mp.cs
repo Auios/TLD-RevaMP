@@ -227,7 +227,7 @@ namespace TLDRevamp.Net
                 scr.Save(new savedata(savedatascript.s.data), mainscript.s.menuBackGroundSaveSprite, pathscript.autosaveName1, _async: false);
                 sw.Stop();
                 LastSaveMs = (float)sw.Elapsed.TotalMilliseconds; LastSaveItems = items;
-                Entities.SaveLeases();
+                EntityWorldLeases.SaveLeases();
                 return "{\"saved\":true,\"sync\":true,\"rotated\":" + (rotated ? "true" : "false") + ",\"items\":" + items + ",\"ms\":" + LastSaveMs.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + "}";
             }
             catch (System.Exception e)
@@ -246,7 +246,7 @@ namespace TLDRevamp.Net
             string d2 = pathscript.SaveDataName(pathscript.autosaveName2), p2 = pathscript.SavePropertiesName(pathscript.autosaveName2), t2 = pathscript.SaveThumbnailName(pathscript.autosaveName2);
             string d3 = pathscript.SaveDataName(pathscript.autosaveName3), p3 = pathscript.SavePropertiesName(pathscript.autosaveName3), t3 = pathscript.SaveThumbnailName(pathscript.autosaveName3);
             if (!System.IO.File.Exists(d1)) return false;
-            Entities.RotateLeaseFiles();   // before the saves move: it decides by the same files
+            EntityWorldLeases.RotateLeaseFiles();   // before the saves move: it decides by the same files
             if (System.IO.File.Exists(d3) && System.IO.File.Exists(d2)) { System.IO.File.Delete(d3); pathscript.Delete(p3); pathscript.Delete(t3); }
             if (System.IO.File.Exists(d2) && System.IO.File.Exists(d1)) { System.IO.File.Move(d2, d3); pathscript.Move(p2, p3); pathscript.Move(t2, t3); }
             if (System.IO.File.Exists(d1)) { System.IO.File.Move(d1, d2); pathscript.Move(p1, p2); pathscript.Move(t1, t2); }
@@ -741,7 +741,7 @@ namespace TLDRevamp.Net
             if (!DedicatedServer.Enabled) HitCheck.Record(0, host);
             float hostYaw = Mp.LocalYaw();
             double hostStamp = Time.realtimeSinceStartupAsDouble;
-            Entities.LocalSeat(out uint hostSeatNet, out int hostSeatIdx);
+            EntitySeats.LocalSeat(out uint hostSeatNet, out int hostSeatIdx);
             Entities.LocalFooting(out var hostFoot);
             _seq++;
             _tick++;
@@ -905,7 +905,7 @@ namespace TLDRevamp.Net
         /// the state a copy ends on. Copies interpolate over the spacing they actually receive (PoseInterpolator).
         public static double CarNearM = 150, CarMidM = 400, CarFarM = 2000;
         public static float CarMidInterval = 0.1f, CarFarInterval = 0.25f;
-        /// Beyond CarFarM: a state every 5 s (plus rest states and driver changes). Nothing at all (â‰¤ v0.57.94) left
+        /// Beyond CarFarM: a state every 5 s (plus rest states and driver changes). Nothing at all (≤ v0.57.94) left
         /// every far player's stored copy where the car was when it last came near them: arriving there showed a parked
         /// ghost of a car that was 50 km away, and their save kept it there. ~60 bytes per car per 5 s per player.
         public static float CarBeyondInterval = 5f;
@@ -934,7 +934,7 @@ namespace TLDRevamp.Net
                 }
                 // Compact animals and limb-only movement kept every pose before interest filtering.
                 // Preserve that cadence for relevant viewers; it is not a far-store maintenance requirement.
-                bool forceHere = force || fullRate && (tier < 3 || !Entities.InterestRelay);
+                bool forceHere = force || fullRate && (tier < 3 || !EntityAuthorityInterest.InterestRelay);
                 if (tier == 3 && !CarTiers && !forceHere) continue;   // A/B: the old cut-off
                 if (CarTiers && tier > 0 && !forceHere)
                 {
@@ -1109,8 +1109,8 @@ namespace TLDRevamp.Net
                     MyId = (int)r.VarU32(); ServerSeed = r.I32(); r.U16(); int car = r.I32(), map = r.I32();
                     ServerWorldTime = !r.Bad ? r.F32() : -1f;   // -1: an old server without the field
                     StormLast = !r.Bad ? r.F32() : -1f; StormNext = !r.Bad ? r.F32() : -1f;
-                    if (!Entities.Finite(ServerWorldTime)) ServerWorldTime = -1f;   // infinity passed the `>= 0` checks
-                    if (!Entities.Finite(StormLast) || !Entities.Finite(StormNext)) StormLast = StormNext = -1f;
+                    if (!EntityNumbers.Finite(ServerWorldTime)) ServerWorldTime = -1f;   // infinity passed the `>= 0` checks
+                    if (!EntityNumbers.Finite(StormLast) || !EntityNumbers.Finite(StormNext)) StormLast = StormNext = -1f;
                     var hostMode = !r.Bad && r.Remaining >= 16 ? GameMode.Read(r) : default;
                     string telemetrySid = r.Str(); double hostClock = r.F64(); string telemetryDate = r.Str();
                     if (r.Bad || !MarkFiles.Date(telemetryDate) || telemetrySid == null || telemetrySid.Length != 16 || !ulong.TryParse(telemetrySid, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out _) || double.IsNaN(hostClock) || double.IsInfinity(hostClock)) return;
@@ -1265,7 +1265,7 @@ namespace TLDRevamp.Net
                 if (_worldSeenAt < 0) _worldSeenAt = Time.realtimeSinceStartup;
                 if (Time.realtimeSinceStartup - _worldSeenAt < 3f) return;
                 TestSafety.InHostWorld = true;
-                if (ServerWorldTime >= 0f) { try { Entities.ApplyWorldTime(ServerWorldTime, true); } catch { } ServerWorldTime = -1f; }   // relative shift (SetStartTime is for before the clock starts); the Ready reply corrects the load time
+                if (ServerWorldTime >= 0f) { try { EntityWorldClock.ApplyWorldTime(ServerWorldTime, true); } catch { } ServerWorldTime = -1f; }   // relative shift (SetStartTime is for before the clock starts); the Ready reply corrects the load time
                 if (StormLast >= 0f && StormNext >= 0f && mainscript.s.sandStormSpawn != null)
                 {
                     try
@@ -1300,7 +1300,7 @@ namespace TLDRevamp.Net
             float yaw = Player != null ? Player.Yaw : Mp.LocalYaw();
             _w.Reset(); _w.U8(Protocol.State); _w.U16(++_seq); Protocol.WriteStamp(_w, Time.realtimeSinceStartupAsDouble); Protocol.WritePos(_w, g); Protocol.WriteYaw(_w, yaw);
             uint sNet = 0; int sIdx = 0; var foot = default(Protocol.Footing);
-            if (Player == null) { Entities.LocalSeat(out sNet, out sIdx); Entities.LocalFooting(out foot); }
+            if (Player == null) { EntitySeats.LocalSeat(out sNet, out sIdx); Entities.LocalFooting(out foot); }
             else if (Player != null) { sNet = Player.SeatNet; sIdx = Player.SeatIndex; }
             Protocol.WriteSeat(_w, sNet, sIdx, foot);
             T.Send(_conn, _w, SteamTransport.SendUnreliable);
@@ -1700,7 +1700,7 @@ namespace TLDRevamp.Net
                 // seated in a shared car: sit in this machine's copy of that seat (their global position comes from
                 // their own, delayed copy of the car — following it would leave them metres behind at speed)
                 if (rp.CachedSeatNet != rp.SeatNet || rp.CachedSeatIdx != rp.SeatIdx) { rp.CachedSeatNet = rp.SeatNet; rp.CachedSeatIdx = rp.SeatIdx; rp.CachedSeat = null; }
-                var seat = rp.SeatNet != 0 ? Entities.SeatTransformCached(rp.SeatNet, rp.SeatIdx, ref rp.CachedCarRoot, ref rp.CachedSeat) : null;
+                var seat = rp.SeatNet != 0 ? EntitySeats.SeatTransformCached(rp.SeatNet, rp.SeatIdx, ref rp.CachedCarRoot, ref rp.CachedSeat) : null;
                 if ((_traceTick % 15) == 0)
                 {
                     if (rp.Cols != null) foreach (var col in rp.Cols) if (col.enabled) { col.enabled = false; Plugin.Log.LogWarning("RemoteTrace: re-killed a live collider on the remote body " + rp.Go.name); }
@@ -1709,7 +1709,7 @@ namespace TLDRevamp.Net
                 if (rp.SeatedOn != seat && SeatFlickerTraces < 8)
                 {
                     SeatFlickerTraces++;
-                    var why = rp.SeatNet == 0 ? "seatNet 0" : Json.Str(Entities.SeatWhy(rp.SeatNet, rp.SeatIdx));
+                    var why = rp.SeatNet == 0 ? "seatNet 0" : Json.Str(EntitySeats.SeatWhy(rp.SeatNet, rp.SeatIdx));
                     Plugin.Log.LogInfo($"seat flicker: {rp.SeatedOn != null} -> {seat != null} {why}");
                 }
                 if (seat != null)
@@ -1820,7 +1820,7 @@ namespace TLDRevamp.Net
         internal static uint SeatNetOf(int id) => All.TryGetValue(id, out var rp) ? rp.SeatNet : 0;
         internal static int SeatIdxOf(int id) => All.TryGetValue(id, out var rp) ? rp.SeatIdx : -1;
 
-        /// Every remote player's body as a feetâ†’head segment (THead follows their pose: crouching, prone, seated).
+        /// Every remote player's body as a feet→head segment (THead follows their pose: crouching, prone, seated).
         /// Other players standing or walking (not seated in a car — the car is what an autopilot sees then).
         internal static List<Vector3> OnFootPositions()
         {

@@ -66,8 +66,8 @@ namespace TLDRevamp.Net
                     wrows.Add("[" + Json.Str(hr.name + "/" + wg.name) + "," + (ProxyWheelOwner.ContainsKey(wg) ? "true" : "false") + ",[" +
                               lq.x.ToString("F4", ic2) + "," + lq.y.ToString("F4", ic2) + "," + lq.z.ToString("F4", ic2) + "," + lq.w.ToString("F4", ic2) + "]]");
                 }
-            return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"wheels(name,synced,rotInVehicle)\":[" + string.Join(",", wrows) + "]" + ",\"ragdollCopy\":" + (TLDRevamp.Net.Entities.ObservedRagdollCopies.Contains(e) ? "true" : "false") + ",\"limbsByBody\":" + (LimbsByBody(e) ? "true" : "false") +
-                   ",\"limbs\":" + (Limbs(e) is Transform[] ls ? ls.Length : 0) + ",\"bodies\":[" + string.Join(",", rows) + "]}";
+            return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"wheels(name,synced,rotInVehicle)\":[" + string.Join(",", wrows) + "]" + ",\"ragdollCopy\":" + (TLDRevamp.Net.EntityRagdolls.ObservedRagdollCopies.Contains(e) ? "true" : "false") + ",\"limbsByBody\":" + (EntityPhysics.LimbsByBody(e) ? "true" : "false") +
+                   ",\"limbs\":" + (EntityRagdolls.Limbs(e) is Transform[] ls ? ls.Length : 0) + ",\"bodies\":[" + string.Join(",", rows) + "]}";
         }
         public static string StandSeries(string[] a)
         {

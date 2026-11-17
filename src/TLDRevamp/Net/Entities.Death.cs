@@ -8,8 +8,8 @@ namespace TLDRevamp.Net
 
         /// A/B: share the corpse that the game creates in fpscontroller.Death2. False leaves it local as before; the
         /// limb transport itself is already implemented in Entities.Ragdoll.
-        public static bool DeathRagdollShare = true;
-        public static long DeathCorpsesShared, DeathCorpseShareMissed;
+        internal static bool DeathRagdollShare = true;
+        internal static long DeathCorpsesShared, DeathCorpseShareMissed;
         /// How many corpses were un-shared again (the corpse of a death that ended: the game's own RagdolReset
         /// replaces the corpse object but never destroys the old one, so without this every death leaked one shared
         /// entity and one orphan body per machine).
@@ -18,7 +18,7 @@ namespace TLDRevamp.Net
         /// other body, as the game itself leaves it in single player (its RagdolReset makes a new corpse object for the
         /// next death and leaves the old one lying). False is the old behaviour: the respawn removed the corpse on every
         /// machine (DeathCorpsesReleased).
-        public static bool DeathCorpseStays = true;
+        internal static bool DeathCorpseStays = true;
         /// How many corpses were left lying at a respawn or a session's end (DeathCorpseStays).
         public static long DeathCorpsesKept;
         /// How many times the game's own Death was called again for a death that already happened: the corpse was
@@ -27,13 +27,13 @@ namespace TLDRevamp.Net
 
         /// The corpse of the last death this machine made, with the exact ids a test needs: the game's own save id
         /// (the id the host and the joiner agree on) and the network id (the id the share got).
-        public static uint DeathCorpseSaveId, DeathCorpseNetId;
+        internal static uint DeathCorpseSaveId, DeathCorpseNetId;
         /// The save ids of the things the death spawned and shared (the test's own items), in order. The save id
         /// is the id every machine agrees on; the network id comes later (the host answers the share), so it is
         /// read when the diagnostics are made, not when the thing is spawned.
-        public static readonly System.Collections.Generic.List<uint> DeathItemSaveIds = new System.Collections.Generic.List<uint>();
+        internal static readonly System.Collections.Generic.List<uint> DeathItemSaveIds = new System.Collections.Generic.List<uint>();
         /// The network ids of the same things, in the same order (0 while the share is still pending).
-        public static readonly System.Collections.Generic.List<uint> DeathItemNetIds = new System.Collections.Generic.List<uint>();
+        internal static readonly System.Collections.Generic.List<uint> DeathItemNetIds = new System.Collections.Generic.List<uint>();
 
         /// The corpse object of the death that is currently open on this machine (the one this machine shared). It is
         /// released when the death ends, so the next death does not leave the previous body behind.
@@ -43,7 +43,7 @@ namespace TLDRevamp.Net
         /// The diagnostics of the last death this machine made (bridge `mp deathinfo`): the exact ids of the corpse
         /// and of the things this death spawned, and the counters that say what happened. A test asserts these
         /// exact numbers, not "an item nearby".
-        public static string DeathInfo()
+        internal static string DeathInfo()
         {
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var sb = new System.Text.StringBuilder();
@@ -141,7 +141,7 @@ namespace TLDRevamp.Net
                 {
                     DeathCorpsesShared++;
                     DeathCorpseSaveId = ts != null ? ts.idInSave : 0;
-                    DeathCorpseNetId = Entities.NetIdOf(rag);   // 0 while the host has not answered the share yet
+                    DeathCorpseNetId = EntityModApi.NetIdOf(rag);   // 0 while the host has not answered the share yet
                     _deathCorpse = rag;
                     _deathCorpseNet = DeathCorpseNetId;
                 }
@@ -156,7 +156,7 @@ namespace TLDRevamp.Net
                     else
                     {
                         DeathCorpseSaveId = ts != null ? ts.idInSave : 0;
-                        DeathCorpseNetId = Entities.NetIdOf(rag);
+                        DeathCorpseNetId = EntityModApi.NetIdOf(rag);
                         _deathCorpse = rag;
                         _deathCorpseNet = DeathCorpseNetId;
                         DeathCorpseDuplicates++;   // the same corpse, shared once: a duplicate death, not a second corpse

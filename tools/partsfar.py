@@ -73,7 +73,7 @@ with game.ProtectedSession():
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if OLD:
-            for s_ in (h, L): s_(f"set {T}.CopyLockSafe False"); s_(f"set {T}.CopyLockByContainer False"); s_(f"set {T}.DriveClaimRootOnly False")
+            for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe False"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer False"); s_(f"set {T}.DriveClaimRootOnly False")
         print(f"  {'OLD (v0.66.7 release)' if OLD else 'CURRENT BUILD'}", flush=True)
         time.sleep(5)
         lid = L("mp entities")["me"]
@@ -134,7 +134,7 @@ with game.ProtectedSession():
             placed = until(lambda: (ent(h, car) or {}).get("dormant") is False, 30)
             verdict(f"{tag}: THE HOST PLACED ITS COPY OF THE CAR", bool(placed))
             time.sleep(8)   # the release rule acts after 1 s; the anomaly census after 6 s
-            print(f"  {tag}: host's copy of the part: {part_state(h, part, car)}; released so far {h(f'get {T}.CopyLocksReleased')['value']}", flush=True)
+            print(f"  {tag}: host's copy of the part: {part_state(h, part, car)}; released so far {h(f'get TLDRevamp.Net.EntityLocks.CopyLocksReleased')['value']}", flush=True)
             census(f"{tag}: {FAR} M AWAY AND BACK — THE HOST'S COPY HAS THE CAR'S PARTS", car)
             try:
                 a, b = L(f"mp relpos {car} {part}")["items"].get(str(part)), h(f"mp relpos {car} {part}")["items"].get(str(part))
@@ -150,7 +150,7 @@ with game.ProtectedSession():
         print("  errors:", [s_("errors")["errors"] for s_ in (h, L)], flush=True)
     finally:
         for s_ in (h, L):
-            try: s_(f"set {T}.CopyLockSafe True"); s_(f"set {T}.CopyLockByContainer True"); s_(f"set {T}.DriveClaimRootOnly True")
+            try: s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe True"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer True"); s_(f"set {T}.DriveClaimRootOnly True")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

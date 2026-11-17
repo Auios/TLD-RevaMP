@@ -108,7 +108,7 @@ namespace TLDRevamp.Net
             if (k > 0) { _itemHistP.RemoveRange(0, k); _itemHistQ.RemoveRange(0, k); }
             var g = _itemHistP[0].Value; var q = _itemHistQ[0];
             _w.Reset();
-            Entities.WriteStateHead(_w, _itemNet, _itemEpoch, ++_itemSeq, now - LegacyBots.BotItemLag, g, q, Vector3.zero, false, false, LegacyBots.BotItemHeld);
+            EntityCodec.WriteStateHead(_w, _itemNet, _itemEpoch, ++_itemSeq, now - LegacyBots.BotItemLag, g, q, Vector3.zero, false, false, LegacyBots.BotItemHeld);
             _w.U8(0);   // no wheels
             _w.U8(0);   // engine: none
             _w.U8(0);   // no car signals
@@ -155,13 +155,13 @@ namespace TLDRevamp.Net
             _carPrev = g; _carPrevT = tNow; _carHasPrev = true;
             var rot = v.sqrMagnitude > 0.01f ? Quaternion.LookRotation(v) : Quaternion.identity;   // pitched with the slope
             _w.Reset();
-            Entities.WriteStateHead(_w, _carNet, _carEpoch, ++_carSeq, tNow /* the frame start: the bot's position is integrated to it */, new Vector3d(g.x, g.y + 0.6, g.z), rot, v, true);
+            EntityCodec.WriteStateHead(_w, _carNet, _carEpoch, ++_carSeq, tNow /* the frame start: the bot's position is integrated to it */, new Vector3d(g.x, g.y + 0.6, g.z), rot, v, true);
             _w.U8((byte)(4 | (LegacyBots.BotTorques ? 0x80 : 0)));                   // 4 wheels (+ torques), the owner's layout
             short rpm = (short)Mathf.Clamp(v.magnitude / 0.33f * 60f / (2f * Mathf.PI), 0f, 32767f);
             for (int i = 0; i < 4; i++) { _w.U8(0); _w.U8(0); _w.U16((ushort)rpm); }
             if (LegacyBots.BotTorques) for (int i = 0; i < 4; i++) { _w.U8(0); _w.U8(8); }
             _w.U8(1 | 2); _w.U16(2200);                                      // engine running at 2200 rpm
-            _w.U8(0);                                                        // no car signals (Entities.CarSignals)
+            _w.U8(0);                                                        // no car signals (EntityCarSignals.CarSignals)
             _w.U8(0);                                                        // no limbs (Entities.Ragdoll)
             Client.T.Send(Client.T.Connections[0], _w, SteamTransport.SendUnreliable);
         }

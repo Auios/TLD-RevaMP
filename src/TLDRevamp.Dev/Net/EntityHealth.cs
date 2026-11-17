@@ -96,7 +96,7 @@ namespace TLDRevamp.Net
                             var part = ps.part(); if (part == null || part.tosave == null || part.tosave.P == null) continue;
                             fitted++;
                             var r = Reach(part, pl);
-                            if (PartWatchRules.Broken(r.Visible, r.Targetable, r.Expected, r.Held)) broken.Add(PrefabName(part.tosave.id) + " (" + PartWatchRules.Why(r.Live, r.Held) + ", colliders " + r.Live + "/" + r.Cols + ")");
+                            if (PartWatchRules.Broken(r.Visible, r.Targetable, r.Expected, r.Held)) broken.Add(EntityLifetimeStreaming.PrefabName(part.tosave.id) + " (" + PartWatchRules.Why(r.Live, r.Held) + ", colliders " + r.Live + "/" + r.Cols + ")");
                         }
             if (e.Root.attachable != null && e.Root.attachable.attached && e.Root.attachable.slot != null && pl != null)
             {

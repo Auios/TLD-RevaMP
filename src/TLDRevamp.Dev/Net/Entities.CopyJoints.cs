@@ -13,7 +13,7 @@ namespace TLDRevamp.Net
         {
             RefreshJointed();
             var rows = new List<string>();
-            foreach (var e in TLDRevamp.Net.Entities.ObservedJointed)
+            foreach (var e in TLDRevamp.Net.EntityPhysics.ObservedJointed)
             {
                 var j = e.Root.attachable.J as ConfigurableJoint;
                 var own = j != null ? j.GetComponent<Rigidbody>() : null;
@@ -24,8 +24,8 @@ namespace TLDRevamp.Net
                          ",\"onKinematic\":" + (j != null && j.connectedBody != null && j.connectedBody.isKinematic ? "true" : "false") +
                          ",\"free\":" + (j != null && j.xMotion == ConfigurableJointMotion.Free ? "true" : "false") + "}");
             }
-            return "{\"enabled\":" + (CopyJointsFree ? "true" : "false") + ",\"freed\":" + CopyJointsFreed + ",\"locked\":" + CopyJointsLocked +
-                   ",\"freeNow\":" + TLDRevamp.Net.Entities.ObservedFreedJoints.Count + ",\"jointed\":[" + string.Join(",", rows) + "]}";
+            return "{\"enabled\":" + (EntityPhysics.CopyJointsFree ? "true" : "false") + ",\"freed\":" + EntityPhysics.CopyJointsFreed + ",\"locked\":" + EntityPhysics.CopyJointsLocked +
+                   ",\"freeNow\":" + TLDRevamp.Net.EntityPhysics.ObservedFreedJoints.Count + ",\"jointed\":[" + string.Join(",", rows) + "]}";
         }
     }
 }

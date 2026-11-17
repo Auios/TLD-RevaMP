@@ -176,12 +176,12 @@ namespace TLDRevamp.Net
             _tpaSendFailed = false; SendTpaState(1, Server[5000]); _tpaSending = false;
             check(Known.Contains(5001) && !_staleEnts[1].Contains(5000), "retry completes known-copy part and resync delivery");
 
-            Mp.Server = null; Tpa.RefreshingObjects = true; BeginTpaRefresh();
+            Mp.Server = null; Tpa.RefreshingObjects = true; EntityTeleportRefresh.BeginTpaRefresh();
             var missingState = new NetWriter(); missingState.VarU32(5000); missingState.VarU32(1);
             var mr = new NetReader { Buf = missingState.Buf, End = missingState.Len };
             ClientReceive(State, mr); mr.Pos = 0; ClientReceive(CompactState, mr);
             check(Known.Contains(5000) && Refetches.Count == 1 && Refetches[0] == 5000, "Known but absent client copy requests one refetch across state formats");
-            BeginTpaRefresh(); mr.Pos = 0; ClientReceive(State, mr);
+            EntityTeleportRefresh.BeginTpaRefresh(); mr.Pos = 0; ClientReceive(State, mr);
             check(Refetches.Count == 2, "next arrival may refetch a repeat loss");
             ByNet[5000] = new object(); mr.Pos = 0; ClientReceive(State, mr);
             check(Tpa.Applied.Contains(5000) && Refetches.Count == 2, "known State counts applied without refetch");
@@ -197,22 +197,22 @@ namespace TLDRevamp.Net
             Mp.Server = null; Tpa.WaitingWorld = true;
             ClientReceive(Add, new NetReader { Buf = new byte[] { 7 }, End = 1 });
             ClientReceive(PartDetached, new NetReader { Buf = new byte[] { 8 }, End = 1 });
-            DrainTpaInbox(); check(Applied.Count == 0, "no objects or states applied before destination geometry exists");
+            EntityTeleportRefresh.DrainTpaInbox(); check(Applied.Count == 0, "no objects or states applied before destination geometry exists");
             ClientReceive(97, new NetReader { Buf = new byte[] { 9 }, End = 1 });
             check(Applied.Count == 1 && Applied[0] == 97009, "world clock bypasses ground wait"); Applied.Clear();
             ClientReceive(Owner, new NetReader { Buf = new byte[] { 9 }, End = 1 });
             check(Applied.Count == 1, "known ownership bypasses ground wait"); Applied.Clear();
             Tpa.WaitingWorld = false;
             ClientReceive(State, new NetReader { Buf = new byte[] { 9 }, End = 1 });
-            DrainTpaInbox();
+            EntityTeleportRefresh.DrainTpaInbox();
             check(string.Join(",", Applied) == "22007,27008,23009", "reliable add, parts and states keep wire order through readiness transition");
             for (int i = 0; i < 450; i++) { Tpa.WaitingWorld = true; ClientReceive(Add, new NetReader { Buf = new byte[] { 1 }, End = 1 }); }
-            Tpa.WaitingWorld = false; int before = Applied.Count; DrainTpaInbox();
-            check(Applied.Count - before == 200 && !TpaInboxEmpty, "client replay work is bounded");
-            DrainTpaInbox(); DrainTpaInbox(); check(TpaInboxEmpty && Applied.Count == before + 450, "all deferred adds eventually applied");
+            Tpa.WaitingWorld = false; int before = Applied.Count; EntityTeleportRefresh.DrainTpaInbox();
+            check(Applied.Count - before == 200 && !EntityTeleportRefresh.TpaInboxEmpty, "client replay work is bounded");
+            EntityTeleportRefresh.DrainTpaInbox(); EntityTeleportRefresh.DrainTpaInbox(); check(EntityTeleportRefresh.TpaInboxEmpty && Applied.Count == before + 450, "all deferred adds eventually applied");
             Tpa.WaitingWorld = true; ClientReceive(Add, new NetReader { Buf = new byte[] { 2 }, End = 1 });
-            ResetTpaSync(); Tpa.WaitingWorld = false; before = Applied.Count; DrainTpaInbox();
-            check(TpaInboxEmpty && Applied.Count == before, "session reset cannot replay previous world's objects");
+            ResetTpaSync(); Tpa.WaitingWorld = false; before = Applied.Count; EntityTeleportRefresh.DrainTpaInbox();
+            check(EntityTeleportRefresh.TpaInboxEmpty && Applied.Count == before, "session reset cannot replay previous world's objects");
 
             Tpa.WaitingWorld = true;
             before = Applied.Count;
@@ -221,7 +221,7 @@ namespace TLDRevamp.Net
             ClientReceive(Owner, new NetReader { Buf = new byte[] { 42, 0, 0, 0 }, End = 4 });
             ClientReceive(65, new NetReader { Buf = new byte[] { 42, 0, 0, 0 }, End = 4 });
             check(Applied.Count == before + 1 && Applied[before] == 65042, "census control bypasses even a queued net ID");
-            Tpa.WaitingWorld = false; DrainTpaInbox();
+            Tpa.WaitingWorld = false; EntityTeleportRefresh.DrainTpaInbox();
             check(Applied[before + 1] == 22042 && Applied[before + 2] == 25042, "ownership of a queued Add waits for its copy");
             ResetTpaSync();
             before = Applied.Count; Tpa.WaitingWorld = true;
@@ -230,7 +230,7 @@ namespace TLDRevamp.Net
             ClientReceive(101, new NetReader { Buf = new byte[] { 43, 0, 0, 0 }, End = 4 });
             ClientReceive(HitchFrozen, new NetReader { Buf = new byte[] { 43, 0, 0, 0 }, End = 4 });
             check(Applied.Count == before, "hitch freeze and final pose wait for their queued part");
-            Tpa.WaitingWorld = false; DrainTpaInbox();
+            Tpa.WaitingWorld = false; EntityTeleportRefresh.DrainTpaInbox();
             check(Applied[before] == 27042 && Applied[before + 1] == 25043 && Applied[before + 2] == 101043 && Applied[before + 3] == 102043,
                 "part, ownership, hitch freeze and frozen pose keep wire order");
             ResetTpaSync();

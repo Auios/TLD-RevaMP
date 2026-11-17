@@ -16,7 +16,7 @@ static class LiveUsablesTest
 namespace TLDRevamp.Net
 {
     internal static partial class EntityUsables { internal static bool ApplyingPoi => Entities.TestApplyingPoi; }
-    internal static class EntityEditCheck { internal static long EditRefusedValues, PoiRefusedValues; }
+    internal static partial class EntityEditCheck { internal static long EditRefusedValues, PoiRefusedValues; }
     internal static class EntityDoors
     {
         internal static bool BusControl(tosaveitemscript it, usablescript u) => false;
@@ -39,23 +39,19 @@ namespace TLDRevamp.Net
         private static List<Ent> LookupSet() => new List<Ent>(ByNet.Values);   // Entities.Placed: every object here is placed
         const byte PoiUsable = 52;
         internal static bool TestApplyingPoi;
-        static long PoiUsablesSent, PoiUsablesApplied, PoiUsablesUnplaced;
-        static readonly Dictionary<PoiKey, usablescript> Buildings = new Dictionary<PoiKey, usablescript>();
-        static usablescript PoiUsableOf(PoiKey k) => Buildings.TryGetValue(k, out var u) ? u : null;
-        static bool PoiAllowed = true;
-        static bool CheckPoiUsable(int from, PoiKey k, PoiState st) => PoiAllowed;
-        static void RelayPoi(PoiKey k, NetWriter w, int from, bool reliable = true) { Relayed.Add(w.Buf.AsSpan(0, w.Len).ToArray()); RelayReliable.Add(reliable); }
-        static readonly List<byte[]> Relayed = new List<byte[]>();
-        static readonly List<bool> Reliable = new List<bool>(), RelayReliable = new List<bool>();
+        internal static readonly Dictionary<Entities.PoiKey, usablescript> Buildings = new Dictionary<Entities.PoiKey, usablescript>();
+        internal static bool PoiAllowed = true;
+        internal static readonly List<byte[]> Relayed = new List<byte[]>();
+        internal static readonly List<bool> Reliable = new List<bool>(), RelayReliable = new List<bool>();
         static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
         static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
         static readonly Dictionary<tosaveitemscript, float> EditDirty = new Dictionary<tosaveitemscript, float>();
         static readonly Dictionary<tosaveitemscript, int> EditKinds = new Dictionary<tosaveitemscript, int>();
         static float _editFlushAt; static int _resyncFirst;
         static bool InSession = true, _applyingState;
-        static int MyId = 1; const float EditHold = 1.5f, StateInterestM = 300;
+        static int MyId = 1; const float EditHold = 1.5f;
         static long EditsOutOfReach, DetachReqsSent;
-        static readonly object _editBuckets = new object(); static float EditRatePerS, EditBurst;
+        static readonly object _editBuckets = new object();
         const byte DetachReq = 37; static readonly NetWriter W = new NetWriter();
         static readonly List<Spot> _spots = new List<Spot>();
         static readonly List<byte[]> Sent = new List<byte[]>();
@@ -66,14 +62,9 @@ namespace TLDRevamp.Net
         static bool IsProxy(object it) => false;
         static bool AtObject(int from, SEnt se) => true;
         static bool CarriedPartsShared = true;
-        static bool CarriedFar(attachablescript at, out Ent carrier) { carrier = null; return false; }
-        static bool TakeEditToken(int from) => true;
         static void ServerSendTo(int id, NetWriter w, bool reliable) { }
-        internal static bool IsFinite(double n) => Finite(n);
-        internal static bool IsFinite(float n) => Finite(n);
-        static bool Finite(double n) => !double.IsNaN(n) && !double.IsInfinity(n);
-        static bool Sane(float n) => Finite(n);
-        static void Refuse(ref long n, string why, string what) => n++;
+        internal static bool IsFinite(double n) => EntityNumbers.Finite(n);
+        internal static bool IsFinite(float n) => EntityNumbers.Finite(n);
         static bool Near(Spot s, double x, double z) => s.Near;
         static void ToServer(NetWriter w, bool reliable) { Sent.Add(w.Buf.AsSpan(0, w.Len).ToArray()); Reliable.Add(reliable); }
         static void Deliver(NetWriter w) => ApplyLiveUsable(Reader(w.Buf.AsSpan(0, w.Len).ToArray()));
@@ -99,8 +90,8 @@ namespace TLDRevamp.Net
             var k = new UsableKey { Net = 401, Epoch = 3, Item = 2, Usable = 7 };
             var v = new UsableValue { X = 1, Y = 65535, Slide = 32768, Turn = -17, Tuned = 513 };
             EntityUsables.WriteLiveUsable(w, k, 65535, 123.5, v); rows.Add(Convert.ToHexString(w.Buf.AsSpan(0, w.Len)));
-            k = new UsableKey { Building = true, Poi = new PoiKey { Gen = 2, X = -8000000.125, Y = 50.5, Z = -6000000.25, U = 130 } };
-            var state = new PoiState { XRot = -45.25f, YRot = 17.5f, Slide = .375f, Turn = -3, Tuned = .625f };
+            k = new UsableKey { Building = true, Poi = new Entities.PoiKey { Gen = 2, X = -8000000.125, Y = 50.5, Z = -6000000.25, U = 130 } };
+            var state = new Entities.PoiState { XRot = -45.25f, YRot = 17.5f, Slide = .375f, Turn = -3, Tuned = .625f };
             EntityUsables.WriteLiveUsable(w, k, 0, 124.5, v, state); rows.Add(Convert.ToHexString(w.Buf.AsSpan(0, w.Len)));
             WritePoiFinal(w, k, 1, 125.5, state); rows.Add(Convert.ToHexString(w.Buf.AsSpan(0, w.Len)));
             var orders = new Dictionary<UsableKey, LiveOrder>();
@@ -169,7 +160,7 @@ namespace TLDRevamp.Net
                 Input(u, 10); LiveUsableTick();
                 var oldKey = _localUsables[u].Key;
                 _localUsables.Clear();
-                EntityUsables.WriteLiveUsable(WL, oldKey, 1, 10, UsableBits(u)); Deliver(WL);
+                EntityUsables.WriteLiveUsable(WL, oldKey, 1, 10, EntityUsables.UsableBits(u)); Deliver(WL);
                 Check(_remoteUsables.ContainsKey(oldKey), "original remote interpolation exists");
                 var oldRemote = _remoteUsables[oldKey];
                 car.Split = new HashSet<int> { 1 }; LiveUsableTick();
@@ -196,9 +187,9 @@ namespace TLDRevamp.Net
                 Check(_localUsables[u].Key.Net == 20 && _localUsables[u].Key.Epoch == part.Epoch, "same usable rebinds after owner/epoch change");
                 // Registration can be rebuilt in place while mounting; cache must follow registered order.
                 var replacement = new usablescript { tosaveid = 200, setid = true, ParentItem = door };
-                Check(ItemUsables(door)[0] == u, "old registration cached");
+                Check(EntityUsables.ItemUsables(door)[0] == u, "old registration cached");
                 door.usables[0] = replacement;
-                Check(ItemUsables(door)[0] == replacement, "registration replacement refreshes cache");
+                Check(EntityUsables.ItemUsables(door)[0] == replacement, "registration replacement refreshes cache");
                 u = replacement; Input(u, 25); LiveUsableTick(); key = _localUsables[u].Key;
                 Check(key.Net == 20 && key.Item == 0 && key.Epoch == part.Epoch, "reattached sender uses current entity/epoch");
                 if (owner == attacher) Check(_localUsables[u].Seq > seq, "same-epoch reattach preserves outgoing sequence");
@@ -243,15 +234,54 @@ namespace TLDRevamp.Net
                 part.Split = new HashSet<int> { 0 }; int sent = Sent.Count; LiveUsableTick();
                 Check(!_localUsables.ContainsKey(u) && Sent.Count == sent, "tick cannot send stale split address");
                 part.Split = null; _localUsables.Clear(); SessionLog.St = Time.realtimeSinceStartup + 1;
-                EntityUsables.WriteLiveUsable(WL, key, 500, SessionLog.St, UsableBits(u)); Deliver(WL);
+                EntityUsables.WriteLiveUsable(WL, key, 500, SessionLog.St, EntityUsables.UsableBits(u)); Deliver(WL);
                 var remote = _remoteUsables[key]; LiveUsablesChanged(door);
-                EntityUsables.WriteLiveUsable(WL, key, 501, SessionLog.St - .01, UsableBits(u)); Deliver(WL);
+                EntityUsables.WriteLiveUsable(WL, key, 501, SessionLog.St - .01, EntityUsables.UsableBits(u)); Deliver(WL);
                 Check(!_remoteUsables.ContainsKey(key), "delayed pre-reattach packet cannot resurrect retired interpolation");
-                SessionLog.St += .1; EntityUsables.WriteLiveUsable(WL, key, 501, SessionLog.St, UsableBits(u)); Deliver(WL);
+                SessionLog.St += .1; EntityUsables.WriteLiveUsable(WL, key, 501, SessionLog.St, EntityUsables.UsableBits(u)); Deliver(WL);
                 Check(!ReferenceEquals(remote, _remoteUsables[key]), "reattach rebuilds interpolator for same net/epoch");
             }
         }
     }
+    internal static partial class EntityAuthorityInterest
+    {
+        internal const float StateInterestM = 300;
+    }
+
+    internal static partial class EntityUsables
+    {
+        internal static long PoiUsablesSent, PoiUsablesApplied, PoiUsablesUnplaced;
+        internal static usablescript PoiUsableOf(Entities.PoiKey k) => Entities.Buildings.TryGetValue(k, out var u) ? u : null;
+    }
+
+
+    internal static partial class EntityEditCheck
+    {
+        internal static bool CheckPoiUsable(int from, Entities.PoiKey k, Entities.PoiState st) => Entities.PoiAllowed;
+        internal static float EditRatePerS, EditBurst;
+        internal static bool TakeEditToken(int from) => true;
+        internal static bool Sane(float n) => EntityNumbers.Finite(n);
+        internal static void Refuse(ref long n, string why, string what) => n++;
+    }
+
+
+    internal static partial class EntityAuthorityInterest
+    {
+        internal static void RelayPoi(Entities.PoiKey k, NetWriter w, int from, bool reliable = true) { Entities.Relayed.Add(w.Buf.AsSpan(0, w.Len).ToArray()); Entities.RelayReliable.Add(reliable); }
+    }
+
+
+    internal static partial class EntityAttachments
+    {
+        internal static bool CarriedFar(attachablescript at, out Entities.Ent carrier) { carrier = null; return false; }
+    }
+
+
+    internal static partial class EntityNumbers
+    {
+        internal static bool Finite(double n) => !double.IsNaN(n) && !double.IsInfinity(n);
+    }
+
     class Spot { internal int Id; internal bool Near; }
     class FakeServer
     {

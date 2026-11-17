@@ -228,7 +228,7 @@ namespace TLDRevamp
             ModHost.MustMatch = Config.Bind("Mods", "LoaderModsMustMatch", true,
                 "When you host: refuse players whose TLD Loader mods (BepInEx/TLDLoaderMods) differ from yours (mod ID, version or DLL). Items those mods add reach other players as game items only when everyone has the same mods. Off: they join anyway, and what those mods add may be missing or wrong for them.").Value;
             ModHost.Start();   // TLDLoader mods from BepInEx/TLDLoaderMods (TLDLoader itself doesn't run on the beta)
-            Net.Entities.CopyFarShadowsM = Mathf.Max(0f, Config.Bind("Multiplayer", "CopyShadowsOffBeyondM", 0f,
+            Net.EntityProxyPresentation.CopyFarShadowsM = Mathf.Max(0f, Config.Bind("Multiplayer", "CopyShadowsOffBeyondM", 0f,
                     "Other players' cars farther than this (metres) cast no shadows here; 0 = always. A slower machine in a big session: try 30 (17 cars 20-45 m away, all without shadows: the slowest frames 2.6 ms quicker on the test desktop).").Value);
 
             Net.PlayerLook.LocalDriverHands = Net.RemotePlayers.LocalDriverHands;   // the copies place a driver's hands (RemotePlayers.DriverHands)
@@ -371,7 +371,7 @@ namespace TLDRevamp
             try { ModHost.FixedTick(); GroundPlacement.FixedTick(); } catch (Exception e) { Fault(13, "mods/placement fixed", e); }
             try { Fixes.DrivingAssists.FixedTick(); Net.JoinLoading.FixedTick(); Fixes.LoadFreeze.FixedTick(); } catch (Exception e) { Fault(14, "assists/join/load fixed", e); }
         }
-        private void LateUpdate() { Net.Entities.WornLate(); Net.Entities.LateSample(); }
+        private void LateUpdate() { Net.EntityHands.WornLate(); Net.EntityDoors.LateSample(); }
 
         private void OnApplicationQuit() => Net.JoinLoading.End("quit");
         private void OnDisable() { Net.JoinLoading.End("disabled"); Plugin.Log.LogWarning("Runner disabled:\n" + Environment.StackTrace); }

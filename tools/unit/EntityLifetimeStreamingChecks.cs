@@ -114,15 +114,10 @@ static partial class EntitySplitTest
 
     static void LifetimeBoundaryChecks()
     {
-        CoreMembers.Register(); var owner = typeof(EntityLifetimeStreaming);
+        var owner = typeof(EntityLifetimeStreaming);
         Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, "lifetime has an internal static owner");
-        foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly))
-        {
-            if (!(member is FieldInfo || member is PropertyInfo || member is MethodInfo) || typeof(Entities).GetMember(member.Name, Static).Length != 0) continue;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." }) Check(Reflect.MemberPath(prefix + member.Name) == owner.FullName + "." + member.Name, "lifetime alias " + prefix + member.Name);
-        }
-        Check(BridgeReflect.Set("Entities.LinkedHoldMaxS", "0.25") == "0.25" && EntityLifetimeStreaming.LinkedHoldMaxS == .25f, "linked setting alias writes owner");
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.PlayerMadeShared", "123") == "123" && EntityLifetimeStreaming.PlayerMadeShared == 123, "player-made full alias writes owner");
+        Check(BridgeReflect.Set("EntityLifetimeStreaming.LinkedHoldMaxS", "0.25") == "0.25" && EntityLifetimeStreaming.LinkedHoldMaxS == .25f, "linked setting owner path writes owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityLifetimeStreaming.PlayerMadeShared", "123") == "123" && EntityLifetimeStreaming.PlayerMadeShared == 123, "player-made full owner path writes owner");
         string[] allowed = { "Ent", "MemberGone", "LifetimeInSession", "LifetimeSpawnCount", "ShareLifetimeSpawn", "LifetimePartIsProxy", "RecordLifetimeFallOff", "ProxyForLinkedDelay" };
         foreach (string part in new[] { "FallOff", "FarPose", "FarStore", "Lifecycle", "LinkedDelay", "MemberGone", "PlayerMade", "Removal" })
         {
@@ -133,7 +128,7 @@ static partial class EntitySplitTest
         }
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");
         Check(kernel.Contains("EntityLifetimeStreaming.ClearPlayerDeleted();") && kernel.IndexOf("EntityLifetimeStreaming.ClearPlayerDeleted();") < kernel.IndexOf("ClockReset();"), "deletion markers reset in the original slot");
-        Check(File.ReadAllText("src/TLDRevamp/Net/Entities.Physical.cs").Contains("LinkedDelayTick();"), "fixed tick retains linked delay call site");
+        Check(File.ReadAllText("src/TLDRevamp/Net/Entities.Physical.cs").Contains("EntityLifetimeStreaming.LinkedDelayTick();"), "fixed tick retains linked delay call site");
         Check(kernel.Contains("if (wasHost) SetProxy(e, false);") && kernel.Contains("UnityEngine.Object.Destroy(e.Root.gameObject);"), "host promotion and joiner cleanup remain kernel decisions");
         string memberSource = File.ReadAllText("src/TLDRevamp/Net/Entities.MemberGone.cs");
         Check(memberSource.Contains("private static void ServerMemberGone(int from, NetReader r)") && memberSource.Contains("private static void ApplyMemberGone(NetReader r)"), "member removal handlers retain kernel authority");

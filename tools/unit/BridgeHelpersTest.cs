@@ -35,13 +35,17 @@ namespace TLDRevamp.Net
         }
         internal static bool Resolve(Ent e) => true;
         internal static void TelemetryTouch(uint net) { }
-        internal static Transform[] Limbs(Ent e) => e.Root.ragdollPos?.childs;
-        internal static bool Limp(Ent e) => true;
         internal static bool IsHeld(BridgeFakes.Item it) => it.P == mainscript.s.player.pickedUp ||
             it.ragdollPos != null && Array.IndexOf(it.ragdollPos.ps, mainscript.s.player.pickedUp) >= 0;
         internal static bool IsStored(BridgeFakes.Item it) => false;
         internal static IReadOnlyDictionary<uint, Ent> ObservedEntities => ByNet;
     }
+    internal static partial class EntityRagdolls
+    {
+        internal static Transform[] Limbs(Entities.Ent e) => e.Root.ragdollPos?.childs;
+        internal static bool Limp(Entities.Ent e) => true;
+    }
+
     internal static class EntityFakeInput
     {
         internal static bool GrabPoint(Entities.Ent e, out Vector3 at) { at = e.Root.transform.position; return true; }

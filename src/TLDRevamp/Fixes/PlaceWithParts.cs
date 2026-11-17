@@ -76,7 +76,7 @@ namespace TLDRevamp.Fixes
                 if (d > StrayM)
                 {
                     Strays++;
-                    LastStray = $"{Net.Entities.PrefabName(data.items[k].prefabID)} ({id}) {d:F0} m from {__result.name} ({__result.idInSave})";
+                    LastStray = $"{Net.EntityLifetimeStreaming.PrefabName(data.items[k].prefabID)} ({id}) {d:F0} m from {__result.name} ({__result.idInSave})";
                     if (Strays <= 20) Plugin.Log.LogInfo("part placed with its car: " + LastStray);
                 }
                 if (itemPlaceRemoveScript.s.GetOne(id, out _)) Placed++;   // PlaceOne again: its own parts follow

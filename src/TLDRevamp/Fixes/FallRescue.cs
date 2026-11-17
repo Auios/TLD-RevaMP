@@ -28,7 +28,7 @@ namespace TLDRevamp.Fixes
         {
             if (!Enabled || savedatascript.s == null || savedatascript.s.items == null || Time.realtimeSinceStartup < _next) return;
             _next = Time.realtimeSinceStartup + EveryS;
-            if (_groundMask < 0) _groundMask = LayerMask.GetMask(Net.Entities.GroundLayers.Split(','));
+            if (_groundMask < 0) _groundMask = LayerMask.GetMask(Net.EntityGround.GroundLayers.Split(','));
             if (_groundMask == 0) return;
             foreach (var it in savedatascript.s.items.Values)
             {

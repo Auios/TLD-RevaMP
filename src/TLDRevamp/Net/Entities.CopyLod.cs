@@ -12,8 +12,8 @@ namespace TLDRevamp.Net
     /// (tools/carcopies.py). Only copies: the player's own car and cars nobody else owns stay as the game made them.
     internal static partial class EntityProxyPresentation
     {
-        public static float CopyFarShadowsM = 0f;
-        public static bool CopyLodAllCars;   // test only: also cars that aren't copies (one machine's measurement)
+        internal static float CopyFarShadowsM = 0f;
+        internal static bool CopyLodAllCars;   // test only: also cars that aren't copies (one machine's measurement)
         public static long CopyLodOff, CopyLodOn;
         private static float _copyLodAt;
 
@@ -71,7 +71,7 @@ namespace TLDRevamp.Net
         }
 
         /// Bridge `mp copycost`: what the copies (or every car, with CopyLodAllCars) have live, summed and per car.
-        public static string CopyCounts()
+        internal static string CopyCounts()
         {
             int cars = 0, tf = 0, rend = 0, rendOn = 0, casters = 0, cols = 0, colsOn = 0, lights = 0, lightsOn = 0, shadowLightsOn = 0, rbs = 0, anim = 0, audio = 0, ps = 0;
             foreach (var c in Entities.PresentationCars())
@@ -102,7 +102,7 @@ namespace TLDRevamp.Net
     {
         private static IEnumerable<carscript> CopyCars()
         {
-            if (CopyLodAllCars) { foreach (var c in Object.FindObjectsOfType<carscript>()) yield return c; yield break; }
+            if (EntityProxyPresentation.CopyLodAllCars) { foreach (var c in Object.FindObjectsOfType<carscript>()) yield return c; yield break; }
             foreach (var e in ByNet.Values)
                 if (e.Proxy && e.Root != null && e.Root.car != null) yield return e.Root.car;
         }

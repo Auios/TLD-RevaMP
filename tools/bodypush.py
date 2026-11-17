@@ -54,7 +54,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_("set kaposztaleves.s.settings.god True"); s_(f"set {T}.BodyClaims {not OLD}")
+        for s_ in (h, L): s_("set kaposztaleves.s.settings.god True"); s_(f"set TLDRevamp.Net.EntityCargoInteraction.BodyClaims {not OLD}")
         print(f"  {'OLD (no body claims)' if OLD else 'NEW (body claims)'}", flush=True)
         lid, hid = L("mp entities")["me"], h("mp entities")["me"]
         rp = h("roadpoint"); x, z = rp["gx"] + 12, rp["gz"] + 12
@@ -121,7 +121,7 @@ with game.ProtectedSession():
         verdict("D NO ERRORS", all(x_["errors"] == 0 and x_["exceptions"] == 0 for x_ in er), str([(x_["errors"], x_["exceptions"], (x_.get("kinds") or [])[:3]) for x_ in er]))
     finally:
         for s_ in (h, L):
-            try: s_(f"set {T}.BodyClaims True")
+            try: s_(f"set TLDRevamp.Net.EntityCargoInteraction.BodyClaims True")
             except Exception: pass
         try: L("mp stop"); h("mp stop")
         except Exception: pass

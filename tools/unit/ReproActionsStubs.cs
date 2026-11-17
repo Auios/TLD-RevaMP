@@ -162,7 +162,6 @@ namespace TLDRevamp.Net
             internal uint NetId, ParentNet; internal int OwnerId; internal bool Proxy, Stored, Held, EngRunning;
             internal tosaveitemscript Root; internal List<tosaveitemscript> Items = new List<tosaveitemscript>();
         }
-        internal static string WorldSaveFile;
         internal static Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
         internal static Ent Make(uint net) { var e = new Ent { NetId = net, OwnerId = MyId, Root = new tosaveitemscript() }; e.Items.Add(e.Root); ByNet[net] = e; return e; }
         internal static bool InSession = true, TestAsPlayer, PlayerActing = true, _hitchApplying, _applyingLive, _applyingState, _applyingPoi, _applyingDetach;
@@ -178,22 +177,52 @@ namespace TLDRevamp.Net
         }
         internal static uint TelemetryNet(tosaveitemscript it) => EditEntityOf(it)?.NetId ?? 0;
         internal static uint TelemetryNet(carscript car) { foreach (var e in ByNet.Values) if (e.Root.car == car) return e.NetId; return 0; }
-        internal static void LocalSeat(out uint net, out int seat) { net = 0; seat = -1; }
         internal static void EndKeyTest(bool expire = false) { if (expire) _keyTestUntil = Time.time - 1; _keyTestCar = null; }
         private static tosaveitemscript ItemOf(usablescript u, int a, int b) => null;
-        internal static usablescript[] ItemUsables(tosaveitemscript it) => Array.Empty<usablescript>();
-        internal static mountStuff[] LockMounts(tosaveitemscript it) { if (it.ThrowMounts) throw new Exception(); return it.Mounts; }
         internal static bool PartIsProxy(attachablescript at) => EditEntityOf(at.tosave)?.Proxy == true;
         internal static bool RequestDetach(attachablescript at) { DetachRequests++; return true; }
-        internal static bool Unmount(attachablescript at, bool b) { at.attached = false; return true; }
         internal static bool IsStored(tosaveitemscript it) => false;
         internal static bool IsHeld(tosaveitemscript it) => false;
         internal static string KeyTest(uint net, int seconds) => "{\"refused\":9}";
         internal static bool HitchTrailer(Ent e) => true;
-        internal static void RequestHitch(Ent tr, Ent car, partslotscript slot, bool on) { }
         internal struct PoiKey { internal int Gen, U; internal double X, Y, Z; }
-        internal static usablescript PoiUsableOf(PoiKey k) => null;
     }
+    internal static partial class EntityWorldLeases
+    {
+        internal static string WorldSaveFile;
+    }
+
+
+    internal static partial class EntitySeats
+    {
+        internal static void LocalSeat(out uint net, out int seat) { net = 0; seat = -1; }
+    }
+
+
+    internal static partial class EntityUsables
+    {
+        internal static usablescript[] ItemUsables(tosaveitemscript it) => Array.Empty<usablescript>();
+        internal static usablescript PoiUsableOf(Entities.PoiKey k) => null;
+    }
+
+
+    internal static partial class EntityLocks
+    {
+        internal static mountStuff[] LockMounts(tosaveitemscript it) { if (it.ThrowMounts) throw new Exception(); return it.Mounts; }
+    }
+
+
+    internal static partial class EntityLifetimeStreaming
+    {
+        internal static bool Unmount(attachablescript at, bool b) { at.attached = false; return true; }
+    }
+
+
+    internal static partial class EntityHitches
+    {
+        internal static void RequestHitch(Entities.Ent tr, Entities.Ent car, partslotscript slot, bool on) { }
+    }
+
     internal static class EntityDebug { internal static string SitSeat(int seat, bool b, uint net) => "{\"ok\":true}"; }
     public static partial class RemotePlayers
     {
@@ -218,4 +247,4 @@ namespace TLDRevamp.Net { static class EntityProxyTools { internal static bool T
 namespace TLDRevamp { static class GameLookups { internal static System.Reflection.MethodInfo Method(Type type, string name, Type[] args = null) => HarmonyLib.AccessTools.Method(type, name, args); } }
 
 namespace TLDRevamp.Net { internal static class EntityDiag { internal static void StuckWatch(carscript car) { } } }
-namespace TLDRevamp.Net { internal static class EntityUsables { internal static bool ApplyingPoi => Entities._applyingPoi; } }
+namespace TLDRevamp.Net { internal static partial class EntityUsables { internal static bool ApplyingPoi => Entities._applyingPoi; } }

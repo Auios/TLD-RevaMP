@@ -134,7 +134,7 @@ namespace TLDRevamp.Net
             var sw = System.Diagnostics.Stopwatch.StartNew();
             int n = e.Items.Count;
             if (e.ResyncHashes == null || e.ResyncHashes.Length != n) e.ResyncHashes = new ulong[n];
-            var map = CanonMap(e.Items);
+            var map = EntityResync.CanonMap(e.Items);
             WR.Reset(); WR.U8(Resync); WR.U32(e.NetId); WR.U32(e.Epoch); WR.F64(SessionLog.St);
             int countAt = WR.Len; WR.U16(0);
             int changed = 0;
@@ -145,7 +145,7 @@ namespace TLDRevamp.Net
                 var it = e.Items[i];
                 if (it == null || (e.Split != null && e.Split.Contains(i))) continue;   // came off: its own entity syncs it
                 if (LiveItemMoving(it)) continue;   // its final reliable record follows the drag, never a stream of full records
-                byte[] rec = StateRecord(ItemSnapshot.Capture(it), map, out ulong h);
+                byte[] rec = EntityResync.StateRecord(ItemSnapshot.Capture(it), map, out ulong h);
                 if (h == e.ResyncHashes[i]) continue;
                 e.ResyncHashes[i] = h;
                 WR.VarU32((uint)i); WR.VarU32((uint)rec.Length); WR.Bytes(rec, 0, rec.Length);
@@ -166,7 +166,7 @@ namespace TLDRevamp.Net
         {
             uint net = r.U32(), epoch = r.U32();
             double stamp = r.F64();
-            if (!Finite(stamp) || Math.Abs(SessionLog.St - stamp) > 10) return;
+            if (!EntityNumbers.Finite(stamp) || Math.Abs(SessionLog.St - stamp) > 10) return;
             if (!Server.TryGetValue(net, out var se) || se.OwnerId != from || se.Epoch != epoch) return;
             int count = r.U16();
             for (int k = 0; k < count && !r.Bad; k++)
@@ -208,7 +208,7 @@ namespace TLDRevamp.Net
         private static void SendHandover(Ent e, uint newEpoch)
         {
             if (e.Root == null || e.Items == null || e.NetId == 0) return;
-            var map = CanonMap(e.Items);
+            var map = EntityResync.CanonMap(e.Items);
             WR.Reset(); WR.U8(HandoverState); WR.U32(e.NetId); WR.U32(newEpoch);
             int countAt = WR.Len; WR.U16(0);
             int n = 0;
@@ -216,7 +216,7 @@ namespace TLDRevamp.Net
             {
                 var it = e.Items[i];
                 if (it == null || (e.Split != null && e.Split.Contains(i))) continue;
-                byte[] rec = StateRecord(ItemSnapshot.Capture(it), map, out _, withCar: false);
+                byte[] rec = EntityResync.StateRecord(ItemSnapshot.Capture(it), map, out _, withCar: false);
                 WR.VarU32((uint)i); WR.VarU32((uint)rec.Length); WR.Bytes(rec, 0, rec.Length);
                 n++;
             }
@@ -295,7 +295,7 @@ namespace TLDRevamp.Net
         {
             uint net = r.U32(); uint epoch = r.U32(); double stamp = r.F64();
             int count = r.U16();
-            if (r.Bad || !Finite(stamp) || !ByNet.TryGetValue(net, out var e) || !e.Proxy || e.Epoch != epoch) return;
+            if (r.Bad || !EntityNumbers.Finite(stamp) || !ByNet.TryGetValue(net, out var e) || !e.Proxy || e.Epoch != epoch) return;
             if (!Resolve(e))
             {
                 // stored here (far away): the records take the new state — what this machine saves and shows on arrival
@@ -313,7 +313,7 @@ namespace TLDRevamp.Net
                     EntityResync.DropUncanonAttach(fd);
                     ItemSnapshot.Remap(fd, fmap);
                     if (idx >= 0 && idx < e.ItemIds.Count) EntityCarTuning.CopyTanksAre(e.ItemIds[idx], fd.tanks);
-                    FarResync(e, idx, fd);
+                    EntityLifetimeStreaming.FarResync(e, idx, fd);
                 }
                 FarResyncs++;
                 SessionLog.Event("resync-applied", net, to: MyId, count: count, epoch: e.Epoch, result: "far store");
@@ -330,7 +330,7 @@ namespace TLDRevamp.Net
                 if (e.Split != null && e.Split.Contains(idx)) { ResyncSplitSkipped++; continue; }   // came off: never re-bolted from a car record
                 // our edit is on its way to the owner: not shown yet, and not sent again unless it changes
                 bool held = e.EditHoldUntil != null && e.EditHoldUntil.TryGetValue(idx, out float hold) && Time.realtimeSinceStartup < hold;
-                if (held) { ResyncHeld++; CensusAfterHold(e.NetId); if (!TankAddEdits) continue; }
+                if (held) { ResyncHeld++; CensusAfterHold(e.NetId); if (!EntityEdits.TankAddEdits) continue; }
                 var d = RecordCodec.Decode(rec);
                 if (d == null) continue;
                 EntityResync.DropUncanonAttach(d);
@@ -389,7 +389,7 @@ namespace TLDRevamp.Net
         private static void ApplyStateInner(tosaveitemscript it, itemDataClass d, int kinds, bool applyUsables)
         {
             bool K(int bit) => (kinds & bit) != 0 && (bit != KindUsable || applyUsables);   // an edit names what it changed
-            var local = StateOnly(ItemSnapshot.Capture(it));
+            var local = EntityResync.StateOnly(ItemSnapshot.Capture(it));
             bool Diff(System.Collections.IList remote, System.Collections.IList mine)
             {
                 if (SameList(remote, mine)) { StateListsSame++; return false; }
@@ -457,9 +457,5 @@ namespace TLDRevamp.Net
                     }
                 }
         }
-        internal static Dictionary<uint, uint> CanonMap(List<tosaveitemscript> items) => EntityResync.CanonMap(items);
-        internal static byte[] StateRecord(itemDataClass captured, Dictionary<uint, uint> map, out ulong hash, bool withCar = true) => EntityResync.StateRecord(captured, map, out hash, withCar);
-        internal static itemDataClass StateOnly(itemDataClass data) => EntityResync.StateOnly(data);
-        private static ulong[] StateHashes(List<tosaveitemscript> items, List<itemDataClass> perItem) => EntityResync.StateHashes(items, perItem);
     }
 }

@@ -100,7 +100,7 @@ def rel(x, car, nets):
 
 def crashes(x): return int(gv(x, "TLDRevamp.Diagnostics.CrashCause.Logged") or 0)
 def last_crash(x): return str(gv(x, "TLDRevamp.Diagnostics.CrashCause.Last") or "")
-def sweeps(x): return int(gv(x, f"{T}.CopySweeps") or 0)   # a copy put > 50 m on in one step without its owner teleporting it
+def sweeps(x): return int(gv(x, f"TLDRevamp.Net.EntityPhysics.CopySweeps") or 0)   # a copy put > 50 m on in one step without its owner teleporting it
 def hitches(x):
     s = x("stats"); return s["hitches50ms"], s["maxms"]
 

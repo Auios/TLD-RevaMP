@@ -475,26 +475,26 @@ namespace TLDRevamp
                         case "breakables": return TLDRevamp.Net.EntityAiTools.Breakables(float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture), ma.Length > 2 ? ma[2] : "");
                         case "breaknear": return TLDRevamp.Net.EntityAiTools.BreakNear(ma[1], float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture));
                         case "getouttry": return TLDRevamp.Net.EntitySeatTools.GetOutTry(int.Parse(ma[1]));
-                        case "share": return Net.Entities.ShareCar(Net.Entities.NearestCar());
+                        case "share": return Net.Entities.ShareCar(Net.EntityLookup.NearestCar());
                         case "entities": return Net.Entities.Status(ma.Length > 1 && int.TryParse(ma[1], out int entityLimit) && entityLimit > 0 ? entityLimit : int.MaxValue);
                         case "mods": return TLDRevamp.Net.ModObjects.StatusJson();
                         case "plausibility": return TLDRevamp.Net.Plausibility.Stats();
                         case "ask": return Net.MpScreen.AskProbe(ma.Length > 1 ? ma[1] : "");
                         case "modtransfer": return TLDRevamp.Net.ModTransfer.Stats();
                         case "sprayhold": return TLDRevamp.Net.EntitySprayTools.SprayHold(float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture));
-                        case "sprayfx": return TLDRevamp.Net.Entities.SprayFxState(uint.Parse(ma[1]));
+                        case "sprayfx": return TLDRevamp.Net.EntityEffects.SprayFxState(uint.Parse(ma[1]));
                         case "lookat": return TLDRevamp.Net.EntitySprayTools.LookAt(uint.Parse(ma[1]));
                         case "turn": return TLDRevamp.Net.EntitySprayTools.TurnItem(uint.Parse(ma[1]));
-                        case "lamp": return TLDRevamp.Net.Entities.LampState(uint.Parse(ma[1]));
-                        case "cardoors": return TLDRevamp.Net.Entities.CarDoors(uint.Parse(ma[1]));
+                        case "lamp": return TLDRevamp.Net.EntityEffects.LampState(uint.Parse(ma[1]));
+                        case "cardoors": return TLDRevamp.Net.EntityDoors.CarDoors(uint.Parse(ma[1]));
                         case "busdoors": return TLDRevamp.Net.EntityBusDoorsTools.BusDoors(uint.Parse(ma[1]), ma.Length > 2 ? int.Parse(ma[2]) : -1, ma.Length > 3 ? int.Parse(ma[3]) : -1);
                         case "doorglue": return TLDRevamp.Net.EntityDoorAttachmentsTools.GlueToDoor(uint.Parse(ma[1]), uint.Parse(ma[2]), int.Parse(ma[3]), int.Parse(ma[4]));
                         case "doorattachment": return TLDRevamp.Net.EntityDoorAttachmentsTools.DoorAttachmentPose(uint.Parse(ma[1]));
                         case "opendoor": return TLDRevamp.Net.EntityCarDoorsTools.OpenDoor(uint.Parse(ma[1]), int.Parse(ma[2]));
                         case "headh": return Net.RemotePlayers.HeadHeights();
                         case "stimuli": return Net.RemotePlayers.Stimuli();
-                        case "rabbit": return TLDRevamp.Net.Entities.Rabbit(uint.Parse(ma[1]));
-                        case "rabbits": return TLDRevamp.Net.Entities.RabbitList();
+                        case "rabbit": return TLDRevamp.Net.EntityDoors.Rabbit(uint.Parse(ma[1]));
+                        case "rabbits": return TLDRevamp.Net.EntityRabbits.RabbitList();
                         case "rabbitdo": return TLDRevamp.Net.EntityRabbitsTools.RabbitDo(ma);
                         case "body": return TLDRevamp.Net.EntityRabbitsTools.BodyState(uint.Parse(ma[1]), ma);
                         case "copymotion": return TLDRevamp.Net.EntityCarDoorsTools.CopyMotion(uint.Parse(ma[1]), ma.Length > 2 && ma[2] == "reset");
@@ -503,7 +503,7 @@ namespace TLDRevamp
                         case "lag": Net.ClientSimulation.LagS = float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture) / 1000f; return "{\"lagMs\":" + ma[1] + "}";
                         case "lookplayer": return Net.RemotePlayers.LookAtPlayer(int.Parse(ma[1]));
                         case "bite": return TLDRevamp.Net.EntityCarDoorsTools.Bite();
-                        case "food": return TLDRevamp.Net.Entities.Food(uint.Parse(ma[1]));
+                        case "food": return TLDRevamp.Net.EntityDoors.Food(uint.Parse(ma[1]));
                         case "putincar": return TLDRevamp.Net.EntityCarDoorsTools.PutInCar(uint.Parse(ma[1]), uint.Parse(ma[2]), int.Parse(ma[3]));
                         case "cargoinfo": return TLDRevamp.Net.EntityCarDoorsTools.CargoInfo(uint.Parse(ma[1]));
                         case "putrel": { var ci = System.Globalization.CultureInfo.InvariantCulture; return TLDRevamp.Net.EntityCarDoorsTools.PutRel(uint.Parse(ma[1]), uint.Parse(ma[2]), float.Parse(ma[3], ci), float.Parse(ma[4], ci), float.Parse(ma[5], ci), ma.Length > 6 && ma[6] == "clear"); }
@@ -519,10 +519,10 @@ namespace TLDRevamp
                         case "lockdiag": return TLDRevamp.Net.EntityPhysLockTools.LockDiag(uint.Parse(ma[1]));
                         case "wear": return TLDRevamp.Net.EntityWornTools.WearNet(uint.Parse(ma[1]));
                         case "takeoff": return TLDRevamp.Net.EntityWornTools.TakeOffNet(uint.Parse(ma[1]), ma.Length > 2 && ma[2] == "drop");
-                        case "worn": return TLDRevamp.Net.Entities.WornStatus();
-                        case "wearables": return TLDRevamp.Net.Entities.Wearables();
+                        case "worn": return TLDRevamp.Net.EntityHands.WornStatus();
+                        case "wearables": return TLDRevamp.Net.EntityHands.Wearables();
                         case "wearnear": return TLDRevamp.Net.EntityWornTools.WearNear(ma.Length > 1 ? ma[1] : "");
-                        case "radio": return ma.Length > 2 && ma[1] == "advance" ? TLDRevamp.Net.EntityRadioTools.RadioAdvance(int.Parse(ma[2])) : TLDRevamp.Net.Entities.RadioStatus();
+                        case "radio": return ma.Length > 2 && ma[1] == "advance" ? TLDRevamp.Net.EntityRadioTools.RadioAdvance(int.Parse(ma[2])) : TLDRevamp.Net.EntityRadio.RadioStatus();
                         case "physlock": { var ci = System.Globalization.CultureInfo.InvariantCulture; return TLDRevamp.Net.EntityPhysLockTools.PhysLockStatus(double.Parse(ma[1], ci), double.Parse(ma[2], ci), float.Parse(ma[3], ci)); }
                         case "deathfling":
                         {
@@ -549,22 +549,22 @@ namespace TLDRevamp
                         case "deathstats": return Net.SessionRules.DeathStats();
                         // The game's own Death, called again for a death that already happened: the duplicate path.
                         case "deathagain": return TLDRevamp.Net.EntityDeathTools.DeathAgain();
-                        case "deathinfo": return TLDRevamp.Net.Entities.DeathInfo();
-                        case "corpses": return TLDRevamp.Net.Entities.CorpseList();
+                        case "deathinfo": return TLDRevamp.Net.EntityRagdolls.DeathInfo();
+                        case "corpses": return TLDRevamp.Net.EntityRagdolls.CorpseList();
                         case "outfit": return TLDRevamp.Net.EntityCorpsesTools.OutfitTest(ma.Length > 1 && ma[1] == "random");
-                        case "ragdolls": return TLDRevamp.Net.Entities.RagdollPrefabs();
-                        case "grips": return TLDRevamp.Net.Entities.GripPrefabs();
+                        case "ragdolls": return TLDRevamp.Net.EntityRagdolls.RagdollPrefabs();
+                        case "grips": return TLDRevamp.Net.EntityCargoInteraction.GripPrefabs();
                         case "storms": return TLDRevamp.Net.EntityStormsTools.StormTest(ma);
                         case "sounds": return TLDRevamp.Net.EntityPlayerSoundsTools.PlayerSoundsTest(ma);
                         case "tumble": return TLDRevamp.Net.EntityTumbleweedsTools.TumbleTest(ma);
-                        case "grip": return ma.Length > 1 ? TLDRevamp.Net.EntityPushGripTools.GripTest(ma) : TLDRevamp.Net.Entities.GripStatus();
+                        case "grip": return ma.Length > 1 ? TLDRevamp.Net.EntityPushGripTools.GripTest(ma) : TLDRevamp.Net.EntityCargoInteraction.GripStatus();
                         case "ragdoll": return ma.Length > 2 ? TLDRevamp.Net.EntityRagdollTools.RagdollTest(uint.Parse(ma[1]), ma[2]) : TLDRevamp.Net.EntityRagdollTools.RagdollStatus(uint.Parse(ma[1]));
-                        case "carsig": return TLDRevamp.Net.Entities.CarSignals(uint.Parse(ma[1]));
+                        case "carsig": return TLDRevamp.Net.EntityCarSignals.CarSignals(uint.Parse(ma[1]));
                         case "tune": return ma.Length > 1 ? TLDRevamp.Net.EntityCarTuneTools.CarTuneDiag(uint.Parse(ma[1])) : TLDRevamp.Net.CarTuneSave.Stats();
                         case "blood": return TLDRevamp.Net.EntityBloodTools.BloodTest(uint.Parse(ma[1]), ma.Length > 2 ? ma[2] : "");
                         case "key": return TLDRevamp.Net.EntityIgnitionKeyTools.KeyTest(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 0f);
                         case "radiocar": return TLDRevamp.Net.EntityRadioTools.RadioCar(uint.Parse(ma[1]));
-                        case "seatguard": return TLDRevamp.Net.Entities.SeatGuardStats();
+                        case "seatguard": return TLDRevamp.Net.EntitySeats.SeatGuardStats();
                         case "push": return TLDRevamp.Net.EntityPushTools.TestPush(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 3f);
                         case "attach": return TLDRevamp.Net.Entities.AttachStats();
                         case "partwatch": return TLDRevamp.Net.EntityPartWatchTools.PartWatchCommand(ma);
@@ -581,15 +581,15 @@ namespace TLDRevamp
                         case "nudgemember": return TLDRevamp.Net.EntityPlaceCheckTools.TestNudgeMember(uint.Parse(ma[1]), int.Parse(ma[2]), float.Parse(ma[3], System.Globalization.CultureInfo.InvariantCulture));
                         case "dropstates": TLDRevamp.Net.EntityPlaceCheckTools.TestDropStates = uint.Parse(ma[1]); return "{\"dropping\":" + ma[1] + "}";
                         case "copypartgone": return TLDRevamp.Net.EntityAnomalyTools.TestCopyPartGone(uint.Parse(ma[1]), ma[2]);
-                        case "shotfx": return Net.Entities.ShotFxStats();
-                        case "blasts": return Net.Entities.ExplosionStats();
+                        case "shotfx": return Net.EntityEffects.ShotFxStats();
+                        case "blasts": return Net.EntityExplosions.ExplosionStats();
                         case "membergone": return Net.Entities.MemberGoneStats();
-                        case "sharequota": return TLDRevamp.Net.Entities.ShareQuotaStats();
+                        case "sharequota": return TLDRevamp.Net.EntityAuthorityInterest.ShareQuotaStats();
                         // `mp reports` stats; `mp report <note>`: what the report key does (asks / sends as a player would)
                         case "sharing":
                         case "reports": return TLDRevamp.Net.Reports.Stats();
                         case "report": { string rn = arg.Length > 6 ? arg.Substring(7) : ""; Net.Reports.LocalReport(rn.Length == 0 ? "bridge" : rn); return TLDRevamp.Net.Reports.Stats(); }
-                        case "aistats": return Net.Entities.AiStats();
+                        case "aistats": return Net.EntityAI.AiStats();
                         case "aisee": return TLDRevamp.Net.EntityAiTools.AiSee();
                         case "rpose": return Net.RemotePlayers.PoseJson();
                         case "poiusables": return Net.Entities.PoiUsableStats();
@@ -598,11 +598,11 @@ namespace TLDRevamp
                         case "usables": return TLDRevamp.Net.EntityLiveUsablesTools.Usables(uint.Parse(ma[1]));
                         case "dragusable": return TLDRevamp.Net.EntityLiveUsablesTools.DragUsable(uint.Parse(ma[1]), int.Parse(ma[2]), int.Parse(ma[3]), float.Parse(ma[4], mic), ma.Length > 5 ? float.Parse(ma[5], mic) : 60f);
                         case "usableprobe": return ma.Length > 1 ? TLDRevamp.Net.EntityLiveUsablesTools.ProbeUsable(uint.Parse(ma[1]), int.Parse(ma[2]), int.Parse(ma[3]), float.Parse(ma[4], mic)) : TLDRevamp.Net.EntityLiveUsablesTools.UsableProbeJson();
-                        case "editcheck": return TLDRevamp.Net.Entities.EditCheckJson();
-                        case "interest": return TLDRevamp.Net.Entities.InterestJson();
+                        case "editcheck": return TLDRevamp.Net.EntityEditCheck.EditCheckJson();
+                        case "interest": return TLDRevamp.Net.EntityAuthorityInterest.InterestJson();
                         case "forgeedit": return TLDRevamp.Net.EntityEditCheckTools.TestForgeEdit(uint.Parse(ma[1]), ma[2], ma.Length > 3 ? int.Parse(ma[3]) : 1);
                         case "forgepoi": return TLDRevamp.Net.EntityEditCheckTools.TestForgePoi(ma);
-                        case "poius": return TLDRevamp.Net.Entities.PoiList(ma.Length > 1 ? float.Parse(ma[1], mic) : 100f);
+                        case "poius": return TLDRevamp.Net.EntityUsables.PoiList(ma.Length > 1 ? float.Parse(ma[1], mic) : 100f);
                         case "poiu": return TLDRevamp.Net.Entities.PoiGet(ma);
                         case "poidrag": return TLDRevamp.Net.EntityPoiUsablesTools.PoiDrag(ma);
                         case "poiprobe": return TLDRevamp.Net.EntityPoiUsablesTools.PoiProbe(ma);
@@ -612,7 +612,7 @@ namespace TLDRevamp
                         case "shootpoint": { var ci = System.Globalization.CultureInfo.InvariantCulture; return TLDRevamp.Net.PlayerCombatTools.ShootPoint(double.Parse(ma[1], ci), double.Parse(ma[2], ci), double.Parse(ma[3], ci), ma.Length > 4 ? ma[4] : ""); }
                         case "combat": return Net.PlayerCombat.Stats();
                         case "hitcheck": return Net.HitCheck.Stats();
-                        case "copycost": return TLDRevamp.Net.Entities.CopyCounts();
+                        case "copycost": return TLDRevamp.Net.EntityProxyPresentation.CopyCounts();
                         case "trysave": return TLDRevamp.JoinerSaveTools.Try(ma[1]);
                         case "say": return "{\"said\":" + (Net.Session.Say(arg.Substring(4)) ? "true" : "false") + "}";
                         case "tpa": return TLDRevamp.Net.Tpa.Stats();
@@ -635,7 +635,7 @@ namespace TLDRevamp
                         }
                         case "forgehit": { var cif = System.Globalization.CultureInfo.InvariantCulture; return TLDRevamp.Net.PlayerCombatTools.Forge(int.Parse(ma[1]), byte.Parse(ma[2]), new Vector3d(double.Parse(ma[3], cif), double.Parse(ma[4], cif), double.Parse(ma[5], cif)), new UnityEngine.Vector3(float.Parse(ma[6], cif), float.Parse(ma[7], cif), float.Parse(ma[8], cif)), ma.Length > 10 ? uint.Parse(ma[9]) : 0u, ma.Length > 10 ? int.Parse(ma[10]) : 0); }
                         case "physical": return TLDRevamp.Net.Entities.PhysicalStatus();
-                        case "crashauth": return TLDRevamp.Net.Entities.CrashAuthorityStatus();
+                        case "crashauth": return TLDRevamp.Net.EntityPhysics.CrashAuthorityStatus();
                         case "stop": return Net.Mp.Stop();
                         default: if (TryRegistered("mp " + ma[0], arg, out var contributed)) return contributed; return "{\"error\":\"mp host [port] | join <ip:port> | bots <n> [radius] [speed] | status | stop\"}";
                     }
@@ -669,8 +669,8 @@ namespace TLDRevamp
                 }
                 case "shot": return CaptureLocalShot(arg);
                 case "handlayers": return TLDRevamp.Fixes.HandLayersAfterVr.Json();
-                case "seatwhy": { var sw2 = arg.Split(' '); return Net.Entities.SeatWhy(uint.Parse(sw2[0]), int.Parse(sw2[1])); }
-                case "leasetable": return TLDRevamp.Net.Entities.LeaseTable();
+                case "seatwhy": { var sw2 = arg.Split(' '); return Net.EntitySeats.SeatWhy(uint.Parse(sw2[0]), int.Parse(sw2[1])); }
+                case "leasetable": return TLDRevamp.Net.EntityWorldLeases.LeaseTable();
                 case "picknearest": return TLDRevamp.Net.EntityLifecycleTools.PickupNearest(arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 3f);
                 case "pickupcar": return TLDRevamp.Net.EntityLifecycleTools.PickupCar(uint.Parse(arg, System.Globalization.CultureInfo.InvariantCulture));
                 case "deleteshare": return Net.Entities.DeleteShared(uint.Parse(arg, System.Globalization.CultureInfo.InvariantCulture));
@@ -1023,7 +1023,7 @@ namespace TLDRevamp
                     // nearest car to the player (or the car of network id cm[6]): put it at x y z facing yaw, at rest (scenario staging)
                     var cm = arg.Split(' ');
                     var cic = System.Globalization.CultureInfo.InvariantCulture;
-                    var car = cm.Length > 6 ? Net.Entities.RootOfNet(uint.Parse(cm[6], cic)) : Net.Entities.NearestCar();
+                    var car = cm.Length > 6 ? Net.Entities.RootOfNet(uint.Parse(cm[6], cic)) : Net.EntityLookup.NearestCar();
                     if (car == null) return "{\"error\":\"no car\"}";
                     var crb = car.GetComponent<Rigidbody>();
                     var cpos = new Vector3(float.Parse(cm[0], cic), float.Parse(cm[1], cic), float.Parse(cm[2], cic));

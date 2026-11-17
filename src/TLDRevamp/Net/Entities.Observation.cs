@@ -18,7 +18,7 @@ namespace TLDRevamp.Net
         }
         internal static Transform OverlayFrame(Ent e)
         {
-            var limbs = e.Root.car == null && e.Rag != null && (e.Rag.Act == null || e.Rag.Act.ragdoll) ? Limbs(e) : null;
+            var limbs = e.Root.car == null && e.Rag != null && (e.Rag.Act == null || e.Rag.Act.ragdoll) ? EntityRagdolls.Limbs(e) : null;
             if (limbs != null)
             {
                 foreach (var limb in limbs) if (limb != null && limb != e.Root.transform && limb.GetComponent<Rigidbody>() != null) return limb;
@@ -45,7 +45,7 @@ namespace TLDRevamp.Net
         }
         internal static bool OverlayBolted(Ent e) => RidesParent(e) && (e.PartIndex >= 0 || e.Items.Count <= 1 || true);
         internal static bool OverlayMoving(Ent e) => ObservationMoving(e.SettledState != null,
-            e.PoseLocked || e.Stored || e.Held || RidesParent(e) || AttachedCarPart(e) || RidesOwnersContainer(e),
+            e.PoseLocked || e.Stored || e.Held || RidesParent(e) || EntityProxyPresentation.AttachedCarPart(e) || EntityLocks.RidesOwnersContainer(e),
             e.LastVel.sqrMagnitude > RestSpeed * RestSpeed, e.Ip != null && e.Ip.LastPoseChanged);
         private static bool ObservationMoving(bool final, bool constrained, bool velocity, bool pose) => !final && !constrained && (velocity || pose);
     }

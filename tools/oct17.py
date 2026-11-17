@@ -26,7 +26,7 @@ os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")   # the example mo
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
 RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
 T = "TLDRevamp.Net.Entities"; REP = "TLDRevamp.Net.Reports"
-SWITCHES = [f"{T}.MemberGoneSync", f"{T}.CopyLockByBox"]
+SWITCHES = [f"{T}.MemberGoneSync", f"TLDRevamp.Net.EntityLocks.CopyLockByBox"]
 JERRYCAN, LAMP = 72, "regizseblampa"
 VERDICTS = []
 def verdict(name, ok, detail=""):

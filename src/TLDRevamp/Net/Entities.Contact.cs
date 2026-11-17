@@ -15,8 +15,8 @@ namespace TLDRevamp.Net
         private static readonly NetWriter W = new NetWriter();
         internal const float MinImpulse = 0.5f;        // Ns: below this a contact is noise
         internal const float StayResendS = 0.1f;
-        public static long ContactSent, ContactRelayed, ContactApplied, ContactMisses;
-        public static float ContactImpulseMaxSent, ContactImpulseMaxApplied;   // Ns, reset by CrashLab
+        internal static long ContactSent, ContactRelayed, ContactApplied, ContactMisses;
+        internal static float ContactImpulseMaxSent, ContactImpulseMaxApplied;   // Ns, reset by CrashLab
 
         /// Applied on a shared entity's root while it is simulated here; removed when it becomes a proxy.
         public class ContactRelay : MonoBehaviour
@@ -100,16 +100,15 @@ namespace TLDRevamp.Net
         {
             if (!Server.TryGetValue(net, out var se))
             {
-                if (ContactMisses++ < 5) Plugin.Log.LogInfo($"contact relay miss: net {net} not in Server ({Server.Count} entities, from {from})");
+                if (EntityPhysics.ContactMisses++ < 5) Plugin.Log.LogInfo($"contact relay miss: net {net} not in Server ({Server.Count} entities, from {from})");
                 return;
             }
             W.Reset(); W.U8(ContactImpulse); W.U32(net);
             W.F32(impulse.x); W.F32(impulse.y); W.F32(impulse.z);
             W.F64(globalPoint.x); W.F64(globalPoint.y); W.F64(globalPoint.z);
             ServerSendTo(se.OwnerId, W, false);
-            ContactRelayed++;
+            EntityPhysics.ContactRelayed++;
         }
 
-        internal static void ServerSleepSync(int from, float worldTime, double stamp, float sleepProgress = float.NaN) => EntityWorldClock.ServerSleepSync(from, worldTime, stamp, sleepProgress);
     }
 }

@@ -81,10 +81,7 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<int, TpaSync> TpaSyncs = new Dictionary<int, TpaSync>();
         private static readonly List<int> TpaDone = new List<int>();
         private static bool _tpaSending, _tpaSendFailed;
-        internal static void BeginTpaRefresh() => EntityTeleportRefresh.BeginTpaRefresh();
         internal static void ResetTpaSync() { TpaSyncs.Clear(); EntityTeleportRefresh.ResetTpaClient(); }
-        internal static void DrainTpaInbox() => EntityTeleportRefresh.DrainTpaInbox();
-        internal static bool TpaInboxEmpty => EntityTeleportRefresh.TpaInboxEmpty;
 
         /// A missing detached part needs its parent's record before the part can be replayed.
         internal static void ServerRefetch(int from, uint net, bool partItself = false)

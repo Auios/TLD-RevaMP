@@ -134,7 +134,6 @@ static partial class EntitySplitTest
 
     static void ResyncEditsSourceChecks()
     {
-        CoreMembers.Register();
         foreach (var owner in new[] { typeof(EntityEditBack), typeof(EntityEditCheck), typeof(EntityEdits), typeof(EntityResync) })
         {
             Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, owner.Name + " internal static");
@@ -151,12 +150,6 @@ static partial class EntitySplitTest
             };
             Check(Regex.Matches(code, @"Entities\.(\w+)").Cast<Match>().All(m => allowed.Contains(m.Groups[1].Value)), owner.Name + " uses only its named narrow kernel facts");
             Check(!code.Contains("HarmonyPatch"), owner.Name + " moves no attributed type");
-            foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is FieldInfo || m is PropertyInfo || m is MethodInfo))
-            {
-                bool retained = typeof(Entities).GetMember(member.Name, Static).Length > 0;
-                foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                    Check(Reflect.MemberPath(prefix + member.Name) == (retained ? prefix + member.Name : owner.FullName + "." + member.Name), "resync/edit alias " + prefix + member.Name);
-            }
         }
         foreach (string name in new[] { "_editBack", "_editBackDue", "_editBuckets", "_poiBuckets", "_refusalsLogged", "_tankTold", "TankAddsApplied", "ResyncForeignAttachDropped" })
             Check(typeof(Entities).GetField(name, Static) == null, name + " has no duplicate kernel storage");
@@ -168,8 +161,8 @@ static partial class EntitySplitTest
         Check(check.Contains("EntityEditCheck.ForgetEditRate(player); _liveServerIn.Remove(player); EntityEditCheck.ForgetPoiRate(player);") && check.Contains("EntityEditCheck.ResetRates(); _groupRecords.Clear();"), "forget and reset keep rate/live/group-cache order");
         string features = File.ReadAllText("src/TLDRevamp/Net/Entities.Features.cs");
         Check(features.Contains("WS.Reset(); WS.U8(CensusRepair); WS.U32(se.NetId); WS.U32(se.Epoch); WS.U8(8);") && features.Contains("WS.VarU32(1); WS.VarU32(item);") && features.Contains("ServerSendTo(se.OwnerId, WS, true);"), "edit-back keeps the kernel census writer and current owner transaction");
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.TankAddsApplied", "19") == "19" && EntityEdits.TankAddsApplied == 19, "full tank apply counter alias writes its owner");
-        Check(BridgeReflect.Set("Entities.EditRefusedRate", "23") == "23" && EntityEditCheck.EditRefusedRate == 23, "short refusal counter alias writes its owner");
-        Check(BridgeReflect.Get("TLDRevamp.Net.Entities._editBack.Count") == "0", "historical private queue path resolves to its owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityEdits.TankAddsApplied", "19") == "19" && EntityEdits.TankAddsApplied == 19, "full tank apply counter owner path writes its owner");
+        Check(BridgeReflect.Set("EntityEditCheck.EditRefusedRate", "23") == "23" && EntityEditCheck.EditRefusedRate == 23, "short refusal counter owner path writes its owner");
+        Check(BridgeReflect.Get("TLDRevamp.Net.EntityEditBack._editBack.Count") == "0", "real owner private queue path resolves to its owner");
     }
 }

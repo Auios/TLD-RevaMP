@@ -88,18 +88,18 @@ namespace TLDRevamp
                 if (p != null)
                 {
                     var g = mainscript.GlobalFromUnityPos(p.transform.position); facts.X = g.x; facts.Y = g.y; facts.Z = g.z;
-                    Net.Entities.LocalSeat(out uint seatNet, out int _); facts.Seated = seatNet != 0;
+                    Net.EntitySeats.LocalSeat(out uint seatNet, out int _); facts.Seated = seatNet != 0;
                 }
             }
             catch (Exception e) { SessionLog.Fail("bug report position", e); }
             string carJson = null;
-            try { carJson = Net.Entities.CarDiagnostics(); }
+            try { carJson = Net.EntityDiag.CarDiagnostics(); }
             catch (Exception e) { SessionLog.Fail("bug report car", e); }
             facts.CarFile = carJson != null;
-            string stuckJson = Net.Entities.StuckCarJson; Net.Entities.StuckCarJson = null;
+            string stuckJson = Net.EntityDiag.StuckCarJson; Net.EntityDiag.StuckCarJson = null;
             facts.StuckCarFile = stuckJson != null;
             string lockJson = null;
-            try { lockJson = Net.Entities.LockDiagnostics(); }
+            try { lockJson = Net.EntityDiag.LockDiagnostics(); }
             catch (Exception e) { SessionLog.Fail("bug report lock", e); }
             facts.LockFile = lockJson != null;
             string partsJson = null;

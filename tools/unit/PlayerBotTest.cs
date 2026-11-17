@@ -45,7 +45,7 @@ static class PlayerBotTest
     {
         var r = new NetReader(); r.Load(s.Bytes.Length); Buffer.BlockCopy(s.Bytes, 0, r.Buf, 0, s.Bytes.Length);
         r.U8();
-        Entities.ReadStateHead(r, out uint net, out uint epoch, out double st, out var g, out var q, out var v, out bool driven, out bool stored, out bool held, out _);
+        EntityCodec.ReadStateHead(r, out uint net, out uint epoch, out double st, out var g, out var q, out var v, out bool driven, out bool stored, out bool held, out _);
         var h = new Head { Net = net, Epoch = epoch, St = st, G = g, Q = q, V = v, Driven = driven, Stored = stored, Held = held, Final = Entities.TestFinal };
         h.Wheels = r.U8() & 0x7F;
         return h;

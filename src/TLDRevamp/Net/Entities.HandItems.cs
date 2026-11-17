@@ -27,9 +27,9 @@ namespace TLDRevamp.Net
 
         /// A/B: the owner's state rate for an item in its player's hands and for FastAfterReleaseS after letting go
         /// (Protocol.StateHz or less = off, before 0.69.2).
-        public static float HeldStateHz = 50f, FastAfterReleaseS = 1.5f;   // 50 = once per physics step (fixedDeltaTime 0.02): 40 Hz gave uneven 20-60 ms gaps
-        public static bool HandItemDraw = true;
-        public static float HandItemPullM = .08f, HandItemPullDeg = 10f;   // A/B: HandItemPullM < 0 = shown at the hand alone (before 0.69.2)   // A/B: false = a held copy is shown by its world interpolation only
+        internal static float HeldStateHz = 50f, FastAfterReleaseS = 1.5f;   // 50 = once per physics step (fixedDeltaTime 0.02): 40 Hz gave uneven 20-60 ms gaps
+        internal static bool HandItemDraw = true;
+        internal static float HandItemPullM = .08f, HandItemPullDeg = 10f;   // A/B: HandItemPullM < 0 = shown at the hand alone (before 0.69.2)   // A/B: false = a held copy is shown by its world interpolation only
         internal static Transform ItemHand(Ent e) => HandItemDraw && e.Proxy && e.HandPose && e.HandEpoch == e.Epoch && e.HandOwner == e.OwnerId &&
             e.Held && !e.Stored && !e.PoseLocked && e.WornBy < 0 ? RemotePlayers.ItemHand(e.OwnerId) : null;
 
@@ -92,7 +92,7 @@ namespace TLDRevamp.Net
                 if (e.HandDraw.Source == null && !e.HandDraw.Blending(now))
                     e.HandDraw.Seed(mainscript.GlobalFromUnityPos(e.Root.transform.position), e.Root.transform.rotation);
                 e.HandDraw.Apply(hand, now, pos, rot, out pos, out rot);
-                if (e.MovedByBody) Entities.StopBodyMotion(e);
+                if (e.MovedByBody) EntityPhysics.StopBodyMotion(e);
                 var rb = e.Root.GetComponent<Rigidbody>();
                 var up = mainscript.UnityPosFromGlobal(pos);
                 if (rb != null)

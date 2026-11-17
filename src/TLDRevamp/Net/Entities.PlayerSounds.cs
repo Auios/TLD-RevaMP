@@ -15,8 +15,8 @@ namespace TLDRevamp.Net
     {
         private static readonly NetWriter W = new NetWriter();
         private static readonly NetWriter WS = new NetWriter();
-        public static long PlayerSoundsSent, PlayerSoundsPlayed, ModelStepsMuted;
-        public static long[] SoundsSentBy = new long[4], SoundsPlayedBy = new long[4];
+        internal static long PlayerSoundsSent, PlayerSoundsPlayed, ModelStepsMuted;
+        internal static long[] SoundsSentBy = new long[4], SoundsPlayedBy = new long[4];
         private static string _lastSound = "null";
         internal static string ObservedLastSound => _lastSound;
 

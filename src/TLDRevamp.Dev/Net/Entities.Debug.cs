@@ -202,7 +202,7 @@ namespace TLDRevamp.Net
             if (at == null || !at.attached) return "{\"error\":\"item is not attached\"}";
             bool applying = ApplyingState, detaching = _applyingDetach;
             ApplyingState = _applyingDetach = true;
-            try { Unmount(at, true); }
+            try { EntityLifetimeStreaming.Unmount(at, true); }
             finally { ApplyingState = applying; _applyingDetach = detaching; }
             if (e.EditHoldUntil == null) e.EditHoldUntil = new Dictionary<int, float>();
             e.EditHoldUntil[index] = Time.realtimeSinceStartup + 10f;
@@ -420,7 +420,7 @@ namespace TLDRevamp.Net
             b.Append(",\"cantCraft\":").Append(ps.cantCraft ? "true" : "false").Append(",\"cantUnCraft\":").Append(ps.cantUnCraft ? "true" : "false")
              .Append(",\"attachTarget\":").Append(ps.attachTarget ? "true" : "false");
             if (part == null || P == null) return b.Append("}").ToString();
-            MountFacts(ps, part, P, pl, b, car.Items.IndexOf(part.tosave));
+            EntityMountFacts.MountFacts(ps, part, P, pl, b, car.Items.IndexOf(part.tosave));
             return b.Append("}").ToString();
         }
 
@@ -525,7 +525,7 @@ namespace TLDRevamp.Net
             var rag = e.Root.GetComponentInChildren<ragdollactivatescript>(true);
             int limbs = 0, loose = 0;
             if (rag != null && rag.RBs != null) foreach (var b in rag.RBs) if (b != null) { limbs++; if (!b.isKinematic) loose++; }
-            ObserveBreaks(net, out int keptCount, out var keptDone);
+            EntityAI.ObserveBreaks(net, out int keptCount, out var keptDone);
             return "{\"breakables\":" + n + ",\"broken\":" + broken + ",\"kept\":" + keptCount +
                    ",\"ragdoll\":" + (rag != null && rag.ragdoll ? "true" : "false") + ",\"limbs\":" + limbs + ",\"limbsLoose\":" + loose +
                    ",\"doneOnThis\":" + (keptDone == e.Root.transform ? "true" : "false") + ",\"id\":" + e.Root.GetInstanceID() + ",\"idInSave\":" + e.Root.idInSave + ",\"rootId\":" + e.RootId + "}";
@@ -600,7 +600,7 @@ namespace TLDRevamp.Net
                 {
                     var pc = it.partconditions[k];
                     if (pc == null) continue;
-                    rows.Add("[" + i + "," + k + "," + Json.Str(PrefabName(it.id)) + "," + pc.slectedRandomTipus + "," + Json.Str(pc.tipus.ToString()) + "," + pc.state + "]");
+                    rows.Add("[" + i + "," + k + "," + Json.Str(EntityLifetimeStreaming.PrefabName(it.id)) + "," + pc.slectedRandomTipus + "," + Json.Str(pc.tipus.ToString()) + "," + pc.state + "]");
                 }
             }
             return "{\"pcs\":[" + string.Join(",", rows) + "]}";
@@ -624,7 +624,7 @@ namespace TLDRevamp.Net
                 var axle = ct.InverseTransformDirection(wg.T.rotation * Vector3.right);
                 float steer = Mathf.Atan2(-axle.z, axle.x) * Mathf.Rad2Deg;
                 var pt = wg.slot != null && wg.slot.hasPart() ? wg.slot.part() : null;   // by prefab: a spawned car's own wheels are named "Wheel", a copy's "TireFelni(Clone)"
-                var part = pt == null ? "" : pt.tosave != null ? PrefabName(pt.tosave.id) : pt.name;
+                var part = pt == null ? "" : pt.tosave != null ? EntityLifetimeStreaming.PrefabName(pt.tosave.id) : pt.name;
                 rows.Add("[" + lp.x.ToString("F3", ic) + "," + lp.y.ToString("F3", ic) + "," + lp.z.ToString("F3", ic) + "," + steer.ToString("F1", ic) + "," + Json.Str(part) + "]");
             }
             return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"wheels\":[" + string.Join(",", rows) + "]}";
@@ -675,7 +675,7 @@ namespace TLDRevamp.Net
             return "{\"claimed\":true}";
         }
 
-        
+
         /// Test (bridge `mp handcopy <net>`): this copy picked up with no claim sent (not known as a copy for that moment): HandCopyTick's state.
         public static string TestHandCopy(uint net)
         {
@@ -790,7 +790,7 @@ namespace TLDRevamp.Net
             var it = idx >= 0 && idx < e.Items.Count ? e.Items[idx] : null;
             if (it == null || it.attachable == null || !it.attachable.attached) return "{\"error\":\"part " + idx + " not on\"}";
             _applyingDetach = true;
-            try { Unmount(it.attachable, true); } finally { _applyingDetach = false; }
+            try { EntityLifetimeStreaming.Unmount(it.attachable, true); } finally { _applyingDetach = false; }
             return "{\"off\":" + Json.Str(it.name) + ",\"attached\":" + (it.attachable.attached ? "true" : "false") + "}";
         }
 
@@ -860,8 +860,8 @@ namespace TLDRevamp.Net
             rows.Sort(StringComparer.Ordinal);
             ulong h = 14695981039346656037UL;
             foreach (var row in rows) { foreach (char c in row) { h ^= c; h *= 1099511628211UL; } h ^= 0xFF; h *= 1099511628211UL; }
-            return "{\"unshared\":[" + string.Join(",", Unshared.ConvertAll(Json.Str)) + "],\"count\":" + rows.Count + ",\"shared\":" + shared + ",\"hash\":\"" + h.ToString("X16") + "\",\"leases\":{\"asked\":" + LeasesAsked +
-                   ",\"granted\":" + LeasesGranted + ",\"spawns\":" + LeaseSpawns + ",\"itemsShared\":" + LeaseItemsShared + ",\"hostShared\":" + HostItemsShared + ",\"builtInShared\":" + BuiltInShared + ",\"builtInDisabled\":" + BuiltInDisabled + ",\"done\":" + LeasesDone + ",\"freed\":" + LeasesFreed + ",\"reEnabled\":" + BuiltInReEnabled + "}}";
+            return "{\"unshared\":[" + string.Join(",", Unshared.ConvertAll(Json.Str)) + "],\"count\":" + rows.Count + ",\"shared\":" + shared + ",\"hash\":\"" + h.ToString("X16") + "\",\"leases\":{\"asked\":" + EntityWorldLeases.LeasesAsked +
+                   ",\"granted\":" + EntityWorldLeases.LeasesGranted + ",\"spawns\":" + EntityWorldLeases.LeaseSpawns + ",\"itemsShared\":" + EntityWorldLeases.LeaseItemsShared + ",\"hostShared\":" + EntityWorldLeases.HostItemsShared + ",\"builtInShared\":" + EntityWorldLeases.BuiltInShared + ",\"builtInDisabled\":" + EntityWorldLeases.BuiltInDisabled + ",\"done\":" + EntityWorldLeases.LeasesDone + ",\"freed\":" + EntityWorldLeases.LeasesFreed + ",\"reEnabled\":" + EntityWorldLeases.BuiltInReEnabled + "}}";
         }
 
         /// `mp relays`: which loaded objects carry a collision relay (what this machine simulates relays its contacts to the
@@ -1013,7 +1013,7 @@ namespace TLDRevamp.Net
         public static string SeatList(uint net)
         {
             if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no entity " + net + "\"}";
-            var seats = VehicleSeats(e.Root, true);
+            var seats = EntitySeats.VehicleSeats(e.Root, true);
             var rows = new List<string>();
             for (int i = 0; i < seats.Length; i++)
             {
@@ -1084,7 +1084,7 @@ namespace TLDRevamp.Net
             else foreach (var it in savedatascript.s.items.Values)
                 if (it != null && it.car != null && it.transform.parent == null) { float d = (it.transform.position - pl.transform.position).sqrMagnitude; if (d < best) { best = d; car = it; } }
             if (car == null) return "{\"error\":\"no car\"}";
-            var seats = VehicleSeats(car, true);
+            var seats = EntitySeats.VehicleSeats(car, true);
             if (idx < 0 || idx >= seats.Length) return "{\"error\":\"no seat " + idx + "\"}";
             var st = seats[idx];
             if (redirect && st.mainseat != null) st = st.mainseat;
@@ -1230,9 +1230,9 @@ namespace TLDRevamp.Net
             float now = Time.time;
             // why BodyMotionTick leaves it alone (its order): a copy it skips is not drawn from its owner's states
             string skip = !e.Proxy ? "own" : e.Physical ? "physical" : e.Ip == null || !e.Ip.Ready ? "no states" : RidesBolted(e) ? "bolted" :
-                CopyLockByContainer && LockedAway(e) ? "locked away" : WornRides(e) ? "worn" : HandManaged(e) ? "hand" : rb == null ? "no body" :
+                EntityLocks.CopyLockByContainer && EntityLocks.LockedAway(e) ? "locked away" : EntityHands.WornRides(e) ? "worn" : EntityHands.HandManaged(e) ? "hand" : rb == null ? "no body" :
                 !rb.isKinematic ? "not kinematic" : e.CarriedBy != 0 ? "carried" : "";
-            return "{\"net\":" + net + ",\"skip\":" + Json.Str(skip) + ",\"liftsRefused\":" + CarLiftsRefused + ",\"healed\":" + CopyBodiesHealed + ",\"proxy\":" + B(e.Proxy) + ",\"owner\":" + e.OwnerId + ",\"driven\":" + B(e.Driven) + ",\"physical\":" + B(e.Physical) +
+            return "{\"net\":" + net + ",\"skip\":" + Json.Str(skip) + ",\"liftsRefused\":" + CarLiftsRefused + ",\"healed\":" + EntityPhysics.CopyBodiesHealed + ",\"proxy\":" + B(e.Proxy) + ",\"owner\":" + e.OwnerId + ",\"driven\":" + B(e.Driven) + ",\"physical\":" + B(e.Physical) +
                    ",\"movedByBody\":" + B(e.MovedByBody) + ",\"crashTaking\":" + B(e.CrashTaking) + ",\"freeIn\":" + B(now >= e.FreeFrom && now < e.FreeUntil) +
                    ",\"stepSpeed\":" + e.StepSpeed.ToString("F2", ic) + ",\"stepExtrap\":" + B(e.StepExtrap) + ",\"atRest\":" + B(e.ReceivedAtRest) +
                    ",\"stateEpoch\":" + e.ReceivedStateEpoch + ",\"recv\":" + e.Recv + ",\"carriedBy\":" + e.CarriedBy + ",\"rideCar\":" + e.RideCar + ",\"body\":" + body +
@@ -1481,7 +1481,7 @@ namespace TLDRevamp.Net
                 if (a == null || a.attachType != 1 || a.parentid != e.RootId || !savedatascript.IndexOfID(data.itemData.items, a.id, out int k)) continue;
                 var rec = data.itemData.items[k];
                 MoveRecord(data.itemData.items, k, rec.transform.pos + new Vector3d(m, 0, 0), rec.transform.rot.Load());
-                return "{\"moved\":" + Json.Str(PrefabName(rec.prefabID)) + ",\"id\":" + a.id + ",\"slot\":" + a.index + "}";
+                return "{\"moved\":" + Json.Str(EntityLifetimeStreaming.PrefabName(rec.prefabID)) + ",\"id\":" + a.id + ",\"slot\":" + a.index + "}";
             }
             return "{\"error\":\"nothing bolted to it in the far store\"}";
         }
@@ -1508,10 +1508,10 @@ namespace TLDRevamp.Net
                 (placed ? "true" : "false") + "," + parent + "," + slot + "," + Json.Str(parentName) + "]";
             foreach (var it in data.itemData.items)
             {
-                if (it == null || !PrefabName(it.prefabID).ToLowerInvariant().Contains(name)) continue;
+                if (it == null || !EntityLifetimeStreaming.PrefabName(it.prefabID).ToLowerInvariant().Contains(name)) continue;
                 uint par = 0; int slot = -1; string pn = "";
-                if (att.TryGetValue(it.id, out var a) && a.attachType == 1) { par = a.parentid; slot = a.indexType == 2 ? a.index : -1; pn = prefabOf.TryGetValue(par, out var pp) ? PrefabName(pp) : savedatascript.s.items.TryGetValue(par, out var lp) && lp != null ? lp.name : "?"; }
-                rows.Add(Row(it.id, PrefabName(it.prefabID), it.transform.pos, false, par, slot, pn));
+                if (att.TryGetValue(it.id, out var a) && a.attachType == 1) { par = a.parentid; slot = a.indexType == 2 ? a.index : -1; pn = prefabOf.TryGetValue(par, out var pp) ? EntityLifetimeStreaming.PrefabName(pp) : savedatascript.s.items.TryGetValue(par, out var lp) && lp != null ? lp.name : "?"; }
+                rows.Add(Row(it.id, EntityLifetimeStreaming.PrefabName(it.prefabID), it.transform.pos, false, par, slot, pn));
             }
             foreach (var kv in savedatascript.s.items)
             {
@@ -1683,7 +1683,7 @@ namespace TLDRevamp.Net
             for (int i = 0; i < e.Items.Count; i++)
             {
                 var it = e.Items[i]; if (it == null) continue;
-                var d = StateOnly(ItemSnapshot.Capture(it)); ItemSnapshot.Remap(d, map);
+                var d = EntityResync.StateOnly(ItemSnapshot.Capture(it)); ItemSnapshot.Remap(d, map);
                 string j = JsonUtility.ToJson(d);
                 if (_diffLast.TryGetValue(i, out var was) && was != j)
                 {
@@ -1932,18 +1932,18 @@ namespace TLDRevamp.Net
         /// records a resync sends, the census rows — raw and deflated (owner-reconcile research, 2026-10-14).
         public static string RecordSize()
         {
-            var root = NearestCar();
+            var root = EntityLookup.NearestCar();
             if (root == null) return "{\"error\":\"no car near\"}";
             var items = ItemSnapshot.Group(root);
             var perItem = new List<itemDataClass>();
             byte[] full = RecordCodec.Encode(ItemSnapshot.CaptureGroup(items, perItem));
-            var map = CanonMap(items);
+            var map = EntityResync.CanonMap(items);
             int stateSum = 0, stateMax = 0, n = 0;
             var all = new System.IO.MemoryStream();
             for (int i = 0; i < items.Count; i++)
             {
                 if (perItem[i] == null) continue;
-                var rec = StateRecord(perItem[i], map, out _);
+                var rec = EntityResync.StateRecord(perItem[i], map, out _);
                 stateSum += rec.Length; if (rec.Length > stateMax) stateMax = rec.Length; n++;
                 all.Write(rec, 0, rec.Length);
             }

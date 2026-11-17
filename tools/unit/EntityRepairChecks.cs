@@ -139,15 +139,9 @@ static partial class EntitySplitTest
     {
         var owner = typeof(EntityRepair);
         Check(owner.IsNotPublic && owner.IsAbstract && owner.IsSealed, "repair owner is internal static");
-        CoreMembers.Register();
-        foreach (var member in owner.GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is FieldInfo || m is PropertyInfo || m is MethodInfo))
-        {
-            bool retained = typeof(Entities).GetMember(member.Name, Static).Length > 0;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." }) Check(Reflect.MemberPath(prefix + member.Name) == (retained ? prefix + member.Name : owner.FullName + "." + member.Name), "repair alias " + prefix + member.Name);
-        }
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.PoiCensusEveryS", "7") == "7" && EntityRepair.PoiCensusEveryS == 7, "POI historical setting writes sole owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityRepair.PoiCensusEveryS", "7") == "7" && EntityRepair.PoiCensusEveryS == 7, "POI real owner setting writes sole owner");
         EntityRepair.PoiCensusEveryS = 5;
-        Check(BridgeReflect.Get("Entities._poiLists.Count") == "0", "POI private state historical alias");
+        Check(BridgeReflect.Get("EntityRepair._poiLists.Count") == "0", "POI private state historical owner path");
         foreach (string part in new[] { "Repair", "PlaceCheck", "PoiCensus" })
         {
             string source = File.ReadAllText("src/TLDRevamp/Net/Entities." + part + ".cs").Split("    public static partial class Entities")[0];
@@ -160,12 +154,6 @@ static partial class EntitySplitTest
         Check(typeof(Entities).GetField("_poiLists", Static) == null && typeof(Entities).GetField("PoiCensusSent", Static) == null, "POI state has one owner");
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs"), features = File.ReadAllText("src/TLDRevamp/Net/Entities.Features.cs");
         Check(kernel.Contains("case CensusRepair: ServerCensusRepair(from, r);") && kernel.Contains("case CensusRepair: ApplyCensusRepair(r);"), "CensusRepair dispatch stays at original kernel slots");
-        Check(features.Contains("private static void PoiCensusTick() => EntityRepair.PoiCensusTick();") && features.Contains("internal static void ResetPoiCensus() => EntityRepair.ResetPoiCensus();"), "POI forwards preserve frozen tick and reset calls");
-        foreach (string facade in new[] {
-            "private static string RepairState(tosaveitemscript it) => EntityRepair.RepairState(it);",
-            "private static System.Collections.Generic.Dictionary<string, string> RowMap(System.Collections.Generic.IEnumerable<string> rows) => EntityRepair.RowMap(rows);",
-            "private static string GluedPlace(attachablescript at) => EntityRepair.GluedPlace(at);",
-            "internal static Transform RepairAttachFrame(attachablescript at) => AttachFrame(at);",
-            "internal static void RepairAnomaly(string what) => Anomaly(what);" }) Check(features.Contains(facade), "repair retains the exact narrow forward " + facade);
+        Check(features.Contains("internal static Transform RepairAttachFrame(attachablescript at) => EntityAttachments.AttachFrame(at);") && features.Contains("internal static void RepairAnomaly(string what) => Anomaly(what);"), "repair uses named kernel attachment and anomaly calls");
     }
 }

@@ -32,10 +32,10 @@ namespace TLDRevamp
                 case "mp status": return Net.Mp.Status();
                 case "net stats": return Net.Mp.NetStats();
                 case "mp entities": return Net.Entities.Status(EntityRows);
-                case "mp aistats": return Net.Entities.AiStats();
+                case "mp aistats": return Net.EntityAI.AiStats();
                 case "mp combat": return Net.PlayerCombat.Stats();
-                case "mp shotfx": return Net.Entities.ShotFxStats();
-                case "mp blasts": return Net.Entities.ExplosionStats();
+                case "mp shotfx": return Net.EntityEffects.ShotFxStats();
+                case "mp blasts": return Net.EntityExplosions.ExplosionStats();
                 case "mp membergone": return Net.Entities.MemberGoneStats();
                 case "mp poiusables": return Net.Entities.PoiUsableStats();
                 default: throw new ArgumentException(section);

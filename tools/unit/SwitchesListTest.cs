@@ -4,6 +4,26 @@ using System; using System.Collections.Generic; using System.IO; using System.Li
 static class P {
   static int fails = 0;
   static void Check(string name, bool ok) { Console.WriteLine((ok ? "PASS " : "FAIL ") + name); if (!ok) fails++; }
+  static readonly Dictionary<(string Code, string Class), string> Declarations = new Dictionary<(string, string), string>();
+  static bool HasField(string code, string cls, string field) {
+    if (!Declarations.TryGetValue((code, cls), out string declarations)) {
+      // Production classes use block indentation; inspect only their direct declarations, once per class/file.
+      var classRe = new Regex(@"(?m)^([ \t]*)(?:(?:public|internal|private|static|partial|sealed|abstract|readonly)\s+)*(?:class|struct)\s+" + Regex.Escape(cls) + @"\b");
+      var lines = new List<string>();
+      foreach (Match match in classRe.Matches(code)) {
+        string indent = match.Groups[1].Value;
+        int start = code.IndexOf('{', match.Index);
+        if (start < 0) continue;
+        var end = Regex.Match(code.Substring(start + 1), @"(?m)^" + Regex.Escape(indent) + @"}");
+        string body = code.Substring(start + 1, end.Success ? end.Index : code.Length - start - 1);
+        string memberIndent = indent + "    ";
+        lines.AddRange(body.Split('\n').Where(line => line.StartsWith(memberIndent) && line.Length > memberIndent.Length && !char.IsWhiteSpace(line[memberIndent.Length])));
+      }
+      declarations = string.Join("\n", lines);
+      Declarations[(code, cls)] = declarations;
+    }
+    return Regex.IsMatch(declarations, @"\bstatic\b[^;{(]*\b" + Regex.Escape(field) + @"\b\s*(=|;|,|\{)");
+  }
   static int Main(string[] args) {
     string root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
     string src = Path.Combine(root, "src", "TLDRevamp");
@@ -11,6 +31,7 @@ static class P {
     var paths = Regex.Matches(list, "\\(\"(TLDRevamp\\.[A-Za-z0-9_.]+)\", Kind\\.(Test|OptIn|Config|Other)").Cast<Match>().Select(m => m.Groups[1].Value).ToList();
     Check("the list has switches", paths.Count > 100);
     Check("each switch once", paths.Distinct().Count() == paths.Count);
+    Check("switch lookup stays within its declaring type", !HasField("class Entities\n{\n}\nclass EntityPhysics\n{\n    public static bool Setting;\n}", "Entities", "Setting"));
     var files = Directory.GetFiles(src, "*.cs", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(root, "src/TLDRevamp.Dev"), "*.cs", SearchOption.AllDirectories))
       .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar) && !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
       .Select(File.ReadAllText).ToList();
@@ -18,18 +39,8 @@ static class P {
     foreach (var p in paths) {
       int dot = p.LastIndexOf('.');
       string type = p.Substring(0, dot), field = p.Substring(dot + 1), cls = type.Substring(type.LastIndexOf('.') + 1);
-      // Core and Dev register the original member paths through Reflect.RegisterMovedMembers.
-      var ownerNames = new HashSet<string> { cls };
-      string plugin = File.ReadAllText(Path.Combine(src, "CoreMembers.cs")) + File.ReadAllText(Path.Combine(root, "src/TLDRevamp.Dev/DevPlugin.cs")) + File.ReadAllText(Path.Combine(root, "src/TLDRevamp.Dev/DevMembers.cs"));
-      foreach (Match registration in Regex.Matches(plugin, @"RegisterMovedMembers\(typeof\(([^)]+)\),([^;]+)")) {
-        string original = registration.Groups[1].Value.Split('.').Last();
-        if (original != cls) continue;
-        foreach (Match owner in Regex.Matches(registration.Groups[2].Value, @"typeof\(([^)]+)\)")) ownerNames.Add(owner.Groups[1].Value.Split('.').Last());
-      }
-      string owners = string.Join("|", ownerNames.Select(Regex.Escape));
-      var classRe = new Regex(@"\b(class|struct)\s+(?:" + owners + @")\b");
-      var fieldRe = new Regex(@"\bstatic\b[^;{(]*\b" + Regex.Escape(field) + @"\b\s*(=|;|,|\{)");
-      if (!files.Any(t => classRe.IsMatch(t) && fieldRe.IsMatch(t))) missing.Add(p);
+      // Bridge paths name the real owner shown by `switches`.
+      if (!files.Any(t => HasField(t, cls, field))) missing.Add(p);
     }
     Check("every listed switch exists" + (missing.Count > 0 ? ": missing " + string.Join(", ", missing.Take(10)) : ""), missing.Count == 0);
     Console.WriteLine(fails == 0 ? "ALL PASS" : fails + " FAILED");

@@ -38,7 +38,7 @@ namespace TLDRevamp.Net
                 return false;   // the copy is not moved here: the owner pushes the real one
             }
         }
-        public static long PushesSent, PushesApplied, PushesRejected, PushFrames;
+        internal static long PushesSent, PushesApplied, PushesRejected, PushFrames;
         private static readonly Dictionary<pushablescript, PushAcc> PushOut = new Dictionary<pushablescript, PushAcc>();
         private static float _pushSendAcc;
 
@@ -116,16 +116,6 @@ namespace TLDRevamp.Net
         }
 
         /// Received numbers that go into physics, clocks or health: a NaN/infinity there doesn't fail, it spreads.
-        internal static bool Finite(float f) => EntityNumbers.Finite(f);
-        internal static bool Finite(double d) => EntityNumbers.Finite(d);
-        internal static bool Finite(Vector3d v) => EntityNumbers.Finite(v);
-        internal static bool Finite(Quaternion q) => EntityNumbers.Finite(q);
-        internal static bool Finite(Vector3 v) => EntityNumbers.Finite(v);
 
-        public static long PushesSent { get => EntityCargoInteraction.PushesSent; set => EntityCargoInteraction.PushesSent = value; }
-        public static long PushesApplied { get => EntityCargoInteraction.PushesApplied; set => EntityCargoInteraction.PushesApplied = value; }
-        public static long PushFrames { get => EntityCargoInteraction.PushFrames; set => EntityCargoInteraction.PushFrames = value; }
-        private static void PushTick(float dt) => EntityCargoInteraction.PushTick(dt);
-        private static void ApplyPush(NetReader r) => EntityCargoInteraction.ApplyPush(r);
     }
 }

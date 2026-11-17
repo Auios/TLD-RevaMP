@@ -32,13 +32,13 @@ namespace TLDRevamp.Net
     /// A/B: RabbitSync false = before (copies think on their own, no events), RabbitOwners false = no ownership rules.
     internal static partial class EntityRabbits
     {
-        public static bool RabbitSync = true, RabbitOwners = true;
-        public static float RabbitNearM = 60f, RabbitSwitchM = 5f, RabbitHoldS = 2f, RabbitCarMoveMps = 1.5f;
-        public static float RabbitClaimM = 0.5f, RabbitClaimSteps = 4f;   // claim before the touch: margin + closing speed × physics steps
+        internal static bool RabbitSync = true, RabbitOwners = true;
+        internal static float RabbitNearM = 60f, RabbitSwitchM = 5f, RabbitHoldS = 2f, RabbitCarMoveMps = 1.5f;
+        internal static float RabbitClaimM = 0.5f, RabbitClaimSteps = 4f;   // claim before the touch: margin + closing speed × physics steps
         public static long RabbitStatesSent, RabbitStatesApplied, RabbitStatesStale, RabbitFxSent, RabbitFxApplied, RabbitDamageSent,
                            RabbitOwnerMoves, RabbitClaimedByCar, RabbitClaimedObjects, RabbitBreakHitsSent, RabbitBreakHitsSkipped, RabbitSizesRolled;
         public static string RabbitLastMove = "";
-        public static float RabbitNextSize = -1f;   // test: the next shared rabbit's size (bridge `set`)
+        internal static float RabbitNextSize = -1f;   // test: the next shared rabbit's size (bridge `set`)
 
         private static readonly NetWriter W = new NetWriter();
         internal static bool InitializeRabbitLookups() => NyLastRoar != null && NyLastAttack != null && NyLastSee != null && NyEvil != null && NyIdleGo != null;
@@ -432,7 +432,7 @@ namespace TLDRevamp.Net
                 {
                     var p = Vector3.Lerp(t.feet, t.top, i / 6f);
                     var c = col.ClosestPoint(p);
-                    if ((c - p).sqrMagnitude <= Entities.BodyR * Entities.BodyR) { touch = true; hit = c; }
+                    if ((c - p).sqrMagnitude <= EntityAI.BodyR * EntityAI.BodyR) { touch = true; hit = c; }
                 }
                 if (!touch) continue;
                 _rabDmg.TryGetValue(t.id, out float acc);
@@ -489,7 +489,7 @@ namespace TLDRevamp.Net
             _rabBreakFlushAt = now + 0.1f;
             foreach (var kv in _rabHits)
             {
-                if (kv.Key == null || !Entities.BreakRef(kv.Key, out uint net, out int bi)) continue;
+                if (kv.Key == null || !EntityAI.BreakRef(kv.Key, out uint net, out int bi)) continue;
                 W.Reset(); W.U8(Entities.BreakHit); W.U32(net); W.VarU32((uint)bi); W.U8(3); W.F32(kv.Value.Sum / kv.Value.N); W.F32(0f); W.F32(0f); W.F32(0f); W.VarU32((uint)kv.Value.N);
                 Entities.SendToServer(W, true); RabbitBreakHitsSent++;
             }
@@ -594,7 +594,7 @@ namespace TLDRevamp.Net
 
         // ================================================================ diagnostics / test hooks
         /// Bridge `mp rabbits`: every rabbit here.
-        public static string RabbitList()
+        internal static string RabbitList()
         {
             var rows = new List<string>();
             foreach (var e in Entities.KnownRabbits()) rows.Add(RabbitJson(e));

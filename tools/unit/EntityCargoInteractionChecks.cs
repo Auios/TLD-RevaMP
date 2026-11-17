@@ -187,17 +187,9 @@ static partial class EntitySplitTest
 
     static void CargoBoundaryChecks()
     {
-        CoreMembers.Register();
         Check(CargoOwner.IsNotPublic && CargoOwner.IsAbstract && CargoOwner.IsSealed, "cargo has an internal static owner");
-        foreach (var member in CargoOwner.GetMembers(Static | BindingFlags.DeclaredOnly))
-        {
-            if (!(member is FieldInfo || member is PropertyInfo || member is MethodInfo)) continue;
-            bool retained = typeof(Entities).GetMember(member.Name, Static).Length != 0;
-            foreach (string prefix in new[] { "Entities.", "TLDRevamp.Net.Entities." })
-                Check(Reflect.MemberPath(prefix + member.Name) == (retained ? prefix + member.Name : CargoOwner.FullName + "." + member.Name), "cargo alias " + prefix + member.Name);
-        }
         float speed = EntityCargoInteraction.BodyMinSpeed;
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.BodyMinSpeed", "0.75") == "0.75" && EntityCargoInteraction.BodyMinSpeed == .75f, "historical cargo setting writes its only owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityCargoInteraction.BodyMinSpeed", "0.75") == "0.75" && EntityCargoInteraction.BodyMinSpeed == .75f, "real owner cargo setting writes its only owner");
         EntityCargoInteraction.BodyMinSpeed = speed;
         Check(!ReferenceEquals(Field(CargoOwner, "W"), Field(typeof(Entities), "W")), "cargo owns its request writer");
         string[] allowed = { "Ent", "ClaimReason", "CargoInSession", "CargoLocalId", "CargoClaimsEnabled", "CargoItemClaims", "CargoItemMinSpeed", "PushMessage", "CargoCopyOf", "IsCargoBody", "CargoRidesParent", "CargoLimbs", "CargoLimp", "SetCargoProxy", "WriteCargoClaim", "SendCargoRequest", "CargoClaimSent", "CargoContactClaimed", "ItemContactClaimed", "CargoOverlappedCar", "CargoCarBounds", "CargoLockedAway", "IsPushCopy", "PushEntityOf", "GripEntityOf", "CargoRabbit", "CargoCarEntity", "CargoItemHeld", "TryCargoContactCar", "TryItemContactSource", "TryPushTarget", "IsFinite" };
@@ -220,10 +212,8 @@ static partial class EntitySplitTest
         Check(cargo.Contains("internal static bool IsHeld(") && cargo.Contains("private static void ShowCarriedCollisions("), "held pipeline stays with the kernel and lock boundary");
         Check(File.ReadAllText("src/TLDRevamp/Net/Entities.Pickup.cs").Contains("if (se.HitchCar != 0)"), "server claim transaction stays on kernel");
         string physical = File.ReadAllText("src/TLDRevamp/Net/Entities.Physical.cs");
-        Check(physical.IndexOf("CargoNearTick(dt);") < physical.IndexOf("BodyNearTick(dt);") && physical.IndexOf("BodyNearTick(dt);") < physical.IndexOf("ItemNearTick(dt);") && physical.IndexOf("ItemNearTick(dt);") < physical.IndexOf("EntityRabbits.RabbitNearTick(dt);"), "cargo body item rabbit claim scan order is unchanged");
+        Check(physical.IndexOf("CargoNearTick(dt);") < physical.IndexOf("EntityCargoInteraction.BodyNearTick(dt);") && physical.IndexOf("EntityCargoInteraction.BodyNearTick(dt);") < physical.IndexOf("ItemNearTick(dt);") && physical.IndexOf("ItemNearTick(dt);") < physical.IndexOf("EntityRabbits.RabbitNearTick(dt);"), "cargo body item rabbit claim scan order is unchanged");
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");
-        Check(kernel.IndexOf("PushTick(dt);") < kernel.IndexOf("EntityRadio.RadioTick(dt);") && kernel.IndexOf("PhysLockTick(dt);") < kernel.IndexOf("PushGripTick();") && kernel.IndexOf("PushGripTick();") < kernel.IndexOf("EntityWeather.StormTick(dt);"), "push and grip retain scheduler neighbors");
-        Check(cargo.Contains("private static bool ClaimCargo(Ent e, bool released = false, ClaimReason reason = ClaimReason.CargoNear) => EntityCargoInteraction.ClaimCargo(e, released, reason);"), "compiled claim facade forwards the unchanged optional arguments");
-        Check(push.Contains("private static void ApplyPush(NetReader r) => EntityCargoInteraction.ApplyPush(r);") && push.Contains("private static void PushTick(float dt) => EntityCargoInteraction.PushTick(dt);"), "push dispatch and tick facades reach the owner");
+        Check(kernel.IndexOf("EntityCargoInteraction.PushTick(dt);") < kernel.IndexOf("EntityRadio.RadioTick(dt);") && kernel.IndexOf("PhysLockTick(dt);") < kernel.IndexOf("EntityCargoInteraction.PushGripTick();") && kernel.IndexOf("EntityCargoInteraction.PushGripTick();") < kernel.IndexOf("EntityWeather.StormTick(dt);"), "push and grip retain scheduler neighbors");
     }
 }

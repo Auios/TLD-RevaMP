@@ -65,7 +65,6 @@ namespace TLDRevamp.Net
         }
 
         /// Nearest car to the local player (for scenarios).
-        internal static tosaveitemscript NearestCar() => EntityLookup.NearestCar();
         internal static tosaveitemscript RootOfNet(uint net) => ByNet.TryGetValue(net, out var e) && Resolve(e) ? e.Root : null;
 
     }

@@ -8,7 +8,7 @@ namespace TLDRevamp.Net
     // epoch fencing, re-entry replay, rabbit routing and the wire codecs are production code.
     public static partial class Entities
     {
-        static bool InterestRelay = true;
+
         static bool IsHost;
         static double InterestM = 3000;
         static HashSet<T> StaleOf<T>(Dictionary<int, HashSet<T>> d, int player)
@@ -28,8 +28,8 @@ namespace TLDRevamp.Net
                 {
                     far++;
                     // A maintenance packet uses the existing full wire form, just like a live pose.
-                    var w = new NetWriter(); WriteStateHead(w, 9, 1, (ushort)tick, now, new Vector3d(tick, 0, 0), Quaternion.identity, Vector3.zero, false);
-                    ReadStateHead(RabbitReader(w), out uint net, out _, out _, out var pos, out _, out _, out _, out _, out _, out _);
+                    var w = new NetWriter(); EntityCodec.WriteStateHead(w, 9, 1, (ushort)tick, now, new Vector3d(tick, 0, 0), Quaternion.identity, Vector3.zero, false);
+                    EntityCodec.ReadStateHead(RabbitReader(w), out uint net, out _, out _, out var pos, out _, out _, out _, out _, out _, out _);
                     hostRecords[net] = pos;
                 }
             }
@@ -46,7 +46,7 @@ namespace TLDRevamp.Net
             Mp.Server = new TestServer();
             var se = new SEnt { NetId = 9, Epoch = 3, ReceivedStateEpoch = 3, OwnerId = 1 };
             var packet = new NetWriter();
-            WriteStateHead(packet, 9, 3, 8, 12, new Vector3d(45, 2, 3), Quaternion.identity, Vector3.zero, false);
+            EntityCodec.WriteStateHead(packet, 9, 3, 8, 12, new Vector3d(45, 2, 3), Quaternion.identity, Vector3.zero, false);
             packet.U8(0); packet.U8(0); packet.U8(0); packet.U8(0);
             var reader = RabbitReader(packet); CacheLatestPose(se, reader);
             var allocation = se.LatestState; CacheLatestPose(se, reader);
@@ -55,7 +55,7 @@ namespace TLDRevamp.Net
             RabbitRecipients.Clear(); StateInterestCatchUp(2, se, new Vector3d(9e6, 0, 0));
             Check(RabbitRecipients.Count == 0, "far known receiver gets no replay");
             StateInterestCatchUp(2, se, default);
-            ReadStateHead(new NetReader { Buf = LastInterestPacket, Pos = 1, End = LastInterestPacket.Length }, out _, out uint epoch, out _, out var current, out _, out _, out _, out _, out _, out _);
+            EntityCodec.ReadStateHead(new NetReader { Buf = LastInterestPacket, Pos = 1, End = LastInterestPacket.Length }, out _, out uint epoch, out _, out var current, out _, out _, out _, out _, out _, out _);
             Check(RabbitRecipients.Count == 1 && epoch == 3 && current.x == 45, "entering known receiver immediately gets complete current moving pose without waiting for rest");
             StateInterestCatchUp(2, se, default);
             Check(RabbitRecipients.Count == 1, "remaining in range does not repeatedly replay snapshots");
@@ -100,7 +100,7 @@ namespace TLDRevamp.Net
             NetWriter Pose(byte mode, uint epoch = 3, byte anchor = 7, bool final = false)
             {
                 var w = new NetWriter();
-                WriteStateHead(w, 9, epoch, 0, mode == RagdollWire.Delta ? 13 : 12, new Vector3d(45, 2, 3), Quaternion.identity, Vector3.zero, false, final: final);
+                EntityCodec.WriteStateHead(w, 9, epoch, 0, mode == RagdollWire.Delta ? 13 : 12, new Vector3d(45, 2, 3), Quaternion.identity, Vector3.zero, false, final: final);
                 w.U8(0); w.U8(0); w.U8(0);
                 var pos = new[] { new Vector3(1, 2, 3), new Vector3(4, 5, 6) };
                 var rot = new[] { Quaternion.identity, Quaternion.identity };
@@ -134,10 +134,10 @@ namespace TLDRevamp.Net
             se.LockFrame = 99; se.Pos = new Vector3d(777, 2, 3); se.Rot = Quaternion.identity;
             RabbitRecipients.Clear(); SendSettledState(2, se);
             var r = new NetReader { Buf = LastInterestPacket, Pos = 1, End = LastInterestPacket.Length };
-            ReadStateHead(r, out _, out _, out _, out var world, out _, out _, out _, out _, out _, out _);
+            EntityCodec.ReadStateHead(r, out _, out _, out _, out var world, out _, out _, out _, out _, out _, out _);
             Check(RabbitRecipients.Count == 2 && world.x == 777 && StateTail.TryRead(LastInterestPacket, out tail) && tail.Mode == StateTail.Mode.Delta,
                 "locked replay also sends two States and refreshes the Delta world fallback");
-            var rewritten = new NetWriter(); ReplayLockedState(rewritten, cached, se.Pos, se.Rot);
+            var rewritten = new NetWriter(); EntityProxyPresentation.ReplayLockedState(rewritten, cached, se.Pos, se.Rot);
             Check(StateTail.TryRead(rewritten.Buf, 0, rewritten.Len, out tail), "rewritten Key remains a complete valid State");
             var block = new RagdollWire.Block();
             Check(RagdollWire.Read(new NetReader { Buf = rewritten.Buf, Pos = tail.Offset, End = rewritten.Len }, block) && block.AX == 1000000 && block.AZ == -1000000,
@@ -172,7 +172,7 @@ namespace TLDRevamp.Net
         {
             // Counterfactuals, not a replay: the marks omit most entities' positions and activity.
             var w = new NetWriter();
-            WriteStateHead(w, 595, 1, 1, 1, default, Quaternion.identity, Vector3.zero, false);
+            EntityCodec.WriteStateHead(w, 595, 1, 1, 1, default, Quaternion.identity, Vector3.zero, false);
             w.U8(0); w.U8(0); w.U8(0); w.U8(0); int item = w.Len;
             w.Reset(); CompactPoseCodec.Write(w, 595, 1, 1, 1, 0, 0, 0, 0, true); int rabbit = w.Len;
             w.Reset(); RabbitStateCodec.Write(w, new RabbitStateCodec.State { Net = 595, Epoch = 1 }); int animation = w.Len;
@@ -187,6 +187,11 @@ namespace TLDRevamp.Net
             Console.WriteLine("Interest projection (conditional): far 22 items + 13 rabbits all moving = 303.4 B/s + transitions/resync; 152.5s all 1336 rabbit poses upright + 227 real animation changes = 7764.94 B/s; settled corpses = 0 recurring B/s (finals retained).");
         }
     }
+    internal static partial class EntityAuthorityInterest
+    {
+        internal static bool InterestRelay = true;
+    }
+
     public static partial class RemotePlayers { internal static bool Visible; internal static bool EntityViewerNear(Vector3d at, double range) => Visible; }
     static class MpServer { internal const float CarBeyondInterval = 5; internal const double CarFarM = 2000; }
 }

@@ -74,7 +74,7 @@ static partial class EntitySplitTest
         Check(replacement.differentialRatio == 4.25f && TuningOwner.TunesReapplied == 1, "known tuning reappears before owner scan on a new placement");
         e.Proxy = false; sent = Entities.Packets.Count; Time.realtimeSinceStartup = 131.5f; TuningOwner.CarTuneTick();
         Check(Entities.Packets.Count == sent + 1 && TuningOwner.TunesResent == 2, "received tuning's old sent timestamp resends right after takeover");
-        var into = new Dictionary<uint, byte[]>(); Entities.KnownTunings(into); var ids = new HashSet<uint>(); Entities.TunedRootIds(ids);
+        var into = new Dictionary<uint, byte[]>(); EntityCarTuning.KnownTunings(into); var ids = new HashSet<uint>(); EntityCarTuning.TunedRootIds(ids);
         Check(Convert.ToHexString(into[41]) == TuneVector.Substring(10) && ids.SetEquals(new uint[] { 41 }), "world save forwarders keep local root ids and tuning bytes");
         var wheels = TuningOwner.TuneWheels(replacement); replacement.WHDriven[0].motorTorque = 7;
         var t = TuningOwner.CaptureTuning(replacement); t.Wheels[0].Roles = CarTuning.Steer; t.Gears[0] = -3;

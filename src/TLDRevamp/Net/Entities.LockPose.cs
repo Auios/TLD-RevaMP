@@ -49,10 +49,10 @@ namespace TLDRevamp.Net
                     cache.Streaming[i] != StreamsLockFrame(candidate)) return false;
             }
             var c = cache.Parent;
-            return c == null || c.Root != null && !RidesBolted(c) && !AttachedCarPart(c) && !WornRides(c);
+            return c == null || c.Root != null && !RidesBolted(c) && !EntityProxyPresentation.AttachedCarPart(c) && !EntityHands.WornRides(c);
         }
 
-        private static bool StreamsLockFrame(Ent e) => !RidesBolted(e) && !AttachedCarPart(e) && !WornRides(e);
+        private static bool StreamsLockFrame(Ent e) => !RidesBolted(e) && !EntityProxyPresentation.AttachedCarPart(e) && !EntityHands.WornRides(e);
 
         // Use the shared ancestor's frame, including a container mounted on a moving part. Unshared parents fall
         // back to world poses, so their motion remains visible to the send decision.
@@ -92,7 +92,7 @@ namespace TLDRevamp.Net
                     if (item < 0) continue;
                     bool streaming = StreamsLockFrame(c);
                     cache.Candidates.Add(c); cache.Streaming.Add(streaming);
-                    var mounts = LockMounts(mount.parentTosave);
+                    var mounts = EntityLocks.LockMounts(mount.parentTosave);
                     int index = System.Array.IndexOf(mounts, mount);
                     if (index < 0) continue;
                     if (cache.AddressParent == null) { cache.AddressParent = c; cache.AddressItem = item; cache.AddressIndex = index; }
@@ -102,7 +102,6 @@ namespace TLDRevamp.Net
                 }
         }
 
-        internal static mountStuff[] LockMounts(tosaveitemscript item) => EntityLocks.LockMounts(item);
 
         private static void RebindPoseLocks(Ent parent)
         {
@@ -124,11 +123,11 @@ namespace TLDRevamp.Net
         {
             var p = e.Root != null ? e.Root.P : null;
             if (!e.PoseLocked || e.LockFrame != 0 || p == null || p.physlock != null) return;
-            StopBodyMotion(e);
+            EntityPhysics.StopBodyMotion(e);
             if (e.LockContainer != 0 && ByNet.TryGetValue(e.LockContainer, out var c) && c.Root != null &&
                 e.LockItem >= 0 && e.LockItem < c.Items.Count && c.Items[e.LockItem] != null)
             {
-                var mounts = LockMounts(c.Items[e.LockItem]);
+                var mounts = EntityLocks.LockMounts(c.Items[e.LockItem]);
                 if (e.LockMount >= 0 && e.LockMount < mounts.Length)
                 {
                     var ct = c.Root.transform;
@@ -177,7 +176,7 @@ namespace TLDRevamp.Net
             if (e.PoseLocked && e.LockFrame != 0 && ByNet.TryGetValue(e.LockFrame, out var c) && c.Root != null &&
                 e.LockItem >= 0 && e.LockItem < c.Items.Count && c.Items[e.LockItem] != null)
             {
-                var mounts = LockMounts(c.Items[e.LockItem]);
+                var mounts = EntityLocks.LockMounts(c.Items[e.LockItem]);
                 if (e.LockMount >= 0 && e.LockMount < mounts.Length) wanted = mounts[e.LockMount];
             }
             e.PoseLockMount = wanted;
@@ -195,7 +194,7 @@ namespace TLDRevamp.Net
                 }
                 return;
             }
-            if (e.MovedByBody) StopBodyMotion(e); // a lock destroys the old body; a release must start the new one without a sweep
+            if (e.MovedByBody) EntityPhysics.StopBodyMotion(e); // a lock destroys the old body; a release must start the new one without a sweep
             if (p.physlock != null) { p.UnPhysicsLock(); ApplyProxyBodies(e); }
             if (wanted == null) return;
             var ct = ByNet[e.LockFrame].Root.transform;

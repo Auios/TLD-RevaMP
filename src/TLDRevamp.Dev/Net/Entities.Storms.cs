@@ -79,7 +79,7 @@ namespace TLDRevamp.Net
                     if (st == null) continue;
                     var g = mainscript.GlobalFromUnityPos(st.transform.position);
                     uint id = 0;
-                    if (!TLDRevamp.Net.Entities.ObservedStormIds.TryGetValue(st, out id)) foreach (var kv in TLDRevamp.Net.Entities.ObservedStormById) if (kv.Value == st) { id = kv.Key; break; }
+                    if (!TLDRevamp.Net.EntityWeather.ObservedStormIds.TryGetValue(st, out id)) foreach (var kv in TLDRevamp.Net.EntityWeather.ObservedStormById) if (kv.Value == st) { id = kv.Key; break; }
                     rows.Add("[" + id + "," + st.prefabid + "," + g.x.ToString("F2", ic) + "," + g.z.ToString("F2", ic) + "," + st.size.ToString("F3", ic) + "," +
                              st.speed.ToString("F2", ic) + "," + st.xdir.ToString("F3", ic) + "," + st.ydir.ToString("F3", ic) + "," + st.life.ToString("F3", ic) + "," +
                              st.distanceLerp.ToString("F3", ic) + "," + (Fixes.Sandstorms.FadeDist.TryGetValue(st, out var fd) ? fd : StormDist(st)).ToString("F0", ic) + "," + st.destroyDist.ToString("F0", ic) + "]");
@@ -88,8 +88,8 @@ namespace TLDRevamp.Net
             var all = Resources.FindObjectsOfTypeAll<sandStormSpawnScript>();
             var spawners = new List<string>();
             foreach (var x in all) spawners.Add(Json.Str(x.name + (x.gameObject.scene.IsValid() ? "" : "(asset)") + (x.gameObject.activeInHierarchy ? "" : "(inactive)") + (x.enabled ? "" : "(disabled)") + " under " + (x.transform.parent != null ? x.transform.parent.name : "-")));
-            return "{\"sandstorms\":" + TLDRevamp.Fixes.Sandstorms.Stats + ",\"spawnerObjects\":[" + string.Join(",", spawners) + "],\"stormPrefabs\":" + (itemdatabase.s != null && itemdatabase.s.storms != null ? itemdatabase.s.storms.Length : -1) + ",\"storms\":[" + string.Join(",", rows) + "],\"sent\":" + StormSyncsSent + ",\"applied\":" + StormSyncsApplied + ",\"made\":" + StormsMade +
-                   ",\"removed\":" + StormsRemoved + ",\"snaps\":" + StormSnaps +
+            return "{\"sandstorms\":" + TLDRevamp.Fixes.Sandstorms.Stats + ",\"spawnerObjects\":[" + string.Join(",", spawners) + "],\"stormPrefabs\":" + (itemdatabase.s != null && itemdatabase.s.storms != null ? itemdatabase.s.storms.Length : -1) + ",\"storms\":[" + string.Join(",", rows) + "],\"sent\":" + EntityWeather.StormSyncsSent + ",\"applied\":" + EntityWeather.StormSyncsApplied + ",\"made\":" + EntityWeather.StormsMade +
+                   ",\"removed\":" + EntityWeather.StormsRemoved + ",\"snaps\":" + EntityWeather.StormSnaps +
                    (sp != null ? ",\"spawner\":{\"radius\":" + sp.radius.ToString("F0", ic) + ",\"min\":" + sp.minTime.ToString("F0", ic) + ",\"max\":" + sp.maxTime.ToString("F0", ic) +
                                  ",\"next\":" + (sp.lastTime + sp.nextTime - Time.time).ToString("F0", ic) + "}" : "") + "}";
         }

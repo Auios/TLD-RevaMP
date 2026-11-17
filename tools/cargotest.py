@@ -59,7 +59,7 @@ def run(b, cfg):
     t0 = time.time(); seen = None
     while time.time() - t0 < 10:   # who owns what, as it happens
         rows = [(n, e["name"], e["owner"], e["epoch"], e["proxy"]) for n, e in ents(b).items() if not e["car"] and n not in before]
-        cnt = {k: b(f"get {k}")["value"] for k in (f"{T}.Handoffs", f"{T}.ClaimsSent", f"{T}.CargoClaimed", f"{T}.OwnerChanges", f"{T}.SpawnShared")}
+        cnt = {k: b(f"get {k}")["value"] for k in (f"{T}.Handoffs", f"{T}.ClaimsSent", f"TLDRevamp.Net.EntityCargoInteraction.CargoClaimed", f"{T}.OwnerChanges", f"{T}.SpawnShared")}
         print(f"   t+{time.time() - t0:4.1f} {rows} {cnt}", flush=True)
         if seen is None: seen = next((n for n, nm, o, ep, px in rows if n != orig and ITEM in nm), None)
         time.sleep(1)
@@ -69,7 +69,7 @@ def run(b, cfg):
     b(f"tpground {cp[0] + 3} {cp[2] + 3}"); time.sleep(2)
     print("  host sits:", b(f"sitseat {seat_idx(b)} redirect"), flush=True); time.sleep(3)
     e0 = ents(b)
-    print(f"  before launch: item {e0.get(bi)}  claims {b(f'get {T}.CargoClaimed')['value']}", flush=True)
+    print(f"  before launch: item {e0.get(bi)}  claims {b(f'get TLDRevamp.Net.EntityCargoInteraction.CargoClaimed')['value']}", flush=True)
     b("crash rec start 30"); time.sleep(0.5)
     print("  launch:", b(f"crash launch {SPEED}"), flush=True)
     time.sleep(8)
@@ -77,7 +77,7 @@ def run(b, cfg):
     car = next((c for c in rec["cars"] if c.get("net") == net), rec["cars"][0] if rec["cars"] else {})
     e1 = ents(b)
     it = e1.get(bi, {})
-    claimed = b(f"get {T}.CargoClaimed")["value"]
+    claimed = b(f"get TLDRevamp.Net.EntityCargoInteraction.CargoClaimed")["value"]
     print(f"  car: {car}\n  item after: {it}\n  cargo claims {claimed}, held shown {b(f'get {T}.HeldShown')['value']}", flush=True)
     dmg, lost = car.get("damageMaxV", -1), car.get("partsLost", -1)
     detail = f"damage input max {dmg} m/s, parts lost {lost}, peak spin {car.get('peakSpinDeg')}, item owner {it.get('owner')} proxy {it.get('proxy')}, claims {claimed}"

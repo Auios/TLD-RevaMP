@@ -54,7 +54,6 @@ static partial class EntitySplitTest
         CodecVectors();
         CarSignalChecks();
         EffectsChecks();
-        CoreMembers.Register();
         foreach (var feature in new[] { (typeof(EntityRadio), "Radio"), (typeof(EntityWorldClock), "Clock"), (typeof(EntityWeather), "Storms"), (typeof(EntityCodec), "StateCodec"), (typeof(EntityCarSignals), "CarSignals"), (typeof(EntityEffects), "PlayerSounds"), (typeof(EntityExplosions), "Explosions"), (typeof(EntityCarTuning), "CarTune"), (typeof(EntityDoors), "CarDoors"), (typeof(EntitySeats), "Seat"), (typeof(EntityHands), "Carried"), (typeof(EntityRagdolls), "Death"), (typeof(EntityAI), "Ai"), (typeof(EntityRabbits), "Rabbits"), (typeof(EntityReproHooks), "Repro") })
         {
             var type = feature.Item1;
@@ -62,14 +61,6 @@ static partial class EntitySplitTest
             string source = File.ReadAllText("src/TLDRevamp/Net/Entities." + feature.Item2 + ".cs");
             Check(!Regex.IsMatch(source, @"using\s+static\s+(?:global::)?(?:TLDRevamp\.Net\.)?Entities\s*;"), type.Name + " uses explicit kernel calls");
             Check(!Regex.IsMatch(source, @"Entities\.(?:W|WS|ByNet|Server)\b"), type.Name + " does not expose kernel state");
-            foreach (var member in type.GetMembers(Static | BindingFlags.DeclaredOnly).Where(m => m is FieldInfo || m is PropertyInfo || m is MethodInfo))
-            {
-                string old = "Entities." + member.Name;
-                bool retained = typeof(Entities).GetMember(member.Name, Static).Length > 0;
-                string target = retained ? old : type.FullName + "." + member.Name;
-                Check(Reflect.MemberPath(old) == target, "short core alias " + old);
-                Check(Reflect.MemberPath("TLDRevamp.Net." + old) == (retained ? "TLDRevamp.Net." + old : target), "full core alias " + old);
-            }
         }
         foreach (string part in new[] { "DetachCodec", "RotCodec", "StateCodec" })
         {
@@ -85,20 +76,19 @@ static partial class EntitySplitTest
         }
         Check(!ReferenceEquals(Field(typeof(EntityCarTuning), "W"), Field(typeof(Entities), "W")) && typeof(EntityDoors).GetField("W", Static) == null, "tuning owns its writer and doors adds no standalone writer");
         Check(typeof(Entities).GetField("_tuneHere", Static) == null && typeof(Entities).GetField("CopyTankTruth", Static) == null && typeof(Entities).GetField("_storedDoorAttaches", Static) == null, "tuning fluid and door caches have one owner");
-        Check(BridgeReflect.Get("TLDRevamp.Net.Entities._storedDoorAttaches.Count") == "0" && BridgeReflect.Get("TLDRevamp.Net.Entities._tuneHere.Count") == "0", "historical full cache paths resolve to feature owners");
+        Check(BridgeReflect.Get("TLDRevamp.Net.EntityDoors._storedDoorAttaches.Count") == "0" && BridgeReflect.Get("TLDRevamp.Net.EntityCarTuning._tuneHere.Count") == "0", "real owner cache paths resolve to feature owners");
         Check(typeof(Entities).GetField("ReadHandPose", Static) == null && typeof(Entities).GetField("ReadFinalState", Static) == null && typeof(Entities).GetField("SignalCars", Static) == null && typeof(Entities).GetField("SignalsApplied", Static) == null, "codec scratch and car signal state have one owner");
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.ReadHandPose", "False") == "false" && !EntityCodec.ReadHandPose, "codec scratch full alias writes owner");
-        Check(BridgeReflect.Get("Entities.ReadLockItem") == EntityCodec.ReadLockItem.ToString(), "codec scratch short alias reads owner");
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.SignalsApplied", "17") == "17" && EntityCarSignals.SignalsApplied == 17 && BridgeReflect.Get("Entities.SignalsApplied") == "17", "car counter full and short aliases share state");
-        string plugin = File.ReadAllText("src/TLDRevamp/Plugin.cs");
-        Check(plugin.IndexOf("CoreMembers.Register();") > plugin.IndexOf("private void Awake()") && plugin.IndexOf("CoreMembers.Register();") < plugin.IndexOf("TestSafety.Init();"), "core aliases register at startup before settings and bridge use");
-        Check(BridgeReflect.Set("Entities.RadioResendS", "7") == "7" && EntityRadio.RadioResendS == 7, "radio setting forwards to one owner");
-        Check(BridgeReflect.Set("TLDRevamp.Net.Entities.RadioSent", "11") == "11" && EntityRadio.RadioSent == 11, "moved radio counter full set");
-        Check(BridgeReflect.Get("Entities.RadioSent") == "11", "moved radio counter short get");
-        Check(BridgeReflect.Set("Entities._worldEpoch", "3") == "3", "clock private field alias");
-        Check(BridgeReflect.Set("Entities.StormSpawnsSkipped", "13") == "13" && EntityWeather.StormSpawnsSkipped == 13, "weather moved field alias");
-        BridgeReflect.Call("Entities.ClockReset", Array.Empty<string>());
-        Check(BridgeReflect.Get("Entities._worldEpoch") == "0" && EntityRadio.RadioSent == 11, "old clock call resets features and preserves counters");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityCodec.ReadHandPose", "False") == "false" && !EntityCodec.ReadHandPose, "codec scratch full owner path writes owner");
+        Check(BridgeReflect.Get("EntityCodec.ReadLockItem") == EntityCodec.ReadLockItem.ToString(), "codec scratch short owner path reads owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityCarSignals.SignalsApplied", "17") == "17" && EntityCarSignals.SignalsApplied == 17 && BridgeReflect.Get("EntityCarSignals.SignalsApplied") == "17", "car counter full and short owner paths share state");
+
+        Check(BridgeReflect.Set("EntityRadio.RadioResendS", "7") == "7" && EntityRadio.RadioResendS == 7, "radio setting forwards to one owner");
+        Check(BridgeReflect.Set("TLDRevamp.Net.EntityRadio.RadioSent", "11") == "11" && EntityRadio.RadioSent == 11, "moved radio counter full set");
+        Check(BridgeReflect.Get("EntityRadio.RadioSent") == "11", "moved radio counter short get");
+        Check(BridgeReflect.Set("EntityWorldClock._worldEpoch", "3") == "3", "clock private field owner path");
+        Check(BridgeReflect.Set("EntityWeather.StormSpawnsSkipped", "13") == "13" && EntityWeather.StormSpawnsSkipped == 13, "weather moved field owner path");
+        BridgeReflect.Call("EntityWorldClock.ClockReset", Array.Empty<string>());
+        Check(BridgeReflect.Get("EntityWorldClock._worldEpoch") == "0" && EntityRadio.RadioSent == 11, "old clock call resets features and preserves counters");
         Check(!ReferenceEquals(Field(typeof(EntityRadio), "W"), Field(typeof(EntityWorldClock), "W")) && !ReferenceEquals(Field(typeof(EntityRadio), "W"), Field(typeof(EntityWeather), "W")) && !ReferenceEquals(Field(typeof(EntityWorldClock), "W"), Field(typeof(EntityWeather), "W")), "each feature owns a separate writer");
 
         mainscript.s = new mainscript(); napszakvaltakozas.s = new napszakvaltakozas();
@@ -112,7 +102,7 @@ static partial class EntitySplitTest
         int sends = Entities.Packets.Count; EntityRadio.RadioTick(0.1f); Check(Entities.Packets.Count == sends, "unchanged station waits for resend");
         EntityRadio.ServerRadioTo(5); Check(Entities.Packets.Last().Peer == 5 && Entities.Packets.Last().Bytes.SequenceEqual(radio), "radio join replay uses same bytes");
         Time.timeScale = 0; EntityWorldClock.HostClockTick(); EntityRadio.RadioTick(0.1f);
-        Check(Entities.Packets.Count == sends + 2 && Entities.HostClockRate == 0, "rate change invalidates radio immediately");
+        Check(Entities.Packets.Count == sends + 2 && EntityWorldClock.HostClockRate == 0, "rate change invalidates radio immediately");
         Entities.IsHost = false;
         EntityRadio.ApplyRadio(Reader(radio)); long applied = EntityRadio.RadioApplied;
         EntityRadio.ApplyRadio(Reader(radio));

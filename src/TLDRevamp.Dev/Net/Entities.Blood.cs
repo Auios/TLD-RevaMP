@@ -15,8 +15,8 @@ namespace TLDRevamp.Net
             if (w == null) return "{\"error\":\"this car has no blood\"}";
             if (what == "dirty") w.GotDirty();
             else if (what == "clean") w.Wash(true, 1, 2f, null);   // past repairValue 1: GotClean, as a sponge's last stroke
-            return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"blood\":" + (w.ON ? "true" : "false") + ",\"cleanedOnCopy\":" + BloodCleanedOnCopy +
-                   ",\"sent\":" + BloodCleanSent + ",\"applied\":" + BloodCleanApplied + "}";
+            return "{\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"blood\":" + (w.ON ? "true" : "false") + ",\"cleanedOnCopy\":" + EntityCarTuning.BloodCleanedOnCopy +
+                   ",\"sent\":" + EntityCarTuning.BloodCleanSent + ",\"applied\":" + EntityCarTuning.BloodCleanApplied + "}";
         }
     }
 }

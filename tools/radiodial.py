@@ -36,7 +36,7 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
-            s_(f"set {T}.AboardDrawnAtPhysics {not OLD}")
+            s_(f"set TLDRevamp.Net.EntityPhysics.AboardDrawnAtPhysics {not OLD}")
         print(f"  {'OLD (the copy interpolated while aboard)' if OLD else 'CURRENT BUILD'}", flush=True)
         h("set settingsscript.s.S.BAutoShift True")
         rp = h("roadpoint"); F = (math.sin(math.radians(rp["yaw"])), math.cos(math.radians(rp["yaw"])))
@@ -66,14 +66,14 @@ with game.ProtectedSession():
         h("autodrive off")
         print(f"  at speed ({v:.0f}-{v2:.0f} km/h):", run, flush=True)
         verdict(f"AT {KMH:.0f} KM/H: THE DIAL CAN BE HIT AS IT IS SEEN", run["frames"] > 20 and run["hits"] / run["frames"] > 0.95,
-                f"{run['hits']}/{run['frames']} frames, the drawn dial {run['gapAvg']} m (max {run['gapMax']}) from its collider; aboard frames {L(f'get {T}.AboardFrames')['value']}")
+                f"{run['hits']}/{run['frames']} frames, the drawn dial {run['gapAvg']} m (max {run['gapMax']}) from its collider; aboard frames {L(f'get TLDRevamp.Net.EntityPhysics.AboardFrames')['value']}")
         er = [x_("errors") for x_ in (h, L)]
         print("  errors:", [(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er], flush=True)
     finally:
         try: h("autodrive off"); L("aimlab stop")
         except Exception: pass
         for s_, v_ in gods.values():
-            try: s_(f"set kaposztaleves.s.settings.god {v_}"); s_(f"set {T}.AboardDrawnAtPhysics True")
+            try: s_(f"set kaposztaleves.s.settings.god {v_}"); s_(f"set TLDRevamp.Net.EntityPhysics.AboardDrawnAtPhysics True")
             except Exception: pass
         h(f"set settingsscript.s.S.BAutoShift {shift_h}")
         L("mp stop"); h("mp stop")

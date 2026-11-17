@@ -262,11 +262,10 @@ static partial class EntitySplitTest
         }
         foreach (string name in new[] { "RagdollBodiesNow", "CopyBreakShoot", "CopyBreakForce", "CopyBreakBody", "CopyBreakBlast", "CopyBreakCollision", "BreakOut", "AiUpdate", "AiVoice", "TumbleSpawn", "TumbleWind" })
             Check(AIOwner.GetNestedType(name, BindingFlags.NonPublic) != null && typeof(Entities).GetNestedType(name, BindingFlags.NonPublic) == null, "one AI Harmony owner for " + name);
-        CoreMembers.Register();
         foreach (string name in new[] { "AiStatesSent", "AiStatesApplied", "AiStatesStale", "AiSoundsSent", "AiSoundsApplied", "AiRemoteSeen", "AiRemoteAttackFrames", "AiDamageSent", "AiKeptOnRemote", "BreakHitsSent", "BreakHitsRun", "BreakFxSent", "BreakFxApplied", "WorldBreaksSent", "WorldBreaksApplied", "WorldBreaksReplayed", "WorldBreaksLate", "WorldBreaksMissed", "WorldGibsShared", "WorldBreakScans", "CopyTouchesIgnored", "ZeroHitsIgnored", "RagdollListsHealed" })
         {
             Check(typeof(Entities).GetField(name, Static) == null, name + " has one feature backing field");
-            Check(BridgeReflect.Get("TLDRevamp.Net.Entities." + name) == Field(AIOwner, name).ToString(), name + " keeps full bridge path");
+            Check(BridgeReflect.Get("TLDRevamp.Net.EntityAI." + name) == Field(AIOwner, name).ToString(), name + " real owner bridge path");
         }
         long sent = EntityAI.AiStatesSent, breaks = EntityAI.WorldBreaksSent; float scanAt = (float)Field(AIOwner, "_aiScanAt"), flushAt = (float)Field(AIOwner, "_aiDmgFlushAt");
         AICall("AiReset"); AICall("BreaksReset");

@@ -16,8 +16,8 @@ namespace TLDRevamp.Net
     /// world always gets everything (its world is the save).
     internal static partial class EntityAuthorityInterest
     {
-        public static bool InterestRelay = true;   // A/B: false = to every player (before v0.69.2)
-        public static double StateInterestM = Protocol.NearM;
+        internal static bool InterestRelay = true;   // A/B: false = to every player (before v0.69.2)
+        internal static double StateInterestM = Protocol.NearM;
         public static long ResyncRelayed, ResyncHeldBack, ResyncCaughtUp, PoiRelayed, PoiHeldBack, PoiCaughtUp;
         private static readonly Dictionary<int, HashSet<PoiKey>> _stalePoi = new Dictionary<int, HashSet<PoiKey>>();   // player → building usables likewise
         private static readonly List<MpServer.PeerSpot> _relaySpots = new List<MpServer.PeerSpot>();
@@ -93,7 +93,7 @@ namespace TLDRevamp.Net
             }
         }
 
-        public static string InterestJson()
+        internal static string InterestJson()
         {
             int ents = Entities.CountInterestStale(), pois = 0;
             foreach (var s in _stalePoi.Values) pois += s.Count;
@@ -124,7 +124,7 @@ namespace TLDRevamp.Net
         {
             if (!s.HasPos) return true;
             double dx = s.Pos.x - x, dz = s.Pos.z - z;
-            return dx * dx + dz * dz <= StateInterestM * StateInterestM;
+            return dx * dx + dz * dz <= EntityAuthorityInterest.StateInterestM * EntityAuthorityInterest.StateInterestM;
         }
 
         /// SendObject gave the player every record of it: nothing of it is owed any more.

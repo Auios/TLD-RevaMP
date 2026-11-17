@@ -11,13 +11,10 @@ static class DevSplitTest
     static string[] References(string project) => XDocument.Load(project).Descendants("ProjectReference").Select(e => (string)e.Attribute("Include")).ToArray();
     static void Main()
     {
-        Check(TLDRevamp.BridgeReflect.Get("AliasOriginal.Existing") == "1", "core members resolve before Dev registers");
-        TLDRevamp.Reflect.RegisterMovedMembers(typeof(AliasOriginal), typeof(AliasMoved));
-        Check(TLDRevamp.BridgeReflect.Set("AliasOriginal.Legacy", "true") == "true" && AliasMoved.Legacy, "old set path reaches the Dev owner");
-        Check(TLDRevamp.BridgeReflect.Get(typeof(AliasOriginal).FullName + ".Legacy") == "true", "full old get path reaches the Dev owner");
-        Check(TLDRevamp.BridgeReflect.Call("AliasOriginal.Add", new[] { "3" }) == "5", "old call path preserves optional arguments");
-        Check(TLDRevamp.BridgeReflect.Set("AliasOriginal.State.Value", "7") == "7" && AliasMoved.State.Value == 7, "aliased nested structs are written back");
-        Check(TLDRevamp.BridgeReflect.Get("AliasOriginal.Existing") == "1", "Dev aliases do not replace retained core members");
+        Check(TLDRevamp.BridgeReflect.Get("AliasOriginal.Existing") == "1", "retained core member resolves");
+        Check(TLDRevamp.BridgeReflect.Set("AliasMoved.Legacy", "true") == "true" && AliasMoved.Legacy, "real Dev owner setting works");
+        Check(TLDRevamp.BridgeReflect.Call("AliasMoved.Add", new[] { "3" }) == "5", "real owner call preserves optional arguments");
+        Check(TLDRevamp.BridgeReflect.Set("AliasMoved.State.Value", "7") == "7" && AliasMoved.State.Value == 7, "real owner nested structs are written back");
         Check(!References("src/TLDRevamp/TLDRevamp.csproj").Any(p => p.Contains("TLDRevamp.Dev")), "core must build independently of Dev");
         var references = References("src/TLDRevamp.Dev/TLDRevamp.Dev.csproj");
         Check(references.Any(p => p == "../TLDRevamp/TLDRevamp.csproj") && references.Any(p => p.Contains("TLDRevamp.Multiplayer")), "Dev depends on core and the multiplayer API");
@@ -67,7 +64,7 @@ static class DevSplitTest
             foreach (string name in new[] { "HealthWatch", "HealthWatchTick", "HealthWatchCycle", "HealthWatchOne", "HealthWatchFound", "AutoMark", "AutoMarkWaitingTick", "ResetAutoMarks", "HealthWatchLine", "RepairFailedNote", "CheckSanity", "OwnerGone", "GroundOver", "FloorBelow", "PartWatchTick", "PartWatchScan", "PartWatchLook", "PartWatchFound", "_testHeld", "TestHeld", "LastDevCmd", "LastDevAt" })
                 Check(!entityMembers.Contains(name), "core entities contain no developer behavior: " + name);
             foreach (string name in new[] { "GroundLayers", "PartsDiagnostics", "SharedCount", "PartWatchNearbyM", "PartWatchFlags", "PartWatchLast", "DeleteShared" })
-                Check(entityMembers.Contains(name), "shared player entity API stays in core: " + name);
+                Check(CoreMembers("TLDRevamp.Net." + (name == "GroundLayers" ? "EntityGround" : "Entities")).Contains(name), "shared player entity API stays in core: " + name);
             var perfMembers = CoreMembers("TLDRevamp.VR.Native.VrPerf");
             foreach (string name in new[] { "PostEffects", "PostList", "CullList", "Visible", "Hide", "Cull", "CullRestore", "PostEffect", "PostLayer" })
                 Check(!perfMembers.Contains(name), "core VR contains no rendering experiment: " + name);

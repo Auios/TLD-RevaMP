@@ -102,39 +102,21 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        private static bool ReadCompactMoving { get => EntityProxyPresentation.ReadCompactMoving; set => EntityProxyPresentation.ReadCompactMoving = value; }
 
-        private static bool FinalState(bool locked, uint lockFrame, bool wasteFixes, BandwidthRules.Quiet quiet, bool moving, bool driven) => EntityProxyPresentation.FinalState(locked, lockFrame, wasteFixes, quiet, moving, driven);
 
-        private static double PoseStamp(double physics, double previous, bool first) => EntityProxyPresentation.PoseStamp(physics, previous, first);
 
-        private static bool LooseRelease(uint previousCar, uint car, bool held, bool stored) => EntityProxyPresentation.LooseRelease(previousCar, car, held, stored);
 
-        private static bool LetGoInCar(bool stored, bool locked, uint carriedBy, bool inBox, bool touching) => EntityProxyPresentation.LetGoInCar(stored, locked, carriedBy, inBox, touching);
 
-        internal static bool CargoBody(Ent e) => EntityProxyPresentation.CargoBody(e);
 
-        private static bool StateMoving(Ent e, bool pose, bool limbs, bool awake, ref bool velocityMoving, bool ground = false) => EntityProxyPresentation.StateMoving(e, pose, limbs, awake, ref velocityMoving, ground);
 
-        private static bool ReleaseMotion(ref bool active, bool released, bool held, bool stored, ref bool moving,
-                                          bool first = false, bool unlocked = false) => EntityProxyPresentation.ReleaseMotion(ref active, released, held, stored, ref moving, first, unlocked);
 
-        private static bool NewerState(double stamp, uint epoch, ref double previous, ref uint previousEpoch) => EntityProxyPresentation.NewerState(stamp, epoch, ref previous, ref previousEpoch);
 
-        private static byte[] FinalSnapshot(NetReader r, bool final) => EntityProxyPresentation.FinalSnapshot(r, final);
 
-        private static void ReplayLockedState(NetWriter w, byte[] bytes, Vector3d position, Quaternion rotation) => EntityProxyPresentation.ReplayLockedState(w, bytes, position, rotation);
 
-        private static void ReadEntityHead(NetReader r, bool compact, out uint net, out uint epoch, out double stamp,
-                                           out Vector3d g, out Quaternion q, out Vector3 v, out bool driven, out bool stored, out bool held, out bool spraying) => EntityProxyPresentation.ReadEntityHead(r, compact, out net, out epoch, out stamp, out g, out q, out v, out driven, out stored, out held, out spraying);
 
-        private static Vector3 CompactVelocity(bool moving, Vector3d at, double stamp, Vector3d previous, double previousStamp) => EntityProxyPresentation.CompactVelocity(moving, at, stamp, previous, previousStamp);
 
-        internal static bool AttachedCarPart(Ent e) => EntityProxyPresentation.AttachedCarPart(e);
 
-        internal static bool CompactFlyer(Ent e) => EntityProxyPresentation.CompactFlyer(e);
 
-        internal static bool CompactGround(Ent e) => EntityProxyPresentation.CompactGround(e);
 
     }
 }

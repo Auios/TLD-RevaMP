@@ -163,7 +163,7 @@ namespace TLDRevamp.Net
             _placed = floor && _floorSince >= 0 && now - _floorSince >= .5;
             _count = Entities.JoinApplied(Expected);
             State.Observe(now, c.ConnectedToHost, c.MyId > 0, _scene, _geometry,
-                _manifest && _ended && _count == Expected.Count && Entities.TpaInboxEmpty, _placed, _count, Expected.Count);
+                _manifest && _ended && _count == Expected.Count && EntityTeleportRefresh.TpaInboxEmpty, _placed, _count, Expected.Count);
             if (!Visible) { RestoreControls(); Release(); }
             // Presentation failures must not cancel the join or change the gate's control/audio lease.
             try { SampleDetails(c, now); }

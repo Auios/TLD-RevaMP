@@ -8,7 +8,7 @@ namespace TLDRevamp.Net
     {
         private static readonly NetWriter W = new NetWriter();
         private static double _radioSentAt = -100;
-        public static float RadioResendS = 5f;
+        internal static float RadioResendS = 5f;
         public static long RadioSent, RadioApplied;
 
         // ---- the host
@@ -51,7 +51,7 @@ namespace TLDRevamp.Net
 
         private static void WriteRadio()
         {
-            W.Reset(); W.U8(Entities.RadioSync); W.F64(ModObjects.ClockTime); W.F32(Entities.HostClockRate);
+            W.Reset(); W.U8(Entities.RadioSync); W.F64(ModObjects.ClockTime); W.F32(EntityWorldClock.HostClockRate);
             WriteStations(W, mainscript.s.radioChs); WriteStations(W, mainscript.s.radioChsAM);
         }
 
@@ -171,7 +171,7 @@ namespace TLDRevamp.Net
         }
 
         /// Diagnostics (bridge `mp radio`): every station's clip and time here.
-        public static string RadioStatus()
+        internal static string RadioStatus()
         {
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>();

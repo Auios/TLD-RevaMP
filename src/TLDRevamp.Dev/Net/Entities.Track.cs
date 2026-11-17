@@ -32,7 +32,7 @@ namespace TLDRevamp.Net
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var g = mainscript.GlobalFromUnityPos(e.Root.transform.position);
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            var hand = ItemHand(e);
+            var hand = EntityHands.ItemHand(e);
             _trackRows.Add("[" + (System.DateTime.UtcNow.Ticks / 10000.0).ToString("F1", ic) + "," + g.x.ToString("F3", ic) + "," + g.y.ToString("F3", ic) + "," + g.z.ToString("F3", ic) +
                            "," + (hand != null ? 1 : 0) + "," + (e.Ip != null ? e.Ip.DelayMs.ToString("F0", ic) : "0") + "]");
         }

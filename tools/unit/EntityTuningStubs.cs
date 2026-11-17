@@ -108,7 +108,7 @@ namespace TLDRevamp.Net
         internal static bool TestTankChanges, TestWithCar;
         private static bool LiveItemMoving(tosaveitemscript it) => LiveMoving;
         private static Ent EditEntityOf(tosaveitemscript it) => SharedGroupOf(it);
-        private static bool TankChangesNow(tosaveitemscript it, List<TankAdds.Add> into)
+        private static bool TankChangesForFixture(tosaveitemscript it, List<TankAdds.Add> into)
         {
             into.Clear(); if (TestTankChanges) into.Add(new TankAdds.Add { Tank = 0, Type = 2, Litres = -1.25f }); return TestTankChanges;
         }

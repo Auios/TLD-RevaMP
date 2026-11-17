@@ -53,7 +53,7 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, s_("get kaposztaleves.s.settings.god").get("value")); s_("set kaposztaleves.s.settings.god True")
-            s_(f"set {T}.LeaseTypeCheck {not OLD}")
+            s_(f"set TLDRevamp.Net.EntityWorldLeases.LeaseTypeCheck {not OLD}")
         print(f"  {'OLD (no type in the lease request)' if OLD else 'CURRENT BUILD'}", flush=True)
         time.sleep(10)
         ph, pl = pois(h), pois(L)
@@ -80,7 +80,7 @@ with game.ProtectedSession():
         print("  errors:", [(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er], flush=True)
     finally:
         for s_, v in gods.values():
-            try: s_(f"set kaposztaleves.s.settings.god {v}"); s_(f"set {T}.LeaseTypeCheck True")
+            try: s_(f"set kaposztaleves.s.settings.god {v}"); s_(f"set TLDRevamp.Net.EntityWorldLeases.LeaseTypeCheck True")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

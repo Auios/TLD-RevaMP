@@ -632,7 +632,7 @@ def scripted(h, L, car, tracked, cars):
         print("     car owner", h.ents()[car]["owner"], flush=True)
         if "--fight-rabbit" in sys.argv:    # the run that gave refusals had a rabbit claiming the car and parts coming off
             for k in range(3):
-                known = set(h.ents()); h.s(f"set {T_}.RabbitNextSize 0.9"); h.s("devspawn 103")
+                known = set(h.ents()); h.s(f"set TLDRevamp.Net.EntityRabbits.RabbitNextSize 0.9"); h.s("devspawn 103")
                 born = lambda: [n for n, e in h.ents().items() if n not in known and "Nyul" in e.get("name", "")]
                 until(born, 10)
                 for rn in born():
@@ -666,7 +666,7 @@ def scripted(h, L, car, tracked, cars):
             def v(p): return {(x["item"], x["usable"]): x["value"] for x in p.s(f"mp usables {car}")["usables"]}[k]
             same = lambda: all(abs(float(a) - float(b)) < 0.01 for a, b in zip(v(h), v(L)))
             for rnd, on in enumerate((False, True) if AB else (True,)):
-                h.s(f"set {T_}.RefusedEditsComeBack {on}")
+                h.s(f"set TLDRevamp.Net.EntityEditBack.RefusedEditsComeBack {on}")
                 out0 = h.s(f"get {T_}.EditsOutOfReach").get("value")
                 h.s(f"set {T_}.EditRangeM 0.1")
                 print(f"     {u['itemName']} usable {u['usable']} ({u['kind']}), told back {on}: before host {v(h)} joiner {v(L)}", flush=True)
@@ -691,7 +691,7 @@ def scripted(h, L, car, tracked, cars):
             same = lambda: all(abs(float(x) - float(y)) < 0.01 for k, ra in v(h).items() for x, y in zip(ra, v(L)[k]))
             for on in (False, True) if AB else (True,):
                 got = 0; rnd = 0
-                h.s(f"set {T_}.HeldRecordsComeBack {on}")
+                h.s(f"set TLDRevamp.Net.EntityEditBack.HeldRecordsComeBack {on}")
                 # the copy's edit, then the owner's on the same knob: 1 round in 18 stayed different over gaps of 0.05-1.3 s, at 0.2 s
                 for other in (a,):
                     for d in (0.1, 0.15, 0.2, 0.25, 0.3) * 8:
@@ -707,7 +707,7 @@ def scripted(h, L, car, tracked, cars):
     if want("aud-split"):
         print("\n=== a part off a car, its old car changes hands: does the part stay what it was on each machine?", flush=True)
         beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0)); time.sleep(1)
-        def healed(p): return p.s(f"get {T_}.CopyBodiesHealed").get("value")
+        def healed(p): return p.s(f"get TLDRevamp.Net.EntityPhysics.CopyBodiesHealed").get("value")
         def kin(p, n):
             w = p.lock(n)
             return (w or {}).get("rb", {}).get("kin") if isinstance((w or {}).get("rb"), dict) else None
@@ -874,7 +874,7 @@ def scripted(h, L, car, tracked, cars):
         # A rabbit's breakable has no item of its own and outlives its break. It dies once a run: --break far|late --break-kept 0|1 chooses.
         how, on = arg("--break", "far"), arg("--break-kept", "1") == "1"
         print(f"\n=== a rabbit dies while the joiner {'has it stored far' if how == 'far' else 'is not in the game'}: kept {on}", flush=True)
-        for p in (h, L): p.s(f"set {T_}.BreaksKept {on}")
+        for p in (h, L): p.s(f"set TLDRevamp.Net.EntityAI.BreaksKept {on}")
         # a fresh one each time: the games can outlive a run, and with them the rabbit the last one killed
         known = set(h.ents()); print("     spawned:", str(h(f"devspawn {h('itemids Nyul')['items'][0][0]}"))[:60], flush=True)
         got = []
@@ -912,7 +912,7 @@ def scripted(h, L, car, tracked, cars):
                 L(f"tpground {at[0] - 3} {at[2]}"); time.sleep(6); until(lambda: rab in L.ents() and not L.ents()[rab].get("dormant"), 15, 0.5)
                 time.sleep(3); ld = dead(L)
                 print(f"     kept {on}, {how}: dead on the host {hd}, on the joiner when it came near {ld}", flush=True)
-                print("     counters:", {k: h.s(f"get {T_}.{k}").get("value") for k in ("BreaksReplayed", "BreakFxSent")}, {k: L.s(f"get {T_}.{k}").get("value") for k in ("BreaksAppliedLate", "BreakFxApplied")}, flush=True)
+                print("     counters:", {k: h.s(f"get TLDRevamp.Net.EntityAI.{k}").get("value") for k in ("BreaksReplayed", "BreakFxSent")}, {k: L.s(f"get TLDRevamp.Net.EntityAI.{k}").get("value") for k in ("BreaksAppliedLate", "BreakFxApplied")}, flush=True)
                 # a record has no breaks in it: away and back, the game places it anew
                 if on:
                     for p in (h, L): p(f"tpground {at[0] + 1500} {at[2]}")
@@ -928,7 +928,7 @@ def scripted(h, L, car, tracked, cars):
                         # no breakable left at all isn't alive: 1 for "nothing here can still die"
                         return st_.get("broken") if st_.get("breakables") else 1
                     seen, t0, settled = [], time.time(), None
-                    print("     threw:", h.s(f"get {T_}.BreaksThrewLate").get("value"), L.s(f"get {T_}.BreaksThrewLate").get("value"), flush=True)
+                    print("     threw:", h.s(f"get TLDRevamp.Net.EntityAI.BreaksThrewLate").get("value"), L.s(f"get TLDRevamp.Net.EntityAI.BreaksThrewLate").get("value"), flush=True)
                     while time.time() - t0 < 15:
                         now_ = (broke(h), broke(L)); seen.append(now_)
                         if now_ == (1, 1) and settled is None: settled = time.time() - t0
@@ -950,15 +950,15 @@ def scripted(h, L, car, tracked, cars):
         known = set(h.ents()); h(f"devspawn {h('itemids Nyul')['items'][0][0]}"); got = []
         until(lambda: got.extend(n for n, e in h.ents().items() if n not in known and "Nyul" in (e.get("name") or "") and not e.get("dormant")) or got, 10)
         rab = got[0]; h.s(f"mp claim {rab}"); wait(3, lambda: not h.ents()[rab]["proxy"]); until(lambda: rab in L.ents(), 10)
-        at = h.ents()[rab]["pos"]; L(f"tpground {at[0] - 3} {at[2]}"); time.sleep(3); b0 = L.s(f"get {T_}.BreakFxApplied").get("value")
+        at = h.ents()[rab]["pos"]; L(f"tpground {at[0] - 3} {at[2]}"); time.sleep(3); b0 = L.s(f"get TLDRevamp.Net.EntityAI.BreakFxApplied").get("value")
         print("     killed:", str(h.s(f"mp breakent {rab} 100000"))[:50], flush=True); time.sleep(2)
         st = L.s(f"mp breakstate {rab}")
-        print(f"     joiner: applied {L.s(f'get {T_}.BreakFxApplied').get('value') - b0}, {st}", flush=True)
+        print(f"     joiner: applied {L.s(f'get TLDRevamp.Net.EntityAI.BreakFxApplied').get('value') - b0}, {st}", flush=True)
         if st.get("broken") != 1: finding("aud-break-near", f"the rabbit lives on the joiner beside it: {st}", rab)
     if want("aud-rabbit-locked"):
         print("\n=== a rabbit that was once locked in a car dies: the lock destroyed its limbs' bodies, the ragdoll's list still names them", flush=True)
         for on in (False, True) if AB else (True,):
-            for p in (h, L): p.s(f"set {T_}.RagdollListHealed {on}")
+            for p in (h, L): p.s(f"set TLDRevamp.Net.EntityAI.RagdollListHealed {on}")
             known = set(h.ents()); h(f"devspawn {h('itemids Nyul')['items'][0][0]}"); got = []
             until(lambda: got.extend(n for n, e in h.ents().items() if n not in known and "Nyul" in (e.get("name") or "") and not e.get("dormant")) or got, 10)
             if not got: note("INVALID aud-rabbit-locked: no rabbit came"); continue
@@ -967,10 +967,10 @@ def scripted(h, L, car, tracked, cars):
             try: killed = h.s(f"mp breakent {rab} 100000")
             except RuntimeError as e_: killed = "threw: " + str(e_)[-60:]
             time.sleep(2); st = h.s(f"mp breakstate {rab}")
-            print(f"     healed {on}: killed {str(killed)[:70]}; host {st}, lists healed {h.s(f'get {T_}.RagdollListsHealed').get('value')}", flush=True)
+            print(f"     healed {on}: killed {str(killed)[:70]}; host {st}, lists healed {h.s(f'get TLDRevamp.Net.EntityAI.RagdollListsHealed').get('value')}", flush=True)
             if on and (st.get("broken") != 1 or not st.get("ragdoll") or not st.get("limbsLoose")): finding("aud-rabbit-locked", f"a once locked rabbit didn't die properly: {st}", rab)
             if not on and st.get("broken") == 1: note("INVALID aud-rabbit-locked: it died with the fix off: this isn't the cause")
-        for p in (h, L): p.s(f"set {T_}.RagdollListHealed True")
+        for p in (h, L): p.s(f"set TLDRevamp.Net.EntityAI.RagdollListHealed True")
     if want("aud-host-grab"):
         print("\n=== the host grabs what the joiner holds: refused at once, inside the pickup, before the hand has it", flush=True)
         beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0)); time.sleep(1)
@@ -1042,7 +1042,7 @@ def scripted(h, L, car, tracked, cars):
             return None
         rp = h("roadpoint"); start = (rp["gx"], rp["gz"]); far = (rp["gx"] - 6000, rp["gz"])
         for on in (False, True) if AB else (True,):
-            for p in (h, L): p.s(f"set {T_}.WorldBreaksKept {on}")
+            for p in (h, L): p.s(f"set TLDRevamp.Net.EntityAI.WorldBreaksKept {on}")
             L(f"tpground {far[0]} {far[1]}"); time.sleep(3)
             c = find(start)
             if not c: note("INVALID aud-world-break: no cactus found"); break
@@ -1150,7 +1150,8 @@ def scripted(h, L, car, tracked, cars):
                 g2 = L("gpos"); wp = L.ents()[wn]["pos"]
                 print("     wheel fetched:", str(L.s(f"mp moveitem {wn} {g2['gx'] + 2 - wp[0]:.1f} {g2['gz'] - wp[2]:.1f} ground"))[:60], flush=True); time.sleep(4)
             ctrs = "PartsReported CarriedOffSent CarriedOffApplied AutoDetachesIgnored SuppressedFallOff DetachReqsApplied PartOffRejected".split()
-            def cnt(p): return [p(f"get {T_}.{c}").get("value") for c in ctrs]
+            counter_paths = ("TLDRevamp.Net.Entities.PartsReported", "TLDRevamp.Net.EntityAttachments.CarriedOffSent", "TLDRevamp.Net.EntityAttachments.CarriedOffApplied", "TLDRevamp.Net.Entities.AutoDetachesIgnored", "TLDRevamp.Net.Entities.SuppressedFallOff", "TLDRevamp.Net.Entities.DetachReqsApplied", "TLDRevamp.Net.Entities.PartOffRejected")
+            def cnt(p): return [p(f"get {field_path}").get("value") for field_path in counter_paths]
             print(f"     owner of the car {L.ents()[car]['owner']}, before {ctrs}: joiner {cnt(L)}, host {cnt(h)}", flush=True)
             near0 = lambda rows: sorted((r["on"], r["root"][:14]) for r in rows["items"] if r["d"] < 25)
             print(f"     before: host {near0(tyres(h))}, joiner {near0(tyres(L))}", flush=True)
@@ -1535,7 +1536,7 @@ def scripted(h, L, car, tracked, cars):
                 for _ in range(40): L.s(f"mp poiuse {a} rot {25 * sign if ax == 'y' else -25 * sign} 0" if ax == "x" else f"mp poiuse {a} rot 0 {25 * sign}")
             print("     door", a, "start: host", st(h), "joiner", st(L), flush=True)
             for on, sign in ((False, -1), (True, 1)):
-                h.s(f"set {T}.PoiRefusalsTold {on}"); h.s(f"set {T}.PoiReachM 0"); swing(sign); time.sleep(4); h.s(f"set {T}.PoiReachM 150")
+                h.s(f"set {T}.PoiRefusalsTold {on}"); h.s(f"set TLDRevamp.Net.EntityEditCheck.PoiReachM 0"); swing(sign); time.sleep(4); h.s(f"set TLDRevamp.Net.EntityEditCheck.PoiReachM 150")
                 a1, b1 = st(h), st(L); print(f"     told back {on}, the host refuses the joiner's swing: host", a1, "joiner", b1, flush=True)
                 if on and abs(a1[ax] - b1[ax]) > 1: finding("aud-building / door", f"a refused door stays {a1[ax]} on the host, {b1[ax]} on the joiner")
                 if not on: note(f"without telling back: {a1[ax]} on the host, {b1[ax]} on the joiner"); swing(-sign); time.sleep(3)
@@ -1640,7 +1641,7 @@ def scripted(h, L, car, tracked, cars):
             print(f"     host {wh}\n     joiner {wl}", flush=True)
             if wl.get("localSlot", -1) >= 0 and wl.get("proxy"): finding(f"worn-stale {rnd + 1} / slot", "in the joiner's wear slot, the hat itself is the host's and lies elsewhere")
             if wl.get("localSlot", -1) >= 0 and float(wl.get("headDist") or 0) > 1: finding(f"worn-stale {rnd + 1} / head", f"on the joiner's head in the game, {wl['headDist']} m from it")
-            print(f"     owner {eh['owner']}/{el['owner']}, copy {eh['proxy']}/{el['proxy']}, hat apart {apart:.2f} m, took back {h('get ' + T_ + '.WornTakenBack').get('value')}, log {h(f'mp ownerlog {n}')['log'][-2:]}", flush=True)
+            print(f"     owner {eh['owner']}/{el['owner']}, copy {eh['proxy']}/{el['proxy']}, hat apart {apart:.2f} m, took back {h('get ' + 'TLDRevamp.Net.EntityHands.WornTakenBack').get('value')}, log {h(f'mp ownerlog {n}')['log'][-2:]}", flush=True)
             if apart > 1: finding(f"worn-stale {rnd + 1}", f"on the joiner's head, {apart:.1f} m away on the host's screen (owner {eh['owner']})")
             check(h, L, tracked, cars, f"worn-stale {rnd + 1}")
             tracked.discard(n)
@@ -2013,7 +2014,7 @@ with game.ProtectedSession():
                 try: return s_(f"get {k}").get("value")
                 except RuntimeError as ex: return f"? {str(ex)[:40]}"
             if who == "host": print(f"streaming: spawn {got('itemPlaceRemoveScript.s.itemSpawnDist')} m, remove {got('itemPlaceRemoveScript.s.itemRemoveDist')} m, unfreeze {got('itemPlaceRemoveScript.s.itemUnFreezeDist')} m, freeze {got('itemPlaceRemoveScript.s.itemFreezeDist')} m", flush=True)
-            print(f"counters {who}: copies made kinematic again {got(T + '.CopyBodiesHealed')}, bumps without a collider {got(T + '.BreakBumpsNoCollider')}, breakable threw {got(T + '.BreakThrewLast')!r}, sends refused {s_('net stats').get('sendErrors')}, queued {s_('net stats').get('sendQueued')}", flush=True)
+            print(f"counters {who}: copies made kinematic again {got('TLDRevamp.Net.EntityPhysics.CopyBodiesHealed')}, bumps without a collider {got('TLDRevamp.Net.EntityAI.BreakBumpsNoCollider')}, breakable threw {got('TLDRevamp.Net.EntityAI.BreakThrewLast')!r}, sends refused {s_('net stats').get('sendErrors')}, queued {s_('net stats').get('sendQueued')}", flush=True)
             for l_ in a_.get("lines", []):
                 if "repair" in l_ or "parts differ" in l_: print("    ", l_[:300], flush=True)
         L("mp stop"); h("mp stop")

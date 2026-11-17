@@ -11,7 +11,7 @@ namespace TLDRevamp.Net
     /// Building addresses, game lookup, respawn restoration and bridge controls.
     internal static partial class EntityUsables
     {
-        public static long PoiUsablesSent, PoiUsablesApplied, PoiUsablesOnSpawn, PoiUsablesUnplaced;
+        internal static long PoiUsablesSent, PoiUsablesApplied, PoiUsablesOnSpawn, PoiUsablesUnplaced;
 
         private static bool _applyingPoi;
         internal static bool ApplyingPoi => _applyingPoi;
@@ -97,7 +97,7 @@ namespace TLDRevamp.Net
                                                                ",\"minY\":" + F(u.minY) + ",\"maxY\":" + F(u.maxY);
 
         /// Building usables near the player (spawned here).
-        public static string PoiList(float radius)
+        internal static string PoiList(float radius)
         {
             var me = mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.transform.position : Vector3.zero;
             var rows = new List<string>();
@@ -127,20 +127,10 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         public const byte PoiUsable = 52;
-        public static long PoiUsablesSent { get => EntityUsables.PoiUsablesSent; set => EntityUsables.PoiUsablesSent = value; }
-        public static long PoiUsablesApplied { get => EntityUsables.PoiUsablesApplied; set => EntityUsables.PoiUsablesApplied = value; }
-        public static long PoiUsablesOnSpawn { get => EntityUsables.PoiUsablesOnSpawn; set => EntityUsables.PoiUsablesOnSpawn = value; }
-        public static long PoiUsablesUnplaced { get => EntityUsables.PoiUsablesUnplaced; set => EntityUsables.PoiUsablesUnplaced = value; }
-        internal static usablescript PoiUsableOf(PoiKey k) => EntityUsables.PoiUsableOf(k);
-        internal static string D(double v) => EntityUsables.D(v);
-        internal static string F(float v) => EntityUsables.F(v);
-        internal static string PoiStateJson(usablescript u) => EntityUsables.PoiStateJson(u);
-        internal static usablescript PoiArg(string[] a, int at) => EntityUsables.PoiArg(a, at);
-        public static string PoiList(float radius) => EntityUsables.PoiList(radius);
         /// A joiner: every building usable changed this session (with InterestRelay: as they come near each building).
         private static void ServerPoiUsablesTo(int playerId)
         {
-            if (InterestRelay) { PoiAllStale(playerId); return; }
+            if (EntityAuthorityInterest.InterestRelay) { PoiAllStale(playerId); return; }
             foreach (var b in ServerPoiUsables.Values)
             {
                 WS.Reset(); WS.Bytes(b, 0, b.Length);
@@ -160,29 +150,29 @@ namespace TLDRevamp.Net
             var u = PoiFocusUsable(); if (u == null) return null;
             var k = PoiLiveKey(u); _poiObserved.TryGetValue(k.Poi, out var s);
             string name = TelemetryPrivacy.ObjectName(u.gameObject.name);
-            return name + " / building part\nPoiKey: generator " + k.Poi.Gen + " / position " + D(k.Poi.X) + ", " + D(k.Poi.Y) + ", " + D(k.Poi.Z) +
-                " / usable " + k.Poi.U + "\nxRot " + F(u.xRot) + " / yRot " + F(u.yRot) + " / slide " + F(u.slideValue) + " / turn " + u.currentTurnState +
-                "\nlast change " + (s != null ? F((float)now - s.ChangedAt) + " s ago" : "unknown") +
+            return name + " / building part\nPoiKey: generator " + k.Poi.Gen + " / position " + EntityUsables.D(k.Poi.X) + ", " + EntityUsables.D(k.Poi.Y) + ", " + EntityUsables.D(k.Poi.Z) +
+                " / usable " + k.Poi.U + "\nxRot " + EntityUsables.F(u.xRot) + " / yRot " + EntityUsables.F(u.yRot) + " / slide " + EntityUsables.F(u.slideValue) + " / turn " + u.currentTurnState +
+                "\nlast change " + (s != null ? EntityUsables.F((float)now - s.ChangedAt) + " s ago" : "unknown") +
                 "\nlive send " + (s != null ? s.Sent.Hz((float)now) : 0) + " Hz / receive " + (s != null ? s.Received.Hz((float)now) : 0) +
                 " Hz / interpolating " + (_remoteUsables.ContainsKey(k) ? "yes" : "no");
         }
 
         private static void PoiUsablesReset() { ServerPoiUsables.Clear(); KnownPoiUsables.Clear(); _poiObserved.Clear(); _poiServerOrder.Clear(); }
 
-        public static string PoiUsableStats() => "{\"sent\":" + PoiUsablesSent + ",\"applied\":" + PoiUsablesApplied + ",\"onSpawn\":" + PoiUsablesOnSpawn +
-                                                 ",\"unplaced\":" + PoiUsablesUnplaced + ",\"known\":" + KnownPoiUsables.Count + ",\"serverKnown\":" + ServerPoiUsables.Count + ",\"removeDist\":[" + EntityUsables.RemoveDists() + "]}";
+        public static string PoiUsableStats() => "{\"sent\":" + EntityUsables.PoiUsablesSent + ",\"applied\":" + EntityUsables.PoiUsablesApplied + ",\"onSpawn\":" + EntityUsables.PoiUsablesOnSpawn +
+                                                 ",\"unplaced\":" + EntityUsables.PoiUsablesUnplaced + ",\"known\":" + KnownPoiUsables.Count + ",\"serverKnown\":" + ServerPoiUsables.Count + ",\"removeDist\":[" + EntityUsables.RemoveDists() + "]}";
 
         /// One building usable's state here: `mp poiu gen x y z u`.
         public static string PoiGet(string[] a)
         {
-            var u = PoiArg(a, 1);
+            var u = EntityUsables.PoiArg(a, 1);
             if (u == null) return "{\"error\":\"not spawned here\"}";
             var k = PoiLiveKey(u); _poiObserved.TryGetValue(k.Poi, out var s);
             float now = Time.realtimeSinceStartup;
-            return "{" + PoiStateJson(u) + ",\"value\":" + UsableValuesJson(UsableState(u)) +
+            return "{" + EntityUsables.PoiStateJson(u) + ",\"value\":" + EntityUsables.UsableValuesJson(EntityUsables.UsableState(u)) +
                 ",\"sendHz\":" + (s != null ? s.Sent.Hz(now) : 0) + ",\"receiveHz\":" + (s != null ? s.Received.Hz(now) : 0) +
                 ",\"received\":" + (s != null ? s.ReceivedTotal : 0) + ",\"interpolating\":" + (_remoteUsables.ContainsKey(k) ? "true" : "false") +
-                ",\"changeAge\":" + (s != null ? UN(now - s.ChangedAt) : "null") + "}";
+                ",\"changeAge\":" + (s != null ? EntityUsables.UN(now - s.ChangedAt) : "null") + "}";
         }
     }
 }

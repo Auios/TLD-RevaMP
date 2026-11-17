@@ -163,14 +163,18 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        internal static bool Finite(Vector3d v) => !(double.IsNaN(v.x) || double.IsNaN(v.y) || double.IsNaN(v.z) ||
-            double.IsInfinity(v.x) || double.IsInfinity(v.y) || double.IsInfinity(v.z));
-        internal static bool Finite(UnityEngine.Vector3 v) => !(float.IsNaN(v.x) || float.IsNaN(v.y) || float.IsNaN(v.z) ||
-            float.IsInfinity(v.x) || float.IsInfinity(v.y) || float.IsInfinity(v.z));
         /// The things another player has taken over (the production set is Entities.ProxyItems).
         public static readonly System.Collections.Generic.HashSet<DeathFakes.Player.Pickupable> Proxies = new System.Collections.Generic.HashSet<DeathFakes.Player.Pickupable>();
         internal static bool IsProxy(DeathFakes.Player.Pickupable p) => p != null && Proxies.Contains(p);
     }
+    internal static partial class EntityNumbers
+    {
+        internal static bool Finite(Vector3d v) => !(double.IsNaN(v.x) || double.IsNaN(v.y) || double.IsNaN(v.z) ||
+            double.IsInfinity(v.x) || double.IsInfinity(v.y) || double.IsInfinity(v.z));
+        internal static bool Finite(UnityEngine.Vector3 v) => !(float.IsNaN(v.x) || float.IsNaN(v.y) || float.IsNaN(v.z) ||
+            float.IsInfinity(v.x) || float.IsInfinity(v.y) || float.IsInfinity(v.z));
+    }
+
 
     /// The record budget's owner, stubbed: the test counts the records the production hooks ask for.
     public static class PlayerSave

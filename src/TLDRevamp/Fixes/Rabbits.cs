@@ -107,7 +107,7 @@ namespace TLDRevamp.Fixes
             private static void Postfix(aispawn __instance)
             {
                 Spawned++;
-                if (__instance.AIs.Count > 0) Net.Entities.RabbitSpawned(__instance.AIs[__instance.AIs.Count - 1]);
+                if (__instance.AIs.Count > 0) Net.EntityRabbits.RabbitSpawned(__instance.AIs[__instance.AIs.Count - 1]);
             }
         }
 

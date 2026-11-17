@@ -23,7 +23,7 @@ namespace TLDRevamp.Net
     internal static partial class EntityHands
     {
         private static readonly NetWriter W = new NetWriter();
-        public static bool WornSync = true;   // A/B: false = before v0.68.2 (worn items drawn at their owner's states)
+        internal static bool WornSync = true;   // A/B: false = before v0.68.2 (worn items drawn at their owner's states)
         public static long WornSent, WornRelayed, WornApplied, WornCleared, WornRefused, WornPlaced;
         private static float _wornCheckAt;
         private static readonly HashSet<Ent> _wornOwn = new HashSet<Ent>(), _wornCopies = new HashSet<Ent>();
@@ -90,8 +90,8 @@ namespace TLDRevamp.Net
         /// states carry away: it lay on the ground and the slot stayed taken, so no other hat could go on. It is claimed back
         /// (the wear key's own claim); when the claim keeps being refused it comes off here. Back as ours it can have been
         /// moved off the head meanwhile: put on again. True: nothing to send this round.
-        public static int WornClaimTries = 3;
-        public static float WornClaimEveryS = 1f, WornOffHeadM = 1.2f;
+        internal static int WornClaimTries = 3;
+        internal static float WornClaimEveryS = 1f, WornOffHeadM = 1.2f;
         public static long WornClaimedBack, WornGivenUp, WornReseated;
         private static bool WornNotMineAnymore(fpscontroller pl, pickupable p, Ent e)
         {
@@ -147,7 +147,7 @@ namespace TLDRevamp.Net
         /// did: for that round trip the server and the others had a loose hat at head height, and the host's car took it
         /// (its contents claim) — on the joiner's screen the hat then sat on its head as the host's copy, 0.7 m below and
         /// 1 m beside it, and nobody else saw it on them (wearsync.py D, 2026-10-17).
-        public static bool WornInShare = true;   // A/B: false = before v0.68.5 (the Worn message after the network id only)
+        internal static bool WornInShare = true;   // A/B: false = before v0.68.5 (the Worn message after the network id only)
         internal static void WriteShareWorn(NetWriter w, tosaveitemscript root)
         {
             int slot = WornSync && WornInShare ? LocalWornSlot(root) : -1;
@@ -165,7 +165,7 @@ namespace TLDRevamp.Net
         /// A player put it on while someone's claim on it (walking past is enough) was on its way: on their head for good,
         /// loose for everyone else, and no one can do it for them as an owner can bolt a part. A deliberate act beats a claim
         /// that overtook it: it goes back to them, unless the new owner has it in hand or on their own head.
-        public static bool WornLateOk = true;   // A/B: false = a Worn from a player who just lost the object is dropped, a copy stays in the wear slot (before)
+        internal static bool WornLateOk = true;   // A/B: false = a Worn from a player who just lost the object is dropped, a copy stays in the wear slot (before)
         public static long WornTakenBack, WornTooLate;
 
         internal static void ServerWorn(int from, NetReader r)
@@ -216,7 +216,7 @@ namespace TLDRevamp.Net
             if (!e.Proxy || wearer == Entities.MyId || !Entities.IsFinite(lp)) return;   // ours: the game's own wear rules it
             e.WornBy = wearer; e.WornSlot = slot; e.WornLp = lp; e.WornLq = lq;
             _wornCopies.Add(e);
-            if (e.MovedByBody) Entities.StopBodyMotion(e);
+            if (e.MovedByBody) EntityPhysics.StopBodyMotion(e);
         }
 
         /// A copy on someone's head collides with nothing (as the worn item does on its wearer's machine).
@@ -250,7 +250,7 @@ namespace TLDRevamp.Net
         internal static bool WornRides(Ent e) => e.WornBy >= 0 && e.Proxy && e.Root != null && WornAnchor(e) != null;
 
         /// Every frame after animation (the runner's LateUpdate): worn copies onto their wearers' heads.
-        public static void WornLate()
+        internal static void WornLate()
         {
             if (_wornCopies.Count == 0) return;
             _wornTmp.Clear(); _wornTmp.AddRange(_wornCopies);
@@ -261,7 +261,7 @@ namespace TLDRevamp.Net
                 var head = WornAnchor(e);
                 if (head == null) continue;
                 if (e.WornOffFor != e.Root) WornBodies(e, true);   // (placed again by the game's streaming: a new object)
-                if (e.MovedByBody) Entities.StopBodyMotion(e);
+                if (e.MovedByBody) EntityPhysics.StopBodyMotion(e);
                 var q = head.rotation;
                 e.Root.transform.SetPositionAndRotation(head.position + q * e.WornLp, q * e.WornLq);
                 WornPlaced++;
@@ -271,7 +271,7 @@ namespace TLDRevamp.Net
         internal static void WornReset() { _wornOwn.Clear(); _wornCopies.Clear(); _wornEnt.Clear(); }
 
         /// `mp wearables`: the spawnable items the game lets a player wear (itemdatabase index, name, slot).
-        public static string Wearables()
+        internal static string Wearables()
         {
             var rows = new List<string>();
             var db = itemdatabase.s != null ? itemdatabase.s.items : null;
@@ -286,7 +286,7 @@ namespace TLDRevamp.Net
 
         /// `mp worn`: every shared wearable this machine knows about: who wears it (here: the local slot; a copy: the
         /// wearer it rides), where it is shown and how far from the wearer's head.
-        public static string WornStatus()
+        internal static string WornStatus()
         {
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var rows = new List<string>();

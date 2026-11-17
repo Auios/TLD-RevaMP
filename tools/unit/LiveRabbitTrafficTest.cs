@@ -10,7 +10,6 @@ namespace TLDRevamp.Net
         static float HandoverAcceptS = 5, HandoverWindowS = 2;
         static readonly List<int> RabbitRecipients = new List<int>();
         static byte[] LastInterestPacket;
-        internal static nyulscript NyOf(Ent e) => e.Root?.nyul;
         static void ServerSendTo(int player, NetWriter w, bool reliable)
         {
             IdleTrafficTest.Check(reliable, "rabbit changes and cached snapshots use reliable transport");
@@ -25,25 +24,25 @@ namespace TLDRevamp.Net
             var rabbit = new Ent(); rabbit.Root.nyul = new TestRabbit { AI = new TestOldAi { alive = true } };
             rabbit.Root.Add(new TestRagdoll());
             rabbit.Root.ragdollPos = new TestLimbList { childs = new[] { new Transform() } };
-            IdleTrafficTest.Check(CompactGround(rabbit), "live rabbit with inactive ragdoll uses compact ground pose");
+            IdleTrafficTest.Check(EntityProxyPresentation.CompactGround(rabbit), "live rabbit with inactive ragdoll uses compact ground pose");
             rabbit.Root.P = new TestPickup();
-            IdleTrafficTest.Check(CompactGround(rabbit), "pickupable live rabbit still uses compact ground pose when loose");
+            IdleTrafficTest.Check(EntityProxyPresentation.CompactGround(rabbit), "pickupable live rabbit still uses compact ground pose when loose");
             rabbit.Root.P.physlock = new TestMount();
-            IdleTrafficTest.Check(!CompactGround(rabbit), "physlocked live rabbit keeps full pose with lock and parent reference");
+            IdleTrafficTest.Check(!EntityProxyPresentation.CompactGround(rabbit), "physlocked live rabbit keeps full pose with lock and parent reference");
             rabbit.Root.P.physlock = null;
-            IdleTrafficTest.Check(CompactGround(rabbit), "unlocked live rabbit resumes compact ground pose");
+            IdleTrafficTest.Check(EntityProxyPresentation.CompactGround(rabbit), "unlocked live rabbit resumes compact ground pose");
             rabbit.Root.GetComponent<TestRagdoll>().ragdoll = true;
-            IdleTrafficTest.Check(!CompactGround(rabbit), "activated ragdoll retains the full State path for Key/Delta limb blocks");
+            IdleTrafficTest.Check(!EntityProxyPresentation.CompactGround(rabbit), "activated ragdoll retains the full State path for Key/Delta limb blocks");
             rabbit.Root.GetComponent<TestRagdoll>().ragdoll = false; rabbit.Root.nyul.AI.alive = false;
-            IdleTrafficTest.Check(!CompactGround(rabbit), "dead rabbit cannot enter compact path before ragdoll activation");
+            IdleTrafficTest.Check(!EntityProxyPresentation.CompactGround(rabbit), "dead rabbit cannot enter compact path before ragdoll activation");
             rabbit.Root.nyul.AI.alive = true; rabbit.Root.npc = new object();
-            IdleTrafficTest.Check(!CompactGround(rabbit), "NPCs keep their full pose path"); rabbit.Root.npc = null;
-            rabbit.PartIndex = 0; IdleTrafficTest.Check(!CompactGround(rabbit), "detached parts keep their full pose path"); rabbit.PartIndex = -1;
+            IdleTrafficTest.Check(!EntityProxyPresentation.CompactGround(rabbit), "NPCs keep their full pose path"); rabbit.Root.npc = null;
+            rabbit.PartIndex = 0; IdleTrafficTest.Check(!EntityProxyPresentation.CompactGround(rabbit), "detached parts keep their full pose path"); rabbit.PartIndex = -1;
 
             // The mark's category contains 647 messages: 568 full poses plus 79 RabbitStates = 24,300 bytes.
             // Keep every message (including all 79 animation changes) for a conservative per-update comparison.
             var w = new NetWriter();
-            WriteStateHead(w, 595, 1, 1, 1, default, Quaternion.identity, Vector3.zero, false);
+            EntityCodec.WriteStateHead(w, 595, 1, 1, 1, default, Quaternion.identity, Vector3.zero, false);
             w.U8(0); w.U8(0); w.U8(0); EntityRagdolls.WriteRagdoll(w, rabbit, false);
             // An upright rabbit has n=0: protocol 54 adds no mode byte and keeps the 40-byte baseline.
             IdleTrafficTest.Check(StateTail.TryRead(w.Buf, 0, w.Len, out var noLimbs) &&
@@ -140,7 +139,7 @@ namespace TLDRevamp.Net
                 {
                     // Solver awake/speed jitter does not turn in-place animation into world motion.
                     bool velocityMoving = tick % 2 == 0;
-                    bool moving = StateMoving(rabbit, false, false, true, ref velocityMoving, CompactGround(rabbit));
+                    bool moving = EntityProxyPresentation.StateMoving(rabbit, false, false, true, ref velocityMoving, EntityProxyPresentation.CompactGround(rabbit));
                     var quiet = BandwidthRules.StateQuiet(ref tail, tick / 20.0, false, false, false, false, velocityMoving,
                         moving, rest, false, false, tick / 20.0);
                     if (quiet == BandwidthRules.Quiet.Final) { finals++; rest = true; }
@@ -152,9 +151,9 @@ namespace TLDRevamp.Net
             for (int tick = 0; tick < 100; tick++)
             {
                 bool velocityMoving = true;
-                IdleTrafficTest.Check(StateMoving(rabbit, true, false, true, ref velocityMoving, true), "real ground motion retains every due update without a rate cap");
+                IdleTrafficTest.Check(EntityProxyPresentation.StateMoving(rabbit, true, false, true, ref velocityMoving, true), "real ground motion retains every due update without a rate cap");
             }
-            var hopVelocity = CompactVelocity(true, new Vector3d(.5, .2, 0), 1.05, default, 1);
+            var hopVelocity = EntityProxyPresentation.CompactVelocity(true, new Vector3d(.5, .2, 0), 1.05, default, 1);
             IdleTrafficTest.Check(Math.Abs(hopVelocity.y - 4) < .001 && Math.Abs(hopVelocity.x - 10) < .001, "derived velocity retains hop height and horizontal motion");
             var ip = new PoseInterpolator();
             ip.Add(new PoseInterpolator.Sample { T = 1, Pos = default, Rot = Quaternion.identity }, 1.1);
@@ -162,11 +161,16 @@ namespace TLDRevamp.Net
             ip.Evaluate(1.19, .01f, out var shown, out _);
             IdleTrafficTest.Check(shown.y > 0 && shown.y < .2 && shown.x > 0 && shown.x < .5, "receiver interpolates compact ground hop in all three dimensions");
             var stop = new Vector3d(.5, 0, 0);
-            ip.Add(new PoseInterpolator.Sample { T = 1.1, Pos = stop, Rot = Quaternion.identity, Vel = CompactVelocity(false, stop, 1.1, default, 1.05) }, 1.2);
+            ip.Add(new PoseInterpolator.Sample { T = 1.1, Pos = stop, Rot = Quaternion.identity, Vel = EntityProxyPresentation.CompactVelocity(false, stop, 1.1, default, 1.05) }, 1.2);
             for (int tick = 0; tick < 150; tick++) ip.Evaluate(1.2 + tick / 60.0, 1f / 60, out shown, out _);
             IdleTrafficTest.Check((shown - stop).sqrMagnitude < 1e-8, "final compact pose has zero velocity and no idle drift");
         }
     }
+    internal static partial class EntityRabbits
+    {
+        internal static nyulscript NyOf(Entities.Ent e) => e.Root?.nyul;
+    }
+
 }
 
 namespace TLDRevamp.Net
@@ -175,17 +179,11 @@ namespace TLDRevamp.Net
     internal static partial class EntityRabbits
     {
         private static float _rabSrvAcc;
-        internal static bool RabbitSync => Entities.RabbitSync;
-        internal static bool RabbitOwners => Entities.RabbitOwners;
-        internal static float RabbitNearM => Entities.RabbitNearM;
-        internal static float RabbitSwitchM => Entities.RabbitSwitchM;
-        internal static float RabbitCarMoveMps => Entities.RabbitCarMoveMps;
         internal static long RabbitOwnerMoves { get => Entities.RabbitOwnerMoves; set => Entities.RabbitOwnerMoves = value; }
         internal static string RabbitLastMove { get => Entities.RabbitLastMove; set => Entities.RabbitLastMove = value; }
         internal static long RabbitStatesStale, RabbitStatesApplied, RabbitStatesSent;
         private static ref float NyLastSee(nyulscript ny) => ref ny.lastSee;
         private static byte RabFlags(nyulscript ny) => ny.AI.fleeing ? (byte)1 : (byte)4;
-        private static nyulscript NyOf(Entities.Ent e) => Entities.NyOf(e);
         internal static void SeedView(nyulscript ny) => RabViews[ny] = new RabView { Has = true, Flags = 1, Interest = new Vector3d(40, 2, 0) };
         internal static bool ViewHas(nyulscript ny) => RabViews[ny].Has;
         internal static float ViewRun(nyulscript ny) => RabViews[ny].Run;

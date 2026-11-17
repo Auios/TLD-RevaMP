@@ -20,12 +20,12 @@ namespace TLDRevamp.Net
     internal static partial class EntityCarTuning
     {
         private static readonly NetWriter W = new NetWriter();
-        public static float CarTuneEveryS = 0.5f;
+        internal static float CarTuneEveryS = 0.5f;
         /// An owner sends a tuned car's tuning again this often (and once soon after it took the car over): a CarTune the
         /// server refused (sent while a claim was still provisional) or lost is replaced by the next one.
-        public static float CarTuneResendS = 30f;
-        public static long TunesSent, TunesResent, TunesApplied, TunesReapplied, TunesReplayed, TunesRefused, TunesKept;
-        public static string TuneLast = "";
+        internal static float CarTuneResendS = 30f;
+        internal static long TunesSent, TunesResent, TunesApplied, TunesReapplied, TunesReplayed, TunesRefused, TunesKept;
+        internal static string TuneLast = "";
 
         /// This machine's tuning per car: what it applied or sent, and the placing it went on.
         private static readonly Dictionary<uint, TuneHere> _tuneHere = new Dictionary<uint, TuneHere>();

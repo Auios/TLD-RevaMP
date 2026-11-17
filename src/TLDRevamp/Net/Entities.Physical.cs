@@ -18,49 +18,49 @@ namespace TLDRevamp.Net
     /// gets its crash from its own physics (and the game's crash damage from its own change of speed).
     internal static partial class EntityPhysics
     {
-        public static bool PhysicalCopies = true;      // A/B: false = kinematic copies everywhere (the old behaviour)
-        public static bool ContactRelayOn;              // A/B: the old impulse relay (double counts; off)
-        public static float NearEnterM = 12f, NearExitM = 18f;
-        public static float ServoGain = 10f, SpinGain = 10f, ServoRampS = 0.4f;
-        public static float FreeMinS = 0.4f, FreeMaxS = 1.5f, CrashS = 0.3f;
-        public static float ServoMaxAccel = 30f;       // m/s² of correction beyond the path's own motion (~3 g)
-        public static float GhostMaxS = 2.0f;          // longest a copy passes through the car it hit while it returns
-        public static bool GhostOnReturn;              // off (v0.57.63): the user saw the T-bone rammer phase into the hit car
+        internal static bool PhysicalCopies = true;      // A/B: false = kinematic copies everywhere (the old behaviour)
+        internal static bool ContactRelayOn;              // A/B: the old impulse relay (double counts; off)
+        internal static float NearEnterM = 12f, NearExitM = 18f;
+        internal static float ServoGain = 10f, SpinGain = 10f, ServoRampS = 0.4f;
+        internal static float FreeMinS = 0.4f, FreeMaxS = 1.5f, CrashS = 0.3f;
+        internal static float ServoMaxAccel = 30f;       // m/s² of correction beyond the path's own motion (~3 g)
+        internal static float GhostMaxS = 2.0f;          // longest a copy passes through the car it hit while it returns
+        internal static bool GhostOnReturn;              // off (v0.57.63): the user saw the T-bone rammer phase into the hit car
                                                        // and both get slingshotted when collisions came back while overlapping
 
-        public static long Ghosted, Unghosted;
+        internal static long Ghosted, Unghosted;
         /// A physical copy whose owner's car is at rest but that stays off its pose (the servo's push each step is bounded,
         /// and the owner's brakes on the copy's wheels hold it against the ground): put it there once it has been more than
         /// RestSnapM off for RestSnapS. The open bug "a car that rolled down a slope rests 1.9 m off on copies" (NOTES
         /// 2026-10-14) is this case: near the host's own car its copy was physical. A/B: false = before 0.69.0.
-        public static bool RestSnap = true;
-        public static float RestSnapM = 0.3f, RestSnapS = 1.5f;
-        public static long RestSnaps;
-        public static long PhysicalEnters, PhysicalExits, FreeWindows;
-        public static string LastFree = "";
+        internal static bool RestSnap = true;
+        internal static float RestSnapM = 0.3f, RestSnapS = 1.5f;
+        internal static long RestSnaps;
+        internal static long PhysicalEnters, PhysicalExits, FreeWindows;
+        internal static string LastFree = "";
         private static readonly Dictionary<carscript, Entities.Ent> PhysicalCars = new Dictionary<carscript, Entities.Ent>();
         /// Copies move as one kinematic BODY in the physics step (MovePosition/MoveRotation + interpolation), the way the
         /// game moves a real car — not by setting the transform every frame. A transform write makes the physics engine
         /// re-sync every collider under it before the next query: 16 car01 copies = 3,619 colliders, and the player
         /// controller's raycasts paid for it — the laptop went from 16 to 80 ms a frame (copycost, v0.57.70; colliders
         /// off: 21 ms). Moved as a body, the colliders ride along like on the owner's car.
-        public static bool CopiesMoveByBody = true;   // A/B: false = transform writes every frame (before v0.57.71)
-        public static bool CopiesInterpolate = true;  // A/B (fpsdrill): rigidbody interpolation on body-moved copies
+        internal static bool CopiesMoveByBody = true;   // A/B: false = transform writes every frame (before v0.57.71)
+        internal static bool CopiesInterpolate = true;  // A/B (fpsdrill): rigidbody interpolation on body-moved copies
 
         /// The copy our player sits in: no interpolation, like every body in the game (mainscript.RBI() is
         /// None). Interpolated, it is drawn up to a physics step behind its colliders — the camera rides the drawn car,
         /// the look ray hits the colliders: a radio dial ~0.6 m off at 100 km/h, "hard to turn as a passenger at speed"
         /// (playtest 2026-10-09/10 (d), radiodial.py). A/B: false = before v0.66.8.
         /// Off by default now: physics-only drawing made the passenger's bus choppy. Riding poses follow its drawn frame.
-        public static bool AboardDrawnAtPhysics;
+        internal static bool AboardDrawnAtPhysics;
         public static long AboardFrames;
-        public static long CopySweeps, CopyRebaseSeats, CopyTeleports;
-        public static bool DirectRebaseBodies = false;   // opt-in until tested in game. A/B: one absolute body teleport; no transform + relative body shift
-        public static long CopyRebaseDirect, CopyRebaseMaxUs;
-        public static int CopyBodiesHealed;
+        internal static long CopySweeps, CopyRebaseSeats, CopyTeleports;
+        internal static bool DirectRebaseBodies = false;   // opt-in until tested in game. A/B: one absolute body teleport; no transform + relative body shift
+        internal static long CopyRebaseDirect, CopyRebaseMaxUs;
+        internal static int CopyBodiesHealed;
         /// diagnostics: an item copy driven faster than this in a physics step is logged (carload.py)
-        public static float FastStepLogM = 15f; public static int FastStepLogs;
-        public static bool StoredByTransform = true;   // A/B (busstool.py K): a stored copy is placed by its transform
+        internal static float FastStepLogM = 15f; internal static int FastStepLogs;
+        internal static bool StoredByTransform = true;   // A/B (busstool.py K): a stored copy is placed by its transform
 
         /// Collider LOD for copies: a car copy far from this machine's player and from every car simulated here keeps only its
         /// own body's colliders; its parts' colliders (a car01 has ~180 of its ~226 on parts) come back within reach. At
@@ -68,15 +68,15 @@ namespace TLDRevamp.Net
         /// off → the frame's first physics query 37 → 6.8 ms) — and a slow machine then fell into the physics catch-up
         /// spiral (the game lets a frame run up to 5 s of physics steps) and froze. Close up nothing changes: crashes,
         /// shoving and shots at parts need them.
-        public static bool CopyColliderLod = true;
-        public static float PartCollidersOnM = 40f, PartCollidersOffM = 50f;
-        public static long PartCollidersOff, PartCollidersOn;
+        internal static bool CopyColliderLod = true;
+        internal static float PartCollidersOnM = 40f, PartCollidersOffM = 50f;
+        internal static long PartCollidersOff, PartCollidersOn;
         /// A member that came off (its own object since: PartDetached) or rides one that did keeps its place in the car's
         /// item list, and the LOD switched its colliders off with the car's. The playtest of 2026-11-06: the host's rear
         /// wheel came off in a crash and lay in the sand, the host's own and simulated there; the host died, the car went
         /// to the client, and the host respawned over 50 m from that car — the wheel fell through the desert floor in
         /// front of the host. A/B: false = before (every member's colliders go with the car's).
-        public static bool LodKeepsPartsOff = true;
+        internal static bool LodKeepsPartsOff = true;
         public static long LodPartsOffKept;
         /// A vehicle's limbs (Bus01's back section, BusBack: its own body on a ConfigurableJoint to the front, 33 of its
         /// seats) are synced like a ragdoll's (save_ragdollpos; RagdollTick: the owner's poses relative to the root).
@@ -85,7 +85,7 @@ namespace TLDRevamp.Net
         /// --stand; the user, watching: "He fell off"; "players should be able to stand in the bus as they can in vanilla").
         /// On a copy moved as a body they move as bodies too, in the same physics step as the root, to the same synced
         /// pose: the floor has the bus's velocity, as on the owner's machine.
-        public static bool VehicleLimbsByBody = true;   // A/B: false = before v0.65.53
+        internal static bool VehicleLimbsByBody = true;   // A/B: false = before v0.65.53
         public static long LimbBodyMoves;
 
         /// A physical copy's wheels get the owner's torques: carscript.Update sets them every frame from this machine's
@@ -374,12 +374,12 @@ namespace TLDRevamp.Net
         public static void FixedTick()
         {
             if (!InSession) return;
-            HitchTick(); EditBackTick();
+            HitchTick(); EntityEditBack.EditBackTick();
             HitchPhysicsTelemetry();
             DevHooks.EntityTrace?.Invoke();
             TelemetryPhysicsTick();
             float dt = Time.fixedDeltaTime;
-            CrashHoldTick();
+            EntityPhysics.CrashHoldTick();
             if (IsHost) ServerCrashTick();
             if (Time.time - _localCarsAt > 0.5f)
             {
@@ -397,39 +397,39 @@ namespace TLDRevamp.Net
                 foreach (var car in _ownCars) ClaimContents(car, false);
             }
             ColliderLodTick();
-            CopyJointTick();
-            LinkedDelayTick();
+            EntityPhysics.CopyJointTick();
+            EntityLifetimeStreaming.LinkedDelayTick();
             DevHooks.TowTick?.Invoke(dt);
             CargoNearTick(dt);   // before the copies move this step: claimed before they touch
-            BodyNearTick(dt);    // the same for loose items the local player walks into (Entities.BodyPush)
+            EntityCargoInteraction.BodyNearTick(dt);    // the same for loose items the local player walks into (Entities.BodyPush)
             ItemNearTick(dt);    // and for loose items a moving item of ours is about to hit (Entities.ItemPush)
             EntityRabbits.RabbitNearTick(dt);
             DevHooks.EntityWatch?.Invoke();
-            if (CopiesMoveByBody) BodyMotionTick(dt);
-            else foreach (var e in ByNet.Values) if (e.MovedByBody) StopBodyMotion(e);   // switched off: back to transform writes
-            StandInterpTick();
+            if (EntityPhysics.CopiesMoveByBody) BodyMotionTick(dt);
+            else foreach (var e in ByNet.Values) if (e.MovedByBody) EntityPhysics.StopBodyMotion(e);   // switched off: back to transform writes
+            EntityPhysics.StandInterpTick();
             foreach (var e in Placed())   // a stored-away copy stops being physical in StoredAway
             {
                 if (!e.Proxy || e.Root == null || e.Root.car == null || e.Ip == null || !e.Ip.Ready) { if (e.Physical && (e.Root == null || !e.Proxy)) e.Physical = false; continue; }
                 var rb = e.Root.GetComponent<Rigidbody>();
                 if (rb == null) continue;
-                if (HandManaged(e)) { if (e.Physical) ExitPhysical(e, rb); continue; }
+                if (EntityHands.HandManaged(e)) { if (e.Physical) EntityPhysics.ExitPhysical(e, rb); continue; }
                 if (e.Physical && rb.isKinematic) e.Physical = false;   // re-bound after streaming: the copy's bodies were reset
                 bool want = false;
-                if (PhysicalCopies)
+                if (EntityPhysics.PhysicalCopies)
                 {
-                    float r = e.Physical ? NearExitM : NearEnterM;
+                    float r = e.Physical ? EntityPhysics.NearExitM : EntityPhysics.NearEnterM;
                     var p = rb.position;
                     foreach (var c in _localCars)
                         if (c != null && c.RB != null && !c.RB.isKinematic && c.transform.root != e.Root.transform.root && (c.RB.position - p).sqrMagnitude < r * r) { want = true; break; }
-                    if (e.Physical && (Time.time < e.FreeUntil + ServoRampS || e.GhostOn)) want = true;   // never leave mid-crash
+                    if (e.Physical && (Time.time < e.FreeUntil + EntityPhysics.ServoRampS || e.GhostOn)) want = true;   // never leave mid-crash
                 }
-                if (want && !e.Physical) EnterPhysical(e, rb);
-                else if (!want && e.Physical) ExitPhysical(e, rb);
+                if (want && !e.Physical) EntityPhysics.EnterPhysical(e, rb);
+                else if (!want && e.Physical) EntityPhysics.ExitPhysical(e, rb);
                 if (e.Physical)
                 {
                     if (DevHooks.CrashHeld?.Invoke(e) ?? false) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }   // `mp holdcopy`: left behind
-                    else Servo(e, rb, dt);
+                    else EntityPhysics.Servo(e, rb, dt);
                 }
             }
         }
@@ -462,17 +462,17 @@ namespace TLDRevamp.Net
                         // copies carry no visszarako: the shift moves neither their transform nor their body
                         var up = mainscript.UnityPosFromGlobal(e.ShownPos);
                         rb.interpolation = RigidbodyInterpolation.None;
-                        if (!DirectRebaseBodies) e.Root.transform.position = up;
+                        if (!EntityPhysics.DirectRebaseBodies) e.Root.transform.position = up;
                         rb.position = up;
                     }
-                    else if (!shifted && DirectRebaseBodies) rb.position = e.Root.transform.position + d;
+                    else if (!shifted && EntityPhysics.DirectRebaseBodies) rb.position = e.Root.transform.position + d;
                     else if (!shifted) { e.Root.transform.position += d; rb.position += d; }   // a simulated copy: keep its motion
                     else rb.position = e.Root.transform.position;
-                    CopyRebaseSeats++;
-                    if (DirectRebaseBodies) CopyRebaseDirect++;
+                    EntityPhysics.CopyRebaseSeats++;
+                    if (EntityPhysics.DirectRebaseBodies) EntityPhysics.CopyRebaseDirect++;
                 }
                 long us = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000000 / System.Diagnostics.Stopwatch.Frequency;
-                if (us > CopyRebaseMaxUs) CopyRebaseMaxUs = us;
+                if (us > EntityPhysics.CopyRebaseMaxUs) EntityPhysics.CopyRebaseMaxUs = us;
             }
         }
 
@@ -483,15 +483,15 @@ namespace TLDRevamp.Net
             {
                 if (!e.Proxy || e.Physical || e.Root == null || e.Ip == null || !e.Ip.Ready) { if (e.MovedByBody && (!e.Proxy || e.Root == null)) e.MovedByBody = false; continue; }
                 if (RidesBolted(e)) continue;
-                if (CopyLockByContainer && LockedAway(e)) continue;   // held in a container here, its owner's far: it rides that (Entities.PhysLock)
-                if (WornRides(e)) { if (e.MovedByBody) StopBodyMotion(e); continue; }   // on its wearer's head: WornLate places it
-                if (HandManaged(e)) { if (e.MovedByBody) StopBodyMotion(e); continue; }
+                if (EntityLocks.CopyLockByContainer && EntityLocks.LockedAway(e)) continue;   // held in a container here, its owner's far: it rides that (Entities.PhysLock)
+                if (EntityHands.WornRides(e)) { if (e.MovedByBody) EntityPhysics.StopBodyMotion(e); continue; }   // on its wearer's head: WornLate places it
+                if (EntityHands.HandManaged(e)) { if (e.MovedByBody) EntityPhysics.StopBodyMotion(e); continue; }
                 // put away (hidden in its holder's inventory): its body took no moves — the copy stayed where it was put
                 // away until the sweep guard below teleported it 50 m on (a katana in the bus driver's inventory jumped
                 // every 4 s on the other machines, busstool.py K). Nothing of it collides: placed by its transform (Tick)
-                if (StoredByTransform && e.Stored) { if (e.MovedByBody) StopBodyMotion(e); continue; }
+                if (EntityPhysics.StoredByTransform && e.Stored) { if (e.MovedByBody) EntityPhysics.StopBodyMotion(e); continue; }
                 var rb = e.Root.GetComponent<Rigidbody>();
-                if (rb != null && !rb.isKinematic) HealCopyBody(e);
+                if (rb != null && !rb.isKinematic) EntityPhysics.HealCopyBody(e);
                 if (rb == null || !rb.isKinematic) continue;
                 // held in a car (no collisions while held): placed each frame in the car's shown pose (Entities.Tick). Moved
                 // from the physics step it was a step or two behind the car: 0.5 m at 50 km/h (heldincar.py)
@@ -510,28 +510,28 @@ namespace TLDRevamp.Net
                     TelemetryProxySnap(e, up, rb.position);
                     rb.position = up; rb.rotation = rot;   // start where it is shown: no sweep from an old pose
                 }
-                var wantI = CopiesInterpolate && !(AboardDrawnAtPhysics && LocalAboard(e)) && !StandsOnAtPhysics(e) ? RigidbodyInterpolation.Interpolate : RigidbodyInterpolation.None;
+                var wantI = EntityPhysics.CopiesInterpolate && !(EntityPhysics.AboardDrawnAtPhysics && EntityPhysics.LocalAboard(e)) && !EntityPhysics.StandsOnAtPhysics(e) ? RigidbodyInterpolation.Interpolate : RigidbodyInterpolation.None;
                 if (rb.interpolation != wantI) rb.interpolation = wantI;
                 // a teleport (the curve restarted) or anything a kinematic body cannot cover in a step without sweeping
                 // through the world (> 50 m = 2,500 m/s): put it there, don't drive it there
                 bool snap = e.Ip.TakeSnap();
                 if (snap || (up - rb.position).sqrMagnitude > 2500f)
                 {
-                    if (!snap && CopySweeps++ < 20)
+                    if (!snap && EntityPhysics.CopySweeps++ < 20)
                         Plugin.Log.LogWarning($"copy sweep stopped: {e.Root.name} {(up - rb.position).magnitude:F0} m in one step (body {rb.position}, target {up}, parent {(e.Root.transform.parent != null ? e.Root.transform.parent.name : "none")})");
-                    CopyTeleports++;
+                    EntityPhysics.CopyTeleports++;
                     TelemetryProxySnap(e, up, rb.position);
                     rb.interpolation = RigidbodyInterpolation.None;
                     e.Root.transform.SetPositionAndRotation(up, rot); rb.position = up; rb.rotation = rot;
-                    MoveLimbs(e, rb, up, rot, true);
+                    EntityPhysics.MoveLimbs(e, rb, up, rot, true);
                     continue;
                 }
                 e.StepSpeed = (up - rb.position).magnitude / Mathf.Max(dt, 1e-4f); e.StepExtrap = e.Ip.Extrapolating;
                 e.StepTurn = Quaternion.Angle(rb.rotation, rot) / Mathf.Max(dt, 1e-4f);
-                if (e.Root.car == null && e.StepSpeed > FastStepLogM && FastStepLogs++ < 40)
+                if (e.Root.car == null && e.StepSpeed > EntityPhysics.FastStepLogM && EntityPhysics.FastStepLogs++ < 40)
                     Plugin.Log.LogInfo($"copy fast step: {e.Root.name} net {e.NetId} {e.StepSpeed:F1} m/s (extrapolating {e.StepExtrap}, correction {e.Ip.CorrCm:F0} cm) from {mainscript.GlobalFromUnityPos(rb.position)} to {pos}");
                 rb.MovePosition(up); rb.MoveRotation(rot);
-                MoveLimbs(e, rb, up, rot, false);
+                EntityPhysics.MoveLimbs(e, rb, up, rot, false);
             }
         }
 
@@ -545,24 +545,24 @@ namespace TLDRevamp.Net
             {
                 if (e.Root == null || e.PartIndex >= 0 || e.Root.car == null) continue;
                 bool want;
-                if (!CopyColliderLod || !e.Proxy || e.Physical || e.CrashTaking) want = true;
+                if (!EntityPhysics.CopyColliderLod || !e.Proxy || e.Physical || e.CrashTaking) want = true;
                 else
                 {
                     var p = e.Root.transform.position;
-                    float r = e.PartsColOff ? PartCollidersOnM : PartCollidersOffM, r2 = r * r;
+                    float r = e.PartsColOff ? EntityPhysics.PartCollidersOnM : EntityPhysics.PartCollidersOffM, r2 = r * r;
                     want = (p - pl).sqrMagnitude < r2;
                     if (!want) foreach (var c in _localCars) if (c != null && (c.transform.position - p).sqrMagnitude < r2) { want = true; break; }
                 }
                 if (want == !e.PartsColOff) continue;
-                SetPartColliders(e, want);
+                EntityPhysics.SetPartColliders(e, want);
             }
         }
 
         public static string PhysicalStatus()
         {
             int phys = 0; foreach (var e in ByNet.Values) if (e.Physical) phys++;
-            return "{\"enabled\":" + (PhysicalCopies ? "true" : "false") + ",\"contactRelay\":" + (ContactRelayOn ? "true" : "false") + ",\"physicalNow\":" + phys +
-                   ",\"distFreezeSkipped\":" + DistFreezeSkipped + ",\"copySweeps\":" + CopySweeps + ",\"copyTeleports\":" + CopyTeleports + ",\"ipSnaps\":" + PoseInterpolator.Snaps + ",\"ipIdleRestarts\":" + PoseInterpolator.IdleRestarts + ",\"ipBigCorrSnaps\":" + PoseInterpolator.BigCorrSnaps + ",\"ipVelClamped\":" + PoseInterpolator.VelClamped + ",\"copyRebaseSeats\":" + CopyRebaseSeats + ",\"partCollidersOff\":" + PartCollidersOff + ",\"partCollidersOn\":" + PartCollidersOn + ",\"ghosted\":" + Ghosted + ",\"unghosted\":" + Unghosted + ",\"enters\":" + PhysicalEnters + ",\"exits\":" + PhysicalExits + ",\"freeWindows\":" + FreeWindows + ",\"restSnaps\":" + RestSnaps + ",\"lastFree\":" + Json.Str(LastFree) + "}";
+            return "{\"enabled\":" + (EntityPhysics.PhysicalCopies ? "true" : "false") + ",\"contactRelay\":" + (EntityPhysics.ContactRelayOn ? "true" : "false") + ",\"physicalNow\":" + phys +
+                   ",\"distFreezeSkipped\":" + EntityProxyPresentation.DistFreezeSkipped + ",\"copySweeps\":" + EntityPhysics.CopySweeps + ",\"copyTeleports\":" + EntityPhysics.CopyTeleports + ",\"ipSnaps\":" + PoseInterpolator.Snaps + ",\"ipIdleRestarts\":" + PoseInterpolator.IdleRestarts + ",\"ipBigCorrSnaps\":" + PoseInterpolator.BigCorrSnaps + ",\"ipVelClamped\":" + PoseInterpolator.VelClamped + ",\"copyRebaseSeats\":" + EntityPhysics.CopyRebaseSeats + ",\"partCollidersOff\":" + EntityPhysics.PartCollidersOff + ",\"partCollidersOn\":" + EntityPhysics.PartCollidersOn + ",\"ghosted\":" + EntityPhysics.Ghosted + ",\"unghosted\":" + EntityPhysics.Unghosted + ",\"enters\":" + EntityPhysics.PhysicalEnters + ",\"exits\":" + EntityPhysics.PhysicalExits + ",\"freeWindows\":" + EntityPhysics.FreeWindows + ",\"restSnaps\":" + EntityPhysics.RestSnaps + ",\"lastFree\":" + Json.Str(EntityPhysics.LastFree) + "}";
         }
     }
 }

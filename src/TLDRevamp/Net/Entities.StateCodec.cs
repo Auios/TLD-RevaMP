@@ -102,13 +102,6 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        internal static void WriteStateHead(NetWriter w, uint net, uint epoch, ushort seq, double stamp, Vector3d g, Quaternion q, Vector3 v, bool driven, bool stored = false, bool held = false, bool spraying = false,
-                                            uint carriedBy = 0, Vector3 localPos = default, Quaternion localRot = default, bool final = false,
-                                            bool locked = false, int lockItem = -1, int lockMount = -1, uint lockContainer = 0,
-                                            bool handPose = false, Vector3 handPos = default, Quaternion handRot = default) =>
-            EntityCodec.WriteStateHead(w, net, epoch, seq, stamp, g, q, v, driven, stored, held, spraying, carriedBy, localPos, localRot, final, locked, lockItem, lockMount, lockContainer, handPose, handPos, handRot);
 
-        internal static void ReadStateHead(NetReader r, out uint net, out uint epoch, out double stamp, out Vector3d g, out Quaternion q, out Vector3 v, out bool driven, out bool stored, out bool held, out bool spraying) =>
-            EntityCodec.ReadStateHead(r, out net, out epoch, out stamp, out g, out q, out v, out driven, out stored, out held, out spraying);
     }
 }

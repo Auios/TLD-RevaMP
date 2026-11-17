@@ -58,7 +58,7 @@ namespace TLDRevamp.Fixes
             foreach (var it in savedatascript.s.items.Values)
             {
                 if (it == null || it.preDestroyed || it.transform.parent != null || !b.Contains(it.transform.position)) continue;
-                if (!Net.Entities.FarFromHere(mainscript.GlobalFromUnityPos(it.transform.position))) continue;
+                if (!Net.EntityLifetimeStreaming.FarFromHere(mainscript.GlobalFromUnityPos(it.transform.position))) continue;
                 _loose.Add(it);
             }
             // as itemPlaceRemoveScript.RemoveStuff does: every item of the hierarchy stored, the object destroyed

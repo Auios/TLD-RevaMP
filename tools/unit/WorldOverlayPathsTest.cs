@@ -31,10 +31,7 @@ namespace TLDRevamp.Net
         internal static uint[] TelemetryFocus = new uint[5];
         internal static uint PanelFocus(bool held) => _telemetryLook;
         internal static bool RidesParent(Ent e) => e.Root?.attachable != null && e.Root.attachable.attached && e.Root.attachable.parentAtAttach && e.Root.transform.parent != null;
-        internal static bool RidesOwnersContainer(Ent e) => !e.PoseLocked && !e.Held && e.Root?.P?.physlock?.parentTosave != null &&
-            ByNet.Values.Any(c => c.Root == e.Root.P.physlock.parentTosave && c.OwnerId == e.OwnerId);
         internal static bool IsStored(TestItem it) => it.P != null && it.P.inInventory;
-        internal static bool IsSpraying(TestItem it) => IsHeld(it) && it.GetComponent<TestSpray>()?.valve > .1f;
 
         static void OverlayCheck(bool ok, string why) => IdleTrafficTest.Check(ok, "overlay: " + why);
         static bool OverlayNear(Vector3d a, Vector3d b) => (a - b).magnitude < .001;
@@ -282,6 +279,18 @@ namespace TLDRevamp.Net
             OverlayCheck(WorldOverlayLogic.Stale(1.51, true), "missing moving stream still becomes stale after margin");
         }
     }
+    internal static partial class EntityLocks
+    {
+        internal static bool RidesOwnersContainer(Entities.Ent e) => !e.PoseLocked && !e.Held && e.Root?.P?.physlock?.parentTosave != null &&
+            Entities.ByNet.Values.Any(c => c.Root == e.Root.P.physlock.parentTosave && c.OwnerId == e.OwnerId);
+    }
+
+
+    internal static partial class EntityEffects
+    {
+        internal static bool IsSpraying(TestItem it) => Entities.IsHeld(it) && it.GetComponent<TestSpray>()?.valve > .1f;
+    }
+
     public static partial class RemotePlayers
     {
         internal static void ObserveRiders(Action<Transform, int, uint, bool, Transform> observe)

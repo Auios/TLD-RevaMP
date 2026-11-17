@@ -31,9 +31,8 @@ roles += '\n        static void ApplyOwner(NetReader r) {\n' + owner.replace('  
 control = source.split('                    bool control = ', 1)[1].split(';', 1)[0].replace('e.SentMoving', 'sentMoving')
 roles += '\n        private static bool SampleControl(bool lockChange, bool wStored, bool wHeld, bool wSig, bool wSpray, bool wDriver, bool velocityMoving, bool sentMoving, bool wHand = false) => ' + control + ';\n'
 source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Cargo.cs').read_text(encoding='utf-8')
-from runpy import run_path
-cargo = run_path(str(Path(__file__).with_name('ExtractCargoInteraction.py')))
-roles += '\n' + cargo['fixture_body'](method('ClaimCargo', 'bool')) + '\n' + method('IsHeld', 'bool')
+cargo_claim = method('ClaimCargo', 'bool')
+roles += '\n' + method('IsHeld', 'bool')
 source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Leases.cs').read_text(encoding='utf-8')
 source = source[source.index('        private static class PickupClaim'):]
 roles += '\n' + method('Prefix').replace('Prefix(', 'PickupPrefix(')
@@ -49,3 +48,10 @@ roles += '\n        internal static void SendToServer(NetWriter w, bool reliable
 
 target.write_text('using System;\nusing UnityEngine;\nusing System.Collections.Generic;\nnamespace TLDRevamp.Net { public static partial class Entities {\n' +
                   roles + '\n} }\n', encoding='utf-8', newline='\n')
+
+# Compile the cargo transaction on its owner, with the same named kernel seams as production.
+features = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Features.cs').read_text(encoding='utf-8')
+names = ('IsCargoBody', 'CargoRidesParent', 'CargoLimbs', 'CargoLimp', 'SetCargoProxy', 'CargoLocalId', 'WriteCargoClaim', 'SendCargoRequest', 'CargoClaimSent')
+boundaries = '\n'.join(next(line for line in features.splitlines() if ' static ' in line and (name + '(' in line or name + ' =>' in line)) for name in names)
+with target.open('a', encoding='utf-8') as output:
+    output.write('namespace TLDRevamp.Net { public static partial class Entities {\n' + boundaries + '\n} internal static partial class EntityCargoInteraction {\n' + cargo_claim + '\n} }')

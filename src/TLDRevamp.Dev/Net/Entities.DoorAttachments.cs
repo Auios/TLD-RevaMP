@@ -31,11 +31,11 @@ namespace TLDRevamp.Net
             if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"entity is not loaded\"}";
             var at = e.Root.attachable;
             if (at == null || !at.attached || at.point == null) return "{\"attached\":false}";
-            var f = AttachFrame(at); var t = at.transform; var iq = Quaternion.Inverse(f.rotation);
+            var f = EntityAttachments.AttachFrame(at); var t = at.transform; var iq = Quaternion.Inverse(f.rotation);
             var q = iq * t.rotation; var g = mainscript.GlobalFromUnityPos(t.position);
             return "{\"attached\":true,\"parented\":" + (RidesParent(e) ? "true" : "false") + ",\"frame\":" + Json.Str(f.name) +
-                ",\"local\":" + TLDRevamp.Net.EntityCarDoorsTools.V3f(iq * (t.position - f.position)) + ",\"rotation\":[" + TLDRevamp.Net.Entities.UN(q.x) + "," + TLDRevamp.Net.Entities.UN(q.y) + "," + TLDRevamp.Net.Entities.UN(q.z) + "," + TLDRevamp.Net.Entities.UN(q.w) +
-                "],\"pos\":[" + TLDRevamp.Net.Entities.UN(g.x) + "," + TLDRevamp.Net.Entities.UN(g.y) + "," + TLDRevamp.Net.Entities.UN(g.z) + "]}";
+                ",\"local\":" + TLDRevamp.Net.EntityCarDoorsTools.V3f(iq * (t.position - f.position)) + ",\"rotation\":[" + TLDRevamp.Net.EntityUsables.UN(q.x) + "," + TLDRevamp.Net.EntityUsables.UN(q.y) + "," + TLDRevamp.Net.EntityUsables.UN(q.z) + "," + TLDRevamp.Net.EntityUsables.UN(q.w) +
+                "],\"pos\":[" + TLDRevamp.Net.EntityUsables.UN(g.x) + "," + TLDRevamp.Net.EntityUsables.UN(g.y) + "," + TLDRevamp.Net.EntityUsables.UN(g.z) + "]}";
         }
         internal static bool UsableArgs(uint net, int item, int usable, out UsableKey k, out usablescript u)
         {

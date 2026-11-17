@@ -9,7 +9,7 @@ namespace TLDRevamp.Net
     /// wheels rebuilt from the owner's suspension/steer/rpm.
     internal static partial class EntityProxyPresentation
     {
-        public static long SuppressedDamage;
+        internal static long SuppressedDamage;
 
         internal static bool TpaFloorReady(tosaveitemscript item)
         {
@@ -19,7 +19,7 @@ namespace TLDRevamp.Net
         }
 
         /// A car that just became ours: no crash detection while its wheels spin up from the copy's standstill.
-        public static long HandoverDamageSuppressed;
+        internal static long HandoverDamageSuppressed;
 
         [HarmonyLib.HarmonyPatch(typeof(carscript), nameof(carscript.DamageStuff))]
         private static class NoProxyDamage
@@ -45,7 +45,7 @@ namespace TLDRevamp.Net
         /// player's car near you became a free body with its wheels' colliders gone, dragged along by our interpolation
         /// and pushed out of the ground each physics step: 14 such copies cost the laptop ~36 ms a frame (the desktop,
         /// whose copies happened to be just past 100 m, ~1 ms; copydiag v0.57.76). A copy's body mode is ours.
-        public static long DistFreezeSkipped;
+        internal static long DistFreezeSkipped;
 
         [HarmonyLib.HarmonyPatch(typeof(tosaveitemscript), nameof(tosaveitemscript.DistUnFreezeRB))]
         private static class NoDistUnfreezeOnCopies
@@ -135,7 +135,7 @@ namespace TLDRevamp.Net
                 }
         }
 
-        public static float TorqueRadiusM = 40f;
+        internal static float TorqueRadiusM = 40f;
         /// Owner side: is another player's car (a copy here) near this car?
 
         internal static void ReadWheels(NetReader r, Ent e)
@@ -211,7 +211,7 @@ namespace TLDRevamp.Net
             }
         }
 
-        public static long ProxyStarterSounds, ProxyStopSounds;
+        internal static long ProxyStarterSounds, ProxyStopSounds;
         /// The starter clip (repeated while the owner cranks, with the gear stick's kick) and the shut-off clip, as
         /// enginescript.Update plays them; that Update is skipped on copies, so a watcher heard only the running engine.
         private static void ProxyEngineSounds(enginescript g, Ent e)
@@ -318,7 +318,7 @@ namespace TLDRevamp.Net
         private static bool NearOtherPlayersCar(Ent e)
         {
             if (e.Root == null) return false;
-            var p = e.Root.transform.position; float r2 = TorqueRadiusM * TorqueRadiusM;
+            var p = e.Root.transform.position; float r2 = EntityProxyPresentation.TorqueRadiusM * EntityProxyPresentation.TorqueRadiusM;
             foreach (var o in Placed())
                 if (o.Proxy && o.Root != null && o.PartIndex < 0 && o.Root.car != null && (o.Root.transform.position - p).sqrMagnitude < r2) return true;
             return false;

@@ -216,25 +216,17 @@ namespace TLDRevamp.Net
             public bool HasState; public Vector3d Where, Pos; public Quaternion Rot; public Vector3 LockLocalPos; public Quaternion LockLocalRot;
         }
         static bool RidesBolted(Ent e) => RidesParent(e);
-        static bool WornRides(Ent e) => false;
-        static void StopBodyMotion(Ent e) { e.MovedByBody = false; }
         internal static void Coast(Ent e) { }
         internal static bool CargoClaims;
-        static float CargoClaimCooldownS = 2;
-        static long CargoClaimed;
-        internal static void LocalSeat(out uint car, out int seat) { car = TestMain.s?.player?.SeatNet ?? 0; seat = 0; }
         static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
         internal static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
         static readonly Dictionary<int, HashSet<uint>> Known = new Dictionary<int, HashSet<uint>>();
         static readonly HashSet<GameObject> ProxyItems = new HashSet<GameObject>();
         static readonly NetWriter WS = new NetWriter();
-        static double StateInterestM = 1000;
         static void ServerFwdAll(int from, NetReader r, bool reliable) { }
         static void Deliver(NetWriter w) { }
         internal static bool Resolve(Ent e) => e.Root != null;
-        internal static bool LimbsByBody(Ent e) => false;
-        internal static bool IsFinite(Vector3 value) => Finite(value);
-        internal static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+        internal static bool IsFinite(Vector3 value) => EntityNumbers.Finite(value);
         internal static void TestIdle()
         {
             TestHandState();
@@ -246,53 +238,53 @@ namespace TLDRevamp.Net
             TestIntermittentMotion();
             var part = new Ent(); part.Root.attachable = new TestAttach { attached = true, isPart = true, slot = new TestSlot(), point = new Transform() };
             part.Root.attachable.point.Add(new TestCar());
-            IdleTrafficTest.Check(AttachedCarPart(part), "joint-mounted engine/coolant counts as attached without parenting");
-            part.Root.car = new TestCar(); IdleTrafficTest.Check(!AttachedCarPart(part), "jointed vehicle/trailer keeps pose stream");
+            IdleTrafficTest.Check(EntityProxyPresentation.AttachedCarPart(part), "joint-mounted engine/coolant counts as attached without parenting");
+            part.Root.car = new TestCar(); IdleTrafficTest.Check(!EntityProxyPresentation.AttachedCarPart(part), "jointed vehicle/trailer keeps pose stream");
             part.Root.car = null; part.Root.attachable.attached = false;
-            IdleTrafficTest.Check(!AttachedCarPart(part), "detached part resumes loose pose stream");
+            IdleTrafficTest.Check(!EntityProxyPresentation.AttachedCarPart(part), "detached part resumes loose pose stream");
             var flyer = new Ent(); flyer.Root.Add(new TestFlyer());
-            IdleTrafficTest.Check(CompactFlyer(flyer), "random flyer selects compact pose");
-            flyer.Root.P = new TestPickup(); IdleTrafficTest.Check(!CompactFlyer(flyer), "pickup items keep full pose");
+            IdleTrafficTest.Check(EntityProxyPresentation.CompactFlyer(flyer), "random flyer selects compact pose");
+            flyer.Root.P = new TestPickup(); IdleTrafficTest.Check(!EntityProxyPresentation.CompactFlyer(flyer), "pickup items keep full pose");
             var w = new NetWriter();
             foreach (uint net in new uint[] { 1, 595, uint.MaxValue })
             {
                 w.Reset(); CompactPoseCodec.Write(w, net, 3, 15, 123.456, -12345.678, 1000.014, 12345.678, -90, true);
                 var r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
-                ReadEntityHead(r, true, out uint id, out uint epoch, out double stamp, out var p, out var q, out _, out bool driven, out bool stored, out bool held, out bool spray);
+                EntityProxyPresentation.ReadEntityHead(r, true, out uint id, out uint epoch, out double stamp, out var p, out var q, out _, out bool driven, out bool stored, out bool held, out bool spray);
                 IdleTrafficTest.Check(!r.Bad && r.Pos == r.End && id == net && epoch == 3 && stamp == 123.456 && Math.Abs(p.x + 12345.678) <= .005 && Math.Abs(p.y - 1000.014) <= .005 && Math.Abs(p.z - 12345.678) <= .005, "compact global pose round trip");
-                IdleTrafficTest.Check(Quaternion.Angle(q, Quaternion.Euler(0, 270, 0)) < .01 && ReadCompactMoving && !driven && !stored && !held && !spray, "compact yaw and flags round trip");
+                IdleTrafficTest.Check(Quaternion.Angle(q, Quaternion.Euler(0, 270, 0)) < .01 && EntityProxyPresentation.ReadCompactMoving && !driven && !stored && !held && !spray, "compact yaw and flags round trip");
                 IdleTrafficTest.Check(w.Len == (net == 1 ? 24 : net == 595 ? 25 : 28), "compact pose size");
                 for (int n = 1; n < w.Len; n++)
-                { var truncated = new NetReader { Buf = w.Buf, Pos = 1, End = n }; ReadEntityHead(truncated, true, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _); IdleTrafficTest.Check(truncated.Bad, "truncated compact pose rejected"); }
+                { var truncated = new NetReader { Buf = w.Buf, Pos = 1, End = n }; EntityProxyPresentation.ReadEntityHead(truncated, true, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _); IdleTrafficTest.Check(truncated.Bad, "truncated compact pose rejected"); }
             }
-            w.Reset(); WriteStateHead(w, 1, 1, 1, 1, default, Quaternion.identity, Vector3.zero, false, final: true);
+            w.Reset(); EntityCodec.WriteStateHead(w, 1, 1, 1, 1, default, Quaternion.identity, Vector3.zero, false, final: true);
             var finalReader = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
-            ReadEntityHead(finalReader, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+            EntityProxyPresentation.ReadEntityHead(finalReader, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
             IdleTrafficTest.Check(EntityCodec.ReadFinalState && !finalReader.Bad, "normal final flag survives wire codec");
-            var snapshot = FinalSnapshot(finalReader, EntityCodec.ReadFinalState);
+            var snapshot = EntityProxyPresentation.FinalSnapshot(finalReader, EntityCodec.ReadFinalState);
             w.Buf[0] = 0;
-            IdleTrafficTest.Check(snapshot[0] == State && snapshot.Length == w.Len && FinalSnapshot(finalReader, false) == null, "retained final owns its bytes; newer motion clears it");
+            IdleTrafficTest.Check(snapshot[0] == State && snapshot.Length == w.Len && EntityProxyPresentation.FinalSnapshot(finalReader, false) == null, "retained final owns its bytes; newer motion clears it");
             var replay = new NetReader { Buf = snapshot, Pos = 1, End = snapshot.Length };
-            ReadEntityHead(replay, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+            EntityProxyPresentation.ReadEntityHead(replay, false, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
             IdleTrafficTest.Check(EntityCodec.ReadFinalState && !replay.Bad, "late join replays the complete final without a live owner keepalive");
             w.Reset(); CompactPoseCodec.Write(w, 1, 1, 1, 1, 0, 0, 0, 0, false, true);
             finalReader = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
-            ReadEntityHead(finalReader, true, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-            IdleTrafficTest.Check(EntityCodec.ReadFinalState && !ReadCompactMoving && !finalReader.Bad && w.Len == 24, "compact final is stationary without increasing packet size");
+            EntityProxyPresentation.ReadEntityHead(finalReader, true, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+            IdleTrafficTest.Check(EntityCodec.ReadFinalState && !EntityProxyPresentation.ReadCompactMoving && !finalReader.Bad && w.Len == 24, "compact final is stationary without increasing packet size");
             w.Reset(); CompactPoseCodec.Write(w, 1, 1, 2, 2, 0, 0, 0, 0, true);
             finalReader = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
-            ReadEntityHead(finalReader, true, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
-            IdleTrafficTest.Check(!EntityCodec.ReadFinalState && ReadCompactMoving, "ordinary state clears final flag");
+            EntityProxyPresentation.ReadEntityHead(finalReader, true, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+            IdleTrafficTest.Check(!EntityCodec.ReadFinalState && EntityProxyPresentation.ReadCompactMoving, "ordinary state clears final flag");
             double previous = 0; uint previousEpoch = 0;
-            IdleTrafficTest.Check(NewerState(5, 1, ref previous, ref previousEpoch) && !NewerState(4, 1, ref previous, ref previousEpoch) && !NewerState(5, 1, ref previous, ref previousEpoch), "delayed reliable final and older motion cannot replace newer state");
-            IdleTrafficTest.Check(NewerState(1, 2, ref previous, ref previousEpoch), "new ownership epoch resets timestamp ordering");
+            IdleTrafficTest.Check(EntityProxyPresentation.NewerState(5, 1, ref previous, ref previousEpoch) && !EntityProxyPresentation.NewerState(4, 1, ref previous, ref previousEpoch) && !EntityProxyPresentation.NewerState(5, 1, ref previous, ref previousEpoch), "delayed reliable final and older motion cannot replace newer state");
+            IdleTrafficTest.Check(EntityProxyPresentation.NewerState(1, 2, ref previous, ref previousEpoch), "new ownership epoch resets timestamp ordering");
             var ip = new PoseInterpolator();
             ip.Add(new PoseInterpolator.Sample { T = 1, Pos = new Vector3d(0, 0, 0), Rot = Quaternion.identity }, 1.1);
-            var velocity = CompactVelocity(true, new Vector3d(1, 0, 0), 1.05, default, 1);
+            var velocity = EntityProxyPresentation.CompactVelocity(true, new Vector3d(1, 0, 0), 1.05, default, 1);
             ip.Add(new PoseInterpolator.Sample { T = 1.05, Pos = new Vector3d(1, 0, 0), Rot = Quaternion.identity, Vel = velocity }, 1.15);
             ip.Evaluate(1.19, .01f, out var shown, out _);
             IdleTrafficTest.Check(shown.x > 0 && shown.x < 1, "received compact poses interpolate between samples");
-            IdleTrafficTest.Check(CompactVelocity(false, new Vector3d(1, 0, 0), 1.1, default, 1).sqrMagnitude == 0 && CompactVelocity(true, default, 1, default, 2).sqrMagnitude == 0, "compact rest and old stamps cannot extrapolate");
+            IdleTrafficTest.Check(EntityProxyPresentation.CompactVelocity(false, new Vector3d(1, 0, 0), 1.1, default, 1).sqrMagnitude == 0 && EntityProxyPresentation.CompactVelocity(true, default, 1, default, 2).sqrMagnitude == 0, "compact rest and old stamps cannot extrapolate");
             var body = new Ent();
             var hip = new Transform { position = new Vector3(10, 2, 3), rotation = Quaternion.Euler(0, 90, 0) }; hip.Add(new Rigidbody());
             var hand = new Transform { position = new Vector3(11, 2, 3) }; hand.Add(new Rigidbody());
@@ -318,9 +310,9 @@ namespace TLDRevamp.Net
             var copy = new Ent { Proxy = true };
             var copyHip = new Transform(); copyHip.Add(new Rigidbody()); var copyHand = new Transform(); copyHand.Add(new Rigidbody());
             copy.Root.ragdollPos = new TestLimbList { childs = new[] { copy.Root.transform, copyHip, copyHand } };
-            IdleTrafficTest.Check(CargoBody(copy), "limp limbs without a root pickupable can be released as cargo");
+            IdleTrafficTest.Check(EntityProxyPresentation.CargoBody(copy), "limp limbs without a root pickupable can be released as cargo");
             var live = new Ent(); live.Root.Add(new TestRagdoll { ragdoll = false }); live.Root.ragdollPos = copy.Root.ragdollPos;
-            IdleTrafficTest.Check(!CargoBody(live), "a live creature without a pickupable is not loose cargo");
+            IdleTrafficTest.Check(!EntityProxyPresentation.CargoBody(live), "a live creature without a pickupable is not loose cargo");
             copy.Root.transform.SetPositionAndRotation(hip.position, hip.rotation);
             var framePos = mainscript.GlobalFromUnityPos(hip.position);
             var rr = new NetReader { Buf = limbKey, End = limbKey.Length };
@@ -338,23 +330,23 @@ namespace TLDRevamp.Net
             IdleTrafficTest.Check(!copyHand.GetComponent<Rigidbody>().detectCollisions, "stored limbs stay collisionless");
             copy.Stored = false; EntityRagdolls.RagdollTick(1);
             IdleTrafficTest.Check(copyHand.GetComponent<Rigidbody>().detectCollisions, "loose limbs collide again");
-            IdleTrafficTest.Check(LooseRelease(7, 0, false, false) && !LooseRelease(7, 0, true, false) && !LooseRelease(7, 0, false, true) && !LooseRelease(7, 8, true, false), "only loose release in the driver's car can claim cargo");
+            IdleTrafficTest.Check(EntityProxyPresentation.LooseRelease(7, 0, false, false) && !EntityProxyPresentation.LooseRelease(7, 0, true, false) && !EntityProxyPresentation.LooseRelease(7, 0, false, true) && !EntityProxyPresentation.LooseRelease(7, 8, true, false), "only loose release in the driver's car can claim cargo");
             bool active = false, moving = false;
-            IdleTrafficTest.Check(ReleaseMotion(ref active, true, false, false, ref moving) && moving, "release before physics is never sent as final rest");
+            IdleTrafficTest.Check(EntityProxyPresentation.ReleaseMotion(ref active, true, false, false, ref moving) && moving, "release before physics is never sent as final rest");
             var releaseTail = new BandwidthRules.Tail();
             IdleTrafficTest.Check(BandwidthRules.StateQuiet(ref releaseTail, 20, false, false, false, false, active, moving, true, false, false, 10) == BandwidthRules.Quiet.None, "release bypasses a completed quiet tail");
             moving = true;
-            IdleTrafficTest.Check(ReleaseMotion(ref active, false, false, false, ref moving), "falling release retains full motion even below pose thresholds");
+            IdleTrafficTest.Check(EntityProxyPresentation.ReleaseMotion(ref active, false, false, false, ref moving), "falling release retains full motion even below pose thresholds");
             moving = false;
-            IdleTrafficTest.Check(!ReleaseMotion(ref active, false, false, false, ref moving) && BandwidthRules.StateQuiet(ref releaseTail, 21, false, false, false, false, active, moving, false, false, false, .05) == BandwidthRules.Quiet.Final, "released body sends a reliable final when physics rests");
+            IdleTrafficTest.Check(!EntityProxyPresentation.ReleaseMotion(ref active, false, false, false, ref moving) && BandwidthRules.StateQuiet(ref releaseTail, 21, false, false, false, false, active, moving, false, false, false, .05) == BandwidthRules.Quiet.Final, "released body sends a reliable final when physics rests");
             // Production release path: control changes only on release/velocity transitions, not every awake tick.
             releaseTail = new BandwidthRules.Tail(); active = false; moving = false;
-            ReleaseMotion(ref active, true, false, false, ref moving);
+            EntityProxyPresentation.ReleaseMotion(ref active, true, false, false, ref moving);
             BandwidthRules.StateQuiet(ref releaseTail, 0, true, false, false, false, true, moving, true, false, false, 10);
             int finals = 0;
             for (int tick = 1; tick <= 140; tick++)
             {
-                moving = true; ReleaseMotion(ref active, false, false, false, ref moving);
+                moving = true; EntityProxyPresentation.ReleaseMotion(ref active, false, false, false, ref moving);
                 var quiet = BandwidthRules.StateQuiet(ref releaseTail, tick / 20.0, false, false, false, false, false,
                                                      moving, finals > 0, false, false, .05, resumedMotion: active);
                 if (quiet == BandwidthRules.Quiet.Final) finals++;
@@ -362,8 +354,8 @@ namespace TLDRevamp.Net
                 if (tick > 100) IdleTrafficTest.Check(quiet == BandwidthRules.Quiet.Pose, "released awake jitter stays silent after visible tail");
             }
             IdleTrafficTest.Check(finals == 1, "released awake jitter sends exactly one reliable final after five seconds");
-            moving = false; ReleaseMotion(ref active, true, false, false, ref moving);
-            IdleTrafficTest.Check(!ReleaseMotion(ref active, false, true, false, ref moving), "picking up again cancels released motion");
+            moving = false; EntityProxyPresentation.ReleaseMotion(ref active, true, false, false, ref moving);
+            IdleTrafficTest.Check(!EntityProxyPresentation.ReleaseMotion(ref active, false, true, false, ref moving), "picking up again cancels released motion");
             TestFallingTrace();
             var counts = new long[10]; StatesSkippedPose = 1; StatesSkippedLocked = 2; StatesSkippedAttached = 3; StatesSkippedRabbitAnimation = 4; StatesSkippedRagdoll = 5; BandwidthSnapshot(counts);
             IdleTrafficTest.Check(counts[5] == 1 && counts[6] == 2 && counts[7] == 3 && counts[8] == 4 && counts[9] == 5, "all idle skip reasons reach telemetry");
@@ -392,7 +384,7 @@ namespace TLDRevamp.Net
                     bool pose = BandwidthRules.PoseChanged((y - lastY) * (y - lastY), 0);
                     // Deliberately no solver velocity/awake flag: displacement alone must stream the fall.
                     bool moving = pose;
-                    ReleaseMotion(ref active, tick == 0 && resume == "release", false, false, ref moving,
+                    EntityProxyPresentation.ReleaseMotion(ref active, tick == 0 && resume == "release", false, false, ref moving,
                                   first: tick == 0 && resume == "handover", unlocked: tick == 0 && resume == "unlock");
                     var quiet = BandwidthRules.StateQuiet(ref tail, now, tick == 0, pose, false, false, false,
                                                          moving, rest, false, false, now - sentAt, resumedMotion: active);
@@ -420,7 +412,7 @@ namespace TLDRevamp.Net
                 for (int tick = 1; tick <= 1200; tick++)
                 {
                     double now = tick / 20.0; bool speed = tick % 2 == 0;
-                    bool moving = StateMoving(e, false, false, awake || speed, ref speed);
+                    bool moving = EntityProxyPresentation.StateMoving(e, false, false, awake || speed, ref speed);
                     bool control = SampleControl(false, false, false, false, false, false, speed, sentSpeed);
                     var quiet = BandwidthRules.StateQuiet(ref tail, now, false, false, false, false, control,
                         moving, rest, false, false, now - last);
@@ -447,16 +439,16 @@ namespace TLDRevamp.Net
             {
                 double now = tick / 20.0;
                 bool visible = tick < 400 && tick % 2 == 0, speed = false;
-                bool moving = StateMoving(e, visible, false, false, ref speed, ground: true);
+                bool moving = EntityProxyPresentation.StateMoving(e, visible, false, false, ref speed, ground: true);
                 var quiet = BandwidthRules.StateQuiet(ref tail, now, tick == 0, visible, false, false,
                     SampleControl(false, false, false, false, false, false, speed, false), moving, rest, false, false, now - sent);
                 if (quiet != BandwidthRules.Quiet.None && quiet != BandwidthRules.Quiet.Final) continue;
-                bool final = FinalState(false, 0, true, quiet, moving, false);
+                bool final = EntityProxyPresentation.FinalState(false, 0, true, quiet, moving, false);
                 if (final) { finals++; IdleTrafficTest.Check(now >= 20.9, "intermittent rabbit/item motion does not force a far final between visible steps"); }
                 else { poses++; IdleTrafficTest.Check(visible, "every non-final packet represents real visible motion"); }
                 var packet = new NetWriter();
                 CompactPoseCodec.Write(packet, 91, 1, (ushort)(poses + finals), now, tick, 0, 0, 0, !final, final);
-                ReadEntityHead(new NetReader { Buf = packet.Buf, Pos = 1, End = packet.Len }, true,
+                EntityProxyPresentation.ReadEntityHead(new NetReader { Buf = packet.Buf, Pos = 1, End = packet.Len }, true,
                     out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
                 IdleTrafficTest.Check(EntityCodec.ReadFinalState == final, "only the confirmed stop sets the compact final flag");
                 if (PoseReceiverDue(2, 91, true, new Vector3d(9e6, 0, 0), default, tick == 0 || final, now, farAt))
@@ -510,21 +502,21 @@ namespace TLDRevamp.Net
                         for (int i = 0; i < ls.Length; i++) EntityRagdolls.LocalPose(ls[0], ls[i], out _, out oldRot[i]);
                     }
                     bool limbMoved = EntityRagdolls.RagdollMoved(e), velocity = tick % 2 != 0;
-                    bool moving = StateMoving(e, false, limbMoved, true, ref velocity);
+                    bool moving = EntityProxyPresentation.StateMoving(e, false, limbMoved, true, ref velocity);
                     var quiet = BandwidthRules.StateQuiet(ref tail, tick / 20.0, false, false, limbMoved, false,
                         velocity != previousVelocity, moving, rest, false, false, tick / 20.0 - last);
                     IdleTrafficTest.Check(!moving && !velocity, "solver velocity and opposing jitter are not visible corpse motion");
                     if (quiet == BandwidthRules.Quiet.None || quiet == BandwidthRules.Quiet.Final)
                     {
                         sent++; if (quiet == BandwidthRules.Quiet.Final) finals++;
-                        w.Reset(); WriteStateHead(w, (uint)(rabbit + 1), 1, (ushort)sent, tick / 20.0, default,
+                        w.Reset(); EntityCodec.WriteStateHead(w, (uint)(rabbit + 1), 1, (ushort)sent, tick / 20.0, default,
                             ls[0].rotation, Vector3.zero, false, final: quiet == BandwidthRules.Quiet.Final);
                         w.U8(0); w.U8(0); w.U8(0);
                         // Finals remain complete poses; protocol 54 sends them as Keys, not full float limb lists.
                         IdleTrafficTest.Check(EntityRagdolls.WriteRagdoll(w, e, true), "final rest forces a Key");
                         EntityRagdolls.RagdollSent(e, true); bytes += w.Len;
                         var r = new NetReader { Buf = w.Buf, Pos = 1, End = w.Len };
-                        ReadStateHead(r, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+                        EntityCodec.ReadStateHead(r, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
                         IdleTrafficTest.Check(EntityCodec.ReadFinalState && StateTail.TryRead(w.Buf, 0, w.Len, out var block) &&
                             block.Count == 14 && block.Mode == StateTail.Mode.Key &&
                             w.Len - block.Offset == RagdollWire.KeySize(14) && w.Len == 256,
@@ -537,7 +529,7 @@ namespace TLDRevamp.Net
                 {
                     ls[13].position += new Vector3(.011f, 0, 0);
                     bool velocity = false, limbMoved = EntityRagdolls.RagdollMoved(e);
-                    bool moving = StateMoving(e, false, limbMoved, false, ref velocity);
+                    bool moving = EntityProxyPresentation.StateMoving(e, false, limbMoved, false, ref velocity);
                     IdleTrafficTest.Check(moving && BandwidthRules.StateQuiet(ref tail, 61 + tick / 20.0, false, false,
                         limbMoved, false, false, moving, rest, false, false, .05) == BandwidthRules.Quiet.None,
                         "real distal limb movement resumes the full twenty Hz without a rate cap");
@@ -546,7 +538,7 @@ namespace TLDRevamp.Net
                         "Key then cumulative Delta retains twenty Hz distal motion with one limb per update");
                 }
                 bool stoppedSpeed = true;
-                bool stopped = StateMoving(e, false, EntityRagdolls.RagdollMoved(e), true, ref stoppedSpeed);
+                bool stopped = EntityProxyPresentation.StateMoving(e, false, EntityRagdolls.RagdollMoved(e), true, ref stoppedSpeed);
                 IdleTrafficTest.Check(!stopped && BandwidthRules.StateQuiet(ref tail, 66, false, false, false, false,
                     false, stopped, rest, false, false, .05) == BandwidthRules.Quiet.Pose &&
                     BandwidthRules.StateQuiet(ref tail, 67, false, false, false, false, false, stopped, rest, false, false, 1.05) == BandwidthRules.Quiet.Final,
@@ -561,15 +553,52 @@ namespace TLDRevamp.Net
                 TestMain.Origin = default;
                 // Root/whole-body movement is also visible; a vehicle retains its physical motion policy.
                 bool speed = true;
-                IdleTrafficTest.Check(StateMoving(e, true, false, false, ref speed), "whole corpse movement sends");
+                IdleTrafficTest.Check(EntityProxyPresentation.StateMoving(e, true, false, false, ref speed), "whole corpse movement sends");
                 e.Root.car = new TestCar(); speed = true;
-                IdleTrafficTest.Check(StateMoving(e, false, false, true, ref speed) && speed, "vehicle joints retain velocity transitions");
+                IdleTrafficTest.Check(EntityProxyPresentation.StateMoving(e, false, false, true, ref speed) && speed, "vehicle joints retain velocity transitions");
             }
             IdleTrafficTest.Check(legacy == 900 && legacy / 5.0 / 2 == 90, "old frame check reproduces apparent ~89 Hz per owned body");
             IdleTrafficTest.Check(sent == 9 && finals == 9 && bytes == 9 * 256, "nine complete finals then zero recurring corpse bytes");
             Console.WriteLine("Corpse regression: old 900 states/5s (~90 Hz if divided by 2 local owners); fixed 9 final Keys, 2304 bytes, then 0 B/s");
         }
     }
+    internal static partial class EntityHands
+    {
+        internal static bool WornRides(Entities.Ent e) => false;
+    }
+
+
+    internal static partial class EntityPhysics
+    {
+        internal static void StopBodyMotion(Entities.Ent e) { e.MovedByBody = false; }
+        internal static bool LimbsByBody(Entities.Ent e) => false;
+    }
+
+
+    internal static partial class EntityCargoInteraction
+    {
+        internal static float CargoClaimCooldownS = 2;
+        internal static long CargoClaimed;
+    }
+
+
+    internal static partial class EntitySeats
+    {
+        internal static void LocalSeat(out uint car, out int seat) { car = TestMain.s?.player?.SeatNet ?? 0; seat = 0; }
+    }
+
+
+    internal static partial class EntityAuthorityInterest
+    {
+        internal static double StateInterestM = 1000;
+    }
+
+
+    internal static partial class EntityNumbers
+    {
+        internal static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+    }
+
     public static class Protocol { public const int StateHz = 20; }
     public static class Mp { public static TestServer Server; }
     public class TestServer

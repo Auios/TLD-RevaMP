@@ -23,7 +23,7 @@ namespace TLDRevamp.Net
         {
             if (!StateKnown(player, net)) { StatesSkippedUnknown++; SkippedByInterest(player); return false; }
             double dx = viewer.x - at.x, dz = viewer.z - at.z;
-            if (hasPosition && dx * dx + dz * dz > StateInterestM * StateInterestM) { StatesSkippedCreatureRange++; SkippedByInterest(player); return false; }
+            if (hasPosition && dx * dx + dz * dz > EntityAuthorityInterest.StateInterestM * EntityAuthorityInterest.StateInterestM) { StatesSkippedCreatureRange++; SkippedByInterest(player); return false; }
             return true;
         }
 
@@ -31,8 +31,8 @@ namespace TLDRevamp.Net
         internal static Transform RagdollFrame(Ent e)
         {
             if (!WasteFixes || e.Root.car != null) return e.Root.transform;
-            var limbs = Limbs(e);
-            if (limbs == null || !Limp(e)) return e.Root.transform;
+            var limbs = EntityRagdolls.Limbs(e);
+            if (limbs == null || !EntityRagdolls.Limp(e)) return e.Root.transform;
             foreach (var limb in limbs) if (limb != null && limb != e.Root.transform && limb.GetComponent<Rigidbody>() != null) return limb;
             foreach (var limb in limbs) if (limb != null && limb != e.Root.transform) return limb;
             return e.Root.transform;

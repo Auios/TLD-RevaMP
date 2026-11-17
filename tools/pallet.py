@@ -18,7 +18,7 @@ def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv
 RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
 CARNAME = arg("--car", "Car02")
 T = "TLDRevamp.Net.Entities"; REP = "TLDRevamp.Net.Reports"
-SWITCHES = [f"{T}.MemberGoneSync", f"{T}.CopyLockByBox", f"{T}.ProxyByOwnRoot", f"{T}.MountBox", "TLDRevamp.Fixes.SliceGuard.Enabled"]
+SWITCHES = [f"{T}.MemberGoneSync", f"TLDRevamp.Net.EntityLocks.CopyLockByBox", f"{T}.ProxyByOwnRoot", f"TLDRevamp.Net.EntityLocks.MountBox", "TLDRevamp.Fixes.SliceGuard.Enabled"]
 JERRYCAN, LAMP = 72, "regizseblampa"
 VERDICTS = []
 def verdict(name, ok, detail=""):

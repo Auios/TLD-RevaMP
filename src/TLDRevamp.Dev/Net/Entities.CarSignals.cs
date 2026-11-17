@@ -38,7 +38,7 @@ namespace TLDRevamp.Net
             var c = e.Root.car;
             if (what == "ignition") c.ignition = v == 1;
             else return "{\"error\":\"ignition only\"}";
-            return "{\"ignition\":" + (c.ignition ? "true" : "false") + ",\"key\":" + CarSignalKey(e) + "}";
+            return "{\"ignition\":" + (c.ignition ? "true" : "false") + ",\"key\":" + EntityCarSignals.CarSignalKey(e) + "}";
         }
     }
 }
