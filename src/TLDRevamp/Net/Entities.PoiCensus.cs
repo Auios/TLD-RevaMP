@@ -11,9 +11,9 @@ namespace TLDRevamp.Net
     /// seconds (key, type, shown or only generated, its draw-distance setting); the server compares players standing
     /// near each other and writes "[anomaly] building …" naming the building, the spot and what the other player has
     /// there instead (nothing, the same building a few metres off, another type, generated but not shown).
-    public static partial class Entities
+    internal static partial class EntityRepair
     {
-        public const byte PoiCensus = 84;   // c→s: f64 gx, f64 gz, f32 drawLerp, u8 distant terrain, f32 shown within, f32 removed beyond, u16 n × (f64 x, f64 z, i32 type, u8 shown)
+        private static readonly NetWriter W = new NetWriter();
         public static bool PoiCensusOn = true;
         public static float PoiCensusEveryS = 5f, PoiCensusRadiusM = 250f, PoiCensusNearM = 120f;
         public static long PoiCensusSent, PoiCensusIn, PoiDiffers;
@@ -24,7 +24,7 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<int, PoiReport> _poiLists = new Dictionary<int, PoiReport>();
         private static readonly HashSet<string> _poiLogged = new HashSet<string>();
 
-        private static void PoiCensusTick()
+        internal static void PoiCensusTick()
         {
             if (!PoiCensusOn || Time.realtimeSinceStartup - _poiCensusAt < PoiCensusEveryS) return;
             _poiCensusAt = Time.realtimeSinceStartup;
@@ -32,7 +32,7 @@ namespace TLDRevamp.Net
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (map == null || map.poiGens == null || pl == null || settingsscript.s == null || settingsscript.s.S == null) return;
             var me = mainscript.GlobalFromUnityPos(pl.transform.position);
-            W.Reset(); W.U8(PoiCensus); W.F64(me.x); W.F64(me.z);
+            W.Reset(); W.U8(Entities.PoiCensus); W.F64(me.x); W.F64(me.z);
             W.F32(settingsscript.s.S.GetDrawDistanceLerp()); W.Bool(settingsscript.s.S.GetDistantTerrain());
             var pg0 = map.poiGens.Count > 0 ? map.poiGens[0] : null;   // the distances the game shows buildings within (from the draw-distance setting)
             W.F32(pg0 != null ? pg0.lodDistance : -1f); W.F32(pg0 != null ? pg0.removeDistance : -1f);
@@ -57,7 +57,7 @@ namespace TLDRevamp.Net
                 }
             }
             W.Buf[countAt] = (byte)n; W.Buf[countAt + 1] = (byte)(n >> 8);
-            ToServer(W, true);
+            Entities.SendToServer(W, true);
             PoiCensusSent++;
         }
 
@@ -68,7 +68,7 @@ namespace TLDRevamp.Net
             int n = r.U16();
             for (int i = 0; i < n && !r.Bad; i++)
                 l.Pois.Add(new PoiSeen { X = r.F64(), Z = r.F64(), Type = r.I32(), Shown = r.Bool() });
-            if (r.Bad || !Finite(new Vector3d(l.X, 0, l.Z))) return;
+            if (r.Bad || !Entities.IsFinite(new Vector3d(l.X, 0, l.Z))) return;
             for (int i = 0; i < l.Pois.Count; i++) { var p = l.Pois[i]; p.Name = BuildingName(p.Type); l.Pois[i] = p; }
             _poiLists[from] = l;
             PoiCensusIn++;
@@ -105,7 +105,7 @@ namespace TLDRevamp.Net
                 string key = p.X.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "," + p.Z.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ">" + bId;
                 if (!_poiLogged.Add(key)) continue;
                 PoiDiffers++;
-                Anomaly($"building differs between players: player {aId} has {p.Name} (type {p.Type}) at {p.X:F1},{p.Z:F1}; player {bId}, " +
+                Entities.RepairAnomaly($"building differs between players: player {aId} has {p.Name} (type {p.Type}) at {p.X:F1},{p.Z:F1}; player {bId}, " +
                         $"{System.Math.Sqrt(db):F0} m from it, has {why} (draw distance {a.DrawLerp:F2} vs {b.DrawLerp:F2}: buildings shown within {a.ShowM:F0} / {b.ShowM:F0} m, removed beyond {a.RemoveM:F0} / {b.RemoveM:F0} m)");
             }
         }

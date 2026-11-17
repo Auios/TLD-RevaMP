@@ -4,6 +4,17 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        // Repair helpers and the POI census use facts and messages without sharing entity tables.
+        public const byte PoiCensus = 84;   // c→s: f64 gx, f64 gz, f32 drawLerp, u8 distant terrain, f32 shown within, f32 removed beyond, u16 n × (f64 x, f64 z, i32 type, u8 shown)
+        private static void PoiCensusTick() => EntityRepair.PoiCensusTick();
+        internal static void ServerPoiCensus(int from, NetReader r) => EntityRepair.ServerPoiCensus(from, r);
+        internal static void ResetPoiCensus() => EntityRepair.ResetPoiCensus();
+        private static string RepairState(tosaveitemscript it) => EntityRepair.RepairState(it);
+        private static System.Collections.Generic.Dictionary<string, string> RowMap(System.Collections.Generic.IEnumerable<string> rows) => EntityRepair.RowMap(rows);
+        private static string GluedPlace(attachablescript at) => EntityRepair.GluedPlace(at);
+        internal static Transform RepairAttachFrame(attachablescript at) => AttachFrame(at);
+        internal static void RepairAnomaly(string what) => Anomaly(what);
+
         // Game adapters ask for one identity fact; all table walks stay here.
         internal static bool TryModRootNet(tosaveitemscript item, out uint net)
         {

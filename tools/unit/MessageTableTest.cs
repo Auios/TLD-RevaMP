@@ -174,6 +174,10 @@ static class MessageTableTest
         }
         foreach (string gap in KnownGaps) Check("the known gap is in the table: " + gap, rows.Any(r => r.Name == gap));
 
+        Check("PoiCensus: original dispatch reaches repair owner", server.Contains("case PoiCensus: ServerPoiCensus(from, r);") && src.Values.Any(s => s.Contains("internal static void ServerPoiCensus(int from, NetReader r) => EntityRepair.ServerPoiCensus(from, r);")));
+        Check("PoiCensus: repair owner decodes and validates reports", Method("EntityRepair", "ServerPoiCensus").Contains("X = r.F64()") && Method("EntityRepair", "ServerPoiCensus").Contains("if (r.Bad || !Entities.IsFinite("));
+        Check("CensusRepair: handlers retain kernel authority and copy lookup", server.Contains("case CensusRepair: ServerCensusRepair(from, r);") && client.Contains("case CensusRepair: ApplyCensusRepair(r);") && Method("Entities", "ServerCensusRepair").Contains("Server.TryGetValue(net") && Method("Entities", "ApplyCensusRepair").Contains("ByNet.TryGetValue(net"));
+
         Console.WriteLine(failures == 0 ? $"ALL PASS ({rows.Count} messages, {KnownGaps.Length} known gaps)" : failures + " failures");
         return failures == 0 ? 0 : 1;
     }

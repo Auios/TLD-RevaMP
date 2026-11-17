@@ -3,6 +3,17 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
+    internal static partial class EntityRepair
+    {
+        internal static string GluedPlace(attachablescript at)
+        {
+            var f = Entities.RepairAttachFrame(at);
+            if (f == null) return null;
+            var lp = Quaternion.Inverse(f.rotation) * (at.transform.position - f.position);
+            return Mathf.RoundToInt(lp.x * 5f) + "," + Mathf.RoundToInt(lp.y * 5f) + "," + Mathf.RoundToInt(lp.z * 5f);
+        }
+    }
+
     /// Where an object is, checked like its parts: a copy near its player adds its position to the census ask (PlaceDigest:
     /// six bytes, the question it was asking anyway), and the owner says nothing unless the copy is really somewhere else.
     /// A state at rest is sent once: when the last one is lost or refused, or a copy stops following them, the copy stays
@@ -112,14 +123,6 @@ namespace TLDRevamp.Net
         public static bool CensusGluedPlaces = true;   // A/B: false = a glued member isn't compared
         public static long GluedPlacesSent, GluedPlacesApplied;
         private const byte GluedPlacesTold = 201;   // CensusReply's attempt byte, as PlaceTold
-        private static string GluedPlace(attachablescript at)
-        {
-            var f = AttachFrame(at);
-            if (f == null) return null;
-            var lp = Quaternion.Inverse(f.rotation) * (at.transform.position - f.position);
-            return Mathf.RoundToInt(lp.x * 5f) + "," + Mathf.RoundToInt(lp.y * 5f) + "," + Mathf.RoundToInt(lp.z * 5f);
-        }
-
         /// Owner: every glued member's pose, one line each (member, position, rotation).
         private static void SendGluedPlaces(Ent e, int asker)
         {

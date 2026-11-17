@@ -111,6 +111,8 @@
     <Compile Include="../../src/TLDRevamp/Net/Entities.StateCodec.cs" />
     <Compile Include="../../src/TLDRevamp/Net/ClockMath.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
+    <Compile Include="EntityRepairChecks.cs" />
+    <Compile Include="EntityRepairStubs.cs" />
   </ItemGroup>
   <Target Name="ExtractFeatureWire" BeforeTargets="CoreCompile">
     <PropertyGroup>
@@ -139,5 +141,7 @@
     <ItemGroup><Compile Include="$(IntermediateOutputPath)AuthorityInterestFeature.g*.cs" /></ItemGroup>
     <ItemGroup><Compile Include="$(IntermediateOutputPath)LeasesFeature.g.cs" /></ItemGroup>
     <ItemGroup><Compile Include="$(IntermediateOutputPath)HitchFeature.g.cs" /><Compile Include="$(IntermediateOutputPath)ResyncEditsBoundary.g*.cs" /><Compile Include="$(IntermediateOutputPath)UsablesBoundary.g*.cs" /><Compile Include="$(IntermediateOutputPath)TelemetryBoundary.g.cs" /><Compile Include="$(IntermediateOutputPath)RabbitWire.g.cs" /><Compile Include="$(IntermediateOutputPath)FeatureWire.g.cs" /><Compile Include="$(IntermediateOutputPath)AIWire.g.cs" /></ItemGroup>
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractEntityRepair.py&quot; &quot;$(IntermediateOutputPath)EntityRepair.g.cs&quot; $(RepairBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)EntityRepair.g*.cs" /></ItemGroup>
   </Target>
 </Project>

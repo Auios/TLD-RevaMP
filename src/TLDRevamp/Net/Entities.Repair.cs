@@ -3,6 +3,33 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
+    internal static partial class EntityRepair
+    {
+        /// Whole litres: a running engine moves the level, and the copy hears it up to a resync late.
+        internal static string RepairState(tosaveitemscript it)
+        {
+            var sb = new System.Text.StringBuilder();
+            if (it.partconditions != null)
+                foreach (var pc in it.partconditions) if (pc != null) sb.Append('c').Append(pc.state).Append('.').Append(pc.state2).Append('.').Append(pc.state3);
+            if (it.usables != null)
+                foreach (var u in it.usables) if (u != null && u.turnable) sb.Append('u').Append(u.currentTurnState);
+            if (it.tanks != null)
+                foreach (var t in it.tanks) if (t != null && t.F != null) sb.Append('t').Append(Mathf.RoundToInt(t.F.GetAmount()));
+            return sb.ToString();
+        }
+
+        internal static Dictionary<string, string> RowMap(IEnumerable<string> rows)
+        {
+            var map = new Dictionary<string, string>();
+            foreach (var row in rows)
+            {
+                int eq = row.IndexOf('=');
+                if (eq > 0) map[row.Substring(0, eq)] = row.Substring(eq + 1);
+            }
+            return map;
+        }
+    }
+
     /// Every one-shot message that was lost, refused or arrived where it could not be applied leaves two machines different
     /// for good: nothing resends it, and the sender's own screen looks right (double doors, a tyre off on one screen, a hat
     /// on one head). Fixing them one message at a time only fixes the ones found, so copies now check themselves. A copy
@@ -133,19 +160,6 @@ namespace TLDRevamp.Net
             return rows;
         }
 
-        /// Whole litres: a running engine moves the level, and the copy hears it up to a resync late.
-        private static string RepairState(tosaveitemscript it)
-        {
-            var sb = new System.Text.StringBuilder();
-            if (it.partconditions != null)
-                foreach (var pc in it.partconditions) if (pc != null) sb.Append('c').Append(pc.state).Append('.').Append(pc.state2).Append('.').Append(pc.state3);
-            if (it.usables != null)
-                foreach (var u in it.usables) if (u != null && u.turnable) sb.Append('u').Append(u.currentTurnState);
-            if (it.tanks != null)
-                foreach (var t in it.tanks) if (t != null && t.F != null) sb.Append('t').Append(Mathf.RoundToInt(t.F.GetAmount()));
-            return sb.ToString();
-        }
-
         private static string RepairSelf(Ent e, tosaveitemscript root)
         {
             var at = root.attachable;
@@ -165,17 +179,6 @@ namespace TLDRevamp.Net
                 }
             string where = pa != null ? pa.NetId + ":" + idx : "*";
             return at.slot != null && owner.partslotscripts != null ? "on" + where + "#" + owner.partslotscripts.IndexOf(at.slot) : "glue" + where;
-        }
-
-        private static Dictionary<string, string> RowMap(IEnumerable<string> rows)
-        {
-            var map = new Dictionary<string, string>();
-            foreach (var row in rows)
-            {
-                int eq = row.IndexOf('=');
-                if (eq > 0) map[row.Substring(0, eq)] = row.Substring(eq + 1);
-            }
-            return map;
         }
 
         /// A copy: the owner's rows, still different after the recheck (attempt 2), or after the repair (attempt 3).
