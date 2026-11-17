@@ -14,7 +14,7 @@ from bench import Bridge
 
 def arg(name, default): return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
 ITEM, OFFSET, LAG, SPEED = arg("--item", "regizseblampa"), arg("--offset", "0,0.9,-0.9"), float(arg("--lag", "0.2")), float(arg("--speed", "15"))
-ONLY = arg("--only", "A,B,C").split(",")
+ONLY = arg("--only", "B,C").split(",")
 CAR = "Car06Full"
 T = "TLDRevamp.Net.Entities"
 VERDICTS = []
@@ -40,8 +40,7 @@ def seat_idx(b):
     return next(s["i"] for s in seats if s["main"] == f"#{target}")
 
 def run(b, cfg):
-    claims, held = cfg != "A", cfg == "C"
-    b(f"set {T}.CargoClaims {claims}")
+    held = cfg == "C"
     p = b("gpos"); b(f"tpground {p['gx'] + 15} {p['gz']}"); time.sleep(3)
     b("mp host 27070")
     before = set(ents(b))
@@ -91,7 +90,7 @@ if "--no-build" not in sys.argv: game.build()
 else: game.deploy_local()
 game.launch()
 with game.ProtectedSession():
-    for cfg in ONLY:
+    for cfg in (cfg for cfg in ONLY if cfg != "A"):
         game.newgame()
         b = Bridge()
         b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
@@ -99,7 +98,7 @@ with game.ProtectedSession():
         try: run(b, cfg)
         except Exception as ex: verdict(f"{cfg}: RAN", False, repr(ex))
         finally:
-            for k, v in ((f"{T}.CargoClaims", True), ("TLDRevamp.Net.LegacyBots.BotItemHeld", False)):
+            for k, v in (("TLDRevamp.Net.LegacyBots.BotItemHeld", False),):
                 try: b(f"set {k} {v}")
                 except Exception as ex: print("restore", k, ex)
             try: b("mp stop")

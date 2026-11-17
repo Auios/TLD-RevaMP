@@ -13,7 +13,7 @@
      shoots it every 0.3 s — none refused
   G the laptop's player seated in its car driving past the host at ~50 km/h: the host shoots them every 0.35 s within
      45 m — every hit arrives, none refused
-  tools/hitcheck.py [--no-build] [--relay iad|off] [--old: the host forwards every hit, before v0.66.9]"""
+  tools/hitcheck.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -21,7 +21,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 from roadkit import until
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 MAGNUM = 64
 VERDICTS = []
 NOBODY, T0 = [], time.time()   # shots with no body to aim at (the victim hidden on the shooter's screen)
@@ -63,8 +63,7 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, s_("get kaposztaleves.s.settings.god").get("value")); s_("set kaposztaleves.s.settings.god True")
-        h(f"set TLDRevamp.Net.HitCheck.Enabled {not OLD}")
-        print(f"  {'OLD (the host forwards every hit)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         rp = h("roadpoint"); h(f"tpground {rp['gx']} {rp['gz']}"); time.sleep(3)
         before = {e["net"] for e in h("mp entities")["entities"]}
         print("car:", h("devspawn Car01Full"), flush=True)
@@ -213,8 +212,6 @@ with game.ProtectedSession():
         for name, (s_, v) in gods.items():
             try: s_(f"set kaposztaleves.s.settings.god {v if v is not None else False}")
             except Exception as ex: print("god restore", name, ex)
-        try: h("set TLDRevamp.Net.HitCheck.Enabled True")
-        except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

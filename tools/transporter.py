@@ -7,7 +7,7 @@ the laptop watches, then takes the transporter over and drives it back while the
   C. driven by the host: the cargo stays on the bed on both machines
   D. driven by the laptop (ownership hand-off): the cargo stays on the bed on both machines
 Answers whether a car-carrying trailer can work in multiplayer as the game's own transporter does.
-  tools/transporter.py [--no-build] [--relay iad|off] [--kmh 40] [--carrier 397] [--cargo 2] [--old]"""
+  tools/transporter.py [--no-build] [--relay iad|off] [--kmh 40] [--carrier 397] [--cargo 2]"""
 import sys, time, math, pathlib, statistics
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -83,9 +83,6 @@ with game.ProtectedSession():
     if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
-    if "--old" in sys.argv:
-        for s_ in (h, L): s_("set TLDRevamp.Net.Entities.CarCargoClaims False")   # A/B: a carried car stays with its last owner
-    print("  carried cars follow the carrier:", g(h, "TLDRevamp.Net.Entities.CarCargoClaims"), flush=True)
     h("set settingsscript.s.S.BAutoShift True"); L("set settingsscript.s.S.BAutoShift True")
     print("  physics lock (host):", g(h, "settingsscript.s.S.IPhysicsLock"), flush=True)
     rp = h("roadpoint"); F = (math.sin(math.radians(rp["yaw"])), math.cos(math.radians(rp["yaw"])))

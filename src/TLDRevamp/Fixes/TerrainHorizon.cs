@@ -35,12 +35,6 @@ namespace TLDRevamp.Fixes
         /// The widest the blend may grow to, so a very coarse tile does not flatten a whole region.
         internal const float MaxBlendM = 260f;
         internal const float MoveRebuildM = 35f;
-        /// A rebuild is spread over frames: the strips a slice at a time, then each road's mesh swapped in, StepBudgetMs of
-        /// work a frame (at least one element or one mesh). In one frame it walked every road in the view distance and
-        /// re-uploaded every mesh: ~80 ms every 35 m driven at a 25 km view distance, a stutter about once a second at
-        /// 120 km/h (playtest 2026-10-23, "constant-stutter": Runner.Update 79-90 ms every 33-36 m). The ribbons it
-        /// replaces stay on screen until their road is done; a road whose strips came out the same is not uploaded again.
-        public static bool SpreadRebuild = true;   // A/B: false = the whole rebuild in one frame (before v0.69.2)
         internal static double StepBudgetMs = 2.0;
         /// One mesh per road type and map cell (CellM square), instead of one per road type for the whole view. A
         /// rebuild then only redoes the cells that can come out different: a cell whose roads all lie inside the ring,
@@ -399,7 +393,7 @@ namespace TLDRevamp.Fixes
             var job = _job;
             if (job == null) return;
             long started = frameStart != 0 ? frameStart : System.Diagnostics.Stopwatch.GetTimestamp();
-            double budget = SpreadRebuild ? StepBudgetMs : double.PositiveInfinity;
+            double budget = StepBudgetMs;
             job.Frames++;
             try
             {
@@ -1023,7 +1017,7 @@ namespace TLDRevamp.Fixes
             ",\"lastBuildMs\":" + LastBuildMs.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
             ",\"lastUploadMs\":" + LastUploadMs.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
             ",\"maxRebuildMs\":" + MaxRebuildMs.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
-            ",\"spread\":" + (SpreadRebuild ? "true" : "false") + ",\"cellBatches\":" + (CellBatches ? "true" : "false") +
+            ",\"spread\":" + ("true") + ",\"cellBatches\":" + (CellBatches ? "true" : "false") +
             ",\"cellsReused\":" + CellsReused + ",\"cellsRebuilt\":" + CellsRebuilt + ",\"lastRebuildFrames\":" + LastRebuildFrames +
             ",\"lastStepMaxMs\":" + LastStepMaxMs.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
             ",\"maxStepMs\":" + MaxStepMs.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +

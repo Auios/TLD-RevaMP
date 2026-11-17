@@ -62,7 +62,6 @@ namespace TLDRevamp.Net
         /// reach to the car refused it, 100 m off, with the player's hand on the tyre (itemchaos aud-wheel-far).
         private static bool AtSplitPart(int player, SEnt se)
         {
-            if (!CarriedPartsShared) return false;
             foreach (uint pn in se.Parts) if (Server.TryGetValue(pn, out var part) && AtObject(player, part)) return true;
             return false;
         }

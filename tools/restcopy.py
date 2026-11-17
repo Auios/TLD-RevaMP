@@ -5,10 +5,8 @@ Two machines over the relay. The host keeps a car of its own by the slope, so it
 (Entities.Physical: a real body steered along the owner's path; NearEnterM/NearExitM raised for the test so the copy
 stays physical for the whole roll). On --rolls slopes found near the road (a grade of 10-30 % on terrain), the laptop
 spawns a car01 at the top facing downhill, gets out with the handbrake off, and the car rolls until it stops. Then
-where the laptop has it and where the host's copy rests are compared. OLD (EntityPhysics.RestSnap off) and NEW, the same
-slopes in turn.
+where the laptop has it and where the host's copy rests are compared. Each slope runs with the finished correction.
   A  the host's copy is physical during the rolls
-  B  OLD: the copy rests > 0.3 m off at least once (the bug; INFO only if it never shows)
   C  NEW: within 0.3 m every time
   D  no errors
   tools/restcopy.py [--no-build] [--relay iad|off] [--rolls 3]"""
@@ -96,26 +94,21 @@ with game.ProtectedSession():
         rp = L("roadpoint"); tp(L, rp["gx"], rp["gz"]); time.sleep(4)
         spots = slopes(L, rp["gx"], rp["gz"], ROLLS)
         if not spots: sys.exit("NO SLOPE FOUND")
-        res = {"OLD": [], "NEW": []}
+        res = {"NEW": []}
         ph0 = h("mp physical")
         for i, (x, z, yaw) in enumerate(spots):
-            for label, on in (("OLD", False), ("NEW", True)):
-                h(f"set TLDRevamp.Net.EntityPhysics.RestSnap {on}")
-                # the NEW roll a little beside the OLD one's start (the OLD car rests below)
-                sx, sz = (x, z) if label == "OLD" else (x + math.cos(math.radians(yaw)) * 6, z - math.sin(math.radians(yaw)) * 6)
+            for label, on in (("NEW", True),):
+                sx, sz = (x, z)
                 r = roll(h, L, sx, sz, yaw, f"{label} slope {i + 1}")
                 res[label].append(r)
         ph = h("mp physical")
         print("  host physical:", {k: (ph0.get(k), ph.get(k)) for k in ("enters", "exits", "restSnaps")}, flush=True)
         verdict("A THE HOST'S COPIES WERE PHYSICAL", (ph.get("enters") or 0) - (ph0.get("enters") or 0) >= len(spots), f"enters {ph0.get('enters')} -> {ph.get('enters')}")
-        old = [r[0] for r in res["OLD"] if r]; new = [r[0] for r in res["NEW"] if r]
-        bug = any(o > 0.3 for o in old)
-        print(f"{'PASS' if bug else 'INFO'}  B OLD: THE COPY RESTS OFF ITS OWNER'S POSE  OLD {res['OLD']} (off m, rolled m)", flush=True)
+        new = [r[0] for r in res["NEW"] if r]
         verdict("C NEW: THE COPY RESTS WHERE ITS OWNER HAS IT", len(new) == len(spots) and all(o <= 0.3 for o in new), f"NEW {res['NEW']}, restSnaps {ph.get('restSnaps')}")
         er = [x_("errors") for x_ in (h, L)]
         verdict("D NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er), str([(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er]))
     finally:
-        h("set TLDRevamp.Net.EntityPhysics.RestSnap True")
         h("set TLDRevamp.Net.EntityPhysics.NearEnterM 12"); h("set TLDRevamp.Net.EntityPhysics.NearExitM 18")
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

@@ -55,7 +55,7 @@ with game.ProtectedSession():
         print("bus:", h("devspawn 106"), flush=True)
         if not until(lambda: any(e["car"] and e["net"] not in before for e in h("mp entities")["entities"]), 20): sys.exit("NO BUS")
         NET = next(e["net"] for e in h("mp entities")["entities"] if e["car"] and e["net"] not in before)
-        for rnd, keep in ((1, False), (2, True)):
+        for rnd, keep in ((2, True),):
             p = ent(h, NET)["pos"]; L(f"tpground {p[0] + 5} {p[2]}"); time.sleep(3)
             if not until(lambda: ent(L, NET) is not None, 30): sys.exit("THE LAPTOP NEVER GOT THE BUS")
             for _ in range(6):
@@ -65,18 +65,14 @@ with game.ProtectedSession():
             ok = until(lambda: ent(h, NET)["owner"] == lid, 15)
             print(f"  round {rnd}: laptop (id {lid}) at the wheel: {r}; host sees owner {ent(h, NET)['owner']}", flush=True)
             if not ok: verdict(f"ROUND {rnd} SETUP: THE LAPTOP OWNS THE BUS", False, "INVALID"); continue
-            h(f"set TLDRevamp.Net.EntityPhysics.CrashLeaveKeep {keep}")
             print("  host's crash lease:", h(f"mp crashlease {NET}"), flush=True)
             L("mp stop")
             time.sleep(6)
             e = ent(h, NET)
-            tag = "OLD BEHAVIOUR (expected FAIL)" if not keep else "FIX"
+            tag = "FIX"
             print(f"  round {rnd}: 6 s after the laptop left - host sees owner {e['owner']} proxy {e['proxy']}; kept {h('get TLDRevamp.Net.EntityPhysics.CrashLeasesKept')['value']}", flush=True)
             verdict(f"ROUND {rnd} {tag}: THE BUS IS SIMULATED BY SOMEONE STILL HERE", e["owner"] == 0 and not e["proxy"], f"owner {e['owner']} (the laptop was {lid}), proxy {e['proxy']}")
-            if rnd == 1:
-                lid = join()
     finally:
-        h("set TLDRevamp.Net.EntityPhysics.CrashLeaveKeep True")
         for nm, s_ in (("host", h), ("laptop", L)):
             try: s_(f"set kaposztaleves.s.settings.god {gods.get(nm) if gods.get(nm) is not None else False}")
             except Exception as ex: print("god restore", nm, ex)

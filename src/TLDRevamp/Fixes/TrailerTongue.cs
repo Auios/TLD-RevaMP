@@ -14,11 +14,9 @@ namespace TLDRevamp.Fixes
     /// coupler (height and side as the game set them). A trailer with two axles apart (the IFA's, the car trailer example
     /// mod) carries its own weight and is left as it is; so is one whose hitched centre is already within the share.
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.TrailerTongue.Enabled / .MaxShare (applies at the next hitch)
     [HarmonyPatch(typeof(utanfutoscript), nameof(utanfutoscript.RefreshCenterOffMass))]
     public static class TrailerTongue
     {
-        public static bool Enabled = true;
         public static float MaxShare = 0.12f;
         public static float SingleAxleSpread = 0.6f;   // m: wheels this close along the trailer count as one axle
         public static long Moved;
@@ -27,7 +25,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPostfix]
         private static void Postfix(utanfutoscript __instance, bool _attached)
         {
-            if (!Enabled || !_attached || __instance.RB == null || __instance.wheels == null) return;
+            if (!_attached || __instance.RB == null || __instance.wheels == null) return;
             var t = __instance.transform;
             var grip = __instance.GetComponent<attachgripscript>();
             if (grip == null || grip.GripPos == null) return;
@@ -52,6 +50,6 @@ namespace TLDRevamp.Fixes
             Last = __instance.name + ": coupler share " + share.ToString("F2") + " → " + MaxShare.ToString("F2") + " (centre z " + z0.ToString("F2") + " → " + com.z.ToString("F2") + ")";
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"moved\":" + Moved + ",\"last\":" + Json.Str(Last) + "}";
+        public static string Stats => "{\"enabled\":" + ("true") + ",\"moved\":" + Moved + ",\"last\":" + Json.Str(Last) + "}";
     }
 }

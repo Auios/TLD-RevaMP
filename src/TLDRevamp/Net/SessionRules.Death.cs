@@ -4,10 +4,6 @@ namespace TLDRevamp.Net
 {
     public static partial class SessionRules
     {
-        /// A/B: record the accepted local death before the corpse starts moving and put the inventory down there on
-        /// respawn. False reproduces the old behaviour: periodic records sample the moving death camera and Respawn
-        /// drops from wherever the ragdoll ended up.
-        public static bool DeathDropAnchor = true;
 
         /// The death state machine (DeathState.cs): the phase, the anchor, the record budget and every rejection
         /// reason. The hooks below only talk to the game; the rules live in the machine, so they can be tested
@@ -94,17 +90,15 @@ namespace TLDRevamp.Net
                 // seat is several metres above the ground and moves with the car, so a seat anchor would drop the
                 // things in mid-air inside the vehicle.
                 bool seated = __instance.Bsitting;
-                bool anchor = DeathDropAnchor;
                 Vector3d g = new Vector3d();
                 double yaw = 0;
-                if (anchor)
                 {
                     try { g = DeathAnchorPoint(__instance, seated); } catch { Death.Reject(DeathReject.NotFinite); return; }
                     if (!EntityNumbers.Finite(g)) { Death.Reject(DeathReject.NotFinite); return; }
                     yaw = __instance.BodyRot != null ? __instance.BodyRot.eulerAngles.y : __instance.transform.eulerAngles.y;
                     if (double.IsNaN(yaw) || double.IsInfinity(yaw)) yaw = 0;
                 }
-                Death.Accept(g.x, g.y, g.z, yaw, Time.realtimeSinceStartupAsDouble, anchor, seated, DeathSession);
+                Death.Accept(g.x, g.y, g.z, yaw, Time.realtimeSinceStartupAsDouble, true, seated, DeathSession);
                 // What the player carries now. The game may drop the held thing during the death itself (the body
                 // flies off, and its hold check lets go once the thing is too far from it), long before Respawn.
                 CarriedAtDeath.Clear();
@@ -266,7 +260,7 @@ namespace TLDRevamp.Net
                 _releasing = false;
                 _carried.Clear();
                 _frames.Clear();
-                if (!InSession || !DeathDropAnchor || !Death.HasAnchor || !AnchorIsCurrent(DeathSession) ||
+                if (!InSession || !Death.HasAnchor || !AnchorIsCurrent(DeathSession) ||
                     mainscript.s == null || __instance == null || __instance != mainscript.s.player)
                 {
                     // No anchor to use: the drop falls back to where the body ended up. That is recorded, not
@@ -389,7 +383,7 @@ namespace TLDRevamp.Net
         {
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var d = Death;
-            return "{\"dropAnchor\":" + (DeathDropAnchor ? "true" : "false") + ",\"hasAnchor\":" + (d.HasAnchor ? "true" : "false") +
+            return "{\"dropAnchor\":" + ("true") + ",\"hasAnchor\":" + (d.HasAnchor ? "true" : "false") +
                    ",\"phase\":" + (int)d.Phase + ",\"respawns\":" + Respawns + ",\"anchors\":" + d.AnchorsCaptured + ",\"anchorDrops\":" + d.AnchorDrops + ",\"fallbacks\":" + d.AnchorFallbacks +
                    ",\"anchorAbsent\":" + d.AnchorAbsent + ",\"deaths\":" + d.Deaths + ",\"seatedDeaths\":" + d.SeatedDeaths + ",\"abandoned\":" + d.DeathsAbandoned +
                    ",\"rejected\":" + d.Rejected + ",\"rejectedNotInSession\":" + d.RejectedNotInSession +

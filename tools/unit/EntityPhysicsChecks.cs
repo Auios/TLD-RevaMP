@@ -21,7 +21,7 @@ static partial class EntitySplitTest
         foreach (string name in new[] { "_held", "_after", "_jointed", "_jointsDone" }) ((IList)Field(typeof(EntityPhysics), name)).Clear();
         foreach (string name in new[] { "PhysicalCars", "_freedJoints" }) ((IDictionary)Field(typeof(EntityPhysics), name)).Clear();
         foreach (var f in typeof(EntityPhysics).GetFields(Static).Where(f => f.FieldType == typeof(long) || f.FieldType == typeof(float) && f.Name.StartsWith("ContactImpulseMax"))) f.SetValue(null, Activator.CreateInstance(f.FieldType));
-        EntityPhysics.CrashAuthority = EntityPhysics.CrashCopyCheck = EntityPhysics.CopyJointsFree = EntityPhysics.RestSnap = true;
+EntityPhysics.CrashCopyCheck = EntityPhysics.CopyJointsFree = true;
         EntityPhysics.GhostOnReturn = EntityPhysics.ContactRelayOn = false;
         EntityPhysics.LastCrash = EntityPhysics.LastFree = "";
         PhysicsFixture.Local.Clear(); PhysicsFixture.Events.Clear(); PhysicsFixture.Tow.Clear(); PhysicsFixture.Trailer = PhysicsFixture.IsProxy = false;
@@ -46,7 +46,7 @@ static partial class EntitySplitTest
                 var e = PhysicsSetup(); var mine = new Rigidbody(); float speed = 10;
                 if (scenario == 0) PhysicsFixture.Trailer = true;
                 if (scenario == 1) PhysicsFixture.Tow.Add(e.Root);
-                if (scenario == 2) EntityPhysics.CrashAuthority = false;
+                if (scenario == 2) continue;
                 if (scenario == 3) e.Proxy = false;
                 if (scenario == 4) speed = 3.999f;
                 if (scenario == 5) e.CrashTaking = true;
@@ -60,7 +60,7 @@ static partial class EntitySplitTest
                 if (scenario == 13) speed = 150;
                 if (scenario == 14) { speed = 151; EntityPhysics.CrashCopyCheck = false; }
                 if (scenario == 15) { var partner = new Entities.Ent { NetId = 99, Root = new tosaveitemscript(), Proxy = true }; mine.transform.parent = partner.Root.transform; PhysicsFixture.Local[99] = partner; }
-                if (scenario == 16) { PhysicsFixture.Trailer = true; PhysicsFixture.Tow.Add(e.Root); EntityPhysics.CrashAuthority = false; }
+                if (scenario == 16) { PhysicsFixture.Trailer = true; PhysicsFixture.Tow.Add(e.Root); }
                 bool took = EntityPhysics.TryTakeCrash(e, mine, speed);
                 PhysicsRow("take:" + scenario, took + ":" + PhysicsState(e));
                 if (took) { PhysicsFixture.Events.Clear(); PhysicsRow("retake:" + scenario, EntityPhysics.TryTakeCrash(e, mine, speed) + ":" + PhysicsState(e)); }
@@ -164,7 +164,7 @@ static partial class EntitySplitTest
             }
             // The unchanged steady physics phases retain their zero-allocation path after warmup.
             {
-                var e = PhysicsSetup(); EntityPhysics.RestSnap = false; e.FreeUntil = -10;
+                var e = PhysicsSetup(); e.FreeUntil = -10;
                 for (int i = 0; i < 100; i++) { EntityPhysics.Servo(e, e.Root.RB, .02f); EntityPhysics.CopyJointTick(); EntityPhysics.CrashHoldTick(); }
                 long start = GC.GetAllocatedBytesForCurrentThread();
                 for (int i = 0; i < 1000; i++) { EntityPhysics.Servo(e, e.Root.RB, .02f); EntityPhysics.CopyJointTick(); EntityPhysics.CrashHoldTick(); }

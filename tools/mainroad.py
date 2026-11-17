@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Main road only (issue #32): does the main road run unbroken, with no crossroads, as you travel along it?
 
-  tools/mainroad.py [--seed 20260924] [--km 8] [--step 600] [--old] [--mode MainRoadOnly] [--shots N] [--menu-shot] [--out DIR]
+  tools/mainroad.py [--seed 20260924] [--km 8] [--step 600] [--mode MainRoadOnly] [--shots N] [--menu-shot] [--out DIR]
 
 Starts a new game in the given terrain mode on the test copy (TLD_DIR / TLD_TEST_COMPAT / TLD_BRIDGE_PORT), then
 teleports north along the main road in steps. At each stop it waits for the roads to be generated and reads the

@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""Rabbits in a session (Entities.Rabbits, Fixes.Rabbits), two machines over the relay. OLD (RabbitSync and
-RabbitOwners off on both: copies think on their own, no ownership rules) then NEW, on the same build.
+"""Rabbits in a session (Entities.Rabbits, Fixes.Rabbits), two machines over the relay, with the shared animation and ownership rules.
   S  the player's spawner runs again (started on both).
   A  a rabbit the laptop's spawner makes (size 0.9 asked for): the host's copy is the same rabbit - size, scale, mass,
      speed, evil.
   B  the host's rabbit runs off and roars: the laptop's copy shows the owner's run animation and the roar.
-  C  the host's evil rabbit (owner rules off: it stays the host's) bites the laptop standing in front of it: the laptop
-     takes the damage. D: rules on - the rabbit goes to the laptop's machine (its player is nearest).
+  C  the host's evil rabbit bites the laptop standing in front of it while the host stays nearer to keep ownership.
+     D: the host moves away and the rabbit goes to the laptop's machine (its player is nearest).
   E  a big rabbit charges the laptop's car (the laptop at the wheel): at the hit one machine simulates both (the rabbit's
      owner is the car's), the car's speed change fits the rabbit's momentum (a kinematic copy of the rabbit has infinite
      mass), and afterwards both screens show the car and the rabbit in the same place.
   F  the laptop's car rolls into a standing rabbit at 15 m/s: one machine simulates both, and the car loses only what a
      body of the rabbit's mass can take (a kinematic copy is a wall: a crash).
 Both players in god mode; natural spawns off during the phases.
-  tools/rabbits.py [--no-build] [--relay iad|off] [--only new]"""
+  tools/rabbits.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -21,7 +20,6 @@ CC = "TLDRevamp.Diagnostics.CrashCause"
 from mplib import Agent, ensure_both, seeded_both
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
-ONLY = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
 VERDICTS = []
 
 def verdict(name, ok, detail=""):
@@ -52,26 +50,27 @@ with game.ProtectedSession():
     for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     sid = h("net me")["steamId"]
-    gods = {}
+    gods = {}; spawn_limits = {}
     try:
         until(lambda: h("rabbits")["spawner"]["started"] and L("rabbits")["spawner"]["started"], 10)
         st_h, st_l = h("rabbits"), L("rabbits")
         print("spawner host:", st_h, "\nspawner laptop:", st_l, flush=True)
         verdict("S THE PLAYER'S SPAWNER RUNS (host, laptop)", bool(st_h["spawner"] and st_h["spawner"]["started"] and st_l["spawner"] and st_l["spawner"]["started"]))
-        for s_ in (h, L): s_("set TLDRevamp.Fixes.Rabbits.Enabled False")
         h("mp host 27070"); L(f"mp joinid {sid}")
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         lid = L("mp status")["client"]["id"]
         for nm, s_ in (("host", h), ("laptop", L)):
             gods[nm] = s_("get kaposztaleves.s.settings.god").get("value"); s_("set kaposztaleves.s.settings.god True")
+        # Keep natural spawns out of the fixture; the bridge spawn skips TrySpawn's count limit.
+        for nm, s_ in (("host", h), ("laptop", L)):
+            spawn_limits[nm] = s_("get TLDRevamp.Fixes.Rabbits._sp.maxAINum")["value"]
+            s_("set TLDRevamp.Fixes.Rabbits._sp.maxAINum 0")
         rp = h("roadpoint"); X, Z, YAW = rp["gx"], rp["gz"], rp["yaw"]
         F = (math.sin(math.radians(YAW)), math.cos(math.radians(YAW)))      # along the road
         R = (math.cos(math.radians(YAW)), -math.sin(math.radians(YAW)))     # across it
-        modes = [("OLD", False), ("NEW", True)] if ONLY != "new" else [("NEW", True)]
+        modes = [("NEW", True)]
         for mi, (tag, on) in enumerate(modes):
-            for s_ in (h, L):
-                s_(f"set TLDRevamp.Net.EntityRabbits.RabbitSync {on}"); s_(f"set TLDRevamp.Net.EntityRabbits.RabbitOwners {on}")
             # each mode further down the road: fresh ground, nothing left over
             bx, bz = X + F[0] * 300 * mi + R[0] * 30, Z + F[1] * 300 * mi + R[1] * 30
             h(f"tpground {bx} {bz}"); L(f"tpground {bx + 4} {bz}"); time.sleep(4)
@@ -116,7 +115,6 @@ with game.ProtectedSession():
             verdict(f"{tag} B THE COPY ROARS WITH THE OWNER", roared and fx1 > fx0, f"roaring {roared}, events {fx0} -> {fx1}")
 
             # ---- C/D: the host's evil rabbit bites the laptop
-            h("set TLDRevamp.Net.EntityRabbits.RabbitOwners False")
             hx, hz = bx + 120 * R[0], bz + 120 * R[1]
             h(f"tpground {hx} {hz}"); L(f"tpground {hx + 30 * F[0]} {hz + 30 * F[1]}"); time.sleep(3)
             before = {e["net"] for e in ents(h)}
@@ -126,7 +124,7 @@ with game.ProtectedSession():
             if not until(lambda: rab(L, nc) is not None, 20): verdict(f"{tag} C THE LAPTOP HAS THE COPY", False); continue
             time.sleep(2)
             r = rab(h, nc); p, f = r["pos"], r["fwd"]
-            L(f"tpground {p[0] + f[0] * 1.6} {p[2] + f[1] * 1.6}"); L(f"mp lookat {nc}"); h(f"tpground {p[0] - f[0] * 8} {p[2] - f[1] * 8}"); time.sleep(1.5)
+            L(f"tpground {p[0] + f[0] * 1.6} {p[2] + f[1] * 1.6}"); L(f"mp lookat {nc}"); h(f"tpground {p[0] - f[0] * .5} {p[2] - f[1] * .5}"); time.sleep(1.5)
             # it stands still for the bite (AI off on both): a rabbit that turned away bit the air (run 2)
             for s_ in (h, L): s_("set mainscript.s.AIDisable True")
             d0 = L("mp rabbits")["stats"]["damageTaken"]
@@ -142,7 +140,6 @@ with game.ProtectedSession():
             d1 = L("mp rabbits")["stats"]["damageTaken"]
             print("  host stats:", h("mp rabbits")["stats"], flush=True)
             verdict(f"{tag} C THE HOST'S RABBIT BITES THE LAPTOP", d1 > d0, f"laptop damage messages {d0} -> {d1}")
-            h(f"set TLDRevamp.Net.EntityRabbits.RabbitOwners {on}")
             r = rab(h, nc); p, f = r["pos"], r["fwd"]
             L(f"tpground {p[0] + f[0] * 1.6} {p[2] + f[1] * 1.6}")
             moved = until(lambda: rab(h, nc)["owner"] == lid, 5, 0.25)
@@ -240,11 +237,10 @@ with game.ProtectedSession():
         print("errors host:", h("errors"), "\nerrors laptop:", L("errors"), flush=True)
         h("shot rabbits_host"); L("shot rabbits_laptop")
     finally:
-        for s_ in (h, L):
-            for k in ("RabbitSync", "RabbitOwners"):
-                try: s_(f"set TLDRevamp.Net.EntityRabbits.{k} True")
-                except Exception: pass
         for nm, s_ in (("host", h), ("laptop", L)):
+            if nm in spawn_limits:
+                try: s_(f"set TLDRevamp.Fixes.Rabbits._sp.maxAINum {spawn_limits[nm]}")
+                except Exception as ex: print("spawn limit restore", nm, ex)
             try: s_(f"set kaposztaleves.s.settings.god {gods.get(nm) if gods.get(nm) is not None else False}")
             except Exception as ex: print("god restore", nm, ex)
         L("mp stop"); h("mp stop")

@@ -67,7 +67,6 @@ namespace TLDRevamp.Net
             if (_delay > _target) _delay = _target;
             _catchUntil = now + CatchUpS;
         }
-        public static bool FreshAfterIdle = true;   // A/B: false = before v0.66.2
         public static float IdleS = 0.5f, MaxBlendM = 25f;
         public static long IdleRestarts, BigCorrSnaps;
         private double _lastEval = double.NegativeInfinity;
@@ -223,7 +222,7 @@ namespace TLDRevamp.Net
                 // item: HeldStateHz) gets its own, shorter interval.
                 Interval = TypicalInterval && used > 0 ? Math.Max(MinInterval, Math.Max(sum / used, 0.75f * mx)) : Math.Max(mx, SendInterval);
             }
-            if (FreshAfterIdle && _hasClock && arrival - _lastEval > IdleS)
+            if (_hasClock && arrival - _lastEval > IdleS)
             {
                 _hasClock = false; _corr = default; _corrRot = Quaternion.identity; IdleRestarts++;
             }
@@ -238,7 +237,7 @@ namespace TLDRevamp.Net
                 _corr = _corr + (before - after);
                 TelemetryCorrection = (float)(before - after).magnitude;
                 _corrRot = beforeRot * Quaternion.Inverse(afterRot) * _corrRot;
-                if (FreshAfterIdle && _corr.sqrMagnitude > (double)MaxBlendM * MaxBlendM)
+                if (_corr.sqrMagnitude > (double)MaxBlendM * MaxBlendM)
                 {
                     TelemetryCorrection = CorrCm / 100f; TelemetrySnap = _telemetrySnapFrame = true;
                     _corr = default; _corrRot = Quaternion.identity; _snapped = true; BigCorrSnaps++;

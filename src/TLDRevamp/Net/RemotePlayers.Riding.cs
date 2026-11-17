@@ -12,7 +12,6 @@ namespace TLDRevamp.Net
 
     public static partial class RemotePlayers
     {
-        public static bool RidingFrames = true;   // A/B: false = body and limbs use their separate playback paths
         internal static void RidingTick(int id)
         {
             if (!All.TryGetValue(id, out var rp) || !rp.Has || rp.Go == null || rp.Mp == null || rp.Mp.anim == null) return;
@@ -35,12 +34,11 @@ namespace TLDRevamp.Net
             var frame = last.Seat >= 0 ? EntitySeats.SeatTransformCached(last.Net, last.Seat, ref rp.CachedCarRoot, ref rp.CachedSeat) : Entities.FootRootOf(last.Net);
             if (frame == null || !rp.Riding.Sample(clock, rp.RidingSample)) return;
             var p = rp.RidingSample; var t = rp.Go.transform;
-            if (RidingFrames)
             {
                 t.SetPositionAndRotation(frame.TransformPoint(p.Body), frame.rotation * p.Facing);
                 PlayerLook.ApplyRiding(rp.Mp, p, frame);
             }
-            rp.RidingShownFrame = Time.frameCount; rp.RidingShownClock = RidingFrames ? clock : double.NaN;
+            rp.RidingShownFrame = Time.frameCount; rp.RidingShownClock = clock;
         }
 
         /// A driver's hands, placed by this copy as fpscontroller.UpdHandPos places a local driver's: on its own steering

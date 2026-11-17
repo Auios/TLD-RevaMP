@@ -14,10 +14,8 @@ namespace TLDRevamp.Fixes
     /// player - it has the ground there; the host does not generate around the others - and a new rabbit is shared at
     /// once. The limit counts every rabbit around the player, the others' too (players together do not get twice as
     /// many), and a rabbit never comes up near another player or where they look.
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.Rabbits.Enabled (off: the beta as it was - the spawner never runs)
     public static class Rabbits
     {
-        public static bool Enabled = true;
         public static long Starts, Stops, Spawned, Limited, NearOthers;
         public static float CountM = 0f;   // others' rabbits this near the player count for its limit; 0: the spawner's maxDist + 50 m
 
@@ -41,7 +39,7 @@ namespace TLDRevamp.Fixes
             _checkAt = Time.unscaledTime + 1f;
             var sp = Spawner();
             if (sp == null || sp.AIPrefab == null || !sp.isActiveAndEnabled) return;
-            bool want = Enabled && !mainscript.s.died;
+            bool want = !mainscript.s.died;
             if (want && !sp.started) { sp.START(); Starts++; Plugin.Log.LogInfo("rabbits: the player's spawner started (max " + sp.maxAINum + ", chance " + sp.chance + ", every " + sp.minTime + "-" + sp.maxTime + " s, " + sp.minDist + "-" + sp.maxDist + " m)"); }
             else if (!want && sp.started) { sp.STOP(); sp.StopAllCoroutines(); Stops++; }
         }
@@ -120,7 +118,7 @@ namespace TLDRevamp.Fixes
                 ",\"chance\":" + sp.chance.ToString("F2", ic) + ",\"time\":[" + sp.minTime.ToString("F0", ic) + "," + sp.maxTime.ToString("F0", ic) + "]" +
                 ",\"count\":[" + sp.minCount.ToString("F0", ic) + "," + sp.maxCount.ToString("F0", ic) + "],\"dist\":[" + sp.minDist.ToString("F0", ic) + "," + sp.maxDist.ToString("F0", ic) + "]" +
                 ",\"halfFov\":" + sp.halfFov.ToString("F0", ic) + ",\"radius\":" + sp.radius.ToString("F2", ic) + ",\"listed\":" + sp.AIs.Count + ",\"around\":" + Around(sp) + "}";
-            return "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"spawner\":" + s + ",\"starts\":" + Starts + ",\"stops\":" + Stops + ",\"spawned\":" + Spawned +
+            return "{\"enabled\":" + ("true") + ",\"spawner\":" + s + ",\"starts\":" + Starts + ",\"stops\":" + Stops + ",\"spawned\":" + Spawned +
                    ",\"limited\":" + Limited + ",\"nearOthers\":" + NearOthers + "}";
         }
     }

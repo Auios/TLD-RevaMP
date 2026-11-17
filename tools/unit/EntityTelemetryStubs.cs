@@ -74,7 +74,6 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         internal static long RepairsAsked, RepairsHealed, RepairsFailed, RepairsRun;
-        internal static bool CensusRepairs;
         internal static List<string> CensusTestRows = new List<string> { "(car) = car", "slot = wheel" };
         internal static List<string> RepairRows(Ent e) => CensusTestRows;
         internal static List<string> CensusRows(Ent e) => CensusTestRows;

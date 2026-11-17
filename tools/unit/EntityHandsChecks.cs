@@ -78,7 +78,7 @@ static partial class EntitySplitTest
         HandDrawChecks(e, pl);
         CarriedChecks(e, carRoot);
         HandsBoundaryChecks(e);
-        HandsCall("WornReset"); Entities.Cascades = 0; Entities.ClaimsSent = 0; EntityHands.WornSync = true; Entities.ByNet.Clear(); Entities.ClearServer(); Entities.Packets.Clear(); mainscript.s = null;
+        HandsCall("WornReset"); Entities.Cascades = 0; Entities.ClaimsSent = 0; Entities.ByNet.Clear(); Entities.ClearServer(); Entities.Packets.Clear(); mainscript.s = null;
     }
 
     static void HandsBoundaryChecks(Entities.Ent e)
@@ -93,7 +93,7 @@ static partial class EntitySplitTest
         Check(BridgeReflect.Set("TLDRevamp.Net.EntityHands.WornClaimTries", "4") == "4" && EntityHands.WornClaimTries == 4, "full worn setting forwards to sole owner"); EntityHands.WornClaimTries = 3;
         Check(BridgeReflect.Get("TLDRevamp.Net.EntityHands.CarriedSent") == EntityHands.CarriedSent.ToString() && BridgeReflect.Get("TLDRevamp.Net.EntityHands._wornOwn.Count") == "0", "full counter and cache owner paths reach feature");
         Check(BridgeReflect.Call("TLDRevamp.Net.EntityHands.WornStatus", Array.Empty<string>()).Contains("sharedWorn"), "real owner diagnostic call forwards");
-        foreach (string name in new[] { "CarriedSent", "RidingSent", "HeldStateHz", "HandItemDraw", "WornSync", "_wornOwn", "WornSent", "WornTooLate" })
+        foreach (string name in new[] { "CarriedSent", "RidingSent", "HeldStateHz", "HandItemDraw", "_wornOwn", "WornSent", "WornTooLate" })
             Check(typeof(Entities).GetField(name, Static) == null, "no second hands field owner " + name);
         foreach (string part in new[] { "Carried", "HandItems", "Worn" })
         {
@@ -114,7 +114,7 @@ static partial class EntitySplitTest
         {
             SeatValue(se, "OwnerId", 2); SeatValue(se, "WornBy", -1); SeatValue(se, "Epoch", 7u);
             SeatValue(se, "PrevOwnerId", -1); SeatValue(se, "Held", false); SeatValue(se, "Stored", false); SeatValue(se, "HitchCar", 0u);
-            EntityHands.WornLateOk = true; Entities.TestEpoch = true;
+Entities.TestEpoch = true;
         }
         CleanServer();
         long applied = EntityHands.WornApplied, relayed = EntityHands.WornRelayed;
@@ -134,9 +134,7 @@ static partial class EntitySplitTest
             Check(EntityHands.WornRelayed == relayed, "worn invalid head distance or finite guard");
         }
         EntityHands.ServerWorn(3, Reader(on)); Check(EntityHands.WornRelayed == relayed, "worn wrong owner without preceding claim refused");
-        EntityHands.WornLateOk = false; Entities.TestEpoch = false;
-        EntityHands.ServerWorn(2, Reader(on)); Check(EntityHands.WornRelayed == relayed, "legacy worn epoch guard");
-        EntityHands.WornLateOk = true;
+        Entities.TestEpoch = false;
         EntityHands.ServerWorn(2, Reader(on)); Check(EntityHands.WornRelayed == relayed + 1, "late worn accepts current owner despite old epoch");
         byte[] relay = Entities.Packets.Last().Bytes;
         Check(Entities.LastExcept == 2 && Entities.Packets.Last().Reliable, "worn relay reliable and excludes sender");
@@ -162,8 +160,6 @@ static partial class EntitySplitTest
         EntityHands.ApplyWorn(Reader(relay)); RemotePlayers.Head = new Transform(); EntityHands.WornLate(); e.Held = true; EntityHands.ClearWorn(e); Check(!body.detectCollisions, "cleared held item still has no body collisions"); e.Held = false;
         e.Proxy = false; EntityHands.ApplyWorn(Reader(relay)); Check(e.WornBy == -1, "owner copy echo ignored"); e.Proxy = true;
         Entities.MyId = 2; EntityHands.ApplyWorn(Reader(relay)); Check(e.WornBy == -1, "wearer copy echo ignored"); Entities.MyId = 1;
-        EntityHands.ApplyWorn(Reader(relay)); EntityHands.WornSync = false; EntityHands.ApplyWorn(Reader(relay));
-        Check(e.WornBy == -1, "disabled worn sync clears previous draw"); EntityHands.WornSync = true;
         // Each reason must refuse before changing owner or broadcasting an Owner packet.
         foreach (string guard in new[] { "prior", "age", "Held", "Stored", "worn", "HitchCar" })
         {
@@ -184,7 +180,6 @@ static partial class EntitySplitTest
         Check(Entities.Packets[^2].Bytes[0] == Entities.Owner && Entities.Packets[^1].Bytes[0] == Entities.Worn, "take back broadcasts Owner before worn relay");
         root.transform.position = pl.anim.HHTarget.position + new Vector3(.25f, .5f, -.75f);
         var share = new NetWriter(); EntityHands.WriteShareWorn(share, root);
-        EntityHands.WornInShare = false; var empty = new NetWriter(); EntityHands.WriteShareWorn(empty, root); Check(empty.Len == 0, "share flag removes only optional worn tail"); EntityHands.WornInShare = true;
         object[] read = { RawReader(Convert.ToHexString(share.Buf.Take(share.Len).ToArray())), null, null, null };
         Check((bool)HandsCall("ReadShareWorn", read) && (byte)read[1] == 3, "shared worn reader consumes original tail");
         CleanServer(); typeof(Entities).GetMethod("ReadShareWorn", Static).Invoke(null, new[] { read[0] = RawReader(Convert.ToHexString(share.Buf.Take(share.Len).ToArray())), se, (object)2 });

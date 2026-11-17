@@ -24,8 +24,7 @@ namespace TLDRevamp.Net
             // The item moves less than the visible threshold after its last loose pose, then loses its body.
             var rest = new Vector3d(10.005, 0, 0);
             Check(!baseline.Moved(rest, Quaternion.identity) && baseline.Transition(true, mount, 0, 1), "locking while moving forces state even below pose threshold");
-            Check(EntityProxyPresentation.FinalState(true, 40, true, BandwidthRules.Quiet.None, true, false) && !EntityProxyPresentation.FinalState(true, 0, true, BandwidthRules.Quiet.None, true, false) &&
-                  !EntityProxyPresentation.FinalState(true, 0, false, BandwidthRules.Quiet.None, true, false), "only a framed lock produces moving finals, including with waste fixes off");
+            Check(EntityProxyPresentation.FinalState(true, 40, BandwidthRules.Quiet.None, true, false) && !EntityProxyPresentation.FinalState(true, 0, BandwidthRules.Quiet.None, true, false), "only a framed lock produces moving finals, with the finished state rules");
             baseline.Sent(true, mount, 0, 1, rest, Quaternion.identity);
             Check(!baseline.Transition(true, mount, 0, 1) && !baseline.Moved(rest, Quaternion.identity), "confirmed world lock becomes quiet");
             Check(baseline.Moved(new Vector3d(11, 0, 0), Quaternion.identity), "unshared moving parent/push changes world pose");
@@ -143,7 +142,7 @@ namespace TLDRevamp.Net
                 Check(frame == 0, "attached-container uses world fallback");
                 if (tick > 0) Check(baseline.Moved(cargo.Root.transform.position, cargo.Root.transform.rotation), "driving and turning the vehicle requires ordinary world pose samples");
                 bool change = baseline.Transition(true, glovebox, frame, 1);
-                bool final = EntityProxyPresentation.FinalState(true, frame, true, BandwidthRules.Quiet.None, true, false);
+                bool final = EntityProxyPresentation.FinalState(true, frame, BandwidthRules.Quiet.None, true, false);
                 if (change || final) reliable++;
                 baseline.Sent(true, glovebox, frame, 1, cargo.Root.transform.position, cargo.Root.transform.rotation);
                 ApplyPoseLock(cargo, true, frame, li, lm);
@@ -279,7 +278,7 @@ namespace TLDRevamp.Net
             {
                 bool carVelocity = tick < 99;
                 bool moving = EntityProxyPresentation.StateMoving(drivenCar, tick < 99, false, tick < 99, ref carVelocity);
-                Check(!baseline.Locked && !EntityProxyPresentation.FinalState(false, 0, true, BandwidthRules.Quiet.None, moving, true),
+                Check(!baseline.Locked && !EntityProxyPresentation.FinalState(false, 0, BandwidthRules.Quiet.None, moving, true),
                     "driven car is never finalized by item release/lock policy, including its last braking sample");
                 Check(BandwidthRules.StateQuiet(ref tail, tick * .05, tick == 0, tick < 99, false, false, tick == 99,
                     moving, false, false, false, .05, driven: true) == BandwidthRules.Quiet.None,

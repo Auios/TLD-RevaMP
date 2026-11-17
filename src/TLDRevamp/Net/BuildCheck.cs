@@ -5,8 +5,6 @@ namespace TLDRevamp.Net
     /// Clean builds of one commit share an identity across SDKs and platforms. Local edits require the identical DLL.
     public static class BuildCheck
     {
-        /// A/B: false = a different build is announced (Notice + [anomaly]) instead of refused, as GameBuild is.
-        public static bool Refuse = true;
 
         public enum Result { Same, Unknown, Differs }
 
@@ -22,7 +20,7 @@ namespace TLDRevamp.Net
         /// version is all there is: a different one is refused like a different build (scan: an unknown identity let
         /// players with different mod versions join with only a notice).
         public static bool RefuseUnknown(Result res, string theirVersion, string myVersion) =>
-            res == Result.Unknown && Refuse && theirVersion != myVersion;
+            res == Result.Unknown && theirVersion != myVersion;
 
         public static Result Compare(string theirs, string mine)
         {

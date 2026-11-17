@@ -40,7 +40,6 @@ namespace TLDRevamp.Net
     /// so nothing here needs to know how to bolt a door. Rows use group indices and net ids: the same on every machine.
     public static partial class Entities
     {
-        public static bool CensusRepairs = true;   // A/B: false = the census only logs a car's parts when it is placed (before)
         public static float RepairAskEveryS = 0.25f, RepairRangeM = 200f, RepairVerifyS = 8f, RepairBackoffS = 30f, RepairBackoffMaxS = 600f, RepairRunEveryS = 4f;
         public static long RepairsAsked, RepairsHealed, RepairsFailed, RepairsRun, RepairPartsReplayed, RepairPartOffsResent, RepairAttachesResent, RepairDetachesResent, RepairResyncsForced;
         public static double RepairRowsMsMax;
@@ -60,7 +59,7 @@ namespace TLDRevamp.Net
         private const float CensusHoldS = 2f;
         private static void CensusAfterHold(uint net)
         {
-            if (CensusRepairs && !_censusDue.ContainsKey(net) && !_repairWait.ContainsKey(net))
+            if (!_censusDue.ContainsKey(net) && !_repairWait.ContainsKey(net))
                 _censusDue[net] = new CensusDue { At = Time.realtimeSinceStartup + CensusHoldS, Attempt = 1 };
         }
 
@@ -81,7 +80,6 @@ namespace TLDRevamp.Net
         /// Per frame on a copy: the next object's turn, and repairs that heard nothing more (the owner's hash is the same now).
         private static void RepairTick(float now)
         {
-            if (!CensusRepairs) return;
             PlaceWaitTick(now);
             if (_repairWait.Count > 0)
             {
@@ -153,7 +151,7 @@ namespace TLDRevamp.Net
                 var owner = Fixes.SlotOwnerSave.Owner(at);
                 string on = owner != null && index.TryGetValue(owner, out int pi) ? pi.ToString() : "*";
                 rows.Add("m" + i + "=" + (at.slot != null && owner != null && owner.partslotscripts != null ? "on" + on + "#" + owner.partslotscripts.IndexOf(at.slot) : "glue" + on));
-                if (at.slot == null && CensusGluedPlaces) { string place = EntityRepair.GluedPlace(at); if (place != null) rows.Add("g" + i + "=" + place); }
+                if (at.slot == null) { string place = EntityRepair.GluedPlace(at); if (place != null) rows.Add("g" + i + "=" + place); }
             }
             rows.Sort(System.StringComparer.Ordinal);
             double ms = sw.Elapsed.TotalMilliseconds; if (ms > RepairRowsMsMax) RepairRowsMsMax = ms;

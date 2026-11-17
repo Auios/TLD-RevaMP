@@ -35,7 +35,7 @@ static partial class EntitySplitTest
             ((IList)Field(typeof(EntityWorldLeases), "PendingGrants")).Clear(); ((IList)Field(typeof(EntityWorldLeases), "Captures")).Clear();
             Set(typeof(EntityWorldLeases), "_captureKnown", null);
             foreach (string n in new[] { "BuiltInShared", "BuiltInDisabled", "BuiltInReEnabled", "LeasesDone", "LeasesFreed", "LeasesAsked", "LeasesGranted", "LeaseSpawns", "LeaseItemsShared", "HostItemsShared", "LeaseTypeMismatches" }) Set(typeof(EntityWorldLeases), n, 0L);
-            EntityWorldLeases.LeaseTypeCheck = true; EntityWorldLeases.LeaseRetryS = 2;
+EntityWorldLeases.LeaseRetryS = 2;
             LM.s = new LM { Scene = 12 }; LM.s.player.transform.position = new Vector3(20, 0, 40);
             LeaseFakes.Menu.s = new LeaseFakes.Menu(); var gen = new LeaseFakes.Generator { chunkSize = 1000 }; var ch = new LeaseFakes.Chunk();
             var poi = new LeaseFakes.Generator.poiClass { posID = new Vector3d(20, 0, 40), id = 7, poiName = "site", pobj = new LeaseFakes.PoiObject() };
@@ -71,7 +71,7 @@ static partial class EntitySplitTest
         var d = new NetWriter(); d.Str("20,40");
         foreach (int i in new[] { 0, d.Len - 1, d.Len + 1, d.Len }) { LeaseCall("ServerLeaseDoneRequest", 1, new NetReader { Buf = d.Buf, End = i }); State("done-cut-" + i); }
         p = Setup(); Row("gate", typeof(EntityWorldLeases).GetNestedType("LeaseGate", BindingFlags.NonPublic).GetMethod("Prefix", Static).Invoke(null, new object[] { p })); State("request-type-tail");
-        p.spawnedItems = p.spawnedFixed = false; EntityWorldLeases.LeaseTypeCheck = false; ((HashSet<string>)Field(typeof(EntityWorldLeases), "LeaseAsked")).Clear(); LeaseHook("LeaseGate", "Prefix", p); State("request-legacy");
+        p.spawnedItems = p.spawnedFixed = false;
         var built = new tosaveitemscript { idInSave = 1 }; p.pobj.Items.Add(built);
         LeaseCall("OnLeaseTaken", "20,40", 8, "other"); Row("disabled", built.gameObject.activeSelf + ":" + EntityWorldLeases.BuiltInDisabled + ":" + EntityWorldLeases.LeaseTypeMismatches);
         LeaseCall("OnLeaseFreed", "20,40"); Row("freed-local", built.gameObject.activeSelf + ":" + p.spawnedItems + ":" + p.spawnedFixed + ":" + EntityWorldLeases.BuiltInReEnabled);

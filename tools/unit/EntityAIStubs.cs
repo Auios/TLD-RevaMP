@@ -77,7 +77,7 @@ namespace TLDRevamp.Net
         internal static void TestAIServer(uint epoch, uint snapEpoch) { Server[301].Epoch = epoch; Server[301].AiSnapshotEpoch = snapEpoch; }
         internal static byte[] TestAISnapshot(int item) => Server[301].AiSnapshots[item];
         internal static int TestAISnapshotCount => Server[301].AiSnapshots.Count;
-        internal static bool ReshareSurvivors = true, WasteFixes = true, TestAudience = true;
+        internal static bool TestAudience = true;
         internal static long StatesSkippedDeadAnimation;
         internal static readonly List<tosaveitemscript> Reshares = new List<tosaveitemscript>();
         internal static void QueueReshare(tosaveitemscript it) => Reshares.Add(it);

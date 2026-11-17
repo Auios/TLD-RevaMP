@@ -37,7 +37,7 @@ namespace TLDRevamp.Net
         }
         internal static string HitchRow(string why) => JsonSerializer.Serialize(new {
             why, MyId, InSession, PlayerActing, _applyingAttach, _applyingDetach, _hitchApplying,
-            HitchTransferTimeout, HitchEnsureKnown, HitchReleaseOnRemove, EntityHitches.ProxyGripsMoved, _hitchToken,
+            HitchTransferTimeout = true, HitchEnsureKnown = true, HitchReleaseOnRemove = true, EntityHitches.ProxyGripsMoved, _hitchToken,
             time = UnityEngine.Time.time, realtime = UnityEngine.Time.realtimeSinceStartup,
             server = Server.OrderBy(k => k.Key).Select(k => new { k.Key, k.Value.OwnerId, k.Value.Epoch,
                 k.Value.HitchCar, k.Value.HitchSlot, k.Value.AttachParent, k.Value.CrashReturnTo, k.Value.Held, k.Value.Stored }),
@@ -87,7 +87,6 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         private const float HitchTimeoutS = 5f;
-        public static bool HitchTransferTimeout = true;
         private static readonly Dictionary<carscript, float> DamageGraceUntil = new Dictionary<carscript, float>();
         public sealed partial class Ent
         {

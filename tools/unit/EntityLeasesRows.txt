@@ -52,11 +52,10 @@ done-cut-7={"leases":[{"key":"20,40","holder":1,"done":false}],"asked":0,"grante
 done-cut-6={"leases":[{"key":"20,40","holder":1,"done":true}],"asked":0,"granted":1,"spawns":0,"done":0,"freed":0,"leaseRefusedWhy":{"malformed":20,"doneMalformed":3}}:until=:wire=
 gate=False
 request-type-tail={"leases":[],"asked":1,"granted":0,"spawns":0,"done":0,"freed":0,"leaseRefusedWhy":{}}:until=:wire=-2:True:1C0632302C3430070000000573697465
-request-legacy={"leases":[],"asked":2,"granted":0,"spawns":0,"done":0,"freed":0,"leaseRefusedWhy":{}}:until=:wire=-2:True:1C0632302C3430
 disabled=False:1:1
 freed-local=True:False:False:1
-retry-before={"leases":[],"asked":2,"granted":0,"spawns":0,"done":0,"freed":0,"leaseRefusedWhy":{}}:until=:wire=
-retry-at={"leases":[],"asked":3,"granted":0,"spawns":0,"done":0,"freed":0,"leaseRefusedWhy":{}}:until=:wire=-2:True:1C0632302C3430
+retry-before={"leases":[],"asked":1,"granted":0,"spawns":0,"done":0,"freed":0,"leaseRefusedWhy":{}}:until=:wire=
+retry-at={"leases":[],"asked":2,"granted":0,"spawns":0,"done":0,"freed":0,"leaseRefusedWhy":{}}:until=:wire=-2:True:1C0632302C3430070000000573697465
 pending=1
 spawn-guard=True
 captured=1:1:1:0

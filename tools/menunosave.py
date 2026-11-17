@@ -6,7 +6,7 @@
   A  the world is the saved one: the can lies where it lay, the lamp is back in the laptop's pocket - as many of each
      as at the save (before: the records were written at the stop, newer than the world: the can twice)
   C  the host saves again: the records saved with autosave1 move to autosave2 with it (the autosave rotation)
-  tools/menunosave.py [--no-build] [--relay iad|off] [--old: WithSaveFile off]"""
+  tools/menunosave.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -24,9 +24,8 @@ def until(fn, timeout=30, step=0.5):   # the value fn returned (roadkit's return
     return None
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 LAMP, CAN = 320, 72
-SW = "TLDRevamp.Net.PlayerSave.WithSaveFile"
 VERDICTS = []
 def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok)); print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
@@ -66,8 +65,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        h(f"set {SW} {not OLD}")
-        print(f"  {'OLD (records written on leave and stop)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         rp = h("roadpoint"); x, z = rp["gx"], rp["gz"]
         h(f"tpground {x} {z}"); L(f"tpground {x + 3} {z}"); time.sleep(4)
         lamp = spawn(L, LAMP); time.sleep(1.5)
@@ -94,7 +92,6 @@ with game.ProtectedSession():
         print("  host loads its save:", h("loadsave autosave1"), flush=True)
         until(lambda: h("get DataFromMenuScript.s.mainmenu")["value"] is False and h("get mainscript.s.player")["value"] is not None, 180)
         time.sleep(15); h("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        h(f"set {SW} {not OLD}")
         if RELAY != "off": relay_both(h, L, RELAY)
         print("  file before hosting again:", recfile(), flush=True)
         h("mp host 27070"); time.sleep(3)
@@ -106,19 +103,16 @@ with game.ProtectedSession():
         verdict("A: AS MANY LAMPS AND CANS AS AT THE SAVE (THE SAVED WORLD, THE RECORDS SAVED WITH IT)",
                 len(k["lamp"]) == len(k0["lamp"]) and len(k["can"]) == len(k0["can"]),
                 f"at the save lamps {len(k0['lamp'])} cans {len(k0['can'])}; now lamps {k['lamp']}, cans {k['can']}")
-        if not OLD:   # ---- the records move with the autosave rotation (autosave1 -> 2), as the lease tables do
-            sv = game.tldenv.DOCS / "Saves"
-            a1, a2 = sv / "TLDsaveData_autosave1.tlds.players", sv / "TLDsaveData_autosave2.tlds.players"
-            b1 = a1.read_bytes() if a1.exists() else None
-            print("  host saves again:", h("mp save"), flush=True); time.sleep(2)
-            verdict("C: THE SAVE'S RECORDS MOVE TO AUTOSAVE2, NEW ONES WITH AUTOSAVE1",
-                    b1 is not None and a2.exists() and a2.read_bytes() == b1 and a1.exists(),
-                    f"autosave1 before {len(b1) if b1 else None} B; now autosave2 {a2.stat().st_size if a2.exists() else None} B, autosave1 {a1.stat().st_size if a1.exists() else None} B")
+        sv = game.tldenv.DOCS / "Saves"
+        a1, a2 = sv / "TLDsaveData_autosave1.tlds.players", sv / "TLDsaveData_autosave2.tlds.players"
+        b1 = a1.read_bytes() if a1.exists() else None
+        print("  host saves again:", h("mp save"), flush=True); time.sleep(2)
+        verdict("C: THE SAVE'S RECORDS MOVE TO AUTOSAVE2, NEW ONES WITH AUTOSAVE1",
+                b1 is not None and a2.exists() and a2.read_bytes() == b1 and a1.exists(),
+                f"autosave1 before {len(b1) if b1 else None} B; now autosave2 {a2.stat().st_size if a2.exists() else None} B, autosave1 {a1.stat().st_size if a1.exists() else None} B")
         er = [x_("errors") for x_ in (h, L)]
         verdict("NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er), str([(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er]))
     finally:
-        try: h(f"set {SW} True")
-        except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print(f"\n{sum(ok for _, ok in VERDICTS)}/{len(VERDICTS)} passed", flush=True)

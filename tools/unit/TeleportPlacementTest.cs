@@ -108,9 +108,8 @@ static class TeleportPlacementTest
         Physics.Hits = p => Array.Empty<RaycastHit>();
         Time.realtimeSinceStartup = 31; Tpa.Tick();
         Check(Tpa.Holding(rb) && rb.isKinematic && Tpa.CarsGaveUp == 1, "no floor at deadline remains physically held with failure event");
-        TLDRevamp.Fixes.UnfreezeOnGround.Enabled = false;
         bool unfreeze = (bool)typeof(TLDRevamp.Fixes.UnfreezeOnGround).GetMethod("Prefix", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { car, true });
-        Check(!unfreeze, "game streamer cannot drop a held owned car even when general ground fix is disabled");
+        Check(!unfreeze, "game streamer cannot drop a held owned car");
         Time.realtimeSinceStartup = 37; Tpa.Tick();
         Check(!Tpa.RefreshingObjects && TLDRevamp.SessionLog.Arrivals == 1, "held failure completes arrival telemetry instead of staying pending forever");
         Tpa.Go(0, 10, 0, 0);
@@ -121,10 +120,6 @@ static class TeleportPlacementTest
         Check(!Tpa.Holding(rb) && !rb.isKinematic, "re-TPA car restores dynamic mode after clear ring landing");
         Check(Math.Abs(car.transform.position.x) >= 4 || Math.Abs(car.transform.position.z) >= 4, "car searches beyond blocked pivot and small rings");
         Check(Math.Abs(car.transform.position.y - 1.4f) < .001, "car lowered to its floor before release");
-
-        // A hitched car and trailer are let go together (the RedPickup load, 2026-11-11): the car has ground, the
-        // trailer none yet, so both wait; once the trailer has ground, the car's unfreeze takes the trailer with it.
-        TLDRevamp.Fixes.UnfreezeOnGround.Enabled = true;
         var prefix = typeof(TLDRevamp.Fixes.UnfreezeOnGround).GetMethod("Prefix", BindingFlags.Static | BindingFlags.NonPublic);
         var pickup = new tosaveitemscript { car = new object() };
         pickup.RB = new Rigidbody { transform = pickup.transform, isKinematic = true };

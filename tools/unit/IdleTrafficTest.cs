@@ -213,7 +213,7 @@ static class IdleTrafficTest
             Final = false;
             if (quiet == BandwidthRules.Quiet.None || quiet == BandwidthRules.Quiet.Final)
             {
-                Final = EntityProxyPresentation.FinalState(false, 0, true, quiet, moving, false);
+                Final = EntityProxyPresentation.FinalState(false, 0, quiet, moving, false);
                 Rest = !moving || Final; last = position; lastAngle = angle; sentAt = now;
                 Sends++; if (Final) Finals++;
             }
@@ -322,7 +322,6 @@ namespace TLDRevamp.Net
         }
         static bool RidesBolted(Ent e) => RidesParent(e);
         internal static void Coast(Ent e) { }
-        internal static bool CargoClaims;
         static readonly Dictionary<uint, SEnt> Server = new Dictionary<uint, SEnt>();
         internal static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent>();
         static readonly Dictionary<int, HashSet<uint>> Known = new Dictionary<int, HashSet<uint>>();
@@ -548,7 +547,7 @@ namespace TLDRevamp.Net
                 var quiet = BandwidthRules.StateQuiet(ref tail, now, tick == 0, visible, false, false,
                     SampleControl(false, false, false, false, false, false, speed, false), moving, rest, false, false, now - sent);
                 if (quiet != BandwidthRules.Quiet.None && quiet != BandwidthRules.Quiet.Final) continue;
-                bool final = EntityProxyPresentation.FinalState(false, 0, true, quiet, moving, false);
+                bool final = EntityProxyPresentation.FinalState(false, 0, quiet, moving, false);
                 if (final) { finals++; IdleTrafficTest.Check(now >= 20.9, "intermittent rabbit/item motion does not force a far final between visible steps"); }
                 else { poses++; IdleTrafficTest.Check(visible, "every non-final packet represents real visible motion"); }
                 var packet = new NetWriter();

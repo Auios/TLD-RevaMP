@@ -57,16 +57,6 @@ namespace TLDRevamp.Net
             if (HostPhysicsLock >= 0 && Entities.InSession && !Entities.IsHost) { PhysLockReads++; return HostPhysicsLock; }
             return s.IPhysicsLock;
         }
-
-        /// A container's own scan (mountStuff.Update, once a second: what lies in it for two scans is stored — parented,
-        /// its body removed) ran on the COPIES of other players' cars too, taking anything: an item lying around here got
-        /// locked onto someone else's car on this machine only (playtest 2026-10-09: "items appear on the other car which
-        /// don't appear for them … if something from the environment physlocks on there by accident"). The car's owner
-        /// decides what its containers hold. A copy's container stores only copies of the car owner's items (what the
-        /// owner's own container holds: parented, they ride exactly with the car — cargoride.py); an own container
-        /// doesn't take another player's copy (storing removes its body: it isn't ours — touching it with our car claims
-        /// it first, Entities.Cargo).
-        internal static bool CopyContainersInert = true;   // A/B: false = before v0.66.2
         internal static long ContainerStoresRefused;
         internal static int StoreTrace;   // test: log the next N stores with their call stack
         private static bool _containerScan;
@@ -78,55 +68,16 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static void Prefix(mountStuff __instance)
             {
-                if (!CopyContainersInert || !Entities.InSession) return;
+                if (!Entities.InSession) return;
                 _scanning = __instance;
                 _containerScan = true;
             }
             [HarmonyFinalizer]
             private static System.Exception Finalizer(System.Exception __exception) { _containerScan = false; return __exception; }
         }
-
-        /// A container's first frames (mountStuff.StartFreeze: three QuickFreeze scans after it starts) store what lies
-        /// in it at once. A copy starts where its record put it — the pose it had when shared (a joiner gets every car at
-        /// its original record pose), or one taken before its spawner moved it — and the interpolator moves it to the
-        /// owner's place a moment later: what lay at the old pose went along, stored, on this machine only (cratepull.py:
-        /// a crate's copy took a plank off a shelf 12 m from where the crate stood; it fell when the crate broke). A copy's
-        /// contents come from its owner's record (physLocks, loaded with it); its first-frames scans are skipped.
-        internal static bool CopyStartFreezeOff = true;   // A/B: false = before v0.66.3 (cratepull.py --old)
         internal static long CopyStartFreezesSkipped;
-
-        /// Our copy stored in a container here (parented: it rides that object) while its owner has it somewhere else: a
-        /// copy's container stored it on this machine only (its own scan takes copies of the car owner's things — the
-        /// owner's container didn't). Shown at its owner's pose it was dragged across the world still parented in the
-        /// car, and the game's streaming removes a whole car when one item in it is beyond its range: crate loot lying
-        /// at home, stored into the copy of the laptop's car on the host, made the host's copy of that car go and come
-        /// back every second 35 m from the player (playround.py, the anomaly watch, 2026-10-09; the 2026-10-09 playtest: "items
-        /// physlocked onto the other player's car on one machine only", "cars disappearing and reappearing").
-        /// Off its owner's pose for a second by more than CopyLockReleaseM: out of that container here, the game's way.
-        internal static bool CopyLockRelease = true;   // A/B: false = before v0.66.7
         internal static float CopyLockReleaseM = 5f, CopyLockReleaseS = 1f;
         internal static long CopyLocksReleased;
-
-        /// The release rule had two faults (playtest 2026-10-09/10, v0.66.7):
-        ///  - a part bolted on sends no states: its owner's last pose is where it last lay loose. Copies of a friend's
-        ///    sun visor, radio and mirror, stored in the copy's container and then bolted back on by the owner, were
-        ///    "taken out" against poses 776–2169 m away: off the car on that machine only, ~20 parts missing on the host's
-        ///    copy of the car. A part attached on a copy is never taken out; a lock left from before is dropped where
-        ///    the part is (partsfar.py).
-        ///  - a copy taken out stayed where the container had it, inside a moving car, as a kinematic body: the driver's
-        ///    car hit it (a lamp, a jerry can: crashes of Δv 56–459, two deaths). Now it is put at its owner's pose at
-        ///    once (no sweep) and collides with nothing until it is clear of every car (copyrelease.py).
-        internal static bool CopyLockSafe = true;   // A/B: false = v0.66.7
-
-        /// A copy a container here holds was still drawn at its owner's pose — parented in that car. The host's ammo box,
-        /// lying 800 m back, in client 1's copy of the host's car: the game's streaming removes a whole hierarchy when one
-        /// object in it is beyond its range, so the car went and came back every second while the host drove on
-        /// (playtest 2026-10-09/10, flicker; the release rule compared the owner's pose with the copy's — the same).
-        /// Now the rule compares the owner's pose with the container's, and until it acts a held copy whose owner has it
-        /// more than CopyLockReleaseM away is not drawn there (it stays in the container); nearer it is drawn at its owner's
-        /// pose as before (an owner taking it out of the trunk, carrying it by the car). One its owner holds in hand is
-        /// taken out at once (copyflicker.py).
-        internal static bool CopyLockByContainer = true;   // A/B: false = v0.66.7
         internal static bool LockedAway(Ent e)
         {
             if (e.PoseLocked) return false;
@@ -134,34 +85,17 @@ namespace TLDRevamp.Net
             if (p == null || p.physlock == null || p.physlock.transform.root == e.Root.transform || e.Ip == null || !e.Ip.Ready) return false;
             return (mainscript.UnityPosFromGlobal(e.Ip.LastPos) - p.physlock.transform.position).sqrMagnitude > CopyLockReleaseM * CopyLockReleaseM;
         }
-        /// A copy held in a container of a car copy with the same owner — what the owner's own container holds in the
-        /// owner's car — rides that car: parented, it moves exactly with the car's copy, not drawn at its own states. Drawn
-        /// at them it trailed the car: a stored item has no body, its states carry no velocity, and the host saw the
-        /// laptop's lamp and jerry can 5-6 m behind the seats at 50 km/h (takeover.py A, 2026-10-16). Taken out by its
-        /// owner it is held (out at once) or its states leave the container (LockedAway, then the release rule).
-        internal static bool StoredRidesCar = true;   // A/B: false = drawn at its own states (before v0.68.1)
         internal static long StoredRides;
         internal static bool RidesOwnersContainer(Ent e)
         {
             if (e.PoseLocked) return false; // its authoritative frame pose, including local changes, is applied by the interpolator
             var p = e.Root != null ? e.Root.P : null;
-            if (!StoredRidesCar || e.Held || p == null || p.physlock == null) return false;
+            if (e.Held || p == null || p.physlock == null) return false;
             var cr = p.physlock.transform.root;
             if (cr == e.Root.transform) return false;
             return Entities.LockContainerOwnedBy(cr, e.OwnerId) && !OwnerHasItOut(e, p);
         }
-
-        /// Taken out by its owner and set down next to the container: the copy still rode the container here until its
-        /// owner had it CopyLockReleaseM (5 m) away — a plank put down 2 m from a pallet stayed on the pallet on every other
-        /// screen, a jerry can set down by the car stayed in the trunk (playtest 2026-10-16/17: "the pallet item did not
-        /// appear outside the pallet"). Now: is the owner's latest pose of it outside the container's own box (its
-        /// colliders, ContainerMarginM around, ContainerUpM above for a stack)? Measured in the container's frame as its
-        /// owner last sent it when the container is a copy of the same owner (one clock for both: a moving car's lag
-        /// doesn't count), else in this machine's container — then only while the container stands still (a car of
-        /// another owner moving: the owner's states of the item lag this machine's car; the 5 m rule stays).
-        internal static bool CopyLockByBox = true;   // A/B: false = the 5 m rule only (v0.68.1)
         internal static float ContainerMarginM = 0.5f, ContainerUpM = 2f, ContainerStillMs = 0.5f;
-        internal static bool MountBox = true;   // A/B: false = the container object's whole box (every collider of the car)
         internal static float MountMarginM = 0.3f, MountUpM = 0.6f;
         public static long OutOfContainerSeen;
         private static Vector3 _diagLocal;
@@ -172,7 +106,7 @@ namespace TLDRevamp.Net
         private static float _containerBoxAt;
         internal static bool OwnerHasItOut(Ent e, pickupable p)
         {
-            if (!CopyLockByBox || p == null || p.physlock == null || e.Ip == null || !e.Ip.Ready) return false;
+            if (p == null || p.physlock == null || e.Ip == null || !e.Ip.Ready) return false;
             var root = p.physlock.transform.root;
             var rt = root.GetComponent<tosaveitemscript>();
             if (rt == null || root == e.Root.transform) return false;
@@ -197,7 +131,7 @@ namespace TLDRevamp.Net
                 local = root.InverseTransformPoint(mainscript.UnityPosFromGlobal(e.Ip.LastPos));
             }
             bool inside;
-            var mc = MountBox ? p.physlock.col : null;
+            var mc = p.physlock.col;
             if (mc != null)
             {
                 // the container's own storing box (mountStuff.col, as its scan places it: the game stores what overlaps it) -
@@ -244,30 +178,25 @@ namespace TLDRevamp.Net
             _containerBox[root] = b;
             return b;
         }
-        /// A passenger takes something out of the car they sit in: held in the car's frame, the check below was skipped (its
-        /// states are car-frame poses), and the other machines' copy stayed in the container for as long as they held it, the
-        /// owner's game holding it in no container at all (itemchaos `aud-part-hand`). A/B: false = skipped (before).
-        internal static bool CarriedLeavesLock = true;
         internal static float ReleaseClearS = 0.5f;
         internal static long CopyLocksDroppedAttached, ReleasesPlaced, ReleaseGhostsCleared, AttachedStoresRefused, LockRecordsDropped;
         internal static void CheckCopyLock(Ent e, double now)
         {
             var p = e.Root.P;
-            if (!CopyLockRelease || p == null || p.physlock == null) { e.LockOffSince = 0; return; }
+            if (p == null || p.physlock == null) { e.LockOffSince = 0; return; }
             var at = e.Root.attachable;
             if (at != null && at.attached)
             {
                 e.LockOffSince = 0;
-                if (!CopyLockSafe) { if (Entities.LockRidesParent(e)) return; }   // v0.66.7: a part riding its parent was skipped, the rest went on
-                else { DropAttachedLock(e, p); return; }
+                { DropAttachedLock(e, p); return; }
             }
             if (e.Ip == null || !e.Ip.Ready) { e.LockOffSince = 0; return; }
             var shownUnity = mainscript.UnityPosFromGlobal(e.CarriedBy != 0 ? e.CarriedGlobal : e.Ip.LastPos);
             // against the container: the copy itself may have been drawn at its owner's pose (v0.66.7 compared that)
-            var held = CopyLockByContainer ? p.physlock.transform.position : e.Root.transform.position;
+            var held = p.physlock.transform.position;
             if (p.physlock.transform.root == e.Root.transform
-                || ((shownUnity - held).sqrMagnitude <= CopyLockReleaseM * CopyLockReleaseM && !(CopyLockByContainer && e.Held) && !OwnerHasItOut(e, p))) { e.LockOffSince = 0; return; }
-            bool inHand = CopyLockByContainer && e.Held;   // its owner holds it: in no container
+                || ((shownUnity - held).sqrMagnitude <= CopyLockReleaseM * CopyLockReleaseM && !(e.Held) && !OwnerHasItOut(e, p))) { e.LockOffSince = 0; return; }
+            bool inHand = e.Held;   // its owner holds it: in no container
             if (e.LockOffSince <= 0 && !inHand) { e.LockOffSince = now; return; }
             if (now - e.LockOffSince < CopyLockReleaseS && !inHand) return;
             e.LockOffSince = 0;
@@ -275,7 +204,7 @@ namespace TLDRevamp.Net
             float off = Vector3.Distance(shownUnity, held);
             p.UnPhysicsLock();
             Entities.RefreshLockBodies(e);
-            if (CopyLockSafe) PlaceReleased(e, shownUnity, e.CarriedBy != 0 ? e.CarriedGlobalRot : e.Ip.LastRot);
+            PlaceReleased(e, shownUnity, e.CarriedBy != 0 ? e.CarriedGlobalRot : e.Ip.LastRot);
             CopyLocksReleased++;
             if (CopyLocksReleased <= 20) Plugin.Log.LogWarning($"copy taken out of a container here: {e.Root.name} net {e.NetId} in {where} — its owner has it {off:F0} m away");
         }
@@ -308,12 +237,6 @@ namespace TLDRevamp.Net
             e.ReleaseGhost = true; e.ReleaseClearSince = -1f;
             ReleasesPlaced++;
         }
-
-        /// A/B: the release ghost ends when the object becomes this machine's. Marks 2026-10-21 (a letter, two jerry
-        /// cans): a can taken out of the host's locked bed was a ghost on the host; ownership came back to the host
-        /// 2 s later, the ghost tick ran for copies only, and the host simulated it with no collisions: it fell
-        /// 207-322 m through the world, and every player saw it go.
-        internal static bool GhostEndsOnOwn = true;
         public static long GhostsEndedOnOwn;
 
         /// Ours now: collisions back at once. Still inside a car, it waited for clear — but simulated here with no
@@ -390,7 +313,6 @@ namespace TLDRevamp.Net
                     var g = mainscript.GlobalFromUnityPos(__instance.transform.root.position);
                     Plugin.Log.LogInfo("[storetrace] copy start freeze: " + __instance.transform.root.name + " at " + g.x.ToString("F1") + "," + g.y.ToString("F1") + "," + g.z.ToString("F1") + " frame " + Time.frameCount);
                 }
-                if (!CopyStartFreezeOff) return true;
                 CopyStartFreezesSkipped++;
                 return false;
             }
@@ -425,7 +347,7 @@ namespace TLDRevamp.Net
                 }
                 // attached is never stored: the game's own scan checks it, a container's saved contents don't — a copy of
                 // a car placed again stored a part that its owner had bolted back on meanwhile (partsfar.py far)
-                if (CopyLockSafe && Entities.InSession && _p != null && _p.tosave != null && _p.tosave.attachable != null && _p.tosave.attachable.attached)
+                if (Entities.InSession && _p != null && _p.tosave != null && _p.tosave.attachable != null && _p.tosave.attachable.attached)
                 { AttachedStoresRefused++; return false; }
                 if (!_containerScan || _p == null || _scanning == null) return true;
                 bool ok = Entities.LockScanAllows(_scanning, _p);

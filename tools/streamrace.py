@@ -24,27 +24,21 @@ if "--no-build" not in sys.argv: game.build()
 else: game.deploy_local()
 game.launch()
 with game.ProtectedSession():
-    for enabled in (False, True):
+    for enabled in (True,):
         game.newgame()
         b = Bridge()
         b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         god = b("get kaposztaleves.s.settings.god").get("value"); b("set kaposztaleves.s.settings.god True")
         try:
-            b(f"set TLDRevamp.Fixes.StreamRace.Enabled {enabled}")
             p = b("gpos"); b(f"tpground {p['gx'] + 15} {p['gz']}"); time.sleep(3)   # out of the start building
-            print(f"  [{'on' if enabled else 'off'}] spawn:", b(f"devspawn {CAR}"), flush=True); time.sleep(8)
+            print(f"  [{'on'}] spawn:", b(f"devspawn {CAR}"), flush=True); time.sleep(8)
             a = b("streamrace arm"); print("  arm:", a, flush=True)
-            if "error" in a: verdict(f"{'ON' if enabled else 'OFF'}: ARMED", False, a["error"]); continue
+            if "error" in a: verdict(f"{'ON'}: ARMED", False, a["error"]); continue
             time.sleep(4)   # the game's own Upd (once a second) places what has a record
             c = b(f"streamrace check {a['id']}"); print("  check:", c, flush=True)
-            if enabled:
-                verdict("ON: THE CAR SURVIVES (RECORD KEPT, PLACED AGAIN)", c["live"] and a["recordAfterUpd"],
-                        f"record after Upd {a['recordAfterUpd']}, kept {a['recordsKept']}, live {c['live']}, members {c.get('members')} of {a['members']}")
-            else:
-                verdict("OFF: THE VANILLA RACE LOSES THE CAR", not c["live"] and not c["record"],
-                        f"record after Upd {a['recordAfterUpd']}, live {c['live']}, record {c['record']}")
+            verdict("ON: THE CAR SURVIVES (RECORD KEPT, PLACED AGAIN)", c["live"] and a["recordAfterUpd"],
+                    f"record after Upd {a['recordAfterUpd']}, kept {a['recordsKept']}, live {c['live']}, members {c.get('members')} of {a['members']}")
         finally:
-            b("set TLDRevamp.Fixes.StreamRace.Enabled True")
             b(f"set kaposztaleves.s.settings.god {god if god is not None else False}")
 game.quit_game()
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

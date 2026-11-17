@@ -9,7 +9,7 @@ dev toggle, runtime-only, restored after). The host spawns two creatures (the de
   C REF   : the host shoots creature 2 itself the same way — how many shots the game needs; dead on the copy too
   A also: it stays on the laptop — never turns to the host 30 m off while at the laptop (v0.65.42; --no-sticky: before)
   C uses a fresh creature (creature 2 chased the laptop beside creature 1: the laptop's volley killed it — run 7)
-  tools/zombies.py [--no-build] [--relay iad|off] [--ai <itemdatabase index>] [--no-sticky]"""
+  tools/zombies.py [--no-build] [--relay iad|off] [--ai <itemdatabase index>]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -74,7 +74,6 @@ try:
             gods[name] = (s, g(s, "kaposztaleves.s.settings.god"))
             s("set kaposztaleves.s.settings.god True")
         print("god mode on both (was", {k: v[1] for k, v in gods.items()}, ")", flush=True)
-        if "--no-sticky" in sys.argv: b("set TLDRevamp.Net.EntityAI.AiStickyRemote False")
         ids = b("mp aiids")["ai"]
         print("creatures in the item database:", ids, flush=True)
         aid = arg("--ai", ids[0][0] if ids else None, int)

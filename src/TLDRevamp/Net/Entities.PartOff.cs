@@ -16,9 +16,6 @@ namespace TLDRevamp.Net
         /// How long after its claim a claimer's old-epoch messages still count: its Owner reply's round trip, with room.
         public static float ClaimEpochGraceS = 3f;
         public static long PartOffAlreadyOff;
-        public static bool GluedPartOff = true;         // A/B: false = only a part bolted into a slot can come off for everyone (before)
-        public static bool SplitParentsCarry = true;    // A/B: false = only a split member bolted back onto its car is a slot parent
-        public static bool PrefabChildSave = true;      // A/B: false = only a save script on the prefab's top object has slots
 
         /// The member's own save script in its prefab. Most prefabs carry it on their top object; Bus01Full is a holder
         /// whose BusFront child carries it (BusBack beside it, the parts under both with their own). Looked up on the top
@@ -28,7 +25,7 @@ namespace TLDRevamp.Net
         private static tosaveitemscript PrefabSave(GameObject prefab)
         {
             var root = prefab.GetComponent<tosaveitemscript>();
-            if (root != null || !PrefabChildSave) return root;
+            if (root != null) return root;
             int best = int.MaxValue;
             foreach (var s in prefab.GetComponentsInChildren<tosaveitemscript>(true))
             {
@@ -89,7 +86,7 @@ namespace TLDRevamp.Net
                 // MountAnything's mounts). A glued member refused here stayed on the other player's screen when the owner took it
                 // off (a bottle taken off a car did not come off for the other player, playtest 2026-10-29).
                 bool slotted = at.indexType == 2;
-                if (at.attachType != 1 || (at.indexType != 2 && !(GluedPartOff && at.indexType == 1)) || at.index < 0) return "not attached to a slot";
+                if (at.attachType != 1 || (at.indexType != 2 && !(at.indexType == 1)) || at.index < 0) return "not attached to a slot";
                 for (int p = 0; p < group.items.Count; p++)
                 {
                     var parent = group.items[p];
@@ -104,7 +101,7 @@ namespace TLDRevamp.Net
                     {
                         bool present = false;
                         foreach (uint pn in car.Parts)
-                            if (Server.TryGetValue(pn, out var split) && split.PartIndex == p && (SplitParentsCarry || split.AttachParent == car.NetId))
+                            if (Server.TryGetValue(pn, out var split) && split.PartIndex == p)
                             { present = true; break; }
                         if (!present) continue;
                     }
@@ -124,7 +121,6 @@ namespace TLDRevamp.Net
         /// The tyre on a wheel carried away from its car comes off where the wheel is, not where the car is.
         private static bool NearSplitPart(SEnt car, Vector3d pos, double reach)
         {
-            if (!CarriedPartsShared) return false;
             foreach (uint pn in car.Parts)
             {
                 if (!Server.TryGetValue(pn, out var part) || !EntityNumbers.Finite(part.Where)) continue;
@@ -133,12 +129,6 @@ namespace TLDRevamp.Net
             }
             return false;
         }
-
-        /// What a member that came off carries stays in its first group (CheckPartOff), and that group can be out of
-        /// range on the machine that unbolts it: a wheel or engine taken off a wreck and driven away with. Its group
-        /// here no longer knows the part, so nothing went out and it was off on one screen for good (itemchaos
-        /// aud-wheel-far). Such a part is named by where it is bolted, the carrier's slot, and the carrier's owner decides.
-        public static bool CarriedPartsShared = true;   // A/B: false = not shared
         /// The group member bolted into `slot` of member `parentIdx`, or -1.
         private static int CarriedMember(SEnt car, int parentIdx, int slot)
         {

@@ -36,7 +36,7 @@ namespace TLDRevamp.Net
                 return;
             }
             // on its owner's head (Entities.Worn): theirs until they take it off
-            if (EntityHands.WornSync && ServerWornNow(se)) { RefuseClaim(from, se, "worn", reason); return; }
+            if (ServerWornNow(se)) { RefuseClaim(from, se, "worn", reason); return; }
             // the first driver keeps the car: no takeover while the owner's player sits in its driver seat
             // (the owner reports it with every state; a stale report counts as not driving)
             if (se.Driven && Time.realtimeSinceStartup - se.DrivenAt < 1f)

@@ -40,7 +40,6 @@ namespace HeadUnit
         public static int MaxTextureWidth = 1920;
         public static bool Trace = false;   // makes, drops and seeks in the log
         public static float MakeGapS = 1.5f;
-        public static bool SendEnded = true;   // A/B
         /// Tries of a video that failed, after the first (each needs a new player, see above).
         public static int MaxRetries = 2;
         private readonly Dictionary<string, int> _retries = new Dictionary<string, int>();
@@ -331,7 +330,7 @@ namespace HeadUnit
                 // said again every few seconds while the queue still plays here: the first word can be refused (the
                 // owner's clock not there yet) or lost, and a video played to its end a second time (|< then PLAY)
                 // must end again; once said, the queue stood on the last frame for good
-                if (s.Playing && SendEnded && Time.realtimeSinceStartup - _endedSentAt > 2.5f)
+                if (s.Playing && Time.realtimeSinceStartup - _endedSentAt > 2.5f)
                 {
                     if (_endedSentAt < 0f) Plugin.Log.LogInfo($"video {VideoId} ended: index {s.Index}, at {want:F1} of {len:F1} (player at {Player.time:F1})");
                     _endedSentAt = Time.realtimeSinceStartup;

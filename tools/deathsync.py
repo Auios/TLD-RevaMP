@@ -2,9 +2,9 @@
 """Death/respawn sync (#31): the laptop player dies; the host sees the actual PlayerRagdol, its limbs track the
 fall and settle, and carried items drop at the death point rather than the ragdoll endpoint.
 
-  tools/deathsync.py [--no-build] [--relay iad|off] [--ab]
+  tools/deathsync.py [--no-build] [--relay iad|off]
 
---ab runs the four switch combinations on the same build and also requires the bridge's deterministic deathfling."""
+The test uses the bridge's deterministic deathfling."""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game, seeded
@@ -28,15 +28,11 @@ def body(who, pid):
     return None
 
 ensure_both("--no-build" not in sys.argv)
-AB = "--ab" in sys.argv
 L = Agent()
 VERDICTS = []
 def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok, detail)); print(f"  {'PASS' if ok else 'FAIL'}  {name}" + (f"  {detail}" if detail else ""), flush=True)
-def set_switches(ragdoll, anchor, host, client):
-    for s in (host, client):
-        s(f"set TLDRevamp.Net.EntityRagdolls.DeathRagdollShare {ragdoll}")
-        s(f"set TLDRevamp.Net.SessionRules.DeathDropAnchor {anchor}")
+
 def corpse_for_remote():
     # A corpse is a PlayerRagdol-owning entity, not the remote player's ordinary pose capsule.
     for e in b("mp entities").get("entities", []):
@@ -62,8 +58,7 @@ try:
         else: L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 150)
         time.sleep(4)
-        for ragdoll, anchor in (((True, True), (False, True), (True, False), (False, False)) if AB else ((True, True),)):
-            set_switches(ragdoll, anchor, b, L)
+        for ragdoll, anchor in (((True, True),)):
             # A deterministic fling: the bridge clears god/fly/ground immunity, creates and grabs two carried items,
             # then calls the game's own Death. A few seconds give the shares time to reach the host before the fall.
             L("set kaposztaleves.s.settings.god False")
@@ -79,27 +74,24 @@ try:
                 time.sleep(.5)
                 ragnet, rag = corpse_for_remote()
                 if ragnet is not None: break
-            if ragdoll:
-                verdict("CORPSE SHARE ON REAL DEATH", ragnet is not None, f"net {ragnet}" if ragnet else "no PlayerRagdol entity on host")
-                samples = []
-                if ragnet is not None:
-                    for _ in range(12):
-                        time.sleep(.25)
-                        st = b(f"mp ragdoll {ragnet}")
-                        if st.get("limbs"): samples.append(tuple(st["limbs"]))
-                    moving = len({str(x) for x in samples}) > 1
-                    # settled before the samples (it happens: the corpse search can take seconds): then the host's copy must
-                    # lie where the joiner's corpse lies, limb by limb (it failed only on a still corpse, on both builds)
-                    gap = None
-                    if samples and not moving:
-                        try:
-                            mine = L(f"mp ragdoll {ragnet}").get("limbs") or []
-                            gap = max(math.dist(a[:3], b_[:3]) for a, b_ in zip(samples[-1], mine) if a and b_)
-                        except Exception as e_: print("    joiner's limbs:", str(e_)[:80], flush=True)
-                    verdict("CORPSE LIMBS STREAM", len(samples) >= 3 and (moving or (gap is not None and gap < 0.3)),
-                            f"{len(samples)} samples, " + ("moving" if moving else f"at rest, farthest limb {gap if gap is None else round(gap, 2)} m from the joiner's"))
-            else:
-                verdict("CORPSE SHARE DISABLED PATH", True, f"found local/world corpse entity {ragnet}" if ragnet is not None else "no corpse assertion")
+            verdict("CORPSE SHARE ON REAL DEATH", ragnet is not None, f"net {ragnet}" if ragnet else "no PlayerRagdol entity on host")
+            samples = []
+            if ragnet is not None:
+                for _ in range(12):
+                    time.sleep(.25)
+                    st = b(f"mp ragdoll {ragnet}")
+                    if st.get("limbs"): samples.append(tuple(st["limbs"]))
+                moving = len({str(x) for x in samples}) > 1
+                # settled before the samples (it happens: the corpse search can take seconds): then the host's copy must
+                # lie where the joiner's corpse lies, limb by limb (it failed only on a still corpse, on both builds)
+                gap = None
+                if samples and not moving:
+                    try:
+                        mine = L(f"mp ragdoll {ragnet}").get("limbs") or []
+                        gap = max(math.dist(a[:3], b_[:3]) for a, b_ in zip(samples[-1], mine) if a and b_)
+                    except Exception as e_: print("    joiner's limbs:", str(e_)[:80], flush=True)
+                verdict("CORPSE LIMBS STREAM", len(samples) >= 3 and (moving or (gap is not None and gap < 0.3)),
+                        f"{len(samples)} samples, " + ("moving" if moving else f"at rest, farthest limb {gap if gap is None else round(gap, 2)} m from the joiner's"))
             dead_at = anchor_xyz
             respawned = until(lambda: L("get TLDRevamp.Net.SessionRules.Respawns")["value"] > r0, 90)
             time.sleep(3)
@@ -111,26 +103,23 @@ try:
             for p in after.values():
                 if dead_at and ((p[0]-dead_at[0])**2 + (p[2]-dead_at[2])**2) ** .5 <= 2.0: near += 1
             verdict("RESPAWNED IN SESSION", respawned and stats.get("hasAnchor") is False, f"anchors={stats.get('anchors')} drops={stats.get('anchorDrops')}")
-            if anchor:
-                verdict("DETERMINISTIC ITEMS CREATED", len(fling.get("spawned", [])) >= 2, f"spawned {fling.get('spawned')}")
-                verdict("DEATH ANCHOR CAPTURED", stats.get("anchors", 0) > 0 and anchor_xyz is not None, str(stats))
-                verdict("DROP ANCHOR APPLIED", stats.get("anchorDrops", 0) > 0, str(stats))
-                print(f"  {near} item(s) of any kind within 2 m of {anchor_xyz}", flush=True)
-                # this death's own carried things, by network id, on both machines: not "any two items nearby"
-                # a joiner's spawns get their network ids from the host after the fling: read them now
-                nets = [p[1] for p in L("mp deathinfo").get("itemIds", [])]
-                print("  the death's things [save, net]:", L("mp deathinfo").get("itemIds"), flush=True)
-                for name, side in (("host", b), ("joiner", L)):
-                    try:
-                        rows = {r["net"]: r["pos"] for r in side("mp shared")["items"]}
-                        ds = [round(((rows[n][0]-dead_at[0])**2 + (rows[n][2]-dead_at[2])**2) ** .5, 2) if n in rows and dead_at else None for n in nets]
-                        verdict(f"{name.upper()}: CARRIED ITEMS DROPPED AT ANCHOR", len(ds) >= 2 and all(d is not None and d <= 2.0 for d in ds),
-                                f"the death's things {nets} lie {ds} m from {anchor_xyz}")
-                    except Exception as e:
-                        verdict(f"{name.upper()}: CARRIED ITEMS DROPPED AT ANCHOR", False, str(e)[:200])
-                verdict("PLAYER SAVE RECORD PRESENT", "deathAnchor" in L("mp playersave"), L("mp playersave").get("last", ""))
-            else:
-                print("  A/B OFF: old behaviour path exercised; see stats above", flush=True)
+            verdict("DETERMINISTIC ITEMS CREATED", len(fling.get("spawned", [])) >= 2, f"spawned {fling.get('spawned')}")
+            verdict("DEATH ANCHOR CAPTURED", stats.get("anchors", 0) > 0 and anchor_xyz is not None, str(stats))
+            verdict("DROP ANCHOR APPLIED", stats.get("anchorDrops", 0) > 0, str(stats))
+            print(f"  {near} item(s) of any kind within 2 m of {anchor_xyz}", flush=True)
+            # this death's own carried things, by network id, on both machines: not "any two items nearby"
+            # a joiner's spawns get their network ids from the host after the fling: read them now
+            nets = [p[1] for p in L("mp deathinfo").get("itemIds", [])]
+            print("  the death's things [save, net]:", L("mp deathinfo").get("itemIds"), flush=True)
+            for name, side in (("host", b), ("joiner", L)):
+                try:
+                    rows = {r["net"]: r["pos"] for r in side("mp shared")["items"]}
+                    ds = [round(((rows[n][0]-dead_at[0])**2 + (rows[n][2]-dead_at[2])**2) ** .5, 2) if n in rows and dead_at else None for n in nets]
+                    verdict(f"{name.upper()}: CARRIED ITEMS DROPPED AT ANCHOR", len(ds) >= 2 and all(d is not None and d <= 2.0 for d in ds),
+                            f"the death's things {nets} lie {ds} m from {anchor_xyz}")
+                except Exception as e:
+                    verdict(f"{name.upper()}: CARRIED ITEMS DROPPED AT ANCHOR", False, str(e)[:200])
+            verdict("PLAYER SAVE RECORD PRESENT", "deathAnchor" in L("mp playersave"), L("mp playersave").get("last", ""))
             L("set kaposztaleves.s.settings.god True")
             L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             b("mp stop"); L("mp stop")

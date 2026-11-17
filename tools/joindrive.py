@@ -2,7 +2,7 @@
 """Joining while the host drives (two machines, relay iad by default). The host drives a car01 along the main road at
 ~50 km/h; the laptop joins mid-drive. Where does the joiner appear (not on the road in front of the car, not under the
 world), and once in: does it see the host's car moving with the host seated in it, where the host has it? Screenshots.
-  tools/joindrive.py [--no-build] [--relay iad|off] [--no-hide: A, before v0.65.30]"""
+  tools/joindrive.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -33,7 +33,6 @@ with game.ProtectedSession():
         L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150, 1): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        if "--no-hide" in sys.argv: L("set TLDRevamp.Net.RemotePlayers.HideFarSeated False")   # A: before v0.65.30
         god_l = g(L, "kaposztaleves.s.settings.god")   # not set: a fall on arrival must show
         time.sleep(3)
         me = h("mp players")["me"]
@@ -41,7 +40,7 @@ with game.ProtectedSession():
         lp = L("mp players")["me"]
         car = next((e for e in h("mp entities")["entities"] if e["net"] == net), None)
         print(f"  the joiner appeared at {lp}, {math.dist(lp[::2], car['pos'][::2]):.0f} m from the host's car; host at {me}", flush=True)
-        ground = L(f"ground {lp[0]} {lp[2]}") if False else None
+        ground = None
         ds, gaps, spd, glide = [], [], [], []
         t0 = time.monotonic()
         while time.monotonic() - t0 < 35:
@@ -64,9 +63,9 @@ with game.ProtectedSession():
         except RuntimeError as ex: print("  ", ex, flush=True)
         hp0 = next((p for p in L("mp players")["players"] if p["id"] == 0), None)
         if hp0:   # the laptop looks where its friend is (car or not) — what a player would see
-            L(f"mp lookat {net}") if False else None
+            None
         L("shot joindrive_laptop"); h("shot joindrive_host")
-        alive = g(L, "mainscript.s.player.died") if False else None
+        alive = None
         hp = next((p for p in h("mp players")["players"] if p["id"] == 1), None)
         print(f"  host's car on the laptop: speeds {[round(x) for x in spd]}; gap to the host's own (same moment, ~lag) median {sorted(gaps)[len(gaps)//2] if gaps else float('nan'):.1f} m", flush=True)
         verdict("THE JOINER SEES THE HOST'S CAR DRIVING (within the game's 300 m)", spd and sorted(spd)[len(spd)//2] > 35, f"median {sorted(spd)[len(spd)//2] if spd else 0:.0f} km/h over {len(spd)} samples")
@@ -84,7 +83,7 @@ with game.ProtectedSession():
         verdict("NO FRIEND GLIDING ON WITHOUT THEIR CAR", glide and not any(v for d, v, hd in glide if d > 260), f"{sum(1 for d, v, hd in glide if v)} of {len(glide)} samples visible")
         verdict("THE HOST SEES THE JOINER", hp is not None and hp["has"], str(hp and {k: hp[k] for k in ("has", "shown", "seated")}))
         h_ = L("get mainscript.s.player.transform.position")["value"]
-        st = L("stats") if False else None
+        st = None
         er = [x("errors") for x in (h, L)]
         verdict("NO ERRORS", all(x["errors"] == 0 and x["exceptions"] == 0 for x in er), str([(x["errors"], x["exceptions"], (x.get('kinds') or [])[:3]) for x in er]))
     finally:

@@ -6,7 +6,7 @@
   C  refused: with no cooldown, the laptop 2 km away asks, the host types /n → it stays where it is
   D  with its car: the laptop drives its own car 2 km away (seated), asks, the host accepts → the car is next to the
      host, set down on the ground (upright, < 3 m above it), the laptop still in it; the host's copy there too
-  tools/tpa.py [--no-build] [--relay iad|off] [--old: TPA off — every request refused]"""
+  tools/tpa.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game

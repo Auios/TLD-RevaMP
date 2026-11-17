@@ -32,7 +32,7 @@ tools/unit/EntityHandsChecks.cs|Entities.ByNet.Clear(); Entities.ClearServer(); 
 tools/unit/EntityHandsChecks.cs|Entities.ByNet.Remove(401); HandsCall("EvalShown", shown);
 tools/unit/EntityHandsChecks.cs|Entities.ByNet[401] = new Entities.Ent { NetId = 401, Root = carRoot }; pl.Bsitting = true; pl.seat = seat; pl.inHandP = p;
 tools/unit/EntityHandsChecks.cs|Entities.ByNet[401] = new Entities.Ent { NetId = 401, Root = carRoot, LastVel = new Vector3(12, 0, 0), Proxy = true };
-tools/unit/EntityHandsChecks.cs|HandsCall("WornReset"); Entities.Cascades = 0; Entities.ClaimsSent = 0; EntityHands.WornSync = true; Entities.ByNet.Clear(); Entities.ClearServer(); Entities.Packets.Clear(); mainscript.s = null;
+tools/unit/EntityHandsChecks.cs|HandsCall("WornReset"); Entities.Cascades = 0; Entities.ClaimsSent = 0; Entities.ByNet.Clear(); Entities.ClearServer(); Entities.Packets.Clear(); mainscript.s = null;
 tools/unit/EntityHandsChecks.cs|e.CarriedBy = 401; var rb = new Rigidbody { PointVelocity = new Vector3(15, 0, 0) }; carRoot.ChildComponent = rb; Entities.ByNet[401].Proxy = false;
 tools/unit/EntityHandsChecks.cs|e.Items.Add(root); Entities.ByNet[301] = e;
 tools/unit/EntityHitchChecks.cs|Entities.ByNet.Clear();

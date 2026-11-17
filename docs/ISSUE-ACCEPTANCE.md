@@ -71,8 +71,7 @@ python3 tools/issue_evidence.py --run-tests # also runs the offline unit project
    transform, and a periodic per-player save made during the death screen uses the anchor rather
    than the moving camera position.
 5. A respawn puts the player back in the session; the session is not left.
-6. The behaviour is switchable at runtime for an A/B run:
-   `EntityRagdolls.DeathRagdollShare` and `SessionRules.DeathDropAnchor` both default to on.
+6. Every accepted death shares the real corpse and captures its drop anchor.
 
 ### Evidence
 
@@ -83,8 +82,7 @@ python3 tools/issue_evidence.py --run-tests # also runs the offline unit project
 | `twomachine` | `tools/deathsync_host.py` on two machines (the host dies) | held item and corpse pass; inventory item not yet run |
 
 The offline unit projects do not cover this: the anchor and the corpse need the game's own
-`fpscontroller` and the item database, so they are game-only. `tools/deathsync.py --ab` runs the
-four switch combinations and the deterministic `mp deathfling` bridge command.
+`fpscontroller` and the item database, so they are game-only. `tools/deathsync.py` runs the current corpse and drop paths with the deterministic `mp deathfling` bridge command.
 
 2026-10-21, host dies (`tools/deathsync_host.py`, fling 32 4 0 and 10 15 0): the joiner follows the corpse limb for
 limb (largest limb gap 0.0 m from the second sample on, 0.5–2.2 m in the first half second of flight), the held item

@@ -13,7 +13,6 @@ namespace TLDRevamp.Net
     /// forward, so a door opened by its owner is seen at once, not up to 3 s later.
     internal static class EntityEdits
     {
-        internal static bool TankAddEdits = true;
         public static long TankAddsApplied;
         /// Per copy item being poured: its tanks as the owner has been told. Starts from the owner's latest record.
         private static readonly Dictionary<uint, List<save_tankscript>> _tankTold = new Dictionary<uint, List<save_tankscript>>();
@@ -21,7 +20,7 @@ namespace TLDRevamp.Net
         internal static bool TankChangesNow(tosaveitemscript it, List<TankAdds.Add> adds)
         {
             adds.Clear();
-            if (!TankAddEdits || it.tanks == null || !_tankTold.TryGetValue(it.idInSave, out var told)) return false;
+            if (it.tanks == null || !_tankTold.TryGetValue(it.idInSave, out var told)) return false;
             var now = new List<save_tankscript>();
             for (int i = 0; i < it.tanks.Count; i++)
             {
@@ -73,7 +72,7 @@ namespace TLDRevamp.Net
 
         internal static void RememberTankTruth(tosaveitemscript it)
         {
-            if (TankAddEdits && it != null && !_tankTold.ContainsKey(it.idInSave) && EntityCarTuning.TryCopyTankTruth(it.idInSave, out var truth)) _tankTold[it.idInSave] = truth;
+            if (it != null && !_tankTold.ContainsKey(it.idInSave) && EntityCarTuning.TryCopyTankTruth(it.idInSave, out var truth)) _tankTold[it.idInSave] = truth;
         }
         internal static void ResetTankEditTruth() => _tankTold.Clear();
         internal static void ForgetTankEditTruth(uint id) => _tankTold.Remove(id);
@@ -99,7 +98,6 @@ namespace TLDRevamp.Net
         /// applies only those; a copy's tank change is an edit only right after something poured into it (a player
         /// filling it: tankcapscript.Filling).
         public const int KindUsable = 1, KindTank = 2, KindPart = 4, KindColor = 8, KindFood = 16, KindAmmo = 32, KindPlate = 64, KindBusDoor = 128, KindBlood = 256, KindAll = 0xFFFF;
-        public static bool ScopedEdits = true;   // A/B: false = before v0.66.2 (whole item, every copy tank change)
         public static long CopyTankSimSkipped;
         private static readonly Dictionary<tosaveitemscript, int> EditKinds = new Dictionary<tosaveitemscript, int>();
         private static readonly Dictionary<tankscript, float> _tankFilledAt = new Dictionary<tankscript, float>();
@@ -121,7 +119,7 @@ namespace TLDRevamp.Net
             if (group != null && group.Proxy)
             {
                 EditDirty[it] = Time.realtimeSinceStartup; EditsMarked++;
-                EditKinds.TryGetValue(it, out int k); EditKinds[it] = k | (ScopedEdits ? EntityEdits.KindBit(kind) : KindAll);
+                EditKinds.TryGetValue(it, out int k); EditKinds[it] = k | (EntityEdits.KindBit(kind));
                 return;
             }
             if (fromTank) return;   // own tanks change all the time (fuel burn): the regular pass is enough
@@ -179,12 +177,6 @@ namespace TLDRevamp.Net
             }
             foreach (var it in _editFlushed) { EditDirty.Remove(it); EditKinds.Remove(it); }
         }
-
-        /// Server: to the owner — from a player at the object (EditRangeM, the host counts it from the last state or its
-        /// record) or seated in it or in the car it came off. Any player could otherwise change anything anywhere in the
-        /// world (empty a tank, open every door) by naming its net id. What the edit changes is checked too, and how
-        /// often a player edits (Entities.EditCheck).
-        public static bool EditsComeBack = true;   // A/B: false = an edit from a player who already owns the object is dropped (before)
         public static long EditsReturned;
         public static float EditRangeM = 15f;
         public static long EditsOutOfReach;
@@ -196,10 +188,6 @@ namespace TLDRevamp.Net
             if (r.Bad || !Server.TryGetValue(net, out var se)) { SessionLog.Event("edit-refused", net, from: from, result: "missing entity"); EditsRejected++; return; }
             if (se.OwnerId == from)
             {
-                // the object became theirs (it came with a car they took) before they heard: their game still called it a copy.
-                // The edit goes back to them, behind the Owner message that tells them. Dropped, the previous owner's
-                // handover record overwrote what they had just done.
-                if (!EditsComeBack) { SessionLog.Event("edit-refused", net, from: from, result: "already owner"); EditsRejected++; return; }
                 EditsReturned++;
                 SessionLog.Event("edit-returned", net, from: from, result: "already owner");
                 WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
@@ -247,7 +235,7 @@ namespace TLDRevamp.Net
             r.Pos = 0;
             WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
             ServerSendTo(se.OwnerId, WS, true);
-            if (EntityEditBack.HeldRecordsComeBack) EditBackAfterHold(se, idx);
+            EditBackAfterHold(se, idx);
         }
 
         private static bool AtObject(int player, SEnt se)
@@ -305,7 +293,7 @@ namespace TLDRevamp.Net
                 if (!InSession || __instance.setpoi || EntityEffects.DisplayPour) return;
                 var it = ItemOf(__instance, __instance.tosaveid, __instance.setid);
                 // a copy's own simulation (its fluid flowing out of an open cap) is the owner's too: only a fill is an edit
-                if (ScopedEdits && it != null && IsProxy(it) && !(_tankFilledAt.TryGetValue(__instance, out float at) && Time.realtimeSinceStartup - at < 2f))
+                if (it != null && IsProxy(it) && !(_tankFilledAt.TryGetValue(__instance, out float at) && Time.realtimeSinceStartup - at < 2f))
                 { CopyTankSimSkipped++; return; }
                 MarkEdit(it, fromTank: true, kind: "tank");
             }

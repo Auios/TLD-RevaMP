@@ -150,8 +150,8 @@ namespace TLDRevamp.Net
                 byte attempt = _censusDue[net].Attempt;
                 _censusDue.Remove(net);
                 if (!ByNet.TryGetValue(net, out var e) || !e.Proxy || e.Root == null) continue;
-                if (CensusRepairs && EditHeld(e, now)) { _censusDue[net] = new CensusDue { At = now + CensusHoldS, Attempt = attempt }; continue; }   // differs for now: our edit
-                W.Reset(); W.U8(CensusAsk); W.U32(net); W.U32(e.Epoch); W.U32(CensusHash(CensusRepairs ? RepairRows(e) : CensusRows(e))); W.U8(attempt); WriteCopyPlace(e, attempt);
+                if (EditHeld(e, now)) { _censusDue[net] = new CensusDue { At = now + CensusHoldS, Attempt = attempt }; continue; }   // differs for now: our edit
+                W.Reset(); W.U8(CensusAsk); W.U32(net); W.U32(e.Epoch); W.U32(CensusHash(RepairRows(e))); W.U8(attempt); WriteCopyPlace(e, attempt);
                 ToServer(W, true);
                 CensusAsks++;
             }
@@ -176,7 +176,7 @@ namespace TLDRevamp.Net
             if (r.Bad || !ByNet.TryGetValue(net, out var e) || e.Proxy || e.Epoch != epoch || !Resolve(e) || e.Root == null) return;
             CensusAsked++;
             if (place) CheckCopyPlace(e, asker, px, py, pz);
-            var rows = CensusRepairs ? RepairRows(e) : CensusRows(e);
+            var rows = RepairRows(e);
             if (CensusHash(rows) == hash) return;
             W.Reset(); W.U8(CensusReply); W.U32(net); W.VarU32((uint)asker); W.U8(attempt); W.Str(string.Join("\n", rows));
             ToServer(W, true);
@@ -201,17 +201,11 @@ namespace TLDRevamp.Net
             CensusDiffers++;
             if (attempt < 2)
             {
-                if (CensusRepairs) _censusFirst[net] = EntityRepair.RowMap(theirs.Split('\n'));
+                _censusFirst[net] = EntityRepair.RowMap(theirs.Split('\n'));
                 _censusDue[net] = new CensusDue { At = Time.realtimeSinceStartup + CensusRecheckS, Attempt = 2 };
                 return;
             }
-            if (CensusRepairs) { RepairReply(e, attempt, theirs); return; }
-            var ours = CensusRows(e);
-            var owner = new List<string>(theirs.Split('\n'));
-            var missing = owner.FindAll(x => !ours.Contains(x));
-            var extra = ours.FindAll(x => !owner.Contains(x));
-            Anomaly($"copy's parts differ from the owner's: {e.Root.name} net {e.NetId} owner {e.OwnerId} — missing here [{string.Join("; ", missing)}], " +
-                    $"extra here [{string.Join("; ", extra)}]");
+            RepairReply(e, attempt, theirs);
         }
     }
 }

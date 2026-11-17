@@ -322,29 +322,6 @@ static class DeathWiringTest
         Check(Flag(deathS, "HasAnchor"), "a seated death still has its anchor");
         Check(Flag(deathS, "AnchorSeated"), "and the anchor says it is a seated one");
 
-        // ---- the anchor path off: the death is accepted but there is no anchor
-        var deathNo = Machine();
-        var plNo = new DeathFakes.Player();
-        DeathFakes.Main.s = new DeathFakes.Main { player = plNo };
-        DeathFakes.Dev.s = new DeathFakes.Dev();
-        bool old = TLDRevamp.Net.SessionRules.DeathDropAnchor;
-        int anchorsBefore = Num(deathNo, "AnchorsCaptured");
-        int deathsBefore = Num(deathNo, "Deaths");
-        TLDRevamp.Net.SessionRules.DeathDropAnchor = false;
-        var pNo = new object[] { plNo, false };
-        prefix.Invoke(null, pNo);
-        Check((bool)pNo[1], "a death without the anchor path is still a death");
-        Check(Num(deathNo, "Deaths") == deathsBefore + 1, "and is counted");
-        Check(!Flag(deathNo, "HasAnchor"), "but there is no anchor");
-        Check(Num(deathNo, "AnchorsCaptured") == anchorsBefore, "and no anchor was captured");
-        // the respawn with no anchor is no anchored drop
-        int dropsBefore = Num(deathNo, "AnchorDrops");
-        dropPrefix.Invoke(null, new object[] { plNo });
-        dropPostfix.Invoke(null, new object[] { plNo, true });
-        Check(Num(deathNo, "AnchorDrops") == dropsBefore, "no anchored drop without an anchor");
-        Check(Num(deathNo, "AnchorAbsent") == 1, "and it is counted as an absent anchor");
-        TLDRevamp.Net.SessionRules.DeathDropAnchor = old;
-
         // ---- the seated anchor: the ground under the vehicle, not the seat
         {
             var deathSeat = Machine();

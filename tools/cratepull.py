@@ -4,14 +4,14 @@ copy of a plank lying 14 m away on a building's shelf moved next to the crate; i
 host's plank never moved, no state was sent for it). Two machines over the relay: the laptop joins next to the host;
 every laptop copy's place recorded; the host spawns one crate; the laptop's copies polled for 10 s — which moved, when,
 and which container holds it then (`mp physlocks`: container id/name, the entity it belongs to).
-  tools/cratepull.py [--no-build] [--relay iad|off] [--old: copies run their start freeze, before v0.66.3]"""
+  tools/cratepull.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD, BOX = arg("--relay", "iad"), "--old" in sys.argv, arg("--box", 62, int)
+RELAY, BOX = arg('--relay', 'iad'), arg('--box', 62, int)
 VERDICTS = []
 def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok)); print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
@@ -36,8 +36,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyStartFreezeOff {not OLD}")
-        print(f"  {'OLD (copies run their start freeze)' if OLD else 'NEW'}", flush=True)
+        print(f"  {'NEW'}", flush=True)
         time.sleep(5)
         hp = h("gpos"); L(f"tpground {hp['gx'] + 4} {hp['gz'] - 6}"); time.sleep(6)
         box = BOX or next(i["id"] for i in h("items Box")["items"] if i["name"] == "Box")
@@ -65,9 +64,6 @@ with game.ProtectedSession():
         verdict("NO COPY PULLED AWAY FROM WHERE ITS OWNER HAS IT", not strangers, str(strangers))
         print("  start freezes skipped (laptop):", L("get TLDRevamp.Net.EntityLocks.CopyStartFreezesSkipped")["value"], "snapshot drops:", L("get TLDRevamp.Net.ItemSnapshot.ForeignRefsDropped")["value"], "laptop errors:", L("errors")["errors"], flush=True)
     finally:
-        for s_ in (h, L):
-            try: s_("set TLDRevamp.Net.EntityLocks.CopyStartFreezeOff True")
-            except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

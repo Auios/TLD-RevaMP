@@ -23,7 +23,6 @@ namespace TLDRevamp.Net
     internal static partial class EntityHands
     {
         private static readonly NetWriter W = new NetWriter();
-        internal static bool WornSync = true;   // A/B: false = before v0.68.2 (worn items drawn at their owner's states)
         public static long WornSent, WornRelayed, WornApplied, WornCleared, WornRefused, WornPlaced;
         private static float _wornCheckAt;
         private static readonly HashSet<Ent> _wornOwn = new HashSet<Ent>(), _wornCopies = new HashSet<Ent>();
@@ -52,7 +51,7 @@ namespace TLDRevamp.Net
         /// cigarette lit from its pack, death, a restored player save).
         internal static void WornTick()
         {
-            if (!WornSync || Time.unscaledTime < _wornCheckAt) return;
+            if (Time.unscaledTime < _wornCheckAt) return;
             _wornCheckAt = Time.unscaledTime + 0.1f;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || pl.weared == null) return;
@@ -79,7 +78,7 @@ namespace TLDRevamp.Net
                     if (e == null) continue;
                     _wornEnt[ts] = e;
                 }
-                if (WornLateOk && WornNotMineAnymore(pl, p, e)) continue;
+                if (WornNotMineAnymore(pl, p, e)) continue;
                 if (e.Proxy || e.SentWornSlot == i) continue;
                 SendWorn(e, i);
                 _wornOwn.Add(e);
@@ -141,16 +140,9 @@ namespace TLDRevamp.Net
             Quaternion lq = iq * t.rotation;
             w.F32(lp.x); w.F32(lp.y); w.F32(lp.z); EntityCodec.WriteRot(w, lq);
         }
-
-        /// A share of something the local player already wears (a player save's hat put back on at a rejoin, a cigarette
-        /// lit and then shared) says so in the same message. Before, the Worn message came only after the network id
-        /// did: for that round trip the server and the others had a loose hat at head height, and the host's car took it
-        /// (its contents claim) — on the joiner's screen the hat then sat on its head as the host's copy, 0.7 m below and
-        /// 1 m beside it, and nobody else saw it on them (wearsync.py D, 2026-10-17).
-        internal static bool WornInShare = true;   // A/B: false = before v0.68.5 (the Worn message after the network id only)
         internal static void WriteShareWorn(NetWriter w, tosaveitemscript root)
         {
-            int slot = WornSync && WornInShare ? LocalWornSlot(root) : -1;
+            int slot = LocalWornSlot(root);
             if (slot < 0) return;
             w.U8((byte)slot); WriteWornPose(w, root);
         }
@@ -159,13 +151,6 @@ namespace TLDRevamp.Net
         /// tells everyone it reaches).
 
         public static long SharedWorn;
-
-        // ------------------------------------------------------------------ server
-
-        /// A player put it on while someone's claim on it (walking past is enough) was on its way: on their head for good,
-        /// loose for everyone else, and no one can do it for them as an owner can bolt a part. A deliberate act beats a claim
-        /// that overtook it: it goes back to them, unless the new owner has it in hand or on their own head.
-        internal static bool WornLateOk = true;   // A/B: false = a Worn from a player who just lost the object is dropped, a copy stays in the wear slot (before)
         public static long WornTakenBack, WornTooLate;
 
         internal static void ServerWorn(int from, NetReader r)
@@ -212,7 +197,7 @@ namespace TLDRevamp.Net
             if (slot != 255) { lp = new Vector3(r.F32(), r.F32(), r.F32()); lq = EntityCodec.ReadRot(r); }
             if (r.Bad || !Entities.TryGetEntity(net, out var e)) return;
             WornApplied++;
-            if (slot == 255 || !WornSync) { ClearWorn(e); return; }
+            if (slot == 255) { ClearWorn(e); return; }
             if (!e.Proxy || wearer == Entities.MyId || !Entities.IsFinite(lp)) return;   // ours: the game's own wear rules it
             e.WornBy = wearer; e.WornSlot = slot; e.WornLp = lp; e.WornLq = lq;
             _wornCopies.Add(e);
@@ -320,7 +305,7 @@ namespace TLDRevamp.Net
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var slots = new List<string>();
             if (pl != null && pl.weared != null) foreach (var p in pl.weared) slots.Add(Json.Str(p != null ? p.name : ""));
-            return "{\"enabled\":" + (WornSync ? "true" : "false") + ",\"slots\":[" + string.Join(",", slots) + "],\"sent\":" + WornSent + ",\"relayed\":" + WornRelayed +
+            return "{\"enabled\":" + ("true") + ",\"slots\":[" + string.Join(",", slots) + "],\"sent\":" + WornSent + ",\"relayed\":" + WornRelayed +
                    ",\"applied\":" + WornApplied + ",\"cleared\":" + WornCleared + ",\"refused\":" + WornRefused + ",\"placed\":" + WornPlaced +
                    ",\"sharedWorn\":" + SharedWorn + ",\"strippedRecords\":" + RecordCodec.WornStripped + ",\"items\":[" + string.Join(",", rows) + "]}";
         }

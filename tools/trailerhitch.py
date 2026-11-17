@@ -48,7 +48,6 @@ with game.ProtectedSession():
         car = min((e for e in h("mp entities")["entities"] if e["part"] < 0 and e["car"] and not e["proxy"]), key=lambda e: math.dist(e["pos"], me))["net"]
         h("driveout"); time.sleep(2)
 
-        print("  fix on:", g(h, "TLDRevamp.Fixes.TrailerGrip.Enabled"), flush=True)
         tr = trailer_behind(h, x, z, F, R, yaw)
         if not tr: sys.exit("TRAILER NOT SHARED")
         gr = h(f"mount grip {tr}"); print("  grip:", gr, flush=True)
@@ -57,7 +56,6 @@ with game.ProtectedSession():
         r = hitch(h, car, tr); print("  hitch:", r, flush=True)
         verdict("B FIX ON: THE DRAWBAR HITCHES TO THE CAR", "hitched" in r, str(r)[:120])
 
-        h("set TLDRevamp.Fixes.TrailerGrip.Enabled False")
         h(f"tpground {x + R[0] * 12} {z + R[1] * 12}"); time.sleep(2)
         tr2 = trailer_behind(h, x + R[0] * 12, z + R[1] * 12, F, R, yaw)
         if not tr2: sys.exit("SECOND TRAILER NOT SHARED")
@@ -75,8 +73,6 @@ with game.ProtectedSession():
         print("  wired:", g(h, "TLDRevamp.Fixes.TrailerGrip.Wired"), flush=True)
         er = h("errors"); print("  errors:", er["errors"], er["exceptions"], (er.get("kinds") or [])[:3], flush=True)
     finally:
-        try: h("set TLDRevamp.Fixes.TrailerGrip.Enabled True")
-        except Exception: pass
         h("mp stop")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]
 fails = [n for n, ok in VERDICTS if not ok]

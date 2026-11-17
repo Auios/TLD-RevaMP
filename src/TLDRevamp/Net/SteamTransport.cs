@@ -181,8 +181,6 @@ namespace TLDRevamp.Net
             var status = Status(c);
             return !Outbox.Waits(c) && status.PendingReliable == 0 && status.QueueTimeUsec < 20000 && Send(c, w, SendReliable);
         }
-
-        public static bool QueueRefusedSends = true;   // A/B: false = before (a refused message was gone, with only SendErrors counting it)
         public const long OutboxMaxBytes = 64 << 20;
         internal readonly SendOutbox<HSteamNetConnection> Outbox = new SendOutbox<HSteamNetConnection>(OutboxMaxBytes);
         private long _sendErrorsLogged;
@@ -262,7 +260,7 @@ namespace TLDRevamp.Net
             if (r != EResult.k_EResultOK)
             {
                 SendErrors++;
-                if (reliable && QueueRefusedSends && r == EResult.k_EResultLimitExceeded)
+                if (reliable && r == EResult.k_EResultLimitExceeded)
                 {
                     LogSendError(r, w.Buf, w.Len, "waits");
                     if (!Outbox.Add(c, w.Buf, w.Len)) OutboxFull(c);

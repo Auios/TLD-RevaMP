@@ -48,9 +48,6 @@ static class P {
     Check("unknown build, other version: refused", BuildCheck.RefuseUnknown(BuildCheck.Result.Unknown, "0.69.0", "0.69.1"));
     Check("unknown build, same version: announced only", !BuildCheck.RefuseUnknown(BuildCheck.Result.Unknown, "0.69.1", "0.69.1"));
     Check("known builds are not this check's", !BuildCheck.RefuseUnknown(BuildCheck.Result.Same, "0.69.0", "0.69.1"));
-    BuildCheck.Refuse = false;
-    Check("Refuse off: announced only", !BuildCheck.RefuseUnknown(BuildCheck.Result.Unknown, "0.69.0", "0.69.1"));
-    BuildCheck.Refuse = true;
     Console.WriteLine(fails == 0 ? "ALL PASS" : fails + " FAILED");
     return fails == 0 ? 0 : 1;
   }

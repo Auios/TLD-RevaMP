@@ -52,10 +52,6 @@ namespace TLDRevamp.Net
         static void ShowHeld(Ent e, bool show) { e.Held = show; }
 
         static void ShowCarriedCollisions(Ent e) { }
-
-
-
-        static bool HostGrabLetGo = true;
         static TestPickup _grabRefusedHere;
         static long PickupLocksSkipped;
 
@@ -65,7 +61,6 @@ namespace TLDRevamp.Net
     internal static partial class EntityCargoInteraction
     {
         private static readonly NetWriter W = new NetWriter();
-        internal static bool SeamlessClaims;
         internal static long LetGoClaimTries;
         internal static void PlaceAtNewest(Entities.Ent e) { }
         internal static void TraceClaim(Entities.Ent e, Entities.ClaimReason reason) { }
@@ -73,14 +68,12 @@ namespace TLDRevamp.Net
 
     internal static partial class EntityLocks
     {
-        internal static bool GhostEndsOnOwn = true;
         internal static void EndGhostOnOwn(Entities.Ent e) { e.ReleaseGhost = false; }
     }
 
 
     internal static partial class EntityCargoInteraction
     {
-        internal static bool LetGoClaims = true;
         internal static float LetGoClaimS = 3f;
         internal static bool ClaimTrace;
     }

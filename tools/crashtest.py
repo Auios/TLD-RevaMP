@@ -20,10 +20,7 @@ Verdicts per crash (MP, each car's owner record against the reference and physic
   - the copies agree: after the crash each car rests where its owner has it (≤ 0.3 m)
 Staging: each crash on the next clear stretch at least 200 m past the previous one, with no other car within 45 m
 (parked world cars, earlier wrecks — a rear-end wreck once flew 356 m down the road).
-  --old: the behaviour before v0.57.59 (kinematic copies + the impulse relay), for A/B
-  --approach A|B|both: A = each machine simulates the crash itself (physical copies, Entities.Physical); B = the machine
-  that hits first simulates the whole crash (EntityPhysics.CrashAuthority); both = every MP crash once with each
-  tools/crashtest.py [--no-build] [--only rear,tbone,headon] [--mode sp|mp|both] [--relay <dc>] [--kmh 100] [--gap 20] [--old]"""
+  tools/crashtest.py [--no-build] [--only rear,tbone,headon] [--mode sp|mp|both] [--relay <dc>] [--kmh 100] [--gap 20]"""
 import sys, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game, seeded
@@ -37,9 +34,7 @@ RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else No
 SPEED = (float(sys.argv[sys.argv.index("--kmh") + 1]) if "--kmh" in sys.argv else 100.0) / 3.6   # m/s
 KEEP_RIGHT = 1.8
 GAP = float(sys.argv[sys.argv.index("--gap") + 1]) if "--gap" in sys.argv else 20.0   # m of run-up (centre to centre): the launched car's wheels spin up before contact; low speeds need less (it rolls with no throttle: at 10 km/h it stopped after 9.4 m)
-OLD = "--old" in sys.argv
-APPROACHES = {"A": ["A"], "B": ["B"], "both": ["A", "B"]}[sys.argv[sys.argv.index("--approach") + 1] if "--approach" in sys.argv else "B"]
-APPROACH = "A"
+APPROACHES = ["B"]
 
 verdicts = {}
 def verdict(name, ok, detail=""):
@@ -174,7 +169,7 @@ def run_mp(b, L, kind, x, z, yaw):
     seen = until(lambda: has(b, nl) and has(L, nb), 20)
     print(f"  cars: desktop's #{nb}, laptop's #{nl}; each shown on the other machine: {seen}", flush=True)
     time.sleep(3)
-    claims0 = {id(s_): s_("mp crashauth").get("claims", 0) for s_ in (b, L)} if APPROACH == "B" else {}
+    claims0 = {id(s_): s_("mp crashauth").get("claims", 0) for s_ in (b, L)}
     cnt0 = {id(s_): counters(s_) for s_ in (b, L)}
     rb_, rl = b("crash rec start 60"), L("crash rec start 60")
     print("  recording: desktop", rb_, "| laptop", rl, flush=True)
@@ -192,12 +187,12 @@ def run_mp(b, L, kind, x, z, yaw):
     # collision events there) — its records are timed from the simulating machine's crash moment plus the display delay.
     # Which machine that is: whose claims rose (head-on: either car can hit first — v0.57.82 the laptop did)
     sim, other = b, L
-    if APPROACH == "B" and L("mp crashauth").get("claims", 0) > claims0[id(L)] and b("mp crashauth").get("claims", 0) == claims0[id(b)]:
+    if 'B' == "B" and L("mp crashauth").get("claims", 0) > claims0[id(L)] and b("mp crashauth").get("claims", 0) == claims0[id(b)]:
         sim, other = L, b
     r_sim = sim("crash rec stop")
     seen_t = [c["contactT"] for c in r_sim["cars"] if c.get("contactSeen")]
-    r_other = other(f"crash rec stop {min(seen_t) + 0.12:.2f}") if APPROACH == "B" and seen_t else other("crash rec stop")
-    if APPROACH == "B": print(f"  crash simulated on the {names[id(sim)]}", flush=True)
+    r_other = other(f"crash rec stop {min(seen_t) + 0.12:.2f}") if 'B' == "B" and seen_t else other("crash rec stop")
+    print(f"  crash simulated on the {names[id(sim)]}", flush=True)
     rd, rlp = (r_sim, r_other) if sim is b else (r_other, r_sim)
     print("  raw desktop:", json.dumps(rd), flush=True); print("  raw laptop:", json.dumps(rlp), flush=True)
     D = unit(ry)
@@ -246,8 +241,8 @@ def run_mp(b, L, kind, x, z, yaw):
     for s_ in (b, L):   # today's ownership features during the crash (claims of loose items near cars, hand-over records)
         c1 = counters(s_); print(f"  {names[id(s_)]} during the crash:", {k: c1[k] - cnt0[id(s_)].get(k, 0) for k in c1 if k != "_late"}, "late:", c1.get("_late"), flush=True)
     print("  physical copies: desktop", b("mp physical"), "| laptop", L("mp physical"), flush=True)
-    if APPROACH == "B": print("  crash authority: desktop", b("mp crashauth"), "| laptop", L("mp crashauth"), flush=True)
-    verdict(f"{kind.upper()} MP" + (" (old)" if OLD else f" [{APPROACH}]"), not problems, f"closing {closing:.1f} m/s, momentum after/before {m:.2f}; " + ("; ".join(problems) if problems else "physically plausible, copies agree"))
+    print("  crash authority: desktop", b("mp crashauth"), "| laptop", L("mp crashauth"), flush=True)
+    verdict(f"{kind.upper()} MP" + (f" [{'B'}]"), not problems, f"closing {closing:.1f} m/s, momentum after/before {m:.2f}; " + ("; ".join(problems) if problems else "physically plausible, copies agree"))
     return P, ry
 
 ensure_both("--no-build" not in sys.argv)
@@ -278,17 +273,15 @@ try:
             L("set kaposztaleves.s.settings.god True")   # joining loads the host's world: settings are fresh after it
             if RELAY: print("route:", L("net route"), flush=True)
             for s in (b, L):
-                s(f"set TLDRevamp.Net.EntityPhysics.PhysicalCopies {not OLD}"); s(f"set TLDRevamp.Net.EntityPhysics.ContactRelayOn {OLD}")
+                s(f"set TLDRevamp.Net.EntityPhysics.ContactRelayOn {False}")
             for k, ap in [(k, ap) for k in ONLY for ap in APPROACHES]:
-                APPROACH = ap
-                for s in (b, L): s(f"set TLDRevamp.Net.EntityPhysics.CrashAuthority {ap == 'B'}")
                 print(f"\n=== approach {ap}: " + ("each machine simulates the crash itself" if ap == "A" else "the machine that hits first simulates the whole crash"), flush=True)
                 try: cur = onward(run_mp(b, L, k, cur[0], cur[1], yaw))
                 except RuntimeError as e:   # one crash's setup failing must not lose the others
                     verdict(f"{k.upper()} MP [{ap}]", False, f"aborted: {e}"); d = unit(yaw); cur = (cur[0] + d[0] * 300, cur[1] + d[1] * 300)
                 for s in (b, L):
                     if g(s, "mainscript.s.player.Bsitting") is True: s("driveout"); time.sleep(1)
-            for s in (b, L): s("set TLDRevamp.Net.EntityPhysics.PhysicalCopies True"); s("set TLDRevamp.Net.EntityPhysics.ContactRelayOn False"); s("set TLDRevamp.Net.EntityPhysics.CrashAuthority False")
+            for s in (b, L): pass; s("set TLDRevamp.Net.EntityPhysics.ContactRelayOn False")
             L("mp stop"); b("mp stop")
         for s in [b] + ([L] if L else []): s("set kaposztaleves.s.settings.god False")
 finally:

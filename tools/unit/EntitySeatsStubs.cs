@@ -92,7 +92,6 @@ namespace TLDRevamp.Net
         internal enum ClaimReason : byte { Driver = 1, DriverRetry, Pickup, CargoNear, CargoContact, CargoRelease, Contents, ContentsPlaced, CarCargo, RabbitNear, RabbitContact, RabbitObjectNear, RabbitObjectContact, PushGrip, Wear, BodyNear, BodyContact, Debug, ItemNear, ItemContact }
         public const byte Claim = 24, Owner = 25;
         private static float _lastDriveClaimTry;
-        internal static bool DriveClaimRootOnly = true;
         internal static int Cascades, Shares;
         internal static string ClaimLog;
         internal static long ClaimsSent, ClaimsRefused, RefusedCrash, RefusedHeld, RefusedStored, RefusedDriven;

@@ -22,13 +22,6 @@ namespace TLDRevamp.Net
         internal static System.Collections.Generic.IReadOnlyCollection<TLDRevamp.Net.Entities.Ent> ObservedRagdollCopies => RagdollCopies;
         private static readonly Dictionary<GameObject, Ent> RagdollLimbOwner = new Dictionary<GameObject, Ent>();
         private const float RagdollFollowRate = 20f;   // 1/s: a copy's limbs close this share of the gap per second (~50 ms lag)
-
-        /// A/B: a limp body's limbs go as a Key (every limb, millimetres from an anchor whose pose rides along) and then
-        /// Deltas (only the limbs that moved since that Key; cumulative, so its Key and any one Delta make the whole pose
-        /// and a lost Delta costs nothing). Before (false): every limb in every state whenever one moved 1 cm / 0.3 deg -
-        /// a dead rabbit lying still sent 3.6 KB/s (14 limbs, 12.6 states a second) as an ear twitched (user, 2026-10-22).
-        /// Vehicles' limb sets keep the frame-relative form (their frame is the moving car).
-        internal static bool RagdollDelta = true;
         internal static float RagdollKeyEveryS = 2f;          // a fresh Key while streaming: bounds what a lost Key costs a copy
         internal static float RagdollDeltaMaxShare = 0.5f;    // a Delta bigger than this share of a Key goes as a Key (twitching rabbit, 2026-10-22: 0.25 2.6 KB/s, 0.5 1.1, 0.75 1.9)
         internal static long RagdollKeysSent, RagdollDeltasSent, RagdollFramesSent, RagdollLimbsSent, RagdollBlockBytes;
@@ -109,7 +102,7 @@ namespace TLDRevamp.Net
             var pos = r.WPos; var rot = r.WRot;   // the wire arrays: exactly one per limb, kept with the body
             int at = w.Len;
             r.Staged = false;
-            if (!RagdollDelta || e.Root.car != null)
+            if (e.Root.car != null)
             {
                 WriteFrameBlock(w, e, ls, t, pos, rot);
                 RagdollFramesSent++; RagdollBlockBytes += w.Len - at;
@@ -197,7 +190,7 @@ namespace TLDRevamp.Net
         /// Deltas after it refer to. Kept if it is newer than the Key held. `at`: where the message (its type byte) starts.
         internal static void KeepLateKey(NetReader r, int at, Ent e, uint epoch)
         {
-            if (!RagdollDelta || e == null || epoch != e.Epoch) return;
+            if (e == null || epoch != e.Epoch) return;
             if (!StateTail.TryRead(r.Buf, at, r.End - at, out var tail) || tail.Mode != StateTail.Mode.Key) return;
             if (e.Rag == null) e.Rag = new Rag();
             var g = e.Rag;

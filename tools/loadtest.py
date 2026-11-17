@@ -51,7 +51,6 @@ try:
         seeded.restart_same_seed(); b = Bridge()
         for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         if RELAY: print("relay only via", RELAY, b(f"net relay {RELAY}"), L(f"net relay {RELAY}"), flush=True)
-        b(f"set TLDRevamp.Net.MpServer.CarTiers {'False' if '--no-cartiers' in sys.argv else 'True'}")   # A/B (v0.57.89)
         b("mp host 27070")
         if RELAY: L(f"mp joinid {b('net me')['steamId']}")
         else: L(f"mp join {DESKTOP_IP}:27070")

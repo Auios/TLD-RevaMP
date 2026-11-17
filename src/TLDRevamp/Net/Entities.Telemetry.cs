@@ -231,7 +231,7 @@ namespace TLDRevamp.Net
                 foreach (var kv in Known)
                 {
                     if (kv.Key == 0 || kv.Key == se.OwnerId || !kv.Value.Contains(se.NetId)) continue;
-                    if (!EntityAuthorityInterest.InterestRelay || Mp.Server.PeerPos(kv.Key, out var pos) && InterestRules.Within(true, pos.x - se.Where.x, pos.z - se.Where.z, EntityAuthorityInterest.StateInterestM)) c.Receivers++;
+                    if (Mp.Server.PeerPos(kv.Key, out var pos) && InterestRules.Within(true, pos.x - se.Where.x, pos.z - se.Where.z, EntityAuthorityInterest.StateInterestM)) c.Receivers++;
                 }
                 if (se.OwnerId != 0 && !DedicatedServer.Enabled && mainscript.s != null && mainscript.s.player != null)
                 {

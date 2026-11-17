@@ -10,7 +10,6 @@ namespace TLDRevamp.Net
     /// on the host's card in the multiplayer menu before they join (rich presence). Sync false = before.
     public static class GameMode
     {
-        public static bool Sync = true;
         public struct Mode { public int Survival, Peaceful, Biome, Homesick; }
         private static Mode? _own;   // the joiner's own, while it plays with the host's
         private static Mode _host;
@@ -37,7 +36,7 @@ namespace TLDRevamp.Net
         /// The joiner, from Welcome, before the host's world loads.
         internal static void TakeHost(Mode host)
         {
-            if (!Sync || host.Survival == 0) return;   // 0: a host that sent none
+            if (host.Survival == 0) return;   // 0: a host that sent none
             var g = gamemodesettingsscript.s;
             if (g == null || g.S == null || !Local(out var own)) return;
             if (_own == null) _own = own;
@@ -108,7 +107,7 @@ namespace TLDRevamp.Net
             return f.Length == 4 && int.TryParse(f[0], out m.Survival) && int.TryParse(f[1], out m.Peaceful) && int.TryParse(f[2], out m.Biome) && int.TryParse(f[3], out m.Homesick);
         }
 
-        public static string Stats() => "{\"sync\":" + (Sync ? "true" : "false") + ",\"local\":" + Json.Str(Local(out var m) ? Describe(m) : "") +
+        public static string Stats() => "{\"sync\":" + ("true") + ",\"local\":" + Json.Str(Local(out var m) ? Describe(m) : "") +
                                         ",\"own\":" + Json.Str(_own != null ? Describe(_own.Value) : "") + ",\"applied\":" + Applied + ",\"restored\":" + Restored +
                                         ",\"savesBlocked\":" + SavesBlocked + ",\"reapplied\":" + Reapplied + "}";
     }

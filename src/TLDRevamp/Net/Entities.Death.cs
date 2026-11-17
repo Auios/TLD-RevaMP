@@ -5,10 +5,6 @@ namespace TLDRevamp.Net
     internal static partial class EntityRagdolls
     {
         private static readonly NetWriter W = new NetWriter();
-
-        /// A/B: share the corpse that the game creates in fpscontroller.Death2. False leaves it local as before; the
-        /// limb transport itself is already implemented in Entities.Ragdoll.
-        internal static bool DeathRagdollShare = true;
         internal static long DeathCorpsesShared, DeathCorpseShareMissed;
         /// How many corpses were un-shared again (the corpse of a death that ended: the game's own RagdolReset
         /// replaces the corpse object but never destroys the old one, so without this every death leaked one shared
@@ -127,7 +123,7 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(fpscontroller __instance)
             {
-                if (!DeathRagdollShare || !Entities.InSession || __instance == null || mainscript.s == null || __instance != mainscript.s.player) return;
+                if (!Entities.InSession || __instance == null || mainscript.s == null || __instance != mainscript.s.player) return;
                 var rag = __instance.spawnedRagdol;
                 if (rag == null || !__instance.died || rag.GetComponent<tosaveitemscript>() == null)
                 {

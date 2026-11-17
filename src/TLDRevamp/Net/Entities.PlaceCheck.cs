@@ -21,7 +21,6 @@ namespace TLDRevamp.Net
     /// item that isn't moving fast is compared: copies of moving things are a little late by design.
     public static partial class Entities
     {
-        public static bool CensusPlaces = true;   // A/B: false = the census only compares parts and state (before)
         public static float RepairPlaceM = 0.5f, RepairPlaceSpeed = 1f;
         public static long PlacesAsked, PlacesApart, PlacesResent, PlacesTold, PlacesHealed, PlacesFailed;
         private const byte PlaceTold = 200;   // CensusReply's attempt byte: not rows but what the owner found
@@ -38,7 +37,7 @@ namespace TLDRevamp.Net
         /// Copy, the ask: its position when it has one to compare.
         private static void WriteCopyPlace(Ent e, byte attempt)
         {
-            if (!CensusPlaces || attempt != 1 || e.Held || e.Stored || EntityHands.WornRides(e) || e.ReleaseGhost || EntityHands.HandManaged(e) || PlaceFollowsElse(e)) return;
+            if (attempt != 1 || e.Held || e.Stored || EntityHands.WornRides(e) || e.ReleaseGhost || EntityHands.HandManaged(e) || PlaceFollowsElse(e)) return;
             var g = mainscript.GlobalFromUnityPos(e.Root.transform.position);
             W.U16(PlaceDigest.Of(g.x)); W.U16(PlaceDigest.Of(g.y)); W.U16(PlaceDigest.Of(g.z));
             PlacesAsked++;
@@ -60,7 +59,7 @@ namespace TLDRevamp.Net
         /// the asker is told what we see, for its log.
         private static void CheckCopyPlace(Ent e, int asker, ushort x, ushort y, ushort z)
         {
-            if (!CensusPlaces || IsHeld(e.Root) || IsStored(e.Root) || PlaceFollowsElse(e) || !OwnerPlaceStill(e)) return;
+            if (IsHeld(e.Root) || IsStored(e.Root) || PlaceFollowsElse(e) || !OwnerPlaceStill(e)) return;
             var g = mainscript.GlobalFromUnityPos(e.Root.transform.position);
             double apart = PlaceDigest.Apart(PlaceDigest.Of(g.x), PlaceDigest.Of(g.y), PlaceDigest.Of(g.z), x, y, z);
             if (apart < RepairPlaceM) return;
@@ -116,11 +115,6 @@ namespace TLDRevamp.Net
                 RepairLine("place healed: net " + net);
             }
         }
-
-        /// A member glued on something of its group is no object of its own: no state carries it, and a record only says which spot
-        /// of the collider its attach point is on. Its place in the frame of what the point hangs on (a door swings it along with
-        /// that frame: no difference), in the census's rows to 20 cm. Different: the owner sends the exact poses to whoever asked.
-        public static bool CensusGluedPlaces = true;   // A/B: false = a glued member isn't compared
         public static long GluedPlacesSent, GluedPlacesApplied;
         private const byte GluedPlacesTold = 201;   // CensusReply's attempt byte, as PlaceTold
         /// Owner: every glued member's pose, one line each (member, position, rotation).

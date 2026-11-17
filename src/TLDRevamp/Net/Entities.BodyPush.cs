@@ -9,7 +9,6 @@ namespace TLDRevamp.Net
     /// Items in hands or inventories, worn, attached or creatures are never claimed (ClaimCargo, and the server refuses).
     internal static partial class EntityCargoInteraction
     {
-        public static bool BodyClaims = true;          // A/B: false = items stay frozen until their owner moves them
         public static float BodyNearM = 0.25f, BodyMinSpeed = 0.3f;
         public static long BodyClaimedNear, BodyClaimedOnContact;
         private static readonly Collider[] _bodyNear = new Collider[32];
@@ -17,7 +16,7 @@ namespace TLDRevamp.Net
         /// Per physics step, before the copies move (Entities.Physical): loose copies ahead of the walking local player.
         internal static void BodyNearTick(float dt)
         {
-            if (!BodyClaims || !Entities.CargoInSession) return;
+            if (!Entities.CargoInSession) return;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || pl.Bsitting || pl.RB == null || pl.CBody == null) return;
             if (pl.GetComponent<BodyContactRelay>() == null) pl.gameObject.AddComponent<BodyContactRelay>();
@@ -41,7 +40,7 @@ namespace TLDRevamp.Net
         /// The fallback: the local player's body touched a loose copy (it moved there faster than the margin covered).
         internal static void BodyContact(Collision c)
         {
-            if (!BodyClaims || !Entities.CargoInSession) return;
+            if (!Entities.CargoInSession) return;
             var rb = c.rigidbody;
             if (rb == null || !rb.isKinematic) return;
             // only a body walking into it: standing against a copy (or on it) every physics step took it from its owner

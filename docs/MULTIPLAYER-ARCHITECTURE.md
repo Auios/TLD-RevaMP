@@ -237,8 +237,7 @@ last pose and zero velocity; late old-epoch packets cannot reclaim authority. A 
 to finish before the server releases the hitch. Required car/trailer Add records go to the new owner before the
 control messages even outside the ordinary 3 km interest range. Deleting a tow car clears its trailers' saved hitch
 records and unmounts loaded and far-store copies, leaving them claimable; a pending transfer is fenced and thawed.
-`HitchTransferTimeout`, `HitchEnsureKnown` and `HitchReleaseOnRemove` are default-on A/B
-switches for these recovery paths. Drawbar placement uses the destination pose. These changes retain the existing wire format.
+These recovery paths are always on. Drawbar placement uses the destination pose. These changes retain the existing wire format.
 Bridge tests: `mount hitchrequest <car> <trailer>`, `mount unhitch <car> <trailer>`, `mount hitchstate <trailer>`,
 `mount hitchhealth <car>` and `mount hitchevents`. `mount hitch` also uses the owner route in a session.
 
@@ -463,7 +462,7 @@ a Delta is 3 + ceil(n/8) + 13 bytes per masked limb.
 Owners send a Key on the first state of an epoch, on entering a player's interest and on the final at-rest state.
 While streaming they send one every `RagdollKeyEveryS` (2 s), or when a Delta exceeds `RagdollDeltaMaxShare`
 (0.75) of a Key. A limb outside the i16 millimetre range falls back to Frame if a fresh anchor cannot fit it.
-Vehicles' limb sets and `EntityRagdolls.RagdollDelta = false` also use Frame. A Key becomes the baseline only when its
+Vehicles' limb sets also use Frame. A Key becomes the baseline only when its
 State is actually sent. Key States travel reliably; the server caches each entity's latest Key and forwards it
 reliably without thinning. A stored Delta is replayed only after its matching Key.
 
@@ -489,8 +488,7 @@ velocities cannot restart the pose tail or velocity-transition sends; real posit
 Item traffic and category telemetry include both messages.
 
 `netcat`/telemetry `bandwidth` adds cumulative `idlePose`, `physlocked`, `attachedPart`, `rabbitAnimation` and
-`ragdollPose` skip counters. Only numeric counts and a fixed message label are added. `Entities.WasteFixes` still
-bypasses pose filtering. No send budget, priority scheduler, rate cap or ownership policy is introduced.
+`ragdollPose` skip counters. Only numeric counts and a fixed message label are added. Pose filtering is always on. No send budget, priority scheduler, rate cap or ownership policy is introduced.
 Final states carry a flag in the existing flags byte (normal bit 32, compact bit 2), adding no payload bytes. They
 travel reliably owner-to-server and server-to-known-viewers, bypassing relay thinning. Both hops reject older
 same-epoch timestamps, including a delayed final overtaken by new motion. The server retains the complete final
@@ -617,7 +615,7 @@ outfit load gives it the first-person cut (`_Dist`) meant only for the local pla
 (`EntityRagdolls.CorpseWhole`). `EntityRagdolls.DeathCorpseStays` off is the old behaviour (the respawn removed the corpse on every
 machine). `tools/corpses.py` checks both.
 
-A pocket handed back to a returning joiner stays with the host until the joiner's record names what came back. A joiner whose game stops while loading, or who can't spawn an item, gets it again at the next join; it can't be lost in between (`PlayerSave.RestoreConfirmed`). The cost: a joiner whose game stops in the moment between spawning its items and sending that record gets them twice.
+A pocket handed back to a returning joiner stays with the host until the joiner's record names what came back. A joiner whose game stops while loading, or who can't spawn an item, gets it again at the next join; it can't be lost in between. The cost: a joiner whose game stops in the moment between spawning its items and sending that record gets them twice.
 
 The per-player record is not a periodic stream during a death. The death sends exactly one record, at the recorded
 death point; the periodic record waits for the respawn, so the moving follow-camera pose can never replace it. The
@@ -628,8 +626,7 @@ bridge's `mp playersave` output.
 When the session respawns the player, the player and its normal carry transforms return to that point just before the
 original `Respawn` calls `Revive` and `DropAll`. The game's own drop path releases the right-hand, dragged and inventory
 items there instead of at the body's flung endpoint. The ordinary 40–60 m respawn movement follows afterwards.
-`EntityRagdolls.DeathRagdollShare` and `SessionRules.DeathDropAnchor` are runtime A/B switches; both default on. Seated deaths
-use the same public hooks and leave seat exit to the game. `tools/deathsync.py --ab` exercises the corpse and drop paths
+Seated deaths use the same public hooks and leave seat exit to the game. `tools/deathsync.py` exercises the corpse and drop paths
 on a real death over the normal Steam relay.
 
 The anchor is a state machine too (`DeathAnchorState`): a non-finite position is refused, a conversion or placement

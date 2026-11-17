@@ -396,15 +396,6 @@ namespace TLDRevamp.Net
         private static float _lastDriveClaimTry;
         /// below these a loose, awake body counts as at rest (m/s, rad/s)
         public static float RestSpeed = 0.05f, RestSpin = 0.5f;
-
-        /// Cars change hands by driving only: while the local player sits in the DRIVER seat (mainseat) of a
-        /// proxy car, ask the server for it. Retried: the server refuses while the current owner is actively
-        /// driving it (their state marks it Driven); parked or exited, the claim goes through and the Owner
-        /// message converts this machine's copy to a real, drivable car (and theirs to a proxy).
-        /// The car itself only: anything else under the car's root is in it, not the car — another player's lamp whose
-        /// copy a container of our car held was claimed the moment we sat at the wheel, and taken from where its owner
-        /// had left it (copyrelease.py, 2026-10-14).
-        public static bool DriveClaimRootOnly = true;   // A/B: false = before v0.66.8
         private static void DriveClaimTick()
         {
             if (Time.unscaledTime - _lastDriveClaimTry < 1.5f) return;
@@ -414,7 +405,7 @@ namespace TLDRevamp.Net
             if (!pl.seat.driverSeat0) return;   // passengers never claim — incl. shotgun (driverSeat1 = the front passenger)
             var root = pl.seat.transform.root;
             foreach (var e in LookupSet())
-                if (e.Proxy && e.Root != null && e.Root.transform.root == root && (!DriveClaimRootOnly || e.Root.transform == root))
+                if (e.Proxy && e.Root != null && e.Root.transform.root == root && (e.Root.transform == root))
                 {
                     W.Reset(); WriteClaim(W, e.NetId, ClaimReason.DriverRetry); ToServer(W, true);
                     ClaimsSent++;
@@ -487,8 +478,8 @@ namespace TLDRevamp.Net
                 // interpolator, simulated, at rest, bolted on — before the skip below: a part bolted on in a container)
                 bool wornRides = EntityHands.WornRides(e);   // on its wearer's head here: placed by WornLate
                 TickPoseLock(e);
-                if (e.Proxy && !e.PoseLocked && (e.CarriedBy == 0 || (EntityLocks.CarriedLeavesLock && e.Held)) && !wornRides) EntityLocks.CheckCopyLock(e, now);
-                if (e.ReleaseGhost && (e.Proxy || EntityLocks.GhostEndsOnOwn)) EntityLocks.ReleaseGhostTick(e);
+                if (e.Proxy && !e.PoseLocked && (e.CarriedBy == 0 || (e.Held)) && !wornRides) EntityLocks.CheckCopyLock(e, now);
+                if (e.ReleaseGhost) EntityLocks.ReleaseGhostTick(e);
                 bool attachedRides = RidesBolted(e) || EntityProxyPresentation.AttachedCarPart(e);
                 if (attachedRides && e.Proxy) continue;
                 if (!e.Proxy)
@@ -506,7 +497,7 @@ namespace TLDRevamp.Net
                     if (!lockChange && e.SendAcc < sendEvery) continue;
                     e.SendAcc = Mathf.Max(0f, e.SendAcc - sendEvery);
                     if (e.SendAcc > sendEvery) e.SendAcc = 0;
-                    if (attachedRides && !lockChange && (!ClearHeldOnAttach || !(e.SentHeld || e.SentStored))) { e.RestWindow = default; StatesSkippedAttached++; continue; }
+                    if (attachedRides && !lockChange && (!(e.SentHeld || e.SentStored))) { e.RestWindow = default; StatesSkippedAttached++; continue; }
                     var rb = e.Root.GetComponent<Rigidbody>();
                     var t = RagdollFrame(e);
                     var g = mainscript.GlobalFromUnityPos(t.position);
@@ -520,7 +511,7 @@ namespace TLDRevamp.Net
                     bool compact = (EntityProxyPresentation.CompactFlyer(e) || ground) && !held && !stored && !spraying;
                     if (compact) q = Quaternion.Euler(0, q.eulerAngles.y, 0);
                     // Resting suspension creep needs 2 cm to wake the stream; moving poses keep the 1 cm threshold.
-                    bool wPos = BandwidthRules.PositionChanged((g - e.LastSentPos).sqrMagnitude, WasteFixes && e.Root.car != null && e.SentAtRest && !e.SentDriven);
+                    bool wPos = BandwidthRules.PositionChanged((g - e.LastSentPos).sqrMagnitude, e.Root.car != null && e.SentAtRest && !e.SentDriven);
                     bool wRot = Quaternion.Angle(q, e.LastSentRot) > BandwidthRules.RotationDeg;
                     Vector3d lockBaseline = lockFrame != 0 ? new Vector3d(lockPos.x, lockPos.y, lockPos.z) : g;
                     var lockBaselineRot = lockFrame != 0 ? lockRot : q;
@@ -546,7 +537,7 @@ namespace TLDRevamp.Net
                     bool entered = audience && !e.StateAudience;
                     e.StateAudience = audience;
                     bool first = e.LastStateEpoch != e.Epoch || entered;
-                    bool restEligible = BandwidthRules.RestEligible(WasteFixes, driven, held, stored, locked,
+                    bool restEligible = BandwidthRules.RestEligible(driven, held, stored, locked,
                         attachedRides || e.RideCar != 0, limbs, spraying)
                         && HangsOnJoint(e);   // hanging things (fresheners) only: cars and loose items, in containers too, keep the old thresholds (physlockcheck)
                     bool outsideRest = BandwidthRules.RestPoseChanged((g - e.LastSentPos).sqrMagnitude, Quaternion.Angle(q, e.LastSentRot));
@@ -569,7 +560,7 @@ namespace TLDRevamp.Net
                     bool visual = BandwidthRules.CarVisualChanged(e.SentState, e.SentStateLength, WS.Buf, WS.Len);
                     var quiet = BandwidthRules.StateQuiet(ref e.QuietTail, now, first || released || unlocked, wPos || wRot, limbs, visual, control, moving, e.SentAtRest,
                                                          locked, attachedRides, now - e.LastStateAt, driven, stored, e.ReleaseMoving, restQuiet);
-                    if (WasteFixes && quiet != BandwidthRules.Quiet.None && quiet != BandwidthRules.Quiet.Final)
+                    if (quiet != BandwidthRules.Quiet.None && quiet != BandwidthRules.Quiet.Final)
                     {
                         if (quiet == BandwidthRules.Quiet.Locked) StatesSkippedLocked++;
                         else if (e.Rag != null && e.Rag.SentPos != null) { StatesSkippedRagdoll++; if (corpseRoot) StatesSkippedCorpseRoot++; }
@@ -578,12 +569,12 @@ namespace TLDRevamp.Net
                     }
                     if (wAwake) e.WhyAwake++; if (wPos) e.WhyPos++; if (wRot) e.WhyRot++; if (wStored) e.WhyStored++;
                     Buffer.BlockCopy(WS.Buf, 0, e.SentState, 0, WS.Len); e.SentStateLength = WS.Len;
-                    bool final = EntityProxyPresentation.FinalState(locked, lockFrame, WasteFixes, quiet, moving, driven);
+                    bool final = EntityProxyPresentation.FinalState(locked, lockFrame, quiet, moving, driven);
                     e.SentAtRest = !moving || final; e.SentMoving = velocityMoving;
                     var v = poseBody != null && moving && !final ? poseBody.velocity : Vector3.zero;
                     // stored in a container (no body of its own): the velocity of the body it rides — with none, its copies
                     // lagged the car 5-6 m at 50 km/h and the release rule took them out of the car (takeover.py A)
-                    if (poseBody == null && moving && !final && EntityLocks.StoredRidesCar && e.Root.P != null && e.Root.P.physlock != null)
+                    if (poseBody == null && moving && !final && e.Root.P != null && e.Root.P.physlock != null)
                     {
                         var carrier = t.parent != null ? t.parent.GetComponentInParent<Rigidbody>() : null;
                         if (carrier != null && !carrier.isKinematic) v = carrier.GetPointVelocity(t.position);
@@ -641,7 +632,7 @@ namespace TLDRevamp.Net
                     e.Observe(mainscript.GlobalFromUnityPos(e.Root.transform.position), dt);
                 }
                 else if (EntityLocks.RidesOwnersContainer(e)) EntityLocks.StoredRides++;   // in its owner's car's container: it rides that car's copy
-                else if (e.Ip != null && e.Ip.Ready && !(EntityLocks.CopyLockByContainer && EntityLocks.LockedAway(e)))   // held in a container here, its owner's far: it rides that
+                else if (e.Ip != null && e.Ip.Ready && !(EntityLocks.LockedAway(e)))   // held in a container here, its owner's far: it rides that
                 {
                     EntityHands.EvalShown(e, now, dt, out var pos, out var rot);
                     e.ShownPos = pos;
@@ -935,7 +926,7 @@ namespace TLDRevamp.Net
             // Returned when the lease ran out, it went to a player who was gone, unsimulated until the hand-off pass gave
             // it to the nearest player (≤ 1 s, or whenever someone comes within 100 m) - crashlease.py
             foreach (var se in Server.Values)
-                if (se.CrashReturnTo == playerId && EntityPhysics.CrashLeaveKeep) { OwnerLog(se, se.OwnerId, "crash lease: player " + playerId + " left, kept"); se.CrashReturnTo = -1; EntityPhysics.CrashLeasesKept++; }
+                if (se.CrashReturnTo == playerId) { OwnerLog(se, se.OwnerId, "crash lease: player " + playerId + " left, kept"); se.CrashReturnTo = -1; EntityPhysics.CrashLeasesKept++; }
             foreach (var se in Server.Values)
                 if (se.OwnerId == playerId && se.HitchCar == 0)
                 {
@@ -1360,7 +1351,7 @@ namespace TLDRevamp.Net
             if (!proxy && e.CarriedBy != 0) EntityHands.TakeOverCarried(e);
             if (!proxy && e.Stored) ShowStored(e, false);   // ours now: the game's own state rules its model again
             if (!proxy && e.Held) ShowHeld(e, false);
-            if (!proxy && e.ReleaseGhost && EntityLocks.GhostEndsOnOwn) EntityLocks.EndGhostOnOwn(e);
+            if (!proxy && e.ReleaseGhost) EntityLocks.EndGhostOnOwn(e);
             if (!proxy && e.CargoGhost) { e.CargoGhost = false; ShowCarriedCollisions(e); }
             if (!proxy) { e.HandPose = false; e.HandDraw.Reset(); }
             // not loaded here (stored): only the role changes — Resolve sets the bodies up for it when it's placed.
@@ -1442,13 +1433,7 @@ namespace TLDRevamp.Net
             EntityRabbits.RabbitRole(e, proxy);
             if (proxy && e.PoseLocked && e.ReceivedStateEpoch == e.Epoch) EnsurePoseLock(e);
         }
-
-        /// A part that came off stays in its old group's Items (state goes by index) but is an object of its own now, with its own
-        /// owner. Its old car changing hands set it too: taken off the copies while it was still one, the game's unfreeze found
-        /// it dynamic every second and it fell until healed (4.9 m in a second: seed runs, "Bus02Tank 5 m apart at rest", from the
-        /// frame the car changed hands to when it changed back). The other way round a part we own became a frozen copy.
-        public static bool SplitPartsApart = true;   // A/B: false = before
-        private static bool PartApart(Ent e, int i) => SplitPartsApart && CameOff(e, i);
+        private static bool PartApart(Ent e, int i) => CameOff(e, i);
 
         // Row 6: old component keys must not retain a destroyed copy, or drive a replacement wheel (registrycheck.py, 2026-11-17).
         // Removal uses this without changing any body's role or touching a detached part's own entity.
@@ -1594,7 +1579,6 @@ namespace TLDRevamp.Net
 
         public static long CopyMembersMissing, ShareMembersDropped;
         public static long MembersRebound, Rebound, FarRecordUpdates, FarRechunked, PartsAppliedStored, PartsDeduped;
-        public static bool FarMoveAttached = true;   // A/B: false = before v0.66.2 (meetagain.py)
         public static long FarAttachedMoved;
 
         /// A state for a shared object that is in this machine's far store: move its record.
@@ -1619,7 +1603,7 @@ namespace TLDRevamp.Net
             Vector3d oldPos = old.pos;
             Quaternion q = e.FarRot * Quaternion.Inverse(Quaternion.Euler(old.rot.Load()));
             MoveRecord(list, ri, e.FarPos, e.FarRot.eulerAngles);
-            if (FarPartsByAttach && data.itemData.attachable != null) { MoveBoltedRecords(e, data.itemData, oldPos, q); FarRecordUpdates++; return; }
+            if (data.itemData.attachable != null) { MoveBoltedRecords(e, data.itemData, oldPos, q); FarRecordUpdates++; return; }
             if (e.ItemIds != null)
                 foreach (var id in e.ItemIds)
                 {
@@ -1633,7 +1617,7 @@ namespace TLDRevamp.Net
             // wheel from another car, a hubcap on that wheel): records of their own too, with the group as their parent —
             // left where they were, the car came back without them (playtest 2026-10-09: "the wheels never right for the
             // other person looking at your car")
-            if (FarMoveAttached && data.itemData.attachable != null)
+            if (data.itemData.attachable != null)
             {
                 var moved = new HashSet<uint>();
                 moved.Add(e.RootId);
@@ -1657,14 +1641,6 @@ namespace TLDRevamp.Net
             }
             FarRecordUpdates++;
         }
-
-        /// The group's stored records as the game stores a car: what is bolted on (an attach record, through parts of
-        /// parts) goes where the car goes; a member lying loose (it came off: its own object now) stays where it lies —
-        /// before v0.68.1 every member moved rigidly with the car, a trunk taken off at one place travelled on with the
-        /// car's record. A bolted part whose record is far from the car (left behind before: playtest 2026-10-16, the
-        /// joiner's Car06 came back without wheels, doors, hood and engine — their records 1–3.5 km away, still bolted
-        /// to it) is put back with the car: the game bolts it into its slot by index when it places it.
-        public static bool FarPartsByAttach = true;   // A/B: false = before v0.68.1 (partsback.py --old)
         public static float FarStrayM = 15f;
         public static long FarStraysPulled;
         private static readonly FarBoltIndex<save_attachable> _boltIdx = new FarBoltIndex<save_attachable>(a => a != null && a.attachType == 1 ? a.parentid : 0);

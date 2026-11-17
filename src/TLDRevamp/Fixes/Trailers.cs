@@ -15,11 +15,9 @@ namespace TLDRevamp.Fixes
     /// record already points at the drawbar's part script, so the two describe the same object; the trailer itself has
     /// no pickupable of its own to lose).
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.TrailerGrip.Enabled (applies to trailers started after the change)
     [HarmonyPatch(typeof(attachgripscript), nameof(attachgripscript.FStart))]
     public static class TrailerGrip
     {
-        public static bool Enabled = true;
         public static long Wired;
         /// Every started trailer (Entities.CarCargoTick: a car carried on a trailer goes with the car towing it).
         public static readonly System.Collections.Generic.List<attachgripscript> All = new System.Collections.Generic.List<attachgripscript>();
@@ -29,7 +27,7 @@ namespace TLDRevamp.Fixes
         {
             All.RemoveAll(g => g == null);
             if (!All.Contains(__instance)) All.Add(__instance);
-            if (!Enabled || __instance.Grip == null) return;
+            if (__instance.Grip == null) return;
             var save = __instance.tosaveitem;
             if (save == null) return;
             var part = __instance.Grip.GetComponent<attachablescript>();

@@ -107,14 +107,12 @@ namespace TLDRevamp.Net
             if (!final) EntityUsables.WriteLiveUsable(WL, k, relaySeq, stamp, default, st);
             EntityAuthorityInterest.RelayPoi(k.Poi, WL, from, final);
         }
-        /// A/B: the sender of a refused building usable hears how it is (false: its door stayed moved on its screen alone, for good).
-        public static bool PoiRefusalsTold = true;
         public static long PoiToldBack;
         private static readonly Dictionary<int, float> _poiBackAt = new Dictionary<int, float>();
         private static void PoiTellBack(int from, UsableKey k)
         {
             float now = Time.realtimeSinceStartup;
-            if (!PoiRefusalsTold || _poiBackAt.TryGetValue(from, out float at) && now - at < 0.25f) return;
+            if (_poiBackAt.TryGetValue(from, out float at) && now - at < 0.25f) return;
             PoiState st;
             if (!KnownPoiUsables.TryGetValue(k.Poi, out st))
             {

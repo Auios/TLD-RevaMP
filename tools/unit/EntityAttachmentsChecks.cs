@@ -23,7 +23,6 @@ static partial class EntitySplitTest
         Entities.ByNet.Clear(); Entities.Packets.Clear(); Entities.AttachmentNotices.Clear();
         Entities.InSession = true; Entities.IsHost = false; Entities.MyId = 2;
         Entities._applyingAttach = Entities._applyingState = Entities._applyingDetach = false;
-        EntityAttachments.AttachRequests = Entities.CarriedPartsShared = true;
         EntityAttachments.AttachPosesSent = EntityAttachments.AttachPosesBad = EntityAttachments.AttachPosesApplied = 0;
         cache.Clear(); told.Clear();
         var item = new tosaveitemscript(); var at = new attachablescript { tosave = item, attached = true };
@@ -66,16 +65,16 @@ static partial class EntitySplitTest
         rows.Add("large|" + AttachmentCall("ReadAttachPose", largeArgs) + "|" + largeReader.Bad + "|" + (EntityAttachments.AttachPosesBad - badBefore));
         EntityAttachments.ApplyAttachPose(e, at, new Vector3(2, 3, 4), Quaternion.identity);
         Check(at.transform.position == new Vector3(12, 23, 34) && EntityAttachments.AttachPosesApplied == 1, "apply reconstructs world pose in parent frame");
-        foreach (string guard in new[] { "ordinary", "attach", "state", "offline", "missing", "proxy", "proxy-inactive", "proxy-disabled" })
+        foreach (string guard in new[] { "ordinary", "attach", "state", "offline", "missing", "proxy", "proxy-inactive" })
         {
             Entities.AttachmentTestTrace = ""; Entities.InSession = guard != "offline";
             Entities._applyingAttach = guard == "attach"; Entities._applyingState = guard == "state";
             at.tosave = guard == "missing" ? null : item; e.Proxy = guard.StartsWith("proxy");
-            Entities.PlayerActing = guard != "proxy-inactive"; EntityAttachments.AttachRequests = guard != "proxy-disabled";
+            Entities.PlayerActing = guard != "proxy-inactive";
             var oldPose = e.Ip; AttachmentHook("Postfix", at);
             rows.Add("hook-" + guard + "|" + Entities.AttachmentTestTrace + "|" + !ReferenceEquals(oldPose, e.Ip));
         }
-        Entities.InSession = Entities.PlayerActing = EntityAttachments.AttachRequests = true;
+        Entities.InSession = Entities.PlayerActing = true;
         Entities._applyingAttach = Entities._applyingState = false; at.tosave = item; e.Proxy = false;
         var carrierItem = new tosaveitemscript { partslotscripts = new List<partslotscript>() };
         var slot = new partslotscript { tosaveitem = carrierItem, Part = at }; carrierItem.partslotscripts.Add(slot); at.slot = slot;
@@ -125,8 +124,6 @@ static partial class EntitySplitTest
     {
         var owner = typeof(EntityAttachments);
         Check(owner.IsAbstract && owner.IsSealed && !owner.IsPublic, "attachments have an internal static owner");
-        Check(BridgeReflect.Set("EntityAttachments.AttachRequests", "False") == "false" && !EntityAttachments.AttachRequests, "attach request switch owner path writes feature storage");
-        EntityAttachments.AttachRequests = true;
         Check(!ReferenceEquals(Field(owner, "W"), Field(typeof(Entities), "W")), "carried messages own their writer");
         string all = "";
         foreach (string part in new[] { "Attach", "CarriedOff", "PartOff" })

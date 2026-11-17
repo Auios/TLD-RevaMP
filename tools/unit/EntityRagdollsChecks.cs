@@ -29,7 +29,6 @@ static partial class EntitySplitTest
         string expected = name switch {
             "key" => "020101EC4D000000000000F03F0000000000000040000000000000084003000000000000FA00F40112FD030000000000000000E803000003000000000000",
             "delta" => "020201027D00E803000003000000000000",
-            "frame" => "02000000803E0000003F000040BF030000000000000000003E0000803F0000000003000000000000",
             "none" => "00",
             "death remove" or "death dormant remove" => "232D010000",
             _ => throw new Exception(name)
@@ -68,8 +67,7 @@ static partial class EntitySplitTest
         Check(RagWrite(e, false)[1] == RagdollWire.Key, "epoch change forces key"); e.Epoch--;
         EntityRagdolls.RagdollDeltaMaxShare = 0;
         Check(RagWrite(e, false)[1] == RagdollWire.Key, "delta share threshold forces key");
-        Set(RagOwner, "RagdollDelta", false); RagVector("frame", RagWrite(e, false));
-        Set(RagOwner, "RagdollDelta", true); Set(RagOwner, "RagdollDeltaMaxShare", .5f);
+        Set(RagOwner, "RagdollDeltaMaxShare", .5f);
         e.Root.ragdollPos = null; RagVector("none", RagWrite(e, false));
         RagdollReadChecks(key, delta);
         RagdollDeathChecks();
@@ -100,13 +98,13 @@ static partial class EntitySplitTest
         Entities.HostReceive = null; Entities.IsHost = false; Entities.TestDeleteThrow = false;
         Entities.TestDeleteDormant = false; Set(RagOwner, "DeathCorpseStays", true);
         RagdollOutfitChecks();
-        foreach (string field in new[] { "RagdollDelta", "RagdollKeyEveryS", "RagdollDeltaMaxShare" })
+        foreach (string field in new[] { "RagdollKeyEveryS", "RagdollDeltaMaxShare" })
         {
-            string value = field == "RagdollDelta" ? "False" : "0.75";
+            string value = "0.75";
             BridgeReflect.Set("TLDRevamp.Net.EntityRagdolls." + field, value);
-            Check(BridgeReflect.Get("TLDRevamp.Net.EntityRagdolls." + field) == (field == "RagdollDelta" ? "false" : "0.75"), field + " real owner setting roundtrips");
+            Check(BridgeReflect.Get("TLDRevamp.Net.EntityRagdolls." + field) == "0.75", field + " real owner setting roundtrips");
         }
-        EntityRagdolls.RagdollDelta = true; EntityRagdolls.RagdollKeyEveryS = 2; EntityRagdolls.RagdollDeltaMaxShare = .5f;
+        EntityRagdolls.RagdollKeyEveryS = 2; EntityRagdolls.RagdollDeltaMaxShare = .5f;
         Check(!ReferenceEquals(Field(RagOwner, "W"), Field(typeof(Entities), "W")), "death fallback owns its writer");
         foreach (string field in new[] { "RagdollCopies", "RagdollLimbOwner", "_ragBlock", "_deathCorpse", "DeathItemSaveIds", "RagdollKeysSent" })
             Check(typeof(Entities).GetField(field, Static) == null, field + " has one feature backing field");
@@ -170,8 +168,6 @@ static partial class EntitySplitTest
         EntityRagdolls.KeepLateKey(RagReader(state), 0, late, 7);
         EntityRagdolls.KeepLateKey(RagReader(state), 0, late, 7);
         Check(late.Rag.CHas && !late.Rag.Has && EntityRagdolls.RagdollLateKeys == lateCount + 1, "late key retained once without applying a stale state");
-        EntityRagdolls.RagdollDelta = false; var disabled = RagBody(); EntityRagdolls.KeepLateKey(RagReader(state), 0, disabled, 7);
-        Check(disabled.Rag == null, "disabled delta ignores late keys"); EntityRagdolls.RagdollDelta = true;
         var wrapped = RagBody(); wrapped.Rag = new Entities.Rag { CHas = true, CEpoch = 7, CId = 255 };
         EntityRagdolls.KeepLateKey(RagReader(state), 0, wrapped, 7);
         Check(wrapped.Rag.CId == 1, "late key comparison accepts byte id wrap");
@@ -201,7 +197,6 @@ static partial class EntitySplitTest
         var e = RagBody(); pl.spawnedRagdol = e.Root.gameObject;
         long shared = EntityRagdolls.DeathCorpsesShared, missed = EntityRagdolls.DeathCorpseShareMissed;
         Entities.InSession = false; RagPatch("ShareRealDeathRagdoll", "Postfix", pl); Entities.InSession = true;
-        EntityRagdolls.DeathRagdollShare = false; RagPatch("ShareRealDeathRagdoll", "Postfix", pl); EntityRagdolls.DeathRagdollShare = true;
         RagPatch("ShareRealDeathRagdoll", "Postfix", new fpscontroller { died = true, spawnedRagdol = pl.spawnedRagdol });
         Check(EntityRagdolls.DeathCorpsesShared == shared && Entities.ByNet.Count == 0, "session disabled and other-player death guards");
         pl.spawnedRagdol = null; RagPatch("ShareRealDeathRagdoll", "Postfix", pl);

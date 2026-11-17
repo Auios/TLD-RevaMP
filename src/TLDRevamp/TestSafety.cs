@@ -46,11 +46,10 @@ namespace TLDRevamp
 {
     /// A joiner plays in the host's world, and the game's Save menu would write that world into the joiner's own slot
     /// (under their own save's name it replaces their world with the host's). The host owns the shared save; in a
-    /// joiner's game, saving does nothing and says why. The host saves as before. Enabled false = before v0.66.9.
+    /// joiner's game, saving does nothing and says why. The host saves as before.
     [HarmonyPatch]
     public static class JoinerSaveBlock
     {
-        public static bool Enabled = true;
         public static long Blocked;
         private static bool InHostWorld => TestSafety.InHostWorld || TestSafety.LeavingHostWorld;
 
@@ -64,7 +63,7 @@ namespace TLDRevamp
 
         private static bool Allow()
         {
-            if (!Enabled || !InHostWorld) return true;
+            if (!InHostWorld) return true;
             Blocked++;
             Plugin.Log.LogInfo("save refused: this is the host's world (JoinerSaveBlock)");
             Net.Session.Show(1, "", "You can't save in someone else's world: the host saves it. Your own saves are untouched.");

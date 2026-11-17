@@ -27,7 +27,6 @@ static partial class EntitySplitTest
         Time.realtimeSinceStartup = 101.71f; EntityEditBack.EditBackTick(); Packet("back-new-owner");
         EntityEditBack.EditBackTick(); Row("back-once", EntityEditBack.RefusedEditsAsked);
         EntityEditBack.EditBackLater(7, -1, false); EntityEditBack.EditBackLater(7, 1, true);
-        EntityEditBack.RefusedEditsComeBack = false; EntityEditBack.EditBackLater(7, 1, false); EntityEditBack.RefusedEditsComeBack = true;
         Row("back-invalid", ((IDictionary)Field(typeof(EntityEditBack), "_editBack")).Count);
         for (int i = 0; i < 300; i++) EntityEditBack.EditBackAfterHold(7, i);
         Row("back-bounded", ((IDictionary)Field(typeof(EntityEditBack), "_editBack")).Count);
@@ -117,8 +116,8 @@ static partial class EntitySplitTest
         Entities.SeatToken = false; Entities.SeatNear = false;
         Run("timestamp-first", Edit(stamp: double.NaN));
         Run("missing-before-rate", Edit(net: 99));
-        Entities.ChangeBackOwner(7, 2, 3); Entities.EditsComeBack = false; Run("already-owner-drop", Edit(payload: false));
-        Entities.EditsComeBack = true; Run("already-owner-echo-before-payload", Edit(payload: false));
+        Entities.ChangeBackOwner(7, 2, 3);
+        Run("already-owner-echo-before-payload", Edit(payload: false));
         Entities.ChangeBackOwner(7, 4, 3); Run("rate-before-reach-and-malformed", Edit(payload: false));
         Entities.SeatToken = true; Run("reach-before-malformed", Edit(payload: false));
         Entities.SeatNear = true; Run("malformed-before-values", Edit(payload: false));

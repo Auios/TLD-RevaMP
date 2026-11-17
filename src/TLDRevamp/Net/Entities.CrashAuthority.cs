@@ -16,12 +16,10 @@ namespace TLDRevamp.Net
     /// the crash machine decides the crash (fairness: could be restricted to the host).
     internal static partial class EntityPhysics
     {
-        internal static bool CrashAuthority = true;       // default since v0.57.67 (the user's call after the A/B and relay runs); false = approach A
         internal static float CrashMinRelMps = 4f;        // softer contacts (shoving, touching) stay with approach A
         internal static float CrashMinHoldS = 1.0f, CrashMaxHoldS = 3.0f, CrashLeaseS = 4.0f;
         internal static long CrashClaims, CrashGranted, CrashRefused, CrashReleases, CrashAutoReturned;
         public static string LastCrash = "";
-        internal static bool CrashLeaveKeep = true;       // A/B: false = before v0.65.56 (crashlease.py)
         internal static long CrashLeasesKept;
         private static readonly List<HeldCrash> _held = new List<HeldCrash>();
         internal static float CrashApartCheckS = 0.25f;   // how often a waiting car's bounds are compared (they walk every collider)
@@ -64,7 +62,7 @@ namespace TLDRevamp.Net
         {
             if (Entities.PhysicsTrailer(e)) return false;
             if (e.Root != null && e.Root.car != null && Fixes.UnfreezeOnGround.Partners(e.Root).Count > 0) { CrashTowingSkipped++; return false; }
-            if (!CrashAuthority || !e.Proxy || relSpeed < CrashMinRelMps || e.CrashTaking) return false;
+            if (!e.Proxy || relSpeed < CrashMinRelMps || e.CrashTaking) return false;
             foreach (var h in _held) if (h.E == e) return false;
             if (WaitingApart(e)) { CrashRetakesSkipped++; return false; }   // still against what it hit last time
             Entities.PhysicsNetOf(mine.transform.root, out uint partnerNet, out bool partnerProxy);
@@ -142,7 +140,7 @@ namespace TLDRevamp.Net
         }
 
         internal static string CrashAuthorityStatus() =>
-            "{\"enabled\":" + (CrashAuthority ? "true" : "false") + ",\"claims\":" + CrashClaims + ",\"granted\":" + CrashGranted + ",\"refused\":" + CrashRefused +
+            "{\"enabled\":" + ("true") + ",\"claims\":" + CrashClaims + ",\"granted\":" + CrashGranted + ",\"refused\":" + CrashRefused +
             ",\"staleRefused\":" + CrashStaleRefused + ",\"releases\":" + CrashReleases + ",\"autoReturned\":" + CrashAutoReturned + ",\"held\":" + _held.Count + ",\"waitingApart\":" + _after.Count + ",\"retakesSkipped\":" + CrashRetakesSkipped + ",\"last\":" + Json.Str(LastCrash) + "}";
 
         // Session cleanup.

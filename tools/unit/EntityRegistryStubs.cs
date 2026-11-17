@@ -272,7 +272,7 @@ namespace TLDRevamp.Net
     static class Protocol { public const byte JoinLoading = 110; public static Vector3d ReadPos(NetReader r) => new(r.F64(), r.F64(), r.F64()); public static void WritePos(NetWriter w, Vector3d p) { w.F64(p.x); w.F64(p.y); w.F64(p.z); } }
     static partial class PlayerSave
     {
-        public static bool Enabled = true, ShareWornLate = true, WithSaveFile = true, RestoreConfirmed = true; public const int MaxItems = 64; public const byte Restore = 68;
+        public const int MaxItems = 64; public const byte Restore = 68;
         static NetReader _pending; static List<uint> _restoredReport; static readonly Dictionary<ulong, Rec> _recs = new(); static int _seed;
         public static string Last = "", WornLog = ""; public static long ItemsRestored, WornRestored, Restored, Pocketed, ItemsDropped;
         class BudgetFake { public void SchedulePeriodic(double at) => RegistryFakes.Trace.Add("record-budget:" + at); }

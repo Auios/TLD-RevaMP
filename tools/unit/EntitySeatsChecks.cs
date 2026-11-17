@@ -92,7 +92,7 @@ static partial class EntitySplitTest
         SeatValue(se, "CrashReturnTo", -1); SeatValue(se, "HitchCar", 10u); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, "HitchCar", 0u);
         foreach (string flag in new[] { "Held", "Stored" })
         { SeatValue(se, flag, true); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, flag, false); }
-        EntityHands.WornSync = true; SeatValue(se, "WornBy", 2); KernelSeatCall("ServerClaim", 1, Reader(claim)); EntityHands.WornSync = false; SeatValue(se, "WornBy", -1);
+SeatValue(se, "WornBy", 2); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, "WornBy", -1);
         SeatValue(se, "Driven", true); SeatValue(se, "DrivenAt", Time.realtimeSinceStartup); KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatValue(se, "Driven", false);
         Check(EntitySeats.DriverSeatRefused == refused && Entities.RefusedHeld == 1 && Entities.RefusedStored == 1 && EntityHands.WornRefused == 1, "authority guards retain their own counters before seat arbitration");
         KernelSeatCall("ServerClaim", 1, Reader(claim)); SeatVector("driver refusal owner reply", "192D0100000200000000");
@@ -200,17 +200,16 @@ static partial class EntitySplitTest
         object[] args = { pl, Vector3.zero, false, null }; SeatHook("SeatExitCollisionRestore", "Prefix", args); SeatHook("SeatExitCollisionRestore", "Postfix", pl, false, args[3]);
         Check(EntitySeats.SeatLeavesLogged == logged && EntitySeats.LocalGetOutCalls == calls + 1 && EntitySeats.SeatIgnoredPairs == 1, "ordinary GetOut probe stays seated without leave or collision restore");
         pl.Bsitting = false; SeatHook("SeatExitCollisionRestore", "Postfix", pl, false, args[3]); Check(EntitySeats.SeatLeavesLogged == logged + 1 && EntitySeats.SeatIgnoredPairs == 0 && !Physics.Ignored.Last().Item3, "actual exit logs once and restores capsule pairs");
-        EntitySeats.SeatLeaveOnExit = false; pl.Bsitting = true; SeatHook("SeatExitCollisionRestore", "Prefix", args); Check(EntitySeats.SeatLeavesLogged == logged + 2, "legacy exit switch logs at original prefix"); EntitySeats.SeatLeaveOnExit = true;
         RemotePlayers.Occupied = true; object[] free = { seat, true }; SeatHook("SeatFreeOverride", "Postfix", free); Check(!(bool)free[1], "remote seat binding overrides vanilla free result"); RemotePlayers.Occupied = false;
+        pl.Bsitting = true;
         var body = new Rigidbody { isKinematic = true, interpolation = RigidbodyInterpolation.Interpolate, position = new Vector3(10, 0, 0) }; body.transform.position = new Vector3(8, 0, 0); seat.ParentComponent = body;
         Check(EntitySeats.SeatAimFrame(out var drawn, out var actual) && actual == body && EntitySeats.SeatAimPoint(drawn, body, new Vector3(9, 1, 0)) == new Vector3(11, 1, 0), "seat aim translates drawn ray into physics frame");
         var camera = new Component(); pl.Cam = camera; camera.transform.localPosition = new Vector3(1, 2, 3); camera.transform.localRotation = new Quaternion(0, 0, 0, 1);
         object[] aim = { pl, null }; SeatHook("SeatAimRays", "Pre", aim); camera.transform.localPosition = Vector3.zero; SeatHook("SeatAimRays", "After", pl, aim[1]); Check(camera.transform.localPosition == new Vector3(1, 2, 3) && EntitySeats.SeatAimFrames == 1, "aim finalizer restores captured camera local pose");
         body.isKinematic = false; Check(!EntitySeats.SeatAimFrame(out _, out _), "owned physics seat needs no aim frame"); body.isKinematic = true; body.interpolation = RigidbodyInterpolation.None; Check(!EntitySeats.SeatAimFrame(out _, out _), "uninterpolated seat needs no aim frame");
-        SeatMap("_seats").Clear(); SeatMap("_seatsOwn").Clear();
+        SeatMap("_seats").Clear();
         var rear = new partslotscript { name = "rear" }; var rearSeat = new seatscript { sitPos = new Transform() }; rearSeat.transform.parent = rear.transform; rear.transform.Children.Add(rearSeat); e.Root.partslotscripts = new System.Collections.Generic.List<partslotscript> { rear };
         Check(EntitySeats.VehicleSeats(e.Root).Contains(rearSeat), "rear slot body seats appended");
-        EntitySeats.RearSeats = false; Check(!EntitySeats.VehicleSeats(e.Root).Contains(rearSeat) && EntitySeats.VehicleSeats(e.Root, true).Contains(rearSeat), "rear switch keeps separate caches and always override"); EntitySeats.RearSeats = true;
         var stool = new tosaveitemscript(); stool.transform.ChildComponent = stool;
         var mount = new Transform { ChildComponent = new mountStuff(), parent = e.Root.transform }; stool.transform.parent = mount;
         var itemSeat = new seatscript { sitPos = new Transform() }; itemSeat.transform.parent = stool.transform; stool.transform.Children.Add(itemSeat); e.Root.transform.Children.Add(itemSeat);
@@ -231,7 +230,7 @@ static partial class EntitySplitTest
             Check(!Regex.IsMatch(source, @"using\s+static\s+(?:global::)?(?:TLDRevamp\.Net\.)?Entities\s*;|Entities\.(?:W|WS|ByNet|Server)\b|\bSEnt\b"), part + " keeps maps writers and authority records in kernel");
             Check(source.Contains("internal static partial class EntitySeats"), part + " has feature owner");
         }
-        foreach (string name in new[] { "_keySeen", "_keyCar", "_keyNet", "_keySentAt", "_keyFirstAt", "_keyLastAt", "_keyHolds", "_keyDone", "_ignoredPairs", "_seatedIn", "_seats", "_seatsOwn", "RemoteShot", "_shotCar", "_shotSteer", "_shotHandbrake", "_shotSendAcc", "_shotHeld", "_shotEdges", "_shotWasActive", "DriverSeatRefused", "DriverSeatMoved", "DriverSeatOut", "LocalGetOutCalls", "ItemSeatsSent", "ShotgunSent", "ShotgunApplied", "SeatAimFrames" })
+        foreach (string name in new[] { "_keySeen", "_keyCar", "_keyNet", "_keySentAt", "_keyFirstAt", "_keyLastAt", "_keyHolds", "_keyDone", "_ignoredPairs", "_seatedIn", "_seats", "RemoteShot", "_shotCar", "_shotSteer", "_shotHandbrake", "_shotSendAcc", "_shotHeld", "_shotEdges", "_shotWasActive", "DriverSeatRefused", "DriverSeatMoved", "DriverSeatOut", "LocalGetOutCalls", "ItemSeatsSent", "ShotgunSent", "ShotgunApplied", "SeatAimFrames" })
             Check(typeof(Entities).GetField(name, Static) == null && SeatsOwner.GetField(name, Static) != null, name + " has one feature field owner");
         Check(!ReferenceEquals(Field(SeatsOwner, "W"), Field(typeof(Entities), "W")) && !ReferenceEquals(Field(SeatsOwner, "WS"), Field(typeof(Entities), "WS")) && !ReferenceEquals(Field(SeatsOwner, "W"), Field(SeatsOwner, "WS")), "seats owns separate client/key and raw relay writers");
         Check(BridgeReflect.Set("TLDRevamp.Net.EntitySeats.KeyResendS", "0.6") == "0.6" && EntitySeats.KeyResendS == .6f, "key owner call writes one owner"); EntitySeats.KeyResendS = .5f;

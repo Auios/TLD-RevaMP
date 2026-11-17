@@ -13,11 +13,9 @@ namespace TLDRevamp.Fixes
     /// by hand) and not on a copy (a kinematic body another machine moves): the machine simulating it does this.
     /// Faster than CreepMs (a car bumps it, a slope too steep to hold) it is left alone.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.TrailerCreep.Enabled
     [HarmonyPatch(typeof(utanfutoscript), "Start")]
     public static class TrailerCreep
     {
-        public static bool Enabled = true;
         public static float CreepMs = 0.55f;   // 2 km/h
         public static float BrakeNm = 1000f;   // on each wheel while held (at least the trailer's own brakeForce)
         public static long Held;
@@ -84,7 +82,7 @@ namespace TLDRevamp.Fixes
 
             private bool Hold()
             {
-                if (!Enabled || _t == null || _t.attached) return false;
+                if (_t == null || _t.attached) return false;
                 var rb = _t.RB != null ? _t.RB : GetComponent<Rigidbody>();
                 if (rb == null || rb.isKinematic || rb.IsSleeping()) return _braked;   // asleep: stays braked
                 var v = rb.velocity;

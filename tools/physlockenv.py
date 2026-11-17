@@ -5,7 +5,7 @@ machines over the relay; the host's physics lock set to 3 (restored after).
   The host's car (a copy on the laptop). The laptop's own lamp is put on its back seat ON THE LAPTOP (on its copy of
   the car). Then the host moves its car 6 m. After each step, on both machines: who owns the lamp, is it held by a
   container (parented into the car), where it is in the car's frame — the same everywhere?
-  tools/physlockenv.py [--no-build] [--relay iad|off] [--old] [--item 320]"""
+  tools/physlockenv.py [--no-build] [--relay iad|off] [--item 320]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -13,7 +13,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 from roadkit import CAR01
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD, ITEM = arg("--relay", "iad"), "--old" in sys.argv, arg("--item", 320, int)
+RELAY, ITEM = arg('--relay', 'iad'), arg('--item', 320, int)
 VERDICTS = []
 def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok)); print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
@@ -43,8 +43,7 @@ with game.ProtectedSession():
         h("set settingsscript.s.S.IPhysicsLock 3")
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyContainersInert {not OLD}")
-        print(f"  {'OLD (copy containers take anything)' if OLD else 'NEW'}; host physics lock 3", flush=True)
+        print(f"  {'NEW'}; host physics lock 3", flush=True)
         time.sleep(6)
         hp = h("gpos"); me = h("mp entities")["me"]; lme = L("mp entities")["me"]
         cx, cz = hp["gx"] + 8, hp["gz"] + 8
@@ -80,9 +79,6 @@ with game.ProtectedSession():
     finally:
         try: h(f"set settingsscript.s.S.IPhysicsLock {lock0}")
         except Exception as ex: print("restore physics lock:", ex)
-        for s_ in (h, L):
-            try: s_("set TLDRevamp.Net.EntityLocks.CopyContainersInert True")
-            except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

@@ -4,7 +4,7 @@ owner), the joiner rides as a passenger. One side turns the radio's tuning or vo
 call (`mp dragusable`: 3 s, 60 Hz, always upward), and BOTH sides record the dial every frame (`mp usableprobe`).
 A dial that jitters shows as steps back against the turn, or as the value leaving its final position again after it
 got there (an older value applied over a newer one). Parked first, then at speed; the owner's hand and the joiner's.
-  tools/dialjitter.py [--no-build] [--relay iad|off] [--kmh 60] [--dials tune,vol] [--old: stepped knobs take values between steps, as before]"""
+  tools/dialjitter.py [--no-build] [--relay iad|off] [--kmh 60] [--dials tune,vol]"""
 import sys, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -12,7 +12,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 from roadkit import g, car_ready, clear_road
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, KMH, DIALS, OLD = arg("--relay", "iad"), arg("--kmh", 60.0, float), arg("--dials", "tune,vol").split(","), "--old" in sys.argv
+RELAY, KMH, DIALS = arg('--relay', 'iad'), arg('--kmh', 60.0, float), arg('--dials', 'tune,vol').split(',')
 DRAG, PROBE = 3.0, 7.0
 T = "TLDRevamp.Net.Entities"
 VERDICTS, ROWS = [], []
@@ -102,8 +102,6 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for name, s_ in (("host", h), ("joiner", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
-            s_(f"set TLDRevamp.Net.UsableMerge.SnapSteps {not OLD}")
-        print(f"  {'OLD (stepped knobs take values between steps)' if OLD else 'CURRENT BUILD'}: SnapSteps {g(h, 'TLDRevamp.Net.UsableMerge.SnapSteps')}/{g(L, 'TLDRevamp.Net.UsableMerge.SnapSteps')}", flush=True)
         h("set settingsscript.s.S.BAutoShift True")
         rp = h("roadpoint"); F = (math.sin(math.radians(rp["yaw"])), math.cos(math.radians(rp["yaw"])))
         r0 = clear_road(h, rp["gx"], rp["gz"], F[0], F[1]); yaw = r0["yaw"]
@@ -170,7 +168,7 @@ with game.ProtectedSession():
         try: h("autodrive off"); h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestIgnition -1"); L(f"set TLDRevamp.Net.EntityCarSignalsTools.TestIgnition -1"); h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHandbrake -1"); L(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHandbrake -1"); h("aimlab stop"); L("aimlab stop")
         except Exception: pass
         for s_, v_ in gods.values():
-            try: s_(f"set kaposztaleves.s.settings.god {v_}"); s_("set TLDRevamp.Net.UsableMerge.SnapSteps True")
+            try: s_(f"set kaposztaleves.s.settings.god {v_}")
             except Exception: pass
         h(f"set settingsscript.s.S.BAutoShift {shift_h}")
         L("mp stop"); h("mp stop")

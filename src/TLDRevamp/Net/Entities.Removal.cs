@@ -128,7 +128,7 @@ namespace TLDRevamp.Net
             if (!Resolve(pe) || pe.Root == null)
             {
                 // our copy is in the far store: it comes off there (placed back loose where it landed)
-                if (StoredAttach && DetachStored(pe.RootId, pos, rot)) { DetachSyncsApplied++; DetachesStored++; SessionLog.Event("detach-applied", net, to: MyId, result: "far store"); }
+                if (DetachStored(pe.RootId, pos, rot)) { DetachSyncsApplied++; DetachesStored++; SessionLog.Event("detach-applied", net, to: MyId, result: "far store"); }
                 return;
             }
             var at = pe.Root.attachable;

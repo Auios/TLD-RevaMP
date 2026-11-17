@@ -15,7 +15,7 @@ namespace TLDRevamp.Net
         internal static bool CarriedFar(attachablescript at, out Entities.Ent carrier)
         {
             carrier = null;
-            if (!Entities.AttachmentCarriesParts || at == null || at.tosave == null || at.slot == null || at.slot.tosaveitem == null || Entities.AttachmentRoot(at.tosave) != null) return false;
+            if (at == null || at.tosave == null || at.slot == null || at.slot.tosaveitem == null || Entities.AttachmentRoot(at.tosave) != null) return false;
             var group = Entities.AttachmentGroup(at.tosave);
             if (group != null && group.Root != null) return false;
             carrier = Entities.AttachmentRoot(at.slot.tosaveitem);

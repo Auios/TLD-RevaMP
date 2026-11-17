@@ -26,12 +26,6 @@ namespace TLDRevamp.Net
             CarriedSent++;
             return car;
         }
-
-        /// A/B: loose cargo lying in a car (on a seat, the floor, a bed, a roof; not stored by a physics lock) travels in
-        /// that car's frame too. Sent in world positions, its copies were interpolated on their own curve while the car's
-        /// copy ran on another: in a Car01 at 8-13 m/s the other player saw the cargo 1-3.6 m off its seat, sliding through
-        /// the car as the driver sped up, braked or turned (stress campaign 2026-10-25, mpstress C).
-        internal static bool RidingFrames = true;
         public static long RidingSent, RidingSwitches;
 
         /// Copy, a state just read: in the car's frame, the interpolator runs on car-frame poses (a fresh one when the
@@ -44,8 +38,8 @@ namespace TLDRevamp.Net
             // the claim then made a still item of it in a car at 50 km/h: the car rammed it (stopped dead, 3 parts off,
             // the lamp thrown 50 m; heldincar B2, 2026-10-08). Let go into a car it now lies in (RidingFrames), its state
             // names that car instead of none (a holder outside it too): the same.
-            uint released = Entities.LooseCarriedRelease(e.CarriedBy, cb, held, stored) ? e.CarriedBy : RidingFrames && e.Held && cb != 0 && !held && !stored ? cb : 0;
-            if (!EntityCodec.ReadLockedState && released != 0 && Entities.TryGetEntity(released, out var car) && !car.Proxy && car.Root != null && Entities.CargoClaims && e.Root != null)
+            uint released = Entities.LooseCarriedRelease(e.CarriedBy, cb, held, stored) ? e.CarriedBy : e.Held && cb != 0 && !held && !stored ? cb : 0;
+            if (!EntityCodec.ReadLockedState && released != 0 && Entities.TryGetEntity(released, out var car) && !car.Proxy && car.Root != null && e.Root != null)
             {
                 if (Entities.ClaimReleasedCarried(e))
                 {

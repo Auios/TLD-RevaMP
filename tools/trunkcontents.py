@@ -6,7 +6,7 @@ world/start), hosts, the joiner joins:
   A  the stored things: objects of their own, stored in the car, on both machines (--old: members of the car's group)
   B  the joiner takes one out and puts it down 3 m beside the car: on the host it leaves the trunk too, and lies where
      the joiner put it
-  tools/trunkcontents.py [--no-build] [--old] [--car Car06P]"""
+  tools/trunkcontents.py [--no-build] [--car Car06P]"""
 import sys, os, time, math, json, shutil, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game

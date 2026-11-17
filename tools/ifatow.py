@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 """The IFA that "doesn't drive well" (Fixes/WheelInertia.cs) and the game's car trailer that "pulls its hitch down"
-(Fixes/TrailerTongue.cs), playtest 2026-10-15. The desktop alone (host, no joiner). Each part twice, OLD (the fix off)
-then NEW (on), each on fresh vehicles; every sample goes to a JSON file.
+(Fixes/TrailerTongue.cs), playtest 2026-10-15. The desktop alone (host, no joiner). Each part runs on fresh vehicles; every sample goes to a JSON file.
   ifa   the IFA (item 174) under autodrive: its four driven wheels against the speed it goes (`mount drive`)
           A NEW: the driven wheels turn together (median spread < 15%, median |slip| < 0.2)
-          B OLD: the bug shows (median spread > 30%)
-          C NEW: it reaches 15 m/s within 13 s (OLD's time is printed: it varies with its slipping wheels)
+          C NEW: it reaches 15 m/s within 13 s
           D a Car01 is left as the game has it (its wheels keep the masses the game gives them)
-  sweep one IFA driving on, the fix's MinLoadShare changed every SECS: off, 1/30, 1/15, 1/8, off (how much is enough)
+  sweep one IFA driving on, the fix's MinLoadShare changed every SECS: 1/30, 1/15, 1/8 (how much is enough)
   tow   a Car01 and the game's trailer (item 53) hitched (`mount hitch`, `mount tow`)
-          E OLD: the bug shows (over 35% of the trailer's weight on the ball)
           F NEW: 5-20% of its weight on the ball
           G NEW: the car's front wheels keep 90% of the load they have without the trailer
           H NEW: towed at 15 m/s without swaying (the trailer within 0.5 m of the car's line, the last 10 s)
@@ -113,8 +110,7 @@ with game.ProtectedSession():
 
         if "ifa" in PARTS:
             res = {}
-            for label, item, on in (("OLD", IFA, False), ("NEW", IFA, True), ("car01", CAR01, True)):
-                h(f"set TLDRevamp.Fixes.WheelInertia.Enabled {on}")
+            for label, item, on in (("NEW", IFA, True), ("car01", CAR01, True)):
                 h(f"tpground {x - R[0] * 6} {z - R[1] * 6}"); time.sleep(2)
                 net = spawn(h, item, x, z, yaw)
                 if not net: print(f"  {label}: NOT SPAWNED", flush=True); continue
@@ -126,13 +122,10 @@ with game.ProtectedSession():
                 res[label] = wheel_stats(rows)
                 res[label]["masses"] = sorted({w["m"] for r in rows if "driven" in r["probe"] for w in r["probe"]["driven"]})
                 print(f"  {label}: {res[label]}", flush=True)
-                if label == "OLD":   # NEW starts where OLD did (the same road ahead): OLD has driven far on by now
-                    h("driveout"); time.sleep(1)
-                else: next_spot(net)
+                next_spot(net)
             o, n, c = res.get("OLD", {}), res.get("NEW", {}), res.get("car01", {})
             verdict("A NEW: THE IFA'S DRIVEN WHEELS TURN TOGETHER", n.get("spread") is not None and n["spread"] < 0.15 and n["slip"] < 0.2,
                     f"spread {n.get('spread')}, slip {n.get('slip')}, shifts {n.get('shifts')}")
-            verdict("B OLD: THE BUG SHOWS", o.get("spread") is not None and o["spread"] > 0.3, f"spread {o.get('spread')}, slip {o.get('slip')}, shifts {o.get('shifts')}")
             # against a fixed time, not OLD's: OLD's slipping wheels made its time vary 8.5-12.6 s from run to run on the same
             # road (NOTES 0.67.2), so "no later than OLD" failed on OLD's luck; NEW took 10.8 s in both of those runs
             verdict(f"C NEW: IT REACHES 15 M/S WITHIN {T15_MAX:g} S", n.get("t15") is not None and n["t15"] <= T15_MAX,
@@ -142,27 +135,24 @@ with game.ProtectedSession():
             DATA["ifa_stats"] = res
 
         if "sweep" in PARTS:
-            h("set TLDRevamp.Fixes.WheelInertia.Enabled False")
             h(f"tpground {x - R[0] * 6} {z - R[1] * 6}"); time.sleep(2)
             net = spawn(h, IFA, x, z, yaw)
             print(f"  sweep IFA net {net}; sits: {sit(h, net)}; fuel: {h('fuelup')}", flush=True)
             res = {}
-            for label, share in (("off", None), ("1/30", 1 / 30), ("1/15", 1 / 15), ("1/8", 1 / 8), ("off again", None)):
-                if share is None: h("set TLDRevamp.Fixes.WheelInertia.Enabled False")
-                else: h(f"set TLDRevamp.Fixes.WheelInertia.MinLoadShare {share}"); h("set TLDRevamp.Fixes.WheelInertia.Enabled True")
+            for label, share in (("1/30", 1 / 30), ("1/15", 1 / 15), ("1/8", 1 / 8)):
+                h(f"set TLDRevamp.Fixes.WheelInertia.MinLoadShare {share}")
                 rows = drive(h, net, "drive", 20)
                 DATA[f"sweep_{label}"] = rows
                 res[label] = wheel_stats(rows)
                 res[label]["masses"] = sorted({round(w["m"]) for r in rows if "driven" in r["probe"] for w in r["probe"]["driven"]})
                 print(f"  sweep {label}: {res[label]}", flush=True)
             DATA["sweep_stats"] = res
-            h("set TLDRevamp.Fixes.WheelInertia.MinLoadShare 0.0666667"); h("set TLDRevamp.Fixes.WheelInertia.Enabled True")
+            h("set TLDRevamp.Fixes.WheelInertia.MinLoadShare 0.0666667")
             next_spot(net)
 
         if "tow" in PARTS:
             res = {}
-            for label, on in (("OLD", False), ("NEW", True)):
-                h(f"set TLDRevamp.Fixes.TrailerTongue.Enabled {on}")
+            for label, on in (("NEW", True),):
                 h(f"tpground {x - R[0] * 6} {z - R[1] * 6}"); time.sleep(2)
                 car = spawn(h, CAR01, x, z, yaw)
                 print("  car sits:", sit(h, car), h("fuelup"), flush=True); time.sleep(4)
@@ -194,7 +184,6 @@ with game.ProtectedSession():
                 print(f"  {label}: {res[label]}", flush=True)
                 next_spot(car)
             o, n = res.get("OLD", {}), res.get("NEW", {})
-            verdict("E OLD: THE BUG SHOWS (OVER 35% ON THE BALL)", o.get("share", 0) > 0.35, f"{o.get('share', 0):.0%}")
             verdict("F NEW: 5-20% OF THE TRAILER'S WEIGHT ON THE BALL", 0.05 <= n.get("share", 0) <= 0.20, f"{n.get('share', 0):.0%}")
             verdict("G NEW: THE CAR'S FRONT WHEELS KEEP 90% OF THEIR LOAD", n.get("front", 0) >= 0.9 * n.get("frontAlone", 1),
                     f"{n.get('front', 0):.0f} N of {n.get('frontAlone', 0):.0f} N (OLD {o.get('front', 0):.0f} of {o.get('frontAlone', 0):.0f})")
@@ -206,7 +195,7 @@ with game.ProtectedSession():
     finally:
         OUT.write_text(json.dumps(DATA, indent=1))
         print("written", OUT, flush=True)
-        for cmd in ("autodrive off", "set TLDRevamp.Fixes.WheelInertia.Enabled True", "set TLDRevamp.Fixes.TrailerTongue.Enabled True"):
+        for cmd in ("autodrive off",):
             try: h(cmd)
             except Exception: pass
         h("mp stop")

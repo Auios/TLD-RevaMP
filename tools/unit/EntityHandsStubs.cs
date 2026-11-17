@@ -75,7 +75,7 @@ namespace TLDRevamp.Net
             public Vector3 WornLp; public Quaternion WornLq;
         }
         private static bool ClaimCargoForFixture(Ent e, bool released = false, ClaimReason reason = ClaimReason.CargoNear) => TestCargoClaim;
-        internal static bool TestEpoch = true, CargoClaims = true, TestCargoClaim;
+        internal static bool TestEpoch = true, TestCargoClaim;
         internal static int Stops, Exits;
         internal static float HandoverAcceptS = 2;
         private static bool ClaimEpochOk(SEnt se, int from, uint epoch) => TestEpoch;

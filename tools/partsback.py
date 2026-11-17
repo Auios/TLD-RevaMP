@@ -8,7 +8,7 @@ relay:
   one part's record is put 2 km from the car, still bolted to it (`mp farstray`: what the host's save had for the
   joiner's car — wheels, doors, engine 1–3.5 km off); the laptop drives it ~1 km; the host comes to it → the host's
   copy has the laptop's parts (`mp carparts`).
-  tools/partsback.py [--no-build] [--relay iad|off] [--plain: the host never takes the car] [--old: before v0.68.1]"""
+  tools/partsback.py [--no-build] [--relay iad|off] [--plain: the host never takes the car]"""
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -17,7 +17,7 @@ from roadkit import CAR01, g
 
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")   # the example mods stay installed
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, PLAIN, OLD = arg("--relay", "iad"), "--plain" in sys.argv, "--old" in sys.argv
+RELAY, PLAIN = arg('--relay', 'iad'), '--plain' in sys.argv
 T = "TLDRevamp.Net.Entities"
 VERDICTS = []
 def verdict(name, ok, detail=""):
@@ -67,8 +67,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set {T}.FarPartsByAttach {not OLD}"); s_(f"set TLDRevamp.Fixes.PlaceWithParts.Enabled {not OLD}")
-        print(f"  {'OLD (before v0.68.1)' if OLD else 'CURRENT BUILD'}{', plain' if PLAIN else ''}", flush=True)
+        print(f"  {'CURRENT BUILD'}{', plain' if PLAIN else ''}", flush=True)
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
         hid, lid = h("mp entities")["me"], L("mp entities")["me"]
@@ -120,9 +119,6 @@ with game.ProtectedSession():
             try: s_("autodrive off")
             except Exception: pass
         for s_, v in list(gods.values()): s_(f"set kaposztaleves.s.settings.god {v}")
-        for s_ in (h, L):
-            try: s_(f"set {T}.FarPartsByAttach True"); s_("set TLDRevamp.Fixes.PlaceWithParts.Enabled True")
-            except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

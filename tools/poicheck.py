@@ -2,7 +2,7 @@
 """Main road only: does every machine get the same buildings, whatever order it generated the area in? (14c6057)
 
   tools/poicheck.py run --from north|south [--draw 25000] [--site -27581] [--travel 20000] [--step 2500]
-                        [--settle 30] [--still 60] [--seed 20260924] [--old] [--out FILE]
+                        [--settle 30] [--still 60] [--seed 20260924] [--out FILE]
   tools/poicheck.py compare A.json B.json
 
 run: a new main-road-only game on the test copy (TLD_DIR / TLD_TEST_COMPAT / TLD_BRIDGE_PORT) at draw distance --draw.

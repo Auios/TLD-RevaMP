@@ -4,7 +4,7 @@ but not for the other player", same seed; nothing in the logs). Two machines ove
 laptop it is taken out of the world (`poihide`: what the joiner's game had there); both players go next to it → the
 host logs "[anomaly] building differs between players" naming the building, the spot, and that the laptop has no
 building there (Entities.PoiCensus); nothing logged for the buildings both have.
-  tools/buildingdiff.py [--no-build] [--relay iad|off] [--old: no building check, before v0.68.1]"""
+  tools/buildingdiff.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib, os
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -12,7 +12,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")   # the example mods stay installed
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 T = "TLDRevamp.Net.Entities"
 VERDICTS = []
 def verdict(name, ok, detail=""):
@@ -56,8 +56,7 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, s_("get kaposztaleves.s.settings.god").get("value")); s_("set kaposztaleves.s.settings.god True")
-            s_(f"set TLDRevamp.Net.EntityRepair.PoiCensusOn {not OLD}")
-        print(f"  {'OLD (no building check)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         time.sleep(10)
         ph, pl = pois(h), pois(L)
         cand = sorted((p for k, p in ph.items() if k in pl and 400 < p["d"] < 3000), key=lambda p: p["d"])
@@ -79,7 +78,7 @@ with game.ProtectedSession():
         verdict("NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er), str([(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er]))
     finally:
         for s_, v in gods.values():
-            try: s_(f"set kaposztaleves.s.settings.god {v}"); s_(f"set TLDRevamp.Net.EntityRepair.PoiCensusOn True")
+            try: s_(f"set kaposztaleves.s.settings.god {v}")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

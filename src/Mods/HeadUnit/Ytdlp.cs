@@ -61,13 +61,9 @@ namespace HeadUnit
         private static readonly ConcurrentQueue<Action> MainThread = new ConcurrentQueue<Action>();
         /// The videos being fetched, and who waits for each (a prefetch, then the player when it comes up).
         private static readonly Dictionary<string, List<Action<string>>> Resolving = new Dictionary<string, List<Action<string>>>();
-
-        /// Fetch a video ahead (the next in the queue while one plays: no wait between songs). One at a time, and only
-        /// while nothing else is being fetched.
-        public static bool PrefetchOn = true;   // runtime switch (bridge set HeadUnit.Ytdlp.PrefetchOn)
         public static void Prefetch(string videoId)
         {
-            if (!PrefetchOn || !ValidVideoId(videoId) || !Present || Resolving.Count > 0 || PrefetchFailed.Contains(videoId)) return;
+            if (!ValidVideoId(videoId) || !Present || Resolving.Count > 0 || PrefetchFailed.Contains(videoId)) return;
             bool merge = HasFfmpeg;
             int h = merge ? Mathf.Clamp(Plugin.MaxHeight.Value, 144, 1080) : 360;
             if (File.Exists(CachedFile(videoId, h))) return;

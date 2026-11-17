@@ -13,14 +13,14 @@ their owner) does the work as a player does it (TestAsPlayer).
   A0 the joiner takes a wheel off with its hubcap on → both agree (the game keeps it on)
   F 10 s with nothing touched: no part mounted on the car or bus sends or gets states; the host drives its car off: the
     bolted-back wheel stays at its slot point on the joiner's screen
-  tools/partsync.py [--no-build] [--relay off|iad] [--old: Entities.SplitParentsCarry, PrefabChildSave False]"""
+  tools/partsync.py [--no-build] [--relay off|iad]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "off"), "--old" in sys.argv
+RELAY = arg('--relay', 'off')
 T = "TLDRevamp.Net.Entities"; CAR05, BUS, LAMP = 154, 106, 320
 HUB, TYRE, ENGINE = "DisztarcsaSlotCol", "GumiSLotCol", "EngineSlotCollider"
 VERDICTS = []
@@ -102,11 +102,7 @@ with game.ProtectedSession():
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         h("set settingsscript.s.S.IPhysicsLock 3")   # containers hold what is put in (the host's setting rules)
-        for s_ in (h, L):
-            for sw in ("SplitParentsCarry", "PrefabChildSave"):
-                try: s_(f"set {T}.{sw} {not OLD}")
-                except RuntimeError as ex: print(f"  no switch {sw} in this build: {ex}", flush=True)
-        print(f"  {'OLD (SplitParentsCarry, PrefabChildSave off)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         hid, lid = h("mp entities")["me"], L("mp entities")["me"]
         time.sleep(6)
         q = h("gpos"); gx, gz = q["gx"] + 8, q["gz"] + 8
@@ -310,5 +306,5 @@ with game.ProtectedSession():
         try: L("mp stop"); h("mp stop")
         except Exception: pass
 passed = sum(1 for _, ok in VERDICTS if ok)
-print(f"\nSUMMARY partsync {'OLD' if OLD else 'NEW'}: {passed}/{len(VERDICTS)} passed", flush=True)
+print(f"\nSUMMARY partsync {'NEW'}: {passed}/{len(VERDICTS)} passed", flush=True)
 sys.exit(0 if passed == len(VERDICTS) else 1)

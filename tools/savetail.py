@@ -36,12 +36,8 @@ with game.ProtectedSession():
             b("mp save"); time.sleep(1.5)
         s0 = slots(); print("  slots at start:", s0, flush=True)
 
-        b("set TLDRevamp.Net.Mp.RotateOnSaveTail False")
-        r = b("mp save"); time.sleep(1); s1 = slots(); print("  A old:", r, s1, flush=True)
-        verdict("A OLD: AUTOSAVE1 WRITTEN OVER, THE PREVIOUS ONE LOST (expected)", s1[2] == s0[2] and s1[1] != s0[1] and s0[1] not in s1.values(),
-                f"before {s0}, after {s1}")
+        s1 = s0
 
-        b("set TLDRevamp.Net.Mp.RotateOnSaveTail True")
         r = b("mp save"); time.sleep(1); s2 = slots(); print("  B fix:", r, s2, flush=True)
         verdict("B FIX: THE GAME'S ROTATION (1 -> 2 -> 3), THEN A NEW AUTOSAVE1", r.get("rotated") is True and s2[2] == s1[1] and s2[3] == s1[2] and s2[1] != s1[1],
                 f"before {s1}, after {s2}")
@@ -60,7 +56,7 @@ with game.ProtectedSession():
         b("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         verdict("D AUTOSAVE ON: ENDING THE SESSION SAVES, ROTATED", s4[2] == s3[1] and s4[1] != s3[1], f"before {s3}, after {s4}")
     finally:
-        for k, v in (("TLDRevamp.Net.MpTools.TestAutosaveOff", False), ("TLDRevamp.Net.Mp.RotateOnSaveTail", True), ("TLDRevamp.TestSafetyTools.BlockAutoSave", True)):
+        for k, v in (("TLDRevamp.Net.MpTools.TestAutosaveOff", False), ("TLDRevamp.TestSafetyTools.BlockAutoSave", True),):
             try: b(f"set {k} {v}")
             except Exception as ex: print("restore", k, ex)
         try: b("mp stop")

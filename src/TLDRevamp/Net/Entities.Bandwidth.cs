@@ -4,7 +4,6 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
-        public static bool WasteFixes = true;
         public static long StatesSkippedIdentical, StatesSkippedCorpseRoot, StatesSkippedUnknown, StatesSkippedCreatureRange, StatesSkippedDeadAnimation;
 
         public static long StatesSkippedPose, StatesSkippedLocked, StatesSkippedAttached, StatesSkippedRabbitAnimation, StatesSkippedRagdoll;
@@ -13,7 +12,7 @@ namespace TLDRevamp.Net
 
         private static void RelayCreature(SEnt se, int from, NetReader r)
         {
-            if (!WasteFixes || Mp.Server == null) { ServerFwdAll(from, r, false); return; }
+            if (Mp.Server == null) { ServerFwdAll(from, r, false); return; }
             WS.Reset(); WS.Bytes(r.Buf, 0, r.End);
             Mp.Server.SendCreatureState(WS, from, se.NetId, se.Where);
             if (from != 0) Deliver(WS);
@@ -30,7 +29,7 @@ namespace TLDRevamp.Net
         // Rabbit death leaves its unused root coasting; detached limbs can already be lying still.
         internal static Transform RagdollFrame(Ent e)
         {
-            if (!WasteFixes || e.Root.car != null) return e.Root.transform;
+            if (e.Root.car != null) return e.Root.transform;
             var limbs = EntityRagdolls.Limbs(e);
             if (limbs == null || !EntityRagdolls.Limp(e)) return e.Root.transform;
             foreach (var limb in limbs) if (limb != null && limb != e.Root.transform && limb.GetComponent<Rigidbody>() != null) return limb;

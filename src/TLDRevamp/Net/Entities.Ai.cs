@@ -31,12 +31,6 @@ namespace TLDRevamp.Net
         private static bool _aiSoundReplay;   // a copy playing the owner's creature voice
 
         internal static bool InitializeAiLookups() => _spawnedGib != null && DamageFromM != null && ChaseStartF != null && CurChaseF != null;
-
-        // ================================================================ breakables
-        /// A/B: false = before: a creature that was ever locked in a car could not die. The lock destroys its limbs' bodies
-        /// (ragdollchildpos.Freeze) and the unlock makes new ones, but ragdollactivatescript.RBs still lists the destroyed ones:
-        /// SetRagdol throws out of aiscript.Die, on every machine. Not ours to leave: a break made again would throw each time.
-        internal static bool RagdollListHealed = true;
         public static long RagdollListsHealed;
 
         [HarmonyPatch(typeof(ragdollactivatescript), nameof(ragdollactivatescript.SetRagdol))]
@@ -45,7 +39,7 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static void Prefix(ragdollactivatescript __instance)
             {
-                if (!RagdollListHealed || __instance.RBs == null) return;
+                if (__instance.RBs == null) return;
                 bool gone = false;
                 foreach (var b in __instance.RBs) if (b == null) { gone = true; break; }
                 if (!gone) return;
@@ -195,34 +189,23 @@ namespace TLDRevamp.Net
                 if (__state || !Entities.InSession || _breakFxReplay) return;
                 if (Entities.IsProxy(__instance))
                 {
-                    if (BreaksKept) { var c0 = BreakOwner(__instance); SessionLog.Event("break-on-copy", c0 != null ? c0.NetId : 0, result: "not shared"); }
+                    { var c0 = BreakOwner(__instance); SessionLog.Event("break-on-copy", c0 != null ? c0.NetId : 0, result: "not shared"); }
                     return;
                 }
-                if (!BreakRef(__instance, out uint net, out int bi)) { if (BreaksKept) SessionLog.Event("break-no-object", result: __instance.name); if (WorldBreakGibs) WorldBreakOut(__instance); return; }
+                if (!BreakRef(__instance, out uint net, out int bi)) { SessionLog.Event("break-no-object", result: __instance.name); WorldBreakOut(__instance); return; }
                 // a member that is an item of its own goes as a member (MemberGone): kept here too, its number would mean another one later
-                bool kept = BreaksKept && (__instance.GetComponent<tosaveitemscript>() == null || (Entities.TryGetEntity(net, out var broke) && broke.Root != null && broke.Root.gameObject == __instance.gameObject));
+                bool kept = (__instance.GetComponent<tosaveitemscript>() == null || (Entities.TryGetEntity(net, out var broke) && broke.Root != null && broke.Root.gameObject == __instance.gameObject));
                 W.Reset(); W.U8(Entities.BreakFx); W.U32(net); W.VarU32((uint)bi); W.U8(kept ? BreakKeep : (byte)0);
                 Entities.SendToServer(W, true); BreakFxSent++;
-                if (BreaksKept) SessionLog.Event("break-sent", net, item: bi, result: kept ? "kept" : "member");
+                SessionLog.Event("break-sent", net, item: bi, result: kept ? "kept" : "member");
                 if (kept) KeepBreakHere(net, bi, Entities.TryGetEntity(net, out var here) && here.Root != null ? here.Root.transform : null);
                 // the gib is the owner's: the copies replay the break without one, so it goes out as an object of its own
-                if (Entities.ReshareSurvivors && _spawnedGib(__instance) is GameObject gib && gib != null)
+                if (_spawnedGib(__instance) is GameObject gib && gib != null)
                     foreach (var t in gib.GetComponentsInChildren<tosaveitemscript>(true)) Entities.QueueReshare(t);
             }
         }
-
-        /// A piece of the world broken here: a cactus by the road (cut with a katana, shot, run over) is no shared object -
-        /// every machine has its own, made from the seed. Before, its piece (the game's gib, cactigib01: an item you can drink
-        /// from and carry) existed on the breaker's machine only, and the cactus stood on to the others: a playtest's
-        /// cactus, cut, drunk from and put in the bus, was there for one player and not the other (2026-10-24,
-        /// tools/busstool.py C). Now the gib is shared as objects of their own (as a shared breakable's is), and the others
-        /// break their own copy of that piece of the world - the same name within WorldBreakM of where it stood - without
-        /// a gib of their own.
-        internal static bool WorldBreakGibs = true;   // A/B: false = before v0.69.2
         internal static float WorldBreakM = 1.5f;
         public static long WorldBreaksSent, WorldBreaksApplied, WorldBreaksMissed, WorldGibsShared;
-        /// A/B: false = before: a piece not generated here when it broke, or a player who joined later, kept it standing.
-        internal static bool WorldBreaksKept = true;
         internal static float WorldBreakNearM = 400f;
         public const int MaxWorldBreaks = 4096;
         public static long WorldBreaksReplayed, WorldBreaksLate, WorldBreakScans;
@@ -232,7 +215,6 @@ namespace TLDRevamp.Net
 
         internal static void ServerKeepWorldBreak(NetReader r)
         {
-            if (!WorldBreaksKept) return;
             var g = new Vector3d(r.F64(), r.F64(), r.F64()); string name = r.Str();
             if (r.Bad || string.IsNullOrEmpty(name) || _worldBreaks.Count >= MaxWorldBreaks) return;
             _worldBreaks.Add(new KeptBreak { G = g, Name = name });
@@ -301,8 +283,7 @@ namespace TLDRevamp.Net
             var g = new Vector3d(r.F64(), r.F64(), r.F64()); string name = r.Str();
             if (r.Bad || string.IsNullOrEmpty(name) || double.IsNaN(g.x) || double.IsNaN(g.y) || double.IsNaN(g.z)) return;
             // a joiner gets every break of the session at once: all of them wait for the same one look, next frame
-            if (WorldBreaksKept) { _worldBreaksWaiting.Add(new KeptBreak { G = g, Name = name }); return; }
-            if (!BreakWorldPiece(Object.FindObjectsOfType<breakablescript>(), g, name)) WorldBreaksMissed++;
+            _worldBreaksWaiting.Add(new KeptBreak { G = g, Name = name });
         }
 
         private static bool BreakWorldPiece(breakablescript[] all, Vector3d g, string name)
@@ -340,14 +321,6 @@ namespace TLDRevamp.Net
         internal static bool BreakRef(breakablescript br, out uint net, out int bi)
         {
             net = 0; bi = -1;
-            if (!BreaksKept)
-            {
-                var whole = Entities.EntOfRoot(br.transform.root);
-                if (whole == null) return false;
-                bi = System.Array.IndexOf(br.transform.root.GetComponentsInChildren<breakablescript>(true), br);
-                net = whole.NetId;
-                return bi >= 0;
-            }
             var e = BreakOwner(br);
             if (e == null) return false;
             bi = BreakablesOf(e, br).IndexOf(br);   // BreakOut asks after the game's Break: it counts as it did before
@@ -387,11 +360,6 @@ namespace TLDRevamp.Net
         internal static breakablescript BreakableOf(uint net, int bi)
         {
             if (!Entities.TryGetEntity(net, out var e) || !Entities.ResolveEntity(e) || e.Root == null) return null;
-            if (!BreaksKept)
-            {
-                var whole = e.Root.transform.root.GetComponentsInChildren<breakablescript>(true);
-                return bi >= 0 && bi < whole.Length ? whole[bi] : null;
-            }
             var all = BreakablesOf(e);
             return bi >= 0 && bi < all.Count ? all[bi] : null;
         }
@@ -425,9 +393,9 @@ namespace TLDRevamp.Net
             uint net = r.U32(); int bi = (int)r.VarU32();
             byte flags = r.Remaining > 0 ? r.U8() : (byte)0;
             if (r.Bad) return;
-            bool kept = BreaksKept && (flags & BreakKeep) != 0;
+            bool kept = (flags & BreakKeep) != 0;
             // for a copy that just came: its members that are gone go at the end of this frame, and the numbers count without them
-            if (BreaksKept) SessionLog.Event("break-got", net, item: bi, result: ((flags & BreakLate) != 0 ? "late " : "") + (kept ? "kept" : "member") + (Entities.TryGetEntity(net, out _) ? "" : ", no object"));
+            SessionLog.Event("break-got", net, item: bi, result: ((flags & BreakLate) != 0 ? "late " : "") + (kept ? "kept" : "member") + (Entities.TryGetEntity(net, out _) ? "" : ", no object"));
             if (kept && (flags & BreakLate) != 0) { if (Entities.TryGetEntity(net, out _)) KeepBreakHere(net, bi, null); return; }
             var br = BreakableOf(net, bi);
             if (br == null)
@@ -448,10 +416,6 @@ namespace TLDRevamp.Net
             try { br.Gib = null; br.reducedGib = null; br.Break(); BreakFxApplied++; }
             finally { _breakFxReplay = false; if (br != null) { br.Gib = gib; br.reducedGib = rgib; } }
         }
-
-        /// A/B: false = before: a break reached whoever had the object loaded then. A copy stored far, or a player who got the
-        /// object later, stayed unbroken: a break is in no record and no census row.
-        internal static bool BreaksKept = true;
         public const int MaxBreaksPerObject = 256;
         private const byte BreakKeep = 1, BreakLate = 2;   // BreakFx's last byte
         public static long BreaksReplayed, BreaksAppliedLate;
@@ -475,7 +439,6 @@ namespace TLDRevamp.Net
 
         internal static void ServerKeepBreak(NetReader r)
         {
-            if (!BreaksKept) return;
             uint net = r.U32(); int bi = (int)r.VarU32();
             byte flags = r.Remaining > 0 ? r.U8() : (byte)0;
             if (r.Bad || bi < 0 || (flags & BreakKeep) == 0) return;
@@ -595,7 +558,6 @@ namespace TLDRevamp.Net
 
         /// Which remote player each creature here chases (set when it sees them; kept through frames it doesn't).
         private static readonly Dictionary<newAiScript, int> AiChasing = new Dictionary<newAiScript, int>();
-        internal static bool AiStickyRemote = true;
         public static long AiKeptOnRemote;
 
         [HarmonyPatch(typeof(newAiScript), "Update")]
@@ -626,7 +588,7 @@ namespace TLDRevamp.Net
                     // game would keep chasing a single player's last place; here its own sight pass would take the
                     // local player instead — the host 30 m off, the victim at arm's length (the creature turned and
                     // walked away). While the game's chase lasts, a farther local player doesn't take the creature.
-                    if (!AiStickyRemote || !AiChasing.TryGetValue(a, out int rid) || !a.isChasing || Time.time - ChaseStartF(a) > CurChaseF(a)) { AiChasing.Remove(a); return; }
+                    if (!AiChasing.TryGetValue(a, out int rid) || !a.isChasing || Time.time - ChaseStartF(a) > CurChaseF(a)) { AiChasing.Remove(a); return; }
                     float rd = -1f;
                     foreach (var t in RemotePlayers.AiTargets()) if (t.id == rid) { rd = (t.body.position - a.transform.position).magnitude; break; }
                     float lo = LocalSeen(a);
@@ -782,13 +744,13 @@ namespace TLDRevamp.Net
                 if (!AiLastSent.TryGetValue(a, out var ls)) AiLastSent[a] = ls = new AiSent { At = -10f };
                 bool rawSend = BandwidthRules.CreatureDue(ls.RawFlags, f, ls.RawFwd == fw && ls.RawTurn == tu && (ls.RawLook - look).sqrMagnitude < 0.04f, now, ls.RawAt);
                 if (rawSend) { ls.RawFlags = f; ls.RawFwd = fw; ls.RawTurn = tu; ls.RawLook = look; ls.RawAt = now; }
-                if (Entities.WasteFixes && a.died) { f = 64; fw = tu = 0; look = Vector3.zero; }
+                if (a.died) { f = 64; fw = tu = 0; look = Vector3.zero; }
                 uint epoch = Entities.TryGetEntity(net, out var ent) ? ent.Epoch : 0;
                 bool audience = Entities.CreatureAudience(mainscript.GlobalFromUnityPos(a.transform.position));
                 bool entered = audience && !ls.Audience; ls.Audience = audience;
-                if (!entered && ls.Epoch == epoch && ls.Flags == f && ls.Fwd == fw && ls.Turn == tu && (ls.Look - look).sqrMagnitude < 0.04f && (Entities.WasteFixes && a.died || now - ls.At < 1f))
+                if (!entered && ls.Epoch == epoch && ls.Flags == f && ls.Fwd == fw && ls.Turn == tu && (ls.Look - look).sqrMagnitude < 0.04f && (a.died || now - ls.At < 1f))
                 {
-                    if (Entities.WasteFixes && a.died && rawSend) Entities.StatesSkippedDeadAnimation++;
+                    if (a.died && rawSend) Entities.StatesSkippedDeadAnimation++;
                     continue;
                 }
                 if (!InterestRules.Due(audience, ls.Epoch != epoch || ((ls.Flags ^ f) & 65) != 0, now, ls.At, MpServer.CarBeyondInterval))

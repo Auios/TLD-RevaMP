@@ -2,7 +2,6 @@ boundary-unknown-position={"on":true,"rangeM":1000,"resync":{"relayed":2,"heldBa
 source-is-excluded={"on":true,"rangeM":1000,"resync":{"relayed":4,"heldBack":1,"caughtUp":0,"owed":1},"poi":{"relayed":0,"heldBack":0,"caughtUp":0,"owed":0}}:1:True:1F40302010|3:True:1F40302010|0:False:1F40302010
 stale-next-relay-sends-full={"on":true,"rangeM":1000,"resync":{"relayed":6,"heldBack":1,"caughtUp":1,"owed":0},"poi":{"relayed":0,"heldBack":0,"caughtUp":0,"owed":0}}:1:True:1F40302010|2:True:1F07090B|3:True:1F40302010|0:False:1F40302010
 host-source-not-delivered={"on":true,"rangeM":1000,"resync":{"relayed":9,"heldBack":1,"caughtUp":1,"owed":0},"poi":{"relayed":0,"heldBack":0,"caughtUp":0,"owed":0}}:1:True:1F40302010|2:True:1F40302010|3:True:1F40302010
-disabled-broadcast={"on":false,"rangeM":1000,"resync":{"relayed":9,"heldBack":1,"caughtUp":1,"owed":0},"poi":{"relayed":0,"heldBack":0,"caughtUp":0,"owed":0}}:all:9:True:1F40302010
 no-server-broadcast={"on":true,"rangeM":1000,"resync":{"relayed":9,"heldBack":1,"caughtUp":1,"owed":0},"poi":{"relayed":0,"heldBack":0,"caughtUp":0,"owed":0}}:all:9:True:1F40302010
 arrival-catches-up={"on":true,"rangeM":1000,"resync":{"relayed":2,"heldBack":1,"caughtUp":1,"owed":0},"poi":{"relayed":0,"heldBack":0,"caughtUp":0,"owed":0}}:2:True:1F07090B
 no-repeat-catch-up={"on":true,"rangeM":1000,"resync":{"relayed":2,"heldBack":1,"caughtUp":1,"owed":0},"poi":{"relayed":0,"heldBack":0,"caughtUp":0,"owed":0}}:

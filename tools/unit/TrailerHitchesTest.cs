@@ -43,9 +43,6 @@ static class TrailerHitchesTest
         itemPlaceRemoveScript.s = new itemPlaceRemoveScript { Parent = parent };
         var part = new attachablescript { utanfuto = new object(), tosave = new TrailerSaveStub { P = new PickupStub { crafted = true } } };
         Check("existing stock slot follows game load", Load(part, 2));
-        MissingTrailerSlot.Enabled = false;
-        Check("disabled recovery exposes game's unknown-slot fallback", Load(part));
-        MissingTrailerSlot.Enabled = true;
         Check("unknown appended slot bypasses generic attachment fallback", !Load(part) && !part.attached && !part.tosave.P.crafted && part.CraftedCalls == 1);
         Check("load leaves movement guard cleared", !part.tempDontMoveAtAttach);
         part.attached = true;

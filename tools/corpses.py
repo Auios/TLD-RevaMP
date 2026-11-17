@@ -7,7 +7,7 @@
   D. the host dies again: three corpses, the first two still where they were
   E. the joiner leaves and joins again: it gets all three, dressed and placed the same
 --old runs with the switches off (DeathCorpseStays, CorpseWhole, CorpseOutfitSaved): the corpses go at the respawn, as before.
-  tools/corpses.py [--no-build] [--relay iad|off] [--old]"""
+  tools/corpses.py [--no-build] [--relay iad|off]"""
 import sys, time, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game

@@ -330,7 +330,7 @@ namespace TLDRevamp.Net
                 if (e.Split != null && e.Split.Contains(idx)) { ResyncSplitSkipped++; continue; }   // came off: never re-bolted from a car record
                 // our edit is on its way to the owner: not shown yet, and not sent again unless it changes
                 bool held = e.EditHoldUntil != null && e.EditHoldUntil.TryGetValue(idx, out float hold) && Time.realtimeSinceStartup < hold;
-                if (held) { ResyncHeld++; CensusAfterHold(e.NetId); if (!EntityEdits.TankAddEdits) continue; }
+                if (held) { ResyncHeld++; CensusAfterHold(e.NetId); }
                 var d = RecordCodec.Decode(rec);
                 if (d == null) continue;
                 EntityResync.DropUncanonAttach(d);
@@ -367,7 +367,6 @@ namespace TLDRevamp.Net
         }
 
         public static long StateListsApplied, StateListsSame, AttachReapplied, ResyncSplitSkipped, PartsRepainted;
-        public static bool RepaintOnApply = true;   // A/B: false = the colour applied without redrawing the part (before v0.65.20)
 
         /// Attached to the same thing in the same place? Only WHERE — never the jittering exact position.
         private static bool SameAttachment(List<save_attachable> remote, List<save_attachable> mine)
@@ -443,7 +442,7 @@ namespace TLDRevamp.Net
                         pc.Refresh(); PartLooksChanged++; continue;
                     }
                     bool st = before[i * 3] != pc.state || before[i * 3 + 1] != pc.state2 || before[i * 3 + 2] != pc.state3;
-                    bool col = RepaintOnApply && colBefore[i] != pc.color;
+                    bool col = colBefore[i] != pc.color;
                     if (st || col)
                     {
                         pc.Refresh();

@@ -55,7 +55,7 @@ namespace TLDRevamp.Net
                     // with the building type generated here: the server compares it with the holder's (a building that
                     // differs between machines — the missing diner)
                     W.Reset(); W.U8(Entities.LeaseReq); W.Str(k);
-                    if (LeaseTypeCheck) { W.I32(_poiClass.id); W.Str(_poiClass.poiName ?? ""); }
+                    { W.I32(_poiClass.id); W.Str(_poiClass.poiName ?? ""); }
                     Entities.SendLeaseRequest(W, true);
                     LeasesAsked++;
                 }
@@ -67,7 +67,6 @@ namespace TLDRevamp.Net
         /// Server: the building type each lease's holder generated there (id, name).
         private static readonly Dictionary<string, KeyValuePair<int, string>> LeaseTypes = new Dictionary<string, KeyValuePair<int, string>>();
         public static long LeaseTypeMismatches;
-        public static bool LeaseTypeCheck = true;   // A/B: false = before v0.66.8 (no type in LeaseReq, nothing compared)
 
         internal static void OnLeaseTaken(string key, int holderType = int.MinValue, string holderName = "")
         {
@@ -273,8 +272,7 @@ namespace TLDRevamp.Net
                 catch (Exception e) { Plugin.Log.LogWarning("lease rotate: " + e.Message); }
             }
             // the lease table, and the players' records (PlayerSave) - each with the copies it writes on the way
-            private static string[] SideFiles => PlayerSave.WithSaveFile
-                ? new[] { ".leases", ".players", ".players.bak", ".players.tmp", ".tune" } : new[] { ".leases", ".tune" };
+            private static string[] SideFiles => new[] { ".leases", ".players", ".players.bak", ".players.tmp", ".tune" };
             private static void Del(string p) { if (System.IO.File.Exists(p)) System.IO.File.Delete(p); }
             private static void Mv(string a, string b) { if (System.IO.File.Exists(a)) System.IO.File.Move(a, b); }
         }
@@ -509,12 +507,9 @@ namespace TLDRevamp.Net
                 // a copy again already: on the host the refusal comes back inside this call, before the game sets pickedUp, so the
                 // lost grab's Drop (case Owner) found an empty hand and the game then put a copy in it. Held there until the
                 // copy-in-hands claim, 0.5 to 5 s later. This prefix can't stop the pick: the game sets pickedUp after it anyway.
-                if (HostGrabLetGo && hit.Proxy) _grabRefusedHere = __instance;
+                if (hit.Proxy) _grabRefusedHere = __instance;
             }
         }
-
-        /// A/B: false = before: the host kept a grab the server refused (found by tools/sim, `itemchaos --only aud-host-grab`).
-        public static bool HostGrabLetGo = true;
         public static long HostGrabsLetGo;
         private static pickupable _grabRefusedHere;
         private static void GrabRefusedTick()
@@ -525,18 +520,12 @@ namespace TLDRevamp.Net
             var hp = mainscript.s != null ? mainscript.s.player : null;
             if (hp != null && hp.pickedUp == p) { hp.Drop(); GrabsLost++; HostGrabsLetGo++; }
         }
-
-        /// A/B: a copy in this player's hands with no claim on its way is claimed (false: it stayed so). Picking up a copy claims
-        /// it and a lost claim lets go, so this should never be seen; the anomaly says it was. Kept, the hand holds a body nobody
-        /// here moves and no state can place (HealCopyBody leaves what's in the hand alone): 1.56 m from the owner's for minutes,
-        /// the place repair helpless (a Bus02Tank in a random-action test run, its way there not found).
-        public static bool HandCopyClaims = true;
         public static float HandCopyS = 0.5f, HandCopyRetryS = 5f;
         public static long HandCopiesClaimed;
         private static float _handCopySince, _handCopyNext;
         private static void HandCopyTick(float now)
         {
-            var p = HandCopyClaims && mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.pickedUp : null;
+            var p = mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.pickedUp : null;
             var e = p != null && p.tosave != null ? OwnEntity(p.tosave) : null;
             if (e == null || !e.Proxy || e.Root == null || e.Root.P != p || e.Root.car != null || HitchTrailer(e)) { _handCopySince = 0f; return; }
             if (_handCopySince == 0f) _handCopySince = now;

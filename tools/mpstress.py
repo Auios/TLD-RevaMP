@@ -498,7 +498,7 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
         h("set settingsscript.s.S.BAutoShift True"); L("set settingsscript.s.S.BAutoShift True")
-        for i, a in enumerate(sys.argv):   # --set EntityHands.RidingFrames=False (A/B flags under TLDRevamp.Net, both games)
+        for i, a in enumerate(sys.argv):   # --set EntityHands.HandItemDraw=False (A/B flags under TLDRevamp.Net, both games)
             if a == "--set":
                 k, v = sys.argv[i + 1].split("=", 1)
                 for s_ in (h, L): s_(f"set TLDRevamp.Net.{k} {v}")

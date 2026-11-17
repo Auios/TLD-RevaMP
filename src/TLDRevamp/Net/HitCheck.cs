@@ -22,7 +22,6 @@ namespace TLDRevamp.Net
     /// checked here either.
     public static class HitCheck
     {
-        public static bool Enabled = true;   // A/B: false = before v0.66.9 (the host forwarded every hit)
         public const byte KShot = 0, KCreature = 1, KMelee = 2;
         public static float HistoryS = 3f;
         public static float DrawDelayS = 0.6f;   // copies are drawn up to this far behind (adaptive buffer + jitter)
@@ -33,7 +32,6 @@ namespace TLDRevamp.Net
         public static float MeleeM = 2.5f, CreatureM = 6f, ShotMaxM = 2000f;
         public static float CreatureLagM = 8f;   // the creature's copy here trails its owner's (draw delay, state rate)
         public static long Checked, Allowed, Refused, NoHistory;
-        public static bool ObjectsEnabled = true;   // A/B: false = before 0.69.0 (hits on objects were the attacker's word)
         public static float ObjShotM = 1000f, ObjForceM = 150f, ObjSeatM = 15f, ObjSizeM = 60f;
         public static long ObjChecked, ObjAllowed, ObjRefused;
         public static string LastObjRefusal = "";
@@ -62,7 +60,6 @@ namespace TLDRevamp.Net
         internal static bool Allow(int from, int target, byte kind, Vector3d origin, Vector3 dir, uint creatureNet, int creatureIdx, out string why)
         {
             why = "";
-            if (!Enabled) return true;
             Checked++;
             double now = Time.realtimeSinceStartupAsDouble;
             Session.Pings.TryGetValue(from, out int pingMs);
@@ -114,7 +111,7 @@ namespace TLDRevamp.Net
         /// it (global); `what` names it in the log.
         internal static bool AllowOnObject(int from, string what, Vector3d where, double reach, double size)
         {
-            if (!ObjectsEnabled || from == 0) return true;   // the host's own hits are the host's business
+            if (from == 0) return true;   // the host's own hits are the host's business
             ObjChecked++;
             if (where.x == 0 && where.y == 0 && where.z == 0) { ObjAllowed++; return true; }   // no position known yet
             if (!_hist.TryGetValue(from, out var fl) || fl.Count == 0) { ObjAllowed++; return true; }
@@ -173,9 +170,9 @@ namespace TLDRevamp.Net
             return (new Vector3d(p.x, y, p.z) - o).magnitude;
         }
 
-        public static string Stats() => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"checked\":" + Checked + ",\"allowed\":" + Allowed
+        public static string Stats() => "{\"enabled\":" + ("true") + ",\"checked\":" + Checked + ",\"allowed\":" + Allowed
                                         + ",\"refused\":" + Refused + ",\"noHistory\":" + NoHistory + ",\"last\":" + Json.Str(LastRefusal)
-                                        + ",\"objects\":" + (ObjectsEnabled ? "true" : "false") + ",\"objChecked\":" + ObjChecked + ",\"objAllowed\":" + ObjAllowed
+                                        + ",\"objects\":" + ("true") + ",\"objChecked\":" + ObjChecked + ",\"objAllowed\":" + ObjAllowed
                                         + ",\"objRefused\":" + ObjRefused + ",\"lastObj\":" + Json.Str(LastObjRefusal) + "}";
     }
 }

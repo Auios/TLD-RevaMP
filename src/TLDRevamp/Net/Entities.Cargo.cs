@@ -25,18 +25,7 @@ namespace TLDRevamp.Net
     {
         internal static long CargoClaimed;
         private static int _claimTraces;
-        /// A/B: a part that came off its car and is bolted to nothing is a loose item for the touch and car claims (walking
-        /// into it, an item or a car coming at it, lying in a car). Mark 2026-10-22 ("why is this tire not changing
-        /// ownership"): a wheel the joiner took off the host's car lay by it, a frozen copy to the host for good - every
-        /// such claim skipped parts, so only picking it up could take it.
-        public static bool LoosePartClaims = true;
         internal static float CargoClaimCooldownS = 2f;   // per item: no claim tug-of-war between two cars touching it
-        /// A/B: an item its owner just let go of is ours at once when it is in or coming at our car — no cooldown. Marks
-        /// 2026-10-22 ("again"): the joiner grabbed a bus tyre out of the host's car for a moment and let go; for the rest
-        /// of the cooldown its copy on the host, kinematic and moved by the joiner's simulation, lay in the host's real car
-        /// and shoved it 30-60 cm, bouncing, until the claim came 2.0 s after the grab, five times in a row. Letting go
-        /// is no tug-of-war. (Copies still without collisions after leaving a container count too.)
-        internal static bool LetGoClaims = true;
         internal static float LetGoClaimS = 1f;
         internal static long LetGoClaimTries, LetGoSeen;
         /// Diagnostics (test copies, off): the cargo scan's view of copies in a car's box, and the first five cargo claims
@@ -45,31 +34,20 @@ namespace TLDRevamp.Net
         internal static bool ClaimTrace = false;
         internal static int ClaimTraceMax = 5;
         private static Entities.Ent _trace; private static carscript _traceCar; private static float _traceUntil;
-        /// A/B: a claimed copy starts where its owner has it now - the newest state carried forward at its speed (at most
-        /// the interpolator's 0.25 s) - not where it was shown, a send interval and the jitter margin behind. Marks
-        /// 2026-10-22 ("the ownership change is clearly visible"): a bus tyre the host's car claimed from the joiner jumped
-        /// back up to 1.53 m on the joiner's screen, where the host's simulation of it began.
-        public static bool SeamlessClaims = true;
         public static long ClaimsPlacedAtNewest;
         public static float ContentsMarginM = 0.05f;
         private static readonly RaycastHit[] _sweepHits = new RaycastHit[16];
-        /// A/B: a loose item is in the car only when the car is under it (its bed, a seat, the roof), not merely inside the
-        /// box of all its colliders: a pickup's box measured 3.4 m wide (mirrors, doors) and a can on the ground beside it
-        /// was claimed as its contents (cargocheck C, 2026-10-22).
-        internal static bool ContentsOverCar = true;
         private static readonly RaycastHit[] _overHits = new RaycastHit[16];
-        public static bool SurfaceSkipsItems = true;   // A/B: false = the first item under it counts (before #21)
         private static readonly Collider[] _ghostHits = new Collider[32];
         private static readonly System.Collections.Generic.List<Collider> _ghostCols = new System.Collections.Generic.List<Collider>();
 
         /// Not a car's part, or one that came off and is bolted to nothing now.
         internal static bool LooseItem(Entities.Ent e) => e.PartIndex < 0 ||
-            LoosePartClaims && e.Root != null && (e.Root.attachable == null || !e.Root.attachable.attached) && !Entities.CargoRidesParent(e);
+            e.Root != null && (e.Root.attachable == null || !e.Root.attachable.attached) && !Entities.CargoRidesParent(e);
 
         /// From ContactRelay (on every root simulated here): a car of this machine touched a copy of a loose item.
         internal static void CargoContact(uint carNet, Collision c)
         {
-            if (!Entities.CargoClaimsEnabled) return;
             var orb = c.rigidbody;
             if (orb == null || !orb.isKinematic) return;
             if (!Entities.TryCargoContactCar(carNet, out var car) || car.Proxy || car.Root == null || car.Root.car == null) return;
@@ -82,7 +60,7 @@ namespace TLDRevamp.Net
         internal static bool ClaimCargo(Entities.Ent e, bool released = false, Entities.ClaimReason reason = Entities.ClaimReason.CargoNear)
         {
             float now = Time.realtimeSinceStartup;
-            bool letGo = LetGoClaims && now - e.LetGoAt < LetGoClaimS;
+            bool letGo = now - e.LetGoAt < LetGoClaimS;
             if (!released && !letGo && now - e.OwnerAt < CargoClaimCooldownS) return false;   // a holder letting go in our car is no tug-of-war
             if (letGo) { if (LetGoClaimTries < 20) Plugin.Log.LogInfo($"let-go claim ({reason}): {e.Root.name} net {e.NetId}, let go {now - e.LetGoAt:F2} s ago, owner since {now - e.OwnerAt:F2} s"); e.LetGoAt = -100f; LetGoClaimTries++; }   // one try
             e.OwnerAt = now;   // one try per cooldown, claimed or not
@@ -92,7 +70,7 @@ namespace TLDRevamp.Net
             if (it.GetComponentInChildren<newAiScript>() != null && (Entities.CargoLimbs(e) == null || !Entities.CargoLimp(e))) return false;   // a living creature thinks where it is owned (Entities.Ai)
             // like a pickup (PickupClaim): ours at once, so it is a real body in this car from the next physics step; a
             // refusal (held there after all) hands it back
-            if (SeamlessClaims) PlaceAtNewest(e);
+            PlaceAtNewest(e);
             Entities.SetCargoProxy(e, false);
             if (ClaimTrace) TraceClaim(e, reason);
             e.OwnerId = Entities.CargoLocalId;
@@ -143,7 +121,7 @@ namespace TLDRevamp.Net
             if (pl != null) return false;
             var b = Entities.CargoCarBounds(car);
             b.Expand(2f * ContentsMarginM / Mathf.Max(0.01f, car.transform.lossyScale.x));
-            return b.Contains(car.transform.InverseTransformPoint(e.Root.transform.position)) && (!ContentsOverCar || OverCar(car, e));
+            return b.Contains(car.transform.InverseTransformPoint(e.Root.transform.position)) && (OverCar(car, e));
         }
 
         /// The item's colliders' box swept `dist` along `rel` meets one of this car's colliders before anything else.
@@ -193,7 +171,7 @@ namespace TLDRevamp.Net
                 var r = _overHits[i].collider.transform.root;
                 if (r == own || r == me || _overHits[i].distance >= best) continue;
                 var it = r.GetComponent<tosaveitemscript>();
-                if (SurfaceSkipsItems && it != null && it.car == null && (it.attachable == null || it.attachable.utanfuto == null)) continue;   // an item, not a vehicle
+                if (it != null && it.car == null && (it.attachable == null || it.attachable.utanfuto == null)) continue;   // an item, not a vehicle
                 best = _overHits[i].distance; first = r; body = _overHits[i].collider.attachedRigidbody;
             }
             return first;
@@ -221,7 +199,6 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        public static bool CargoClaims = true;          // A/B: false = items stay with whoever placed them
 
         public static long HeldShown;
         internal static bool IsHeld(tosaveitemscript it)
@@ -237,16 +214,10 @@ namespace TLDRevamp.Net
         private static void ShowHeld(Ent e, bool held)
         {
             if (e.Held != held) HeldShown++;
-            if (HeldLayer && (held || e.Held)) ShowHeldLayer(e, held);
+            if ((held || e.Held)) ShowHeldLayer(e, held);
             e.Held = held;
             ShowCarriedCollisions(e);
         }
-
-        /// A/B: a copy in its owner's hands is on the game's picked-up layer, as the item is on its owner's machine
-        /// (pickupable.Pickup): the layer the physics settings keep away from wheels. Collisions off alone left it to every
-        /// wheel here, since a wheel feels the ground with a query and queries see bodies with collisions off: another
-        /// player's car rode up on an item someone held, its body passing through (user, 2026-10-22, 0.69.0 and dev).
-        public static bool HeldLayer = true;
         public static long HeldLayersSet;
         private static void ShowHeldLayer(Ent e, bool held)
         {
@@ -275,7 +246,7 @@ namespace TLDRevamp.Net
         public static long LetGoInCarClaimed;
         private static bool ClaimLetGoInCar(Ent e, bool stored)
         {
-            if (!CargoClaims || _localCars.Count == 0 || !e.Proxy || e.Root == null || e.Root.car != null || e.Ip == null || !EntityCargoInteraction.LooseItem(e)) return false;
+            if (_localCars.Count == 0 || !e.Proxy || e.Root == null || e.Root.car != null || e.Ip == null || !EntityCargoInteraction.LooseItem(e)) return false;
             if (!e.Ip.Newest(Time.realtimeSinceStartupAsDouble, out var gp, out _, out _)) return false;
             var p = mainscript.UnityPosFromGlobal(gp);
             foreach (var car in _localCars)
@@ -313,18 +284,8 @@ namespace TLDRevamp.Net
         /// then the game's own physics between a 1 kg lamp and a car. Contact stays as the fallback.
         public static float CargoNearM = 0.3f, CargoNearSteps = 3f;
         public static long CargoClaimedNear, CargoClaimedOnContact;
-        /// A/B: outside the car's own box, only an item coming at the car is claimed (closing at CargoApproachMin or more);
-        /// one dropped beside it stays its owner's. Marks 2026-10-22 ("dropping item near car makes it the other player's
-        /// ownership"): anything within the margin was taken, even falling straight down next to the car.
-        public static bool CargoApproachOnly = true;
         public static float CargoApproachMin = 0.3f;
         public static long CargoNearSkippedNotComing;
-        /// A/B: a copy in a car's zone that this machine may not take yet (the cooldown, not coming at the car, a refusal)
-        /// has no collisions here until it is ours or out of the zone: kinematic and moved by its owner, it met our car with
-        /// no mass limit. Marks 2026-10-22: the host's parked car shoved 30-60 cm by the joiner's bus tyre lying in it, and
-        /// thrown with a crash of dv 26 m/s by one sunk into it ("last hits: BusTireGumi ... copy kin, inside it now").
-        /// The owner still simulates the item against its copy of the car, so it lands and rests as before.
-        public static bool CargoGhosts = true;
         public static long CargoGhostsMade;
         /// The items made a ghost (network ids, the last 256): a test asks about its own items, not every copy at rest
         /// against some car simulated here (a joiner's bus tyre against a parked bike by the road).
@@ -335,9 +296,9 @@ namespace TLDRevamp.Net
         private static void CargoNearTick(float dt)
         {
             _cargoTick++;
-            if (CargoClaims && _localCars.Count > 0) CargoNearScan(dt);
+            if (_localCars.Count > 0) CargoNearScan(dt);
             foreach (var e in Placed())   // out of every zone (or ours, or the rule off): collisions back
-                if (e.CargoGhost && (e.CargoGhostTick != _cargoTick || !e.Proxy || !CargoGhosts)) { e.CargoGhost = false; ShowCarriedCollisions(e); }
+                if (e.CargoGhost && (e.CargoGhostTick != _cargoTick || !e.Proxy)) { e.CargoGhost = false; ShowCarriedCollisions(e); }
         }
 
         private static void CargoNearScan(float dt)
@@ -347,7 +308,7 @@ namespace TLDRevamp.Net
             {
                 if (!e.Proxy || e.Root == null || e.Root.car != null || !EntityCargoInteraction.LooseItem(e) || e.Held || e.Stored || e.Physical || e.CrashTaking || !EntityProxyPresentation.CargoBody(e)) continue;
                 var irb = e.Root.GetComponent<Rigidbody>();
-                if (irb == null || !irb.isKinematic || !irb.detectCollisions && !e.CargoGhost && !(e.ReleaseGhost && EntityCargoInteraction.LetGoClaims && Time.realtimeSinceStartup - e.LetGoAt < EntityCargoInteraction.LetGoClaimS)) continue;
+                if (irb == null || !irb.isKinematic || !irb.detectCollisions && !e.CargoGhost && !(e.ReleaseGhost && Time.realtimeSinceStartup - e.LetGoAt < EntityCargoInteraction.LetGoClaimS)) continue;
                 var p = irb.position;
                 float iv = e.LastVel.magnitude;
                 foreach (var car in _localCars)
@@ -364,14 +325,14 @@ namespace TLDRevamp.Net
                     var lp = car.transform.InverseTransformPoint(p);
                     if (!lb.Contains(lp)) continue;
                     // in the car's own box (lying in it, landed on it) or coming at it: the car's; beside it and not coming: not
-                    bool coming = b.Contains(lp) && (!EntityCargoInteraction.ContentsOverCar || EntityCargoInteraction.OverCar(car, e));
+                    bool coming = b.Contains(lp) && (EntityCargoInteraction.OverCar(car, e));
                     if (EntityCargoInteraction.ClaimTrace && b.Contains(lp) && _scanTraces < 60 && Time.realtimeSinceStartup - e.ScanTracedAt > 0.1f)
                     {
                         e.ScanTracedAt = Time.realtimeSinceStartup; _scanTraces++;
                         var su = EntityCargoInteraction.SurfaceUnder(e, out _);
                         Plugin.Log.LogInfo($"scan trace: {e.Root.name} net {e.NetId} at [{lp.x:F2}, {lp.y:F2}, {lp.z:F2}] coming {coming} under {(su != null ? su.name : "-")} cooldown {Mathf.Max(0f, EntityCargoInteraction.CargoClaimCooldownS - (Time.realtimeSinceStartup - e.OwnerAt)):F2} s overlaps {EntityCargoInteraction.OverlapsCar(e, car, CargoGhostMarginM)} ghost {e.CargoGhost} v {e.LastVel.magnitude:F2} body {EntityProxyPresentation.CargoBody(e)} rides {RidesParent(e)}");
                     }
-                    if (!coming && CargoApproachOnly && !b.Contains(lp))
+                    if (!coming && !b.Contains(lp))
                     {
                         // the car's box is only a first filter (a pickup's measured 3.4 m wide: mirrors, doors): the item's
                         // own shape swept along its motion relative to the car, three physics steps ahead, must meet the car
@@ -379,13 +340,12 @@ namespace TLDRevamp.Net
                         coming = rel.magnitude >= CargoApproachMin && EntityCargoInteraction.SweepMeetsCar(e, car, rel, rel.magnitude * dt * CargoNearSteps + CargoNearM);
                         if (!coming) CargoNearSkippedNotComing++;
                     }
-                    else if (!CargoApproachOnly) coming = true;
                     if (coming && EntityCargoInteraction.ClaimCargo(e))
                     {
                         CargoClaimedNear++;
                         if (CargoClaimedNear <= 20) Plugin.Log.LogInfo($"cargo near: {e.Root.name} net {e.NetId} claimed for {car.name}, {Vector3.Distance(p, car.transform.position):F1} m from its centre, its box {b.size.x:F1} x {b.size.y:F1} x {b.size.z:F1} m");
                     }
-                    else if (CargoGhosts && (!CargoGhostOnlyOverlapping || EntityCargoInteraction.OverlapsCar(e, car, e.CargoGhost ? 3f * CargoGhostMarginM : CargoGhostMarginM)))
+                    else if ((EntityCargoInteraction.OverlapsCar(e, car, e.CargoGhost ? 3f * CargoGhostMarginM : CargoGhostMarginM)))
                     {
                         e.CargoGhostTick = _cargoTick;
                         if (!e.CargoGhost)
@@ -424,18 +384,10 @@ namespace TLDRevamp.Net
             _carBounds[car] = b;
             return b;
         }
-
-        /// A car carried on a car (the transporter's bed, a trunk: mountStuff.storedcars) rides with its carrier, so it is
-        /// simulated where the carrier is. It stayed its last owner's (cargo claims skip cars): with another player at the
-        /// carrier's wheel it was a kinematic copy on a real bed, and the first start threw it off (transporter.py, laptop
-        /// driving: the carried car 17.9 m off the bed, a 93 km/h jolt). Now a car stored on a car simulated here becomes
-        /// this machine's, unless someone sits at its own wheel.
-        public static bool CarCargoClaims = true;   // A/B: false = a carried car stays with its last owner
         public static long CarCargoClaimed;
         private static readonly System.Collections.Generic.List<Transform> _carriers = new System.Collections.Generic.List<Transform>();
         private static void CarCargoTick()
         {
-            if (!CargoClaims || !CarCargoClaims) return;
             foreach (var car in _localCars)
             {
                 if (car == null) continue;
@@ -465,20 +417,6 @@ namespace TLDRevamp.Net
             }
         }
 
-        /// A car's contents go with the car (playtest 2026-10-16: the joiner drove the host's car with the host's food,
-        /// jerry cans, barrel and katana in it — kinematic copies of the host's on the joiner's machine, inside the car
-        /// it simulated: crashes of Δv 9-668, a death, the car thrown apart). Three holes in the claims above:
-        ///  - an item stored in a container (parented, its body removed: mountStuff.Store) has no body, so the near-claim
-        ///    never looked at it, and the car's new owner drew it at its old owner's pose, a collider of its own car moved
-        ///    around by transform writes;
-        ///  - taking the wheel claimed the car only (DriveClaimRootOnly), never what lay in it;
-        ///  - a copy placed again inside a car (the game's streaming, a respawn: "copy placed again 1.0 s after a
-        ///    displaced store-out", then the death) appears overlapping it, before any claim could come.
-        /// Now our car's contents are claimed when the car becomes ours, when a copy is placed inside it, and every
-        /// half second: what its containers hold and every loose item inside its box (not one its owner holds, has in
-        /// the inventory, or carried away from the container: LockedAway — the release rule takes that one out).
-        public static bool ContentsFollowCar = true;   // A/B: false = before v0.68.1 (takeover.py --old)
-
         public static long ContentsClaimed, ContentsOnOwner, ContentsOnPlace, ContentsStored;
         private static readonly System.Collections.Generic.List<carscript> _ownCars = new System.Collections.Generic.List<carscript>();
 
@@ -504,7 +442,7 @@ namespace TLDRevamp.Net
         {
             lp = default; lq = Quaternion.identity;
             if (resting) { if (e.RideCar != 0) { LogRidingSwitch(e, 0, t, "at rest"); e.RideCar = 0; EntityHands.RidingSwitches++; } return 0; }
-            if (!EntityHands.RidingFrames || e.Root == null || e.Root.car != null || e.Root.P == null || !EntityCargoInteraction.LooseItem(e)) { e.RideCar = 0; return 0; }
+            if (e.Root == null || e.Root.car != null || e.Root.P == null || !EntityCargoInteraction.LooseItem(e)) { e.RideCar = 0; return 0; }
             Ent car = null;
             if (e.RideCar != 0 && ByNet.TryGetValue(e.RideCar, out var was) && was.Root != null && was.Root.car != null &&
                 RidingBox(was.Root.car).Contains(was.Root.transform.InverseTransformPoint(t.position)))
@@ -626,12 +564,11 @@ namespace TLDRevamp.Net
         }
 
         public static float CargoGhostMarginM = 0.1f;
-        public static bool CargoGhostOnlyOverlapping = true;   // A/B: false = every copy in the car's box is a ghost
 
         /// Every copy in our car `car` claimed; `now`: no cooldown (the car just became ours, a copy just appeared in it).
         private static int ClaimContents(carscript car, bool now)
         {
-            if (!CargoClaims || !ContentsFollowCar || car == null) return 0;
+            if (car == null) return 0;
             int n = 0;
             _contentsScratch.Clear();
             foreach (var e in LookupSet()) if (EntityCargoInteraction.ContentsCandidate(e)) _contentsScratch.Add(e);   // ClaimCargo changes owners: not while iterating
@@ -648,7 +585,7 @@ namespace TLDRevamp.Net
         /// A copy just placed (Resolve): inside one of our cars, ours before the next physics step.
         private static void ClaimIfPlacedInOwnCar(Ent e)
         {
-            if (!CargoClaims || !ContentsFollowCar || !EntityCargoInteraction.ContentsCandidate(e)) return;
+            if (!EntityCargoInteraction.ContentsCandidate(e)) return;
             foreach (var car in _ownCars)
             {
                 if (car == null || !EntityCargoInteraction.InCar(car, e, out bool stored)) continue;

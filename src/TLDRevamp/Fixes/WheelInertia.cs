@@ -16,11 +16,9 @@ namespace TLDRevamp.Fixes
     /// Here, after the game sets it, a wheel far lighter than MinLoadShare of what it carries (sprungMass; under Slack
     /// of that) gets that mass. A Car01's wheels (21 kg for 306) stay as they are.
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.WheelInertia.Enabled / .MinLoadShare / .Slack (apply the next frame)
     [HarmonyPatch(typeof(wheelgraphicsscript), nameof(wheelgraphicsscript.WheelSize))]
     public static class WheelInertia
     {
-        public static bool Enabled = true;
         public static float MinLoadShare = 1f / 15f;   // sweep (ifatow.py): 1/30 spread 0.13, 1/15 0.0004, 1/8 0.0004
         public static float Slack = 0.75f;
         public static long Raised;
@@ -29,7 +27,6 @@ namespace TLDRevamp.Fixes
         [HarmonyPostfix]
         private static void Postfix(wheelgraphicsscript __instance)
         {
-            if (!Enabled) return;
             Raise(__instance, __instance.W);
             Raise(__instance, __instance.W2);
         }
@@ -43,6 +40,6 @@ namespace TLDRevamp.Fixes
             w.mass = min;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"raised\":" + Raised + ",\"last\":" + Json.Str(Last) + "}";
+        public static string Stats => "{\"enabled\":" + ("true") + ",\"raised\":" + Raised + ",\"last\":" + Json.Str(Last) + "}";
     }
 }

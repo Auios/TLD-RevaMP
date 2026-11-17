@@ -150,13 +150,6 @@ namespace TLDRevamp.Net
             if (torques) for (int i = 0; i < n; i++) { e.WBrake[i] = r.U8() * 64f; e.WMotor[i] = (sbyte)r.U8() * 32f; }
         }
 
-        // ---- engine: enginescript.Update simulates (burns fuel from the tank — gated only by the official MP's host check —
-        // heats the engine, rolls start chances). On a display copy that would drain fuel on the watching machine; so
-        // the simulation is skipped there, and the owner's running/starter/rpm drive the game's own sound curves.
-        // The owner's engine temperature (enginescript.temp, flag 8) rides along too: it is what the gauge, the "temp"
-        // lamp and the coolant boil/steam (carscript.Update) read, and nothing on a copy would heat it otherwise.
-        public static bool EngineTempSync = true;   // A/B: false = before protocol 56 (a copy's engine kept the temperature it was loaded with)
-
         internal static void WriteEngine(NetWriter w, Ent e)
         {
             var eng = e.PartIndex < 0 && e.Root != null && e.Root.car != null ? e.Root.car.Engine : null;
@@ -188,7 +181,7 @@ namespace TLDRevamp.Net
                 g.rpm = Mathf.Lerp(g.rpm, e.EngRpm, 1f - Mathf.Exp(-10f * Time.deltaTime));
                 g.running = e.EngRunning;
                 g.start = e.EngStart;
-                if (e.EngHasTemp && EngineTempSync)
+                if (e.EngHasTemp)
                 {
                     g.temp = e.EngTemp;
                     g.TempWeak = Mathf.Pow(Mathf.InverseLerp(g.minOptimalTemp2, g.maxOptimalTemp2, g.temp), 3f);   // as Update derives it
@@ -284,9 +277,6 @@ namespace TLDRevamp.Net
         public static float HandOverS = 3f, HandOverM = 4f;
         public static long HandedOver;
         public static long AutoDetachesIgnored;
-        /// Autopilot traffic: another player's car shown here as a display copy moves by pose updates, so its rigidbody
-        /// reads 0 — the owner's velocity instead. Null: not a display copy here (its physics body is the truth).
-        public static bool ProxyByOwnRoot = true;   // A/B: false = keyed by transform.root (v0.68.1)
         private static readonly Dictionary<Transform, Ent> _proxyByRoot = new Dictionary<Transform, Ent>();
         private static int _proxyByRootFrame = -1;
         public static long DetachReqsSent;
@@ -310,7 +300,7 @@ namespace TLDRevamp.Net
                 // its transform.root it took the car's place — the jerry can was its own "container", always inside it,
                 // so a can set down 3 m from the car stayed on the back seat on every other screen (pallet.py C)
                 foreach (var e in Placed())
-                    if (e.Proxy && e.Root != null) _proxyByRoot[ProxyByOwnRoot ? e.Root.transform : e.Root.transform.root] = e;
+                    if (e.Proxy && e.Root != null) _proxyByRoot[e.Root.transform] = e;
             }
             return _proxyByRoot.TryGetValue(root, out var pe) ? pe.LastVel : (Vector3?)null;
         }

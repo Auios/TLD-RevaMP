@@ -9,7 +9,7 @@ and steam (`mp entities`: engTemp, boil, steam).
   2 boiling         the owner's temperature set above the steam point: the copy boils and steams too
   3 parked, cooling ignition off: the cooling engine (no rpm, no motion) still reaches the copy, a degree at a time
   4 late joiner     the joiner leaves and joins again: its new copy starts at the owner's temperature
-  tools/coolantsync.py [--no-build] [--relay iad|off] [--old: copies ignore the temperature (EngineTempSync off)]"""
+  tools/coolantsync.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -17,7 +17,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 from roadkit import g, car_ready, clear_road
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 T = "TLDRevamp.Net.Entities"
 E = "mainscript.s.player.Car.Engine."
 VERDICTS, MISSING = [], [0]
@@ -52,8 +52,7 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for name, s_ in (("host", h), ("joiner", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
-        L(f"set TLDRevamp.Net.EntityProxyPresentation.EngineTempSync {not OLD}")
-        print(f"  {'OLD (copies ignore the temperature)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         steam_at, top = float(g(h, "mainscript.s.minSteamTemp")), float(g(h, "mainscript.s.maxCarTemp"))
         print(f"  steam from {steam_at}, max {top}", flush=True)
         rp = h("roadpoint"); F = (math.sin(math.radians(rp["yaw"])), math.cos(math.radians(rp["yaw"])))
@@ -101,7 +100,6 @@ with game.ProtectedSession():
         L("mp stop"); time.sleep(3)
         h(f"set {E}temp {steam_at - 25:.1f}"); time.sleep(2)
         if not join_both(h, L, rehost=False): sys.exit("JOINER NEVER JOINED AGAIN")
-        L(f"set TLDRevamp.Net.EntityProxyPresentation.EngineTempSync {not OLD}")
         at = row(h, net)["pos"]
         me = L("gpos"); print(f"  4 rejoined at {me.get('gx')},{me.get('gz')}: {math.dist((me['gx'], me['gz']), (at[0], at[2])):.0f} m from the car; walking up to it", flush=True)
         L(f"tpground {at[0] + R[0] * 4} {at[2] + R[1] * 4}")
@@ -118,7 +116,7 @@ with game.ProtectedSession():
         er = [x_("errors") for x_ in (h, L)]
         print("  errors:", [(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er], flush=True)
     finally:
-        try: h("autodrive off"); h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestIgnition -1"); h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHandbrake -1"); L(f"set TLDRevamp.Net.EntityProxyPresentation.EngineTempSync True")
+        try: h("autodrive off"); h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestIgnition -1"); h(f"set TLDRevamp.Net.EntityCarSignalsTools.TestHandbrake -1")
         except Exception: pass
         for s_, v_ in gods.values():
             try: s_(f"set kaposztaleves.s.settings.god {v_}")

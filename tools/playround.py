@@ -11,7 +11,7 @@ single-feature tests pass; the playtest broke where things came together). The d
   Every check: each car's parts (prefab + slot) and wheels on both machines; every object within 40 m of the meeting
   point on both machines by model and place (`mp sitestate`, ±1 m); caps' states; errors. God mode on during the test
   (restored), autosave blocked (ProtectedSession).
-  tools/playround.py [--no-build] [--relay iad|off] [--rounds 2] [--drive 40] [--focus flicker|mirror|parts] [--changes] [--old-copylock]"""
+  tools/playround.py [--no-build] [--relay iad|off] [--rounds 2] [--drive 40] [--focus flicker|mirror|parts] [--changes]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -235,9 +235,6 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         L("set settingsscript.s.S.BAutoShift True")
         for s_ in (h, L): s_(f"set {T}.StoreOutTrace 60")   # log every shared root streamed out (where, the call stack)
-        if "--old-copylock" in sys.argv:   # A/B: the container release rule as in v0.66.7
-            for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe False"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer False"); s_(f"set {T}.DriveClaimRootOnly False")
-            print("  OLD COPYLOCK (v0.66.7)", flush=True)
         time.sleep(8)
         hid, lid = h("mp entities")["me"], L("mp entities")["me"]
         # the laptop's car01 on the road (it drives off later); the host's Car05Full next to it
@@ -346,7 +343,6 @@ with game.ProtectedSession():
                 """the laptop's car moved (dx, dz) and the laptop with it — what driving it there does. The server's hand-off
                 is held meanwhile: between the car's move and the laptop's arrival its owner is 1 km away and, coming home,
                 the host next to it (P1 of the first runs: the car became the host's, round 2 found nothing to move)"""
-                h(f"set {T}.HandoffEnabled False")
                 try:
                     L(f"mp moveitem {lcar} {dx} {dz}"); time.sleep(2)
                     c_ = ent(L, lcar)["pos"]
@@ -355,7 +351,7 @@ with game.ProtectedSession():
                     # onto the ground there (the move kept the height it had: under the terrain on higher ground)
                     print(f"  {who}: onto the ground: {until(lambda: L(f'mp moveitem {lcar} 0 0 ground'), 30, 2.0)}", flush=True)
                     time.sleep(4)
-                finally: h(f"set {T}.HandoffEnabled True")
+                finally: pass
                 cp_ = L(f"mp carparts {lcar}")
                 print(f"  {who}: the car's body: up {cp_.get('up')}, kinematic {cp_.get('kin')}, asleep {cp_.get('asleep')}, {cp_.get('agl')} m over the ground", flush=True)
                 return ent(L, lcar)["pos"]

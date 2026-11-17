@@ -8,8 +8,8 @@ the bar stool slides away backwards while I drive, the stool stays, he snaps bac
   R  the other way round: the host on the stool, the joiner drives
   C  a cactus the joiner cuts down (the game's TryBreak, a katana's blow): its piece (cactigib01) must reach the host
      too, and stay visible to the host once the joiner puts it in the bus ("a cactus in the bus I can't see")
-  busstool.py [--no-build] [--only S,P,R,C] [--speed 12] [--secs 10] [--old]
-  (--old: EntitySeats.ItemSeats, WorldBreakGibs and SeatLeaveOnExit off, the build before the fix)"""
+  busstool.py [--no-build] [--only S,P,R,C] [--speed 12] [--secs 10]
+"""
 import sys, os, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -19,7 +19,6 @@ def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv
 DIAG = "--diag" in sys.argv
 ONLY = set(arg("--only", "S,P,R,C,K,M").split(","))
 SPEED, SECS = arg("--speed", 12.0, float), arg("--secs", 10, int)
-OLD = "--old" in sys.argv
 T = "TLDRevamp.Net.Entities"
 VERDICTS = []
 
@@ -341,13 +340,10 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for s_ in (h, L):
             s_("set kaposztaleves.s.settings.god True")
-            for f, field_path in (("ItemSeats", "TLDRevamp.Net.EntitySeats.ItemSeats"), ("WorldBreakGibs", "TLDRevamp.Net.EntityAI.WorldBreakGibs"), ("SeatLeaveOnExit", "TLDRevamp.Net.EntitySeats.SeatLeaveOnExit"), ("StoredByTransform", "TLDRevamp.Net.EntityPhysics.StoredByTransform")):
-                try: s_(f"set {field_path} {not OLD}")
-                except RuntimeError as ex: print(f"  {f}:", ex, flush=True)   # not in the build before the fix
         h("set settingsscript.s.S.BAutoShift True")
         plock = h("get settingsscript.s.S.IPhysicsLock")["value"]
         if not plock: h("set settingsscript.s.S.IPhysicsLock 1")
-        print("mode", "old" if OLD else "new", "physics lock", plock, flush=True)
+        print("mode", "new", "physics lock", plock, flush=True)
         if ONLY & {"S", "P", "R"}:
             stool_scene()
         if "S" in ONLY:

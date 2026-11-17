@@ -22,11 +22,9 @@ namespace TLDRevamp.Fixes
     /// A car and the trailer hitched to it are let go together, when both have ground (HitchPairs): one let go alone
     /// while the other stays frozen is dragged by the joint. While a world loads nothing is let go (LoadFreeze).
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.UnfreezeOnGround.Enabled
     [HarmonyPatch(typeof(tosaveitemscript), nameof(tosaveitemscript.DistUnFreezeRB))]
     public static class UnfreezeOnGround
     {
-        public static bool Enabled = true;
         public static float RayM = 1000f, NearM = 1.5f, HoldMaxS = 120f;
         public static long Held, Released, HeldFar, TimedOut;
         private static readonly RaycastHit[] _hits = new RaycastHit[16];
@@ -43,7 +41,7 @@ namespace TLDRevamp.Fixes
             // in range each second, and could let a copy's hitch partner go against that refusal
             if (!__runOriginal) return false;
             if (Net.Tpa.Holding(__instance.RB) || LoadFreeze.Holding) return false;
-            if (!Enabled || __instance.RB == null || !__instance.RB.isKinematic || __instance.buried) return true;
+            if (__instance.RB == null || !__instance.RB.isKinematic || __instance.buried) return true;
             if (_partnerCall) return true;   // let go with its hitch partner: both were checked there
             int id = __instance.GetInstanceID();
             var p = __instance.transform.position;
@@ -190,7 +188,7 @@ namespace TLDRevamp.Fixes
             return r;
         }
 
-        public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"held\":" + Held + ",\"heldFar\":" + HeldFar +
+        public static string Stats => "{\"enabled\":" + ("true") + ",\"held\":" + Held + ",\"heldFar\":" + HeldFar +
                                       ",\"released\":" + Released + ",\"timedOut\":" + TimedOut + ",\"waiting\":" + _held.Count +
                                       ",\"footprint\":" + (Footprint ? "true" : "false") + ",\"footprintCarried\":" + FootprintCarried + ",\"hitchPairs\":" + (HitchPairs ? "true" : "false") + ",\"heldForPartner\":" + HeldForPartner + ",\"partnersLetGo\":" + PartnersLetGo + "}";
     }

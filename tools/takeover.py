@@ -9,7 +9,7 @@ relay, the host's physics lock at 3 (the passenger room holds things), a car01 o
   B  the host takes the wheel back (the items come back to the host); the laptop takes the lamp lying in the host's car
      (`mp claim`, what a touch or a grab does): the host's again; the host drives --kmh for 15 s — no crash cause on the
      host, the items still in the car on both machines
-  tools/takeover.py [--no-build] [--relay iad|off] [--kmh 50] [--items 320,72] [--old: before v0.68.1: no contents claims, stored copies drawn at their own states]"""
+  tools/takeover.py [--no-build] [--relay iad|off] [--kmh 50] [--items 320,72]"""
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -19,7 +19,7 @@ from roadkit import g, car_ready, clear_road
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")   # the example mods stay installed
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD, KMH = arg("--relay", "iad"), "--old" in sys.argv, arg("--kmh", 50.0, float)
+RELAY, KMH = arg('--relay', 'iad'), arg('--kmh', 50.0, float)
 ITEMS = [int(x) for x in arg("--items", "320,72").split(",")]
 T = "TLDRevamp.Net.Entities"; CC = "TLDRevamp.Diagnostics.CrashCause"
 VERDICTS = []
@@ -70,8 +70,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set {T}.ContentsFollowCar {not OLD}"); s_(f"set TLDRevamp.Net.EntityLocks.StoredRidesCar {not OLD}")
-        print(f"  {'OLD (before v0.68.1)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
             shift[name] = (s_, g(s_, "settingsscript.s.S.BAutoShift")); s_("set settingsscript.s.S.BAutoShift True")
@@ -134,9 +133,6 @@ with game.ProtectedSession():
         for s_, v in list(gods.values()): s_(f"set kaposztaleves.s.settings.god {v}")
         for s_, v in list(shift.values()): s_(f"set settingsscript.s.S.BAutoShift {v}")
         h(f"set settingsscript.s.S.IPhysicsLock {lock_h}")
-        for s_ in (h, L):
-            try: s_(f"set {T}.ContentsFollowCar True"); s_(f"set TLDRevamp.Net.EntityLocks.StoredRidesCar True")
-            except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

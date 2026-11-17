@@ -11,7 +11,7 @@
   D  the laptop leaves and joins again: the hat back on its head (its player save), on the host's screen too; the host's
      glasses on the host's head for the laptop; one hat, one pair of glasses
   The host's auto shift is on for B (the autopilot stays in first gear without it).
-  tools/wearsync.py [--no-build] [--relay iad|off] [--kmh 50] [--old: before v0.68.2] [--old-share: before v0.68.5]"""
+  tools/wearsync.py [--no-build] [--relay iad|off] [--kmh 50]"""
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -21,10 +21,8 @@ from roadkit import g, car_ready, clear_road
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")   # the example mods stay installed
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD, KMH = arg("--relay", "iad"), "--old" in sys.argv, arg("--kmh", 50.0, float)
-OLD_SHARE = "--old-share" in sys.argv   # before v0.68.5: a rejoin's hat shared loose, its Worn message after the network id
+RELAY, KMH = arg('--relay', 'iad'), arg('--kmh', 50.0, float)
 T = "TLDRevamp.Net.Entities"; CC = "TLDRevamp.Diagnostics.CrashCause"
-SWITCHES = [f"TLDRevamp.Net.EntityHands.WornSync", "TLDRevamp.Net.RecordCodec.StripWorn", "TLDRevamp.Net.PlayerSave.KeepWorn", "TLDRevamp.Net.ItemSnapshot.SkipPlayersThings"]
 VERDICTS = []
 def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok)); print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
@@ -47,16 +45,12 @@ def body_gap(a, b):
     return max(abs(a["onBody"][0] - b["onBody"][0]), abs(a["onBody"][1] - b["onBody"][1]))
 def speed(s): return abs(float(g(s, "mainscript.s.player.Car.speed") or 0))
 def crashes(s): return int(s(f"get {CC}.Logged")["value"])
-def setall(s, v):
-    for k in SWITCHES: s(f"set {k} {v}")
-    for k in (f"TLDRevamp.Net.EntityHands.WornInShare", "TLDRevamp.Net.PlayerSave.ShareWornLate"): s(f"set {k} {v and not OLD_SHARE}")
-
 L = Agent()
 ensure_both("--no-build" not in sys.argv)
 with game.ProtectedSession():
     h = seeded_both(L)
-    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); setall(s_, not OLD)
-    print(f"  {'OLD (before v0.68.2)' if OLD else 'OLD SHARE (before v0.68.5)' if OLD_SHARE else 'CURRENT BUILD'}", flush=True)
+    for s_ in (h, L): s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
+    print(f"  {'CURRENT BUILD'}", flush=True)
     if RELAY != "off": relay_both(h, L, RELAY)
     gods = {}; shift_h = None
     try:
@@ -75,13 +69,13 @@ with game.ProtectedSession():
         print("  host puts them on:", h(f"mp wearnear {glasses[1]}"), flush=True)
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         # (the join loads the host's world: god mode is off again — the laptop died in C once, flung while getting out)
-        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); setall(L, not OLD); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         hid, lid = h("mp entities")["me"], L("mp entities")["me"]
         me = h("mp players")["me"]
         L(f"tpground {me[0] + F[0] * 2.5} {me[2] + F[1] * 2.5}"); time.sleep(4)
         hg = until(lambda: next(i for i in named(h, glasses[1]) if i["localSlot"] >= 0), 10)
         gnet = hg["net"] if hg else None
-        lg = until(lambda: (lambda i: i if i and (i.get("onBody") is not None or OLD) else None)(item(L, gnet)), 15) or item(L, gnet)
+        lg = until(lambda: (lambda i: i if i and (i.get("onBody") is not None or False) else None)(item(L, gnet)), 15) or item(L, gnet)
         lslots = worn(L)["slots"]
         verdict("J: THE HOST'S GLASSES ARE NOT ON THE JOINER'S OWN HEAD", not any(glasses[1] in x for x in lslots), f"laptop's slots {lslots}")
         gap = body_gap(hg, lg)
@@ -151,7 +145,7 @@ with game.ProtectedSession():
             L(join_cmd(h, sid))
             if until(lambda: L("mp status")["client"]["ready"], 150): break
             L("mp stop"); time.sleep(3)
-        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); setall(L, not OLD); L("set kaposztaleves.s.settings.god True")
+        L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
         time.sleep(8)
         time.sleep(3)
         # (2026-10-17: a hat restored loose and put on only then was claimed by the host on the way: owner log "claim")
@@ -184,8 +178,5 @@ with game.ProtectedSession():
         try:
             if shift_h is not None: h(f"set settingsscript.s.S.BAutoShift {shift_h}")
         except Exception: pass
-        for s_ in (h, L):
-            try: setall(s_, True)
-            except Exception: pass
         L("mp stop"); h("mp stop")
     print(f"\n{sum(ok for _, ok in VERDICTS)}/{len(VERDICTS)} passed", flush=True)

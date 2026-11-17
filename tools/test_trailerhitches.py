@@ -356,7 +356,6 @@ class MeasurementRun(unittest.TestCase):
 
         results = self.run_world(bridge)
         self.assertEqual(len(results), 1)
-        self.assertIn("set TLDRevamp.Fixes.MissingTrailerSlot.Enabled True", world.commands)
         self.assertEqual(world.commands[-1], "set TLDRevamp.TestSafetyTools.BlockAutoSave False")
         self.assertIn(("measurement run completes", False), hitch.VERDICTS)
         self.assertFalse(any(".Spawn 397 " in c for c in world.commands))

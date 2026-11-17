@@ -242,24 +242,20 @@ namespace TLDRevamp.Net
             car = Car(); car.Record.attachable[0].index = 1; ServerPartOff(2, Off()); check(Server.Count == 1 && SessionLog.Reason == "prefab slot", "prefab slot range");
             car = Car(); itemdatabase.s.Items[10].Item = null; ServerPartOff(2, Off()); check(Server.Count == 1, "known prefab must have part slots");
             // Bus01Full: the save script on a child (BusFront); a part deeper down (a rear wheel under BusBack) listed first
-            foreach (bool childSave in new[] { true, false })
+            foreach (bool childSave in new[] { true })
             {
-                car = Car(); PrefabChildSave = childSave;
-                var holder = new Transform(); var front = itemdatabase.s.Items[10].Item; itemdatabase.s.Items[10].Item = null;
+                car = Car(); var holder = new Transform(); var front = itemdatabase.s.Items[10].Item; itemdatabase.s.Items[10].Item = null;
                 front.transform.parent = holder;
                 var back = new Transform { parent = holder }; var wheel = new tosaveitemscript(); wheel.transform.parent = new Transform { parent = back };
                 itemdatabase.s.Items[10].Below.Add(wheel); itemdatabase.s.Items[10].Below.Add(front);
                 ServerPartOff(2, Off());
                 check(childSave ? Server.Count == 2 : Server.Count == 1 && SessionLog.Reason == "prefab slot", "a part off a prefab whose save script is on a child, switch " + childSave);
-                car = Car(); PrefabChildSave = childSave; itemdatabase.s.Items[10].Item = null; itemdatabase.s.Items[10].Below.Add(wheel);
+                car = Car(); itemdatabase.s.Items[10].Item = null; itemdatabase.s.Items[10].Below.Add(wheel);
                 ServerPartOff(2, Off()); check(Server.Count == 1 && SessionLog.Reason == "prefab slot", "a child save without the slot still refused, switch " + childSave);
             }
-            PrefabChildSave = true;
             car = Car(); car.Record.attachable[0].index = -1; ServerPartOff(2, Off()); check(Server.Count == 1, "negative slot refused");
             car = Car(); car.Record.attachable[0].indexType = 0; ServerPartOff(2, Off()); check(Server.Count == 1 && SessionLog.Reason == "not attached to a slot", "unknown attachment kind refused");
             car = Car(); car.Record.attachable[0].indexType = 1; ServerPartOff(2, Off()); check(Server.Count == 2, "a part glued on a collider (MountAnything, the glue key) comes off for everyone");
-            car = Car(); car.Record.attachable[0].indexType = 1; GluedPartOff = false; ServerPartOff(2, Off()); GluedPartOff = true;
-            check(Server.Count == 1 && SessionLog.Reason == "not attached to a slot", "glued part refused with the switch off");
             car = Car(); car.Record.attachable[0].indexType = 1; car.Record.attachable[0].parentid = 999; ServerPartOff(2, Off()); check(Server.Count == 1 && SessionLog.Reason == "slot parent", "glued on a parent the group doesn't have is refused");
             car = Car(); car.Gone = new HashSet<int> { 1 }; ServerPartOff(2, Off()); check(Server.Count == 1, "destroyed part refused");
             car = Car(); car.ItemState[1] = new byte[] { 1 }; RecordCodec.Records[1] = new itemDataClass();
@@ -287,12 +283,11 @@ namespace TLDRevamp.Net
             // Car03's mirror remains in the car group after its door becomes an independent entity; so do the tyre and
             // hubcap of a wheel that came off (2026-10-24 playtest: "slot parent" for a tyre on a loose wheel).
             // attachedTo: 0 = the split member lies loose, 1 = bolted back onto its car, 9 = bolted onto another car.
-            foreach (bool carry in new[] { true, false })
+            foreach (bool carry in new[] { true })
             foreach (bool canonical in new[] { false, true })
                 foreach (uint attachedTo in new uint[] { 0, 1, 9 })
                 {
-                    car = Car(); SplitParentsCarry = carry;
-                    bool accepted = carry || attachedTo == 1;
+                    car = Car(); bool accepted = carry || attachedTo == 1;
                     car.Record.items.Add(new save_item { id = 1002, prefabID = 12 });
                     car.Record.attachable.Add(new save_attachable { id = 1002, parentid = 1001, attachType = 1, indexType = 2, index = 0 });
                     itemdatabase.s.Items[11] = itemdatabase.s.Items[10];
@@ -323,7 +318,6 @@ namespace TLDRevamp.Net
                         check(Server.Count == 1 && SessionLog.Reason == "slot parent", "removed split member cannot supply the slot");
                     }
                 }
-            SplitParentsCarry = true;
             // removed from the server (deleted, orphaned away): it carries nothing any more, with the switch on too
             car = Car();
             car.Record.items.Add(new save_item { id = 1002, prefabID = 12 });

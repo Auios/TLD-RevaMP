@@ -1,6 +1,5 @@
 take:0=False:True:False:False:False:False:0:0:0:0:0:0:
 take:1=False:True:False:False:False:False:0:0:0:1:0:0:
-take:2=False:True:False:False:False:False:0:0:0:0:0:0:
 take:3=False:False:False:False:False:False:0:0:0:0:0:0:
 take:4=False:True:False:False:False:False:0:0:0:0:0:0:
 take:5=False:True:False:True:False:False:0:0:0:0:0:0:

@@ -52,8 +52,7 @@ with game.ProtectedSession():
             # carried away in the inventory: the laptop goes 400 m off, the host stands where it was put away. It stays
             # the laptop's (a handoff would take it out of the inventory). First with the guard off (the old behaviour),
             # then on; where the server thinks the stored item is tells whether its position follows the holder.
-            for keep in (False, True):
-                h(f"set TLDRevamp.Net.Entities.HandoffKeepCarried {keep}")
+            for keep in (True,):
                 L(f"tpground {x + 400} {z}"); time.sleep(8)
                 a, b, lp = state(f"carried 400 m away (guard {keep})")
                 hp = h("mp players")["me"]
@@ -61,7 +60,6 @@ with game.ProtectedSession():
                 verdict(f"CARRIED AWAY (guard {keep}): STILL THE LAPTOP'S, STILL IN ITS INVENTORY", a["owner"] == b["owner"] and a["stored"] and b["owner"] != 0,
                         f"owner laptop's view {a['owner']} host's view {b['owner']}, stored {a['stored']}")
                 L(f"tpground {x + 3} {z}"); time.sleep(4)
-            h("set TLDRevamp.Net.Entities.HandoffKeepCarried True")
         # take out
         L(f"call mainscript.s.player.InvSwitchTo {s0} False"); time.sleep(2.5)
         a, b, lp = state("taken out")

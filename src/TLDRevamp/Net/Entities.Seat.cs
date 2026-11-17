@@ -121,13 +121,6 @@ namespace TLDRevamp.Net
 
         internal static string SeatGuardStats() =>
             "{\"refused\":" + DriverSeatRefused + ",\"moved\":" + DriverSeatMoved + ",\"out\":" + DriverSeatOut + "}";
-
-        /// The game calls GetOut every frame a passenger sits with a place to get out to (fpscontroller.Update); it only
-        /// gets out on the use key's press. The seat-leave event (and the repro recorder's seat leave, made from it) and the
-        /// restore of the car's collisions came on every one of those calls: 19 seat-leave events in 0.2 s in a playtest's
-        /// black box, and a seated passenger's capsule colliding with the car copy again from the frame after it sat down.
-        /// Both now come only when the player is out.
-        internal static bool SeatLeaveOnExit = true;   // A/B: false = before v0.69.2 (on every call)
         internal static long SeatLeavesLogged, LocalGetOutCalls;
 
         [HarmonyLib.HarmonyPatch(typeof(fpscontroller), nameof(fpscontroller.GetOut), new[] { typeof(Vector3), typeof(bool) })]
@@ -142,7 +135,6 @@ namespace TLDRevamp.Net
                     LocalGetOutCalls++;
                     LocalSeat(out uint net, out int seat);
                     __state = (__instance.Bsitting, net, seat);
-                    if (!SeatLeaveOnExit && net != 0) { SessionLog.Event("seat-leave", net, slot: seat, from: Entities.MyId, result: forced ? "forced" : "ok"); SeatLeavesLogged++; }
                 }
                 if (!Entities.InSession || !Mp.RemoteTrace) return;
                 Plugin.Log.LogInfo($"SeatTrace: GetOut forced={forced} seated={__instance.Bsitting} seat={(__instance.seat != null ? __instance.seat.name : "null")} at={__instance.transform.position:F1}\n{System.Environment.StackTrace}");
@@ -151,8 +143,8 @@ namespace TLDRevamp.Net
             [HarmonyLib.HarmonyPostfix]
             private static void Postfix(fpscontroller __instance, bool forced, (bool sat, uint net, int seat) __state)
             {
-                if (SeatLeaveOnExit && __instance.Bsitting) return;   // still seated: the call didn't get out
-                if (SeatLeaveOnExit && __state.sat && __state.net != 0)
+                if (__instance.Bsitting) return;   // still seated: the call didn't get out
+                if (__state.sat && __state.net != 0)
                 { SessionLog.Event("seat-leave", __state.net, slot: __state.seat, from: Entities.MyId, result: forced ? "forced" : "ok"); SeatLeavesLogged++; }
                 SeatCollisionRestore(__instance);
             }

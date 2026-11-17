@@ -7,33 +7,21 @@ namespace TLDRevamp.Net
 {
     internal static partial class EntitySeats
     {
-        /// A vehicle's seats: its own hierarchy's (indices as before), then those of every body outside it that carries its
-        /// part slots — Bus01's rear section (BusBack: its own body on a joint, 33 of the bus's 81 seats). Before, a player
-        /// in the back of a bus counted as not seated: the other machines showed them standing, trailing the bus.
-        internal static bool RearSeats = true;   // off: the old behaviour (A/B in tools/busrear.py)
-        /// An object's seats are those in its own hierarchy, not its root's, and not those of an object locked into it. A
-        /// bar stool locked into a bus is parented to the bus's mount (mountStuff.Store): its seat is in the bus's
-        /// hierarchy, the bus's seat list (cached before the stool came) didn't have it and the stool's own list was the
-        /// bus's. Its sitter was sent as standing and drawn from late world positions on the other machines: sliding back
-        /// through the bus while it drove, snapping onto the stool when it stopped (playtest 2026-10-24, tools/busstool.py).
-        internal static bool ItemSeats = true;   // A/B: false = before v0.69.2
         public static long ItemSeatsSent;
         private static readonly Dictionary<Transform, seatscript[]> _seats = new Dictionary<Transform, seatscript[]>();
-        private static readonly Dictionary<Transform, seatscript[]> _seatsOwn = new Dictionary<Transform, seatscript[]>();
-        internal static seatscript[] VehicleSeats(tosaveitemscript vehicle, bool always = false)
+        internal static seatscript[] VehicleSeats(tosaveitemscript vehicle)
         {
-            bool all = RearSeats || always;
-            var cache = all ? _seats : _seatsOwn;
-            var root = ItemSeats ? vehicle.transform : vehicle.transform.root;
+            var cache = _seats;
+            var root = vehicle.transform;
             if (cache.TryGetValue(root, out var have) && have.Length > 0 && have[0] != null) return have;
             if (cache.Count > 256) cache.Clear();   // destroyed vehicles' entries
             var list = new List<seatscript>(root.GetComponentsInChildren<seatscript>(true));
-            if (ItemSeats) list.RemoveAll(st => st == null || InLockedItem(st.transform, root));
-            if (all && vehicle.partslotscripts != null)
+            list.RemoveAll(st => st == null || InLockedItem(st.transform, root));
+            if (vehicle.partslotscripts != null)
             {
                 var extra = new List<Transform>();
                 foreach (var sl in vehicle.partslotscripts)
-                    if (sl != null && (ItemSeats ? !sl.transform.IsChildOf(root) : sl.transform.root != root) && !extra.Contains(sl.transform.root)) extra.Add(sl.transform.root);
+                    if (sl != null && (!sl.transform.IsChildOf(root)) && !extra.Contains(sl.transform.root)) extra.Add(sl.transform.root);
                 extra.Sort((x, y) => string.CompareOrdinal(x.name, y.name));
                 foreach (var t in extra) list.AddRange(t.GetComponentsInChildren<seatscript>(true));
             }
@@ -63,7 +51,7 @@ namespace TLDRevamp.Net
             net = 0; idx = 0;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             if (pl == null || !pl.Bsitting || pl.seat == null) return;
-            if (ItemSeats && SeatObject(pl.seat) is Ent so)
+            if (SeatObject(pl.seat) is Ent so)
             {
                 int k = Array.IndexOf(VehicleSeats(so.Root), pl.seat);
                 if (k >= 0)
@@ -90,7 +78,6 @@ namespace TLDRevamp.Net
                     bool mine = false;
                     foreach (var sl in e.Root.partslotscripts) if (sl != null && sl.transform.root == root) { mine = true; break; }
                     if (!mine) continue;
-                    if (!RearSeats) continue;
                     seats = VehicleSeats(e.Root);
                 }
                 int i = Array.IndexOf(seats, pl.seat);

@@ -82,7 +82,6 @@ namespace TLDRevamp.Net
             // what mustn't be asked
             EditBackLater(car, -1, false); EditBackLater(car, 3, true);
             check(BackCount == 0, "no item, or a malformed message: nothing");
-            EntityEditBack.RefusedEditsComeBack = false; EditBackLater(car, 3, false); EntityEditBack.RefusedEditsComeBack = true;
             check(BackCount == 0, "switched off: nothing (before)");
 
             // a flood of refusals costs a bounded table

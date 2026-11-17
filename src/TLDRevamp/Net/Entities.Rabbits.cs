@@ -29,10 +29,8 @@ namespace TLDRevamp.Net
     ///    machine's rabbit takes it before the touch, and a rabbit simulated here takes the parked car or loose item it
     ///    is about to hit. Car flips, pushes and run-overs are then the game's own physics, on one machine, and every
     ///    other machine sees the result.
-    /// A/B: RabbitSync false = before (copies think on their own, no events), RabbitOwners false = no ownership rules.
     internal static partial class EntityRabbits
     {
-        internal static bool RabbitSync = true, RabbitOwners = true;
         internal static float RabbitNearM = 60f, RabbitSwitchM = 5f, RabbitHoldS = 2f, RabbitCarMoveMps = 1.5f;
         internal static float RabbitClaimM = 0.5f, RabbitClaimSteps = 4f;   // claim before the touch: margin + closing speed × physics steps
         public static long RabbitStatesSent, RabbitStatesApplied, RabbitStatesStale, RabbitFxSent, RabbitFxApplied, RabbitDamageSent,
@@ -67,14 +65,14 @@ namespace TLDRevamp.Net
             foreach (var e in RabEnts) if (e.Root == it) return e;
             return Entities.RabbitOfItem(it);
         }
-        private static bool RabCopy(Component c) => RabbitSync && Entities.InSession && !_rabReplay && Entities.IsProxy(c);
+        private static bool RabCopy(Component c) => Entities.InSession && !_rabReplay && Entities.IsProxy(c);
 
         // ================================================================ sharing: the size first
         /// From ShareItem: a rabbit not yet started rolls its size now, as its Start would (Start then leaves it): the
         /// record that goes out carries the rabbit the owner will have.
         internal static void RabbitBeforeShare(tosaveitemscript root)
         {
-            if (!RabbitSync || root == null || root.nyul == null || root.nyul.started) return;
+            if (root == null || root.nyul == null || root.nyul.started) return;
             root.nyul.SetBasedOnSize(RabbitNextSize >= 0f ? RabbitNextSize : Random.Range(0f, 1f));
             RabbitNextSize = -1f;
             RabbitSizesRolled++;
@@ -136,7 +134,7 @@ namespace TLDRevamp.Net
             private static bool Prefix(nyulscript __instance)
             {
                 if (RabCopy(__instance)) return false;
-                if (Entities.InSession && RabbitSync) { _voiceOf = __instance; _voiceKind = RfIdle; _voiceClip = null; }
+                if (Entities.InSession) { _voiceOf = __instance; _voiceKind = RfIdle; _voiceClip = null; }
                 return true;
             }
             [HarmonyPostfix]
@@ -202,7 +200,7 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static void Prefix(nyulscript __instance, ref bool _playSound)
             {
-                if (!Entities.InSession || !RabbitSync || _rabReplay) return;
+                if (!Entities.InSession || _rabReplay) return;
                 if (Entities.IsProxy(__instance)) { _playSound = false; return; }
                 Voice(__instance, RfDie);
             }
@@ -212,7 +210,7 @@ namespace TLDRevamp.Net
 
         private static void Voice(nyulscript ny, byte kind)
         {
-            if (!Entities.InSession || !RabbitSync || _rabReplay) return;
+            if (!Entities.InSession || _rabReplay) return;
             _voiceOf = ny; _voiceKind = kind; _voiceClip = null;
         }
 
@@ -292,7 +290,7 @@ namespace TLDRevamp.Net
 
         private static void SenseLost(sensoryscript s, byte kind)
         {
-            if (!Entities.InSession || !RabbitSync || _rabReplay) return;
+            if (!Entities.InSession || _rabReplay) return;
             var ny = s.GetComponentInParent<nyulscript>();
             if (ny != null) SendRabbitFx(ny, kind, 0);
         }
@@ -313,7 +311,7 @@ namespace TLDRevamp.Net
             {
                 if (__state || !NyEvil(__instance)) return;
                 RabGreen[__instance] = !natural;
-                if (Entities.InSession && RabbitSync && !_rabReplay && !Entities.IsProxy(__instance)) SendRabbitFx(__instance, RfEvil, natural ? 1 : 0);
+                if (Entities.InSession && !_rabReplay && !Entities.IsProxy(__instance)) SendRabbitFx(__instance, RfEvil, natural ? 1 : 0);
             }
         }
 
@@ -338,7 +336,7 @@ namespace TLDRevamp.Net
                 Entities.CollectRabbits(RabEnts);
                 Prune(RabViews); Prune(RabLastSent); Prune(RabGreen);
             }
-            if (!RabbitSync || RabEnts.Count == 0) return;
+            if (RabEnts.Count == 0) return;
             bool send = RemotePlayers.Count > 0 && now >= _rabSendAt;
             if (send) _rabSendAt = now + 0.1f;
             float k = 1f - Mathf.Exp(-12f * Time.deltaTime);
@@ -367,13 +365,13 @@ namespace TLDRevamp.Net
                 bool rawSend = BandwidthRules.CreatureDue(ls.RawFlags, f, Mathf.Abs(ls.RawRun - run) <= 2 && (ls.RawInterest - interest).sqrMagnitude < 0.25f, now, ls.RawAt);
                 if (rawSend) { ls.RawFlags = f; ls.RawRun = run; ls.RawInterest = interest; ls.RawAt = now; }
                 var target = ny.AI != null && validInterest ? mainscript.GlobalFromUnityPos(ny.AI.interestPos) : default;
-                if (Entities.WasteFixes && (f & 128) != 0) { f &= 248; run = 0; target = default; seen = false; }
+                if ((f & 128) != 0) { f &= 248; run = 0; target = default; seen = false; }
                 bool audience = Entities.CreatureAudience(mainscript.GlobalFromUnityPos(ny.transform.position));
                 bool entered = audience && !ls.Audience; ls.Audience = audience;
                 if (!BandwidthRules.RabbitDue(ls.Epoch != e.Epoch || entered, ls.Flags, f, ls.Run, run, ls.Seen, seen))
                 {
                     Entities.StatesSkippedRabbitAnimation++;
-                    if (Entities.WasteFixes && (f & 128) != 0 && rawSend) Entities.StatesSkippedDeadAnimation++;
+                    if ((f & 128) != 0 && rawSend) Entities.StatesSkippedDeadAnimation++;
                     continue;
                 }
                 if (!InterestRules.Due(audience, ls.Epoch != e.Epoch || ((ls.Flags ^ f) & 248) != 0, now, ls.SentAt, MpServer.CarBeyondInterval))
@@ -463,7 +461,7 @@ namespace TLDRevamp.Net
             [HarmonyPrefix]
             private static void Prefix(playerdeathtriggerscript __instance)
             {
-                if (!Entities.InSession || !RabbitSync) return;
+                if (!Entities.InSession) return;
                 if (!_rabTriggerOf.TryGetValue(__instance, out bool rab)) _rabTriggerOf[__instance] = rab = __instance.GetComponentInParent<nyulscript>() != null;
                 _rabTrigger = rab;
             }
@@ -504,7 +502,7 @@ namespace TLDRevamp.Net
         ///    driver's: the driver's machine takes the rabbit instead).
         internal static void RabbitNearTick(float dt)
         {
-            if (!RabbitSync || !RabbitOwners || RabEnts.Count == 0) return;
+            if (RabEnts.Count == 0) return;
             _rabMine.Clear();
             foreach (var e in RabEnts)
             {
@@ -575,7 +573,7 @@ namespace TLDRevamp.Net
         /// ContactRelay (a root simulated here touched something): the claim before the touch missed - now.
         internal static void RabbitContact(uint net, Collision c)
         {
-            if (!RabbitSync || !RabbitOwners || c.rigidbody == null || !Entities.TryGetEntity(net, out var mine) || mine.Proxy || mine.Root == null) return;
+            if (c.rigidbody == null || !Entities.TryGetEntity(net, out var mine) || mine.Proxy || mine.Root == null) return;
             var other = Entities.RabbitProxyOf(c.rigidbody.transform.root);
             if (other == null && EntityRagdolls.TryLimbOwner(c.rigidbody.gameObject, out var lo)) other = lo;   // a dead rabbit's limb
             if (other == null || other.Root == null || !other.Proxy || other.Held || other.Stored || other.Physical || other.CrashTaking) return;
@@ -623,7 +621,7 @@ namespace TLDRevamp.Net
         }
 
         public static string RabbitStats() =>
-            "{\"sync\":" + (RabbitSync ? "true" : "false") + ",\"owners\":" + (RabbitOwners ? "true" : "false") + ",\"statesSent\":" + RabbitStatesSent + ",\"statesApplied\":" + RabbitStatesApplied +
+            "{\"sync\":" + ("true") + ",\"owners\":" + ("true") + ",\"statesSent\":" + RabbitStatesSent + ",\"statesApplied\":" + RabbitStatesApplied +
             ",\"statesStale\":" + RabbitStatesStale + ",\"fxSent\":" + RabbitFxSent + ",\"fxApplied\":" + RabbitFxApplied + ",\"damageSent\":" + RabbitDamageSent +
             ",\"damageTaken\":" + PlayerCombat.DamageTaken + ",\"ownerMoves\":" + RabbitOwnerMoves + ",\"lastMove\":" + Json.Str(RabbitLastMove) +
             ",\"claimedByCar\":" + RabbitClaimedByCar + ",\"claimedObjects\":" + RabbitClaimedObjects + ",\"breakHitsSent\":" + RabbitBreakHitsSent +

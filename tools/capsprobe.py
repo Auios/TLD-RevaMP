@@ -3,7 +3,7 @@
 gets locked"). Two machines over the relay. The host spawns a car; both list its caps (`mp caps`: usable kind, state,
 colliders, layer). Then each cap is used once by the laptop (on its copy) and once by the host (its own): after each,
 both machines' cap state must agree and the cap's colliders must be on where they were on.
-  tools/capsprobe.py [--no-build] [--relay iad|off] [--car 2] [--old]"""
+  tools/capsprobe.py [--no-build] [--relay iad|off] [--car 2]"""
 import sys, time, math, pathlib, json
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -37,9 +37,7 @@ with game.ProtectedSession():
         h("mp host 27070"); L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        OLD = "--old" in sys.argv
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.Entities.ScopedEdits {not OLD}")
-        print(f"  {'OLD (whole-item edits)' if OLD else 'NEW (scoped edits)'}", flush=True)
+        print(f"  {'NEW (scoped edits)'}", flush=True)
         time.sleep(5)
         hp = h("gpos"); me = h("mp entities")["me"]
         cx, cz = hp["gx"] + 8, hp["gz"] + 8

@@ -1013,7 +1013,7 @@ namespace TLDRevamp.Net
         public static string SeatList(uint net)
         {
             if (!ObservedEntities.TryGetValue(net, out var e) || !Resolve(e)) return "{\"error\":\"no entity " + net + "\"}";
-            var seats = EntitySeats.VehicleSeats(e.Root, true);
+            var seats = EntitySeats.VehicleSeats(e.Root);
             var rows = new List<string>();
             for (int i = 0; i < seats.Length; i++)
             {
@@ -1084,7 +1084,7 @@ namespace TLDRevamp.Net
             else foreach (var it in savedatascript.s.items.Values)
                 if (it != null && it.car != null && it.transform.parent == null) { float d = (it.transform.position - pl.transform.position).sqrMagnitude; if (d < best) { best = d; car = it; } }
             if (car == null) return "{\"error\":\"no car\"}";
-            var seats = EntitySeats.VehicleSeats(car, true);
+            var seats = EntitySeats.VehicleSeats(car);
             if (idx < 0 || idx >= seats.Length) return "{\"error\":\"no seat " + idx + "\"}";
             var st = seats[idx];
             if (redirect && st.mainseat != null) st = st.mainseat;
@@ -1230,7 +1230,7 @@ namespace TLDRevamp.Net
             float now = Time.time;
             // why BodyMotionTick leaves it alone (its order): a copy it skips is not drawn from its owner's states
             string skip = !e.Proxy ? "own" : e.Physical ? "physical" : e.Ip == null || !e.Ip.Ready ? "no states" : RidesBolted(e) ? "bolted" :
-                EntityLocks.CopyLockByContainer && EntityLocks.LockedAway(e) ? "locked away" : EntityHands.WornRides(e) ? "worn" : EntityHands.HandManaged(e) ? "hand" : rb == null ? "no body" :
+                EntityLocks.LockedAway(e) ? "locked away" : EntityHands.WornRides(e) ? "worn" : EntityHands.HandManaged(e) ? "hand" : rb == null ? "no body" :
                 !rb.isKinematic ? "not kinematic" : e.CarriedBy != 0 ? "carried" : "";
             return "{\"net\":" + net + ",\"skip\":" + Json.Str(skip) + ",\"liftsRefused\":" + CarLiftsRefused + ",\"healed\":" + EntityPhysics.CopyBodiesHealed + ",\"proxy\":" + B(e.Proxy) + ",\"owner\":" + e.OwnerId + ",\"driven\":" + B(e.Driven) + ",\"physical\":" + B(e.Physical) +
                    ",\"movedByBody\":" + B(e.MovedByBody) + ",\"crashTaking\":" + B(e.CrashTaking) + ",\"freeIn\":" + B(now >= e.FreeFrom && now < e.FreeUntil) +

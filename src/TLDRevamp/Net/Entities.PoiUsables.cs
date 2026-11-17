@@ -130,12 +130,7 @@ namespace TLDRevamp.Net
         /// A joiner: every building usable changed this session (with InterestRelay: as they come near each building).
         private static void ServerPoiUsablesTo(int playerId)
         {
-            if (EntityAuthorityInterest.InterestRelay) { PoiAllStale(playerId); return; }
-            foreach (var b in ServerPoiUsables.Values)
-            {
-                WS.Reset(); WS.Bytes(b, 0, b.Length);
-                ServerSendTo(playerId, WS, true);
-            }
+            PoiAllStale(playerId);
         }
 
         internal static usablescript PoiFocusUsable()

@@ -450,8 +450,6 @@ def scripted(h, L, car, tracked, cars):
                 print(f"     +{(w + 1) * 0.5}: host holds {h.held()}, lock host {(h.lock(n) or {}).get('physlock')!r} joiner {(L.lock(n) or {}).get('physlock')!r}, owner {eh and eh['owner']}, apart {math.dist(eh['pos'], el['pos']) if eh and el else None}", flush=True)
             check(h, L, tracked, cars, f"out-of-hand {rnd + 1} held")
             h.try_act("drop", net=n, item=0); time.sleep(2)
-    for x in (h, L):    # the games are kept between runs: said every time
-        for sw in ("SlotReplaces", "StaleOwnerForwards", "StaleDetachDirect", "AttachReqBecomesSync", "WornLateOk", "EditsComeBack", "CensusRepairs", "CarriedPartsShared", "RemoveFarMembers", "TankAddEdits", "CarriedLeavesLock"): x(f"set TLDRevamp.Net.{ {'WornLateOk': 'EntityHands', 'TankAddEdits': 'EntityEdits', 'CarriedLeavesLock': 'EntityLocks'}.get(sw, 'Entities')}.{sw} {'--oldslot' not in sys.argv}")
     for k, x in h.slots(car).items():
         if "--slots" in sys.argv and x["parts"]: print(f"     member {k[0]} slot {k[1]}: {x['parts']}", flush=True)
         if len(x["parts"]) > 1 and not x.get("many"):
@@ -665,18 +663,16 @@ def scripted(h, L, car, tracked, cars):
             k = (u["item"], u["usable"])
             def v(p): return {(x["item"], x["usable"]): x["value"] for x in p.s(f"mp usables {car}")["usables"]}[k]
             same = lambda: all(abs(float(a) - float(b)) < 0.01 for a, b in zip(v(h), v(L)))
-            for rnd, on in enumerate((False, True) if AB else (True,)):
-                h.s(f"set TLDRevamp.Net.EntityEditBack.RefusedEditsComeBack {on}")
+            for rnd, on in enumerate((True,)):
                 out0 = h.s(f"get {T_}.EditsOutOfReach").get("value")
                 h.s(f"set {T_}.EditRangeM 0.1")
                 print(f"     {u['itemName']} usable {u['usable']} ({u['kind']}), told back {on}: before host {v(h)} joiner {v(L)}", flush=True)
                 L.try_act("usable", net=car, item=u["item"], slot=u["usable"], x=0.6 + 0.1 * rnd); time.sleep(1.5)
                 h.s(f"set {T_}.EditRangeM 15")
                 print(f"     refused {h.s(f'get {T_}.EditsOutOfReach').get('value') - out0}, host {v(h)} joiner {v(L)}", flush=True)
-                t0 = time.time(); until(same, 30 if not on else 60, 0.5)
+                t0 = time.time(); until(same, 60, 0.5)
                 print(f"     told back {on}: {'the same after %.1f s' % (time.time() - t0) if same() else 'STILL different after %.0f s' % (time.time() - t0)}: host {v(h)} joiner {v(L)}", flush=True)
                 if on and not same(): finding("aud-refused", f"{u['itemName']} usable {u['usable']}: host {v(h)}, joiner {v(L)} 60 s after the refusal", car)
-                if not on and same(): note("INVALID aud-refused: the same with the telling back off")
     if want("aud-held"):
         print("\n=== the owner turns one knob, a copy another right after: does the owner's reach the copy, inside the copy's hold?", flush=True)
         beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0))
@@ -689,9 +685,8 @@ def scripted(h, L, car, tracked, cars):
             i, us = pick; a, b = us[0], us[-1]
             def v(p): return {(x["item"], x["usable"]): x["value"] for x in p.s(f"mp usables {car}")["usables"] if x["item"] == i}
             same = lambda: all(abs(float(x) - float(y)) < 0.01 for k, ra in v(h).items() for x, y in zip(ra, v(L)[k]))
-            for on in (False, True) if AB else (True,):
+            for on in (True,):
                 got = 0; rnd = 0
-                h.s(f"set TLDRevamp.Net.EntityEditBack.HeldRecordsComeBack {on}")
                 # the copy's edit, then the owner's on the same knob: 1 round in 18 stayed different over gaps of 0.05-1.3 s, at 0.2 s
                 for other in (a,):
                     for d in (0.1, 0.15, 0.2, 0.25, 0.3) * 8:
@@ -703,7 +698,6 @@ def scripted(h, L, car, tracked, cars):
                         print(f"     on {on} {'same knob' if other is a else 'other knob'} {d} s: {'the same' if ok else 'DIFFERENT host %s joiner %s' % (v(h), v(L))}"[:230], flush=True)
                         if on and not ok: finding("aud-held", f"{us[0]['itemName']} {d} s: host {v(h)}, joiner {v(L)} 6.5 s after both edits", car)
                 print(f"     came back {on}: {got} of {rnd} rounds stayed different", flush=True)
-                if not on and got == 0: note("INVALID aud-held: no round stayed different with it off")
     if want("aud-split"):
         print("\n=== a part off a car, its old car changes hands: does the part stay what it was on each machine?", flush=True)
         beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0)); time.sleep(1)
@@ -711,8 +705,7 @@ def scripted(h, L, car, tracked, cars):
         def kin(p, n):
             w = p.lock(n)
             return (w or {}).get("rb", {}).get("kin") if isinstance((w or {}).get("rb"), dict) else None
-        for on in (False, True) if AB else (True,):
-            for p in (h, L): p.s(f"set {T_}.SplitPartsApart {on}")
+        for on in (True,):
             # the joiner owns car and part, the host takes the car: the host's copy of the part stays a copy
             L.s(f"mp claim {car}"); wait(3, lambda: not L.ents()[car]["proxy"] and h.ents()[car]["proxy"])
             # glued, with a body the game knows (tosaveitemscript.RB). A door or a wheel gets its body only when it comes off: the game's unfreeze doesn't reach those
@@ -746,18 +739,15 @@ def scripted(h, L, car, tracked, cars):
             dyn2 = healed(h) - h0
             print(f"     apart {on}: the car away and back to the host: the host's copy of the part made kinematic again {dyn2} times, height against the owner's each second {fell}", flush=True)
             if on and dyn2: finding("aud-split", f"the host's copy of a part went dynamic {dyn2} times after its old car changed hands", part)
-            if not on and not dyn2: note("INVALID aud-split: no dynamic copy with it off")
             print("    ", str(L.s(f"mp moveitem {part} 0 0"))[:50], flush=True); y1 = L.ents()[part]["pos"][1]
             time.sleep(2); y2 = L.ents()[part]["pos"][1]
             print(f"     apart {on}: the joiner's own part after its old car left it: lifted to {y1:.2f}, 2 s later {y2:.2f} ({'fell' if y2 < y1 - 0.3 else 'stayed in the air'}), proxy {L.ents()[part]['proxy']}", flush=True)
             if on and y2 >= y1 - 0.3: finding("aud-split", f"the joiner's own part stays in the air after its old car left it: {y1:.2f} to {y2:.2f}", part)
-            if not on and y2 < y1 - 0.3: note("this direction passes with it off too")
             beside(L, L.ent(car), (-2.6, 0, 0)); time.sleep(1)
     if want("aud-send"):
         print("\n=== sends Steam refuses: a burst over its send buffer, then refusals in a live session", flush=True)
         ST = "TLDRevamp.Net.SteamTransport"
-        for on in (False, True) if AB else (True,):
-            h.s(f"set {ST}.QueueRefusedSends {on}")
+        for on in (True,):
             print("     burst:", str(h.s("net pair 1500 1000 loopback"))[:120], flush=True)
             t0 = time.time(); st = {}
             while time.time() - t0 < 14:
@@ -765,8 +755,6 @@ def scripted(h, L, car, tracked, cars):
                 if not st.get("running"): break
             print(f"     queue {on}: reliable {st.get('reliable')} of 1500, unreliable {st.get('unreliable')}, out of order {st.get('outOfOrder')}, bad {st.get('badPayload')}, refused {st.get('sendErrors')}, queued {st.get('queued')}, sent later {st.get('flushed')}, most waiting {st.get('waitingMaxB')} B, {st.get('elapsedMs')} ms", flush=True)
             if on and (st.get("reliable") != [1500, 1500] or st.get("outOfOrder") or st.get("badPayload")): finding("aud-send", f"burst: {str(st)[:200]}")
-            if not on and st.get("reliable") == [1500, 1500]: note("INVALID aud-send: nothing lost with the queue off")
-        h.s(f"set {ST}.QueueRefusedSends True")
         for p in (h, L):
             before = p.s("net stats")
             p.s(f"set {ST}.TestRefuseSends 300"); time.sleep(6)
@@ -782,8 +770,7 @@ def scripted(h, L, car, tracked, cars):
     if want("aud-lost"):
         print("\n=== a copy this machine's game destroyed on its own, twice within 30 s: does it come back?", flush=True)
         beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0))
-        for on in (False, True) if AB else (True,):
-            L.s(f"set {T_}.RefetchLater {on}")
+        for on in (True,):
             n = spawn(h, "jerry"); tracked.add(n); until(lambda: n in L.ents(), 8)
             h.s(f"mp claim {n}"); wait(3, lambda: not h.ents()[n]["proxy"]); until(lambda: L.ents().get(n, {}).get("proxy"), 5, 0.25)   # only a copy can be lost
             try: print(f"     came later {on}: {n}, joiner's copy lost:", str(L.s(f"mp losecopy {n}"))[:40], flush=True)
@@ -795,7 +782,6 @@ def scripted(h, L, car, tracked, cars):
             back = n in L.ents()
             print(f"     came later {on}: {'back after %.0f s' % (time.time() - t0) if back else 'STILL gone after %.0f s, and on the host: %s' % (time.time() - t0, n in h.ents())}", flush=True)
             if on and not back: finding("aud-lost", f"a copy lost twice stays gone: {n}", n)
-            if not on and back: note("INVALID aud-lost: it came back with it off")
             if not back: tracked.discard(n)
     if want("aud-restore"):
         print("\n=== a joiner's pocket comes back: its game ignores the Restore, or can't spawn an item, or nothing goes wrong", flush=True)
@@ -815,28 +801,25 @@ def scripted(h, L, car, tracked, cars):
             if L.held():
                 try: L("dropheld")
                 except RuntimeError: pass
-        for on in (False, True) if AB else (True,):
-            h.s(f"set {PS}.RestoreConfirmed {on}")
+        for on in (True,):
             for how in ("all", "1"):
                 pocket()
                 first = rejoin_with(how); second = rejoin_with("none")
                 print(f"     confirmed {on}, the joiner's game drops {how}: came back {first}, at the next join {second}, in the hand: {L.held()}", flush=True)
                 if on and second != 1: finding("aud-restore", f"drop {how}: {second} items at the next join")
-                if not on and second: note(f"INVALID aud-restore: drop {how} came back with it off")
                 free()
-            if on:
-                pocket()
-                once = rejoin_with("none"); twice = rejoin_with("none")
-                print(f"     nothing goes wrong: {once} item at one join, {twice} at the next, in the hand: {L.held()}", flush=True)
-                if once != 1 or twice != 1: finding("aud-restore", f"plain rejoin: {once}, then {twice} items: one each time is right")
-                free()
+            pocket()
+            once = rejoin_with("none"); twice = rejoin_with("none")
+            print(f"     nothing goes wrong: {once} item at one join, {twice} at the next, in the hand: {L.held()}", flush=True)
+            if once != 1 or twice != 1: finding("aud-restore", f"plain rejoin: {once}, then {twice} items: one each time is right")
+            free()
             print("     host:", {k: h.s(f"get {PS}.{k}").get("value") for k in ("RestoreKept", "RestoreConfirmedItems")}, flush=True)
     if want("aud-part-lost"):
         print("\n=== the game destroys a joiner's copy of a part that came off a car: does it come back?", flush=True)
         beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0)); time.sleep(1)
         h.s(f"mp claim {car}"); wait(3, lambda: not h.ents()[car]["proxy"])
-        for on in (False, True) if AB else (True,):
-            L.s(f"set {T_}.RefetchParts {on}"); L.s(f"set {T_}.LostPartMembers {bool(PART_MEMBERS)}")
+        for on in (True,):
+            L.s(f"set {T_}.LostPartMembers {bool(PART_MEMBERS)}")
             ms = [m for m in glued(h, car) if m["i"] > 0 and m.get("lp") and math.hypot(*m["lp"]) < 30]
             # one that carries something (a wheel with its tyre, a part with a can glued on it): what hung on it must come back too
             on_it = {x.get("on") for x in h.members(car) if x.get("loaded")}
@@ -854,7 +837,6 @@ def scripted(h, L, car, tracked, cars):
             back = part in L.ents()
             print(f"     refetch {on}: {'back after %.1f s' % (time.time() - t0) if back else 'STILL gone after %.0f s' % (time.time() - t0)}", flush=True)
             if on and not back: finding("aud-part-lost", f"a lost part stays gone: {part} {m['name']}", part)
-            if not on and back: note("INVALID aud-part-lost: it came back with it off")
             if not back: print("     the off round's part goes everywhere:", str(h(f"deleteshare {part}"))[:60], flush=True)
             if back:
                 tracked.add(part)
@@ -874,7 +856,6 @@ def scripted(h, L, car, tracked, cars):
         # A rabbit's breakable has no item of its own and outlives its break. It dies once a run: --break far|late --break-kept 0|1 chooses.
         how, on = arg("--break", "far"), arg("--break-kept", "1") == "1"
         print(f"\n=== a rabbit dies while the joiner {'has it stored far' if how == 'far' else 'is not in the game'}: kept {on}", flush=True)
-        for p in (h, L): p.s(f"set TLDRevamp.Net.EntityAI.BreaksKept {on}")
         # a fresh one each time: the games can outlive a run, and with them the rabbit the last one killed
         known = set(h.ents()); print("     spawned:", str(h(f"devspawn {h('itemids Nyul')['items'][0][0]}"))[:60], flush=True)
         got = []
@@ -957,8 +938,7 @@ def scripted(h, L, car, tracked, cars):
         if st.get("broken") != 1: finding("aud-break-near", f"the rabbit lives on the joiner beside it: {st}", rab)
     if want("aud-rabbit-locked"):
         print("\n=== a rabbit that was once locked in a car dies: the lock destroyed its limbs' bodies, the ragdoll's list still names them", flush=True)
-        for on in (False, True) if AB else (True,):
-            for p in (h, L): p.s(f"set TLDRevamp.Net.EntityAI.RagdollListHealed {on}")
+        for on in (True,):
             known = set(h.ents()); h(f"devspawn {h('itemids Nyul')['items'][0][0]}"); got = []
             until(lambda: got.extend(n for n, e in h.ents().items() if n not in known and "Nyul" in (e.get("name") or "") and not e.get("dormant")) or got, 10)
             if not got: note("INVALID aud-rabbit-locked: no rabbit came"); continue
@@ -969,13 +949,10 @@ def scripted(h, L, car, tracked, cars):
             time.sleep(2); st = h.s(f"mp breakstate {rab}")
             print(f"     healed {on}: killed {str(killed)[:70]}; host {st}, lists healed {h.s(f'get TLDRevamp.Net.EntityAI.RagdollListsHealed').get('value')}", flush=True)
             if on and (st.get("broken") != 1 or not st.get("ragdoll") or not st.get("limbsLoose")): finding("aud-rabbit-locked", f"a once locked rabbit didn't die properly: {st}", rab)
-            if not on and st.get("broken") == 1: note("INVALID aud-rabbit-locked: it died with the fix off: this isn't the cause")
-        for p in (h, L): p.s(f"set TLDRevamp.Net.EntityAI.RagdollListHealed True")
     if want("aud-host-grab"):
         print("\n=== the host grabs what the joiner holds: refused at once, inside the pickup, before the hand has it", flush=True)
         beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0)); time.sleep(1)
-        for on in (False, True) if AB else (True,):
-            h.s(f"set {T_}.HostGrabLetGo {on}")
+        for on in (True,):
             n = spawn(L, "jerry"); tracked.add(n); until(lambda: n in h.ents(), 8); time.sleep(1)
             print("     joiner holds:", str(L.s(f"mp holdnet {n}"))[:60], flush=True); time.sleep(2)
             c0 = h.s(f"get {T_}.HandCopiesClaimed").get("value")
@@ -988,7 +965,6 @@ def scripted(h, L, car, tracked, cars):
             print("     host holds at once:", held0, {k: v for k, v in row0.items() if k in ("owner", "proxy", "held")}, flush=True)
             print(f"     let go {on}: host holds {held0}, let go {h.s(f'get {T_}.HostGrabsLetGo').get('value')}", flush=True)
             if on and held0 and row0.get("proxy"): finding("aud-host-grab", f"the host holds a copy the joiner owns: {held0}", n)
-            if not on and not held0: note("INVALID aud-host-grab: the hand was empty with it off: the game let go, nothing tested")
             time.sleep(7)
             held = h.held(); row = h.ents()[n]
             print(f"     after 7 s: host holds {held}, its row owner {row.get('owner')} proxy {row.get('proxy')}, joiner holds {L.held()}, copies in hands claimed {h.s(f'get {T_}.HandCopiesClaimed').get('value') - c0}", flush=True)
@@ -996,7 +972,6 @@ def scripted(h, L, car, tracked, cars):
             if h.held(): h.s("dropheld")
             if L.held(): L.s("dropheld")
             beside(h, h.ent(car)); time.sleep(1)
-        h.s(f"set {T_}.HostGrabLetGo True")
     if want("aud-regrab"):
         # black box 11-10 (Car07Engine): the joiner took the engine off the host's car and let it go in it, the host claimed it
         # (CargoRelease), the joiner picked it up again 1.2 s later; 1 s after that it sank on the joiner, then fell 300 m
@@ -1041,8 +1016,7 @@ def scripted(h, L, car, tracked, cars):
                 if c: return c[0]
             return None
         rp = h("roadpoint"); start = (rp["gx"], rp["gz"]); far = (rp["gx"] - 6000, rp["gz"])
-        for on in (False, True) if AB else (True,):
-            for p in (h, L): p.s(f"set TLDRevamp.Net.EntityAI.WorldBreaksKept {on}")
+        for on in (True,):
             L(f"tpground {far[0]} {far[1]}"); time.sleep(3)
             c = find(start)
             if not c: note("INVALID aud-world-break: no cactus found"); break
@@ -1053,7 +1027,6 @@ def scripted(h, L, car, tracked, cars):
             down = all(b["destroyed"] for b in lc)   # a broken one is destroyed: gone from the list, or there and marked
             print(f"     kept {on}: the joiner came near: host's {[b['destroyed'] for b in hc_]}, joiner's {[b['destroyed'] for b in lc]}", flush=True)
             if on and not down: finding("aud-world-break", f"far: the cactus stands on the joiner: {lc}")
-            if not on and down: note("INVALID aud-world-break: down on the joiner with it off")
             # does the game bring a piece back when its area is made again? On both machines the same is all that matters
             for p in (h, L): p(f"tpground {c['pos'][0] + 3000} {c['pos'][2]}")
             time.sleep(8)
@@ -1128,7 +1101,6 @@ def scripted(h, L, car, tracked, cars):
     if want("aud-wheel-far"):
         print("\n=== a tyre unbolted from a wheel, beside its car and 3 km from it: the same on both?", flush=True)
         def tyres(p): return p.s("mp namecount TireGumi 0")
-        if "--oldslot" in sys.argv: h(f"set {T_}.CarriedPartsShared false"); L(f"set {T_}.CarriedPartsShared false")
         for dist, both in ((0, True), (100, True), (3000, True), (3000, False)):
             if ("--far-only" in sys.argv and dist < 500) or ("--far-stay" in sys.argv and both) or ("--near-100" in sys.argv and dist != 100): continue
             print(f"     --- {dist} m, the host {'beside the wheel' if both else 'stays at the car'}", flush=True)
@@ -1381,8 +1353,7 @@ def scripted(h, L, car, tracked, cars):
         else:
             if L.ents()[n]["proxy"]: L.s(f"mp claim {n}"); wait(2, lambda: not L.ents()[n]["proxy"] and h.ents()[n]["proxy"])
             print("     item", n, L.ents()[n]["name"], "owner", L.ents()[n]["owner"], "| before:", h.s("mp places"), flush=True)
-            for rnd, on in enumerate((False, True) if AB else (True,)):
-                h.s(f"set {T}.CensusPlaces {on}"); L.s(f"set {T}.CensusPlaces {on}")
+            for rnd, on in enumerate((True,)):
                 h.s(f"mp dropstates {n}")
                 print(f"     census positions {on}: the owner moves it, the copy hears none of it:", str(L.s(f"mp moveitem {n} {8 + 6 * rnd} 0"))[:70], flush=True); time.sleep(6)
                 h.s("mp dropstates 0")
@@ -1395,7 +1366,6 @@ def scripted(h, L, car, tracked, cars):
                 d1 = gap()
                 print(f"     census positions {on}: {'healed in %.0f s' % (time.time() - t0) if d1 <= 0.6 else 'STILL %.2f m apart after 40 s' % d1}", flush=True)
                 if on and d1 > 0.6: finding("aud-place", f"still {d1:.2f} m apart")
-                if not on and d1 <= 0.6: note("INVALID aud-place: healed with the check off, a gap this way doesn't last")
             print("     places: host", h.s("mp places"), "joiner", L.s("mp places"), flush=True)
             print("     anomalies host:", str(h.s("mp anomalies").get("lines"))[-400:], flush=True)
             check(h, L, tracked, cars, "aud-place")
@@ -1468,8 +1438,8 @@ def scripted(h, L, car, tracked, cars):
         def hrow():
             m = h.s(f"mp lockdiag {n}"); o = L.s(f"mp lockdiag {n}")
             return f"{math.dist(h.ents()[n]['pos'], L.ents()[n]['pos']):5.2f} m | host: owner {m.get('owner')} proxy {m.get('proxy')} kin {m.get('kinematic')} body {m.get('movedByBody')} hands {h.held()} | joiner: owner {o.get('owner')} proxy {o.get('proxy')} held {o.get('held')} kin {o.get('kinematic')}"
-        for on, secs in ((False, 45), (True, 8)):
-            h.s(f"set {T}.HandCopyClaims {on}"); beside(h, h.ents()[n], (2.5, 0, 0)); time.sleep(1)
+        for on, secs in ((True, 8),):
+            beside(h, h.ents()[n], (2.5, 0, 0)); time.sleep(1)
             print(f"     guard {on}: before", hrow(), flush=True)
             print("     host takes it, no claim:", str(h.s(f"mp handcopy {n}"))[:60], flush=True)
             for k in range(secs):
@@ -1477,7 +1447,7 @@ def scripted(h, L, car, tracked, cars):
                 time.sleep(1)
             print(f"     guard {on}: {hrow()}", flush=True); print("     places:", h.s("mp places"), flush=True)
             if on and h.ents()[n]["proxy"]: finding("aud-handcopy", "still a copy in the host's hands with the guard on")
-            if not on and not h.ents()[n]["proxy"]: note("INVALID aud-handcopy: the hold made no copy in the hands")
+            pass
             if h.held(): h("dropheld")
             time.sleep(6); d = math.dist(h.ents()[n]["pos"], L.ents()[n]["pos"])
             print(f"     let go: {hrow()}", flush=True)
@@ -1499,8 +1469,7 @@ def scripted(h, L, car, tracked, cars):
                 a = {x["i"]: x for x in copy.members(car)}[i]; b = {x["i"]: x for x in own.members(car)}[i]
                 return math.dist(a["lp"], b["lp"])
             print(f"     member {i} {m['name']}: {apart():.3f} m apart at the start", flush=True)
-            for on in (False, True) if AB else (True,):
-                copy.s(f"set {T}.CensusGluedPlaces {on}"); own.s(f"set {T}.CensusGluedPlaces {on}")
+            for on in (True,):
                 print(f"     check {on}: moved on the copy:", copy.s(f"mp nudgemember {car} {i} 1"), flush=True); time.sleep(1)
                 d0 = apart(); copy.s(f"mp censusnow {car} 0")
                 t0 = time.time()
@@ -1508,7 +1477,6 @@ def scripted(h, L, car, tracked, cars):
                 d1 = apart()
                 print(f"     check {on}: {d0:.2f} m, {'back in %.0f s (%.3f m)' % (time.time() - t0, d1) if d1 <= 0.1 else 'STILL %.2f m after 40 s' % d1}", flush=True)
                 if on and d1 > 0.1: finding("aud-glued", f"{m['name']} still {d1:.2f} m off")
-                if not on and d1 <= 0.1: note("INVALID aud-glued: put back with the check off")
             print("     places copy:", copy.s("mp places"), "owner:", own.s("mp places"), flush=True)
         check(h, L, tracked, cars, "aud-glued")
     if want("aud-building"):
@@ -1535,28 +1503,27 @@ def scripted(h, L, car, tracked, cars):
             def swing(sign):
                 for _ in range(40): L.s(f"mp poiuse {a} rot {25 * sign if ax == 'y' else -25 * sign} 0" if ax == "x" else f"mp poiuse {a} rot 0 {25 * sign}")
             print("     door", a, "start: host", st(h), "joiner", st(L), flush=True)
-            for on, sign in ((False, -1), (True, 1)):
-                h.s(f"set {T}.PoiRefusalsTold {on}"); h.s(f"set TLDRevamp.Net.EntityEditCheck.PoiReachM 0"); swing(sign); time.sleep(4); h.s(f"set TLDRevamp.Net.EntityEditCheck.PoiReachM 150")
+            for on, sign in ((True, 1),):
+                h.s(f"set TLDRevamp.Net.EntityEditCheck.PoiReachM 0"); swing(sign); time.sleep(4); h.s(f"set TLDRevamp.Net.EntityEditCheck.PoiReachM 150")
                 a1, b1 = st(h), st(L); print(f"     told back {on}, the host refuses the joiner's swing: host", a1, "joiner", b1, flush=True)
                 if on and abs(a1[ax] - b1[ax]) > 1: finding("aud-building / door", f"a refused door stays {a1[ax]} on the host, {b1[ax]} on the joiner")
-                if not on: note(f"without telling back: {a1[ax]} on the host, {b1[ax]} on the joiner"); swing(-sign); time.sleep(3)
+                pass
         else: note("INVALID aud-building: no door found")
         h(f"tpground {home[0]} {home[1]}"); L(f"tpground {home[0] + 6} {home[1]}"); time.sleep(10)
         beside(L, L.ent(car)); L(f"mp sitdriver {car}"); time.sleep(3); L("driveout"); time.sleep(3)   # the jumps handed the car over
-        print("  -- the pour: hand-off off on the host, the joiner owns the barrel and leaves", flush=True)
+        print("  -- the pour: the joiner owns the barrel and leaves", flush=True)
         n = barrel_of()
         if n:
             L.s(f"mp moveitem {n} 6 0"); time.sleep(4)
             beside(h, h.ents()[n], (2, 0, 0)); can = spawn(h, "jerry"); tracked.add(can); time.sleep(2)
             if h.ents()[can]["proxy"]: h.s(f"mp claim {can}"); time.sleep(2)
             h.s(f"mp fill {can} 0 gas 8"); time.sleep(2)
-            h.s(f"set {T}.HandoffEnabled False")
             g = L("gpos"); L(f"tpground {g['gx'] + 3000} {g['gz']}"); time.sleep(12)
             a0, c0 = litres(h, n), litres(h, can); print(f"     owner {h.ents()[n]['owner']}, barrel {a0}, can {c0}", flush=True)
             print("     pour:", str(h.s(f"mp holdfill {can} {n} 0"))[:80], flush=True); time.sleep(10); h.s("mp holdfill stop"); time.sleep(3)
             if h.held(): h("dropheld")
             a1, c1 = litres(h, n), litres(h, can); print(f"     after: barrel here {a1}, can {c1}", flush=True)
-            L(f"tpground {g['gx']} {g['gz']}"); time.sleep(4); h.s(f"set {T}.HandoffEnabled True"); time.sleep(25)
+            L(f"tpground {g['gx']} {g['gz']}"); time.sleep(4); time.sleep(25)
             ha, la, c2 = litres(h, n), litres(L, n), litres(h, can); print(f"     joiner back, 25 s: barrel host {ha}, joiner {la}, can {c2}, owner {h.ents()[n]['owner']}", flush=True)
             if isinstance(ha, dict) and isinstance(la, dict) and abs(sum(ha.values()) - sum(la.values())) > 0.5: finding("aud-building / pour", f"barrel {ha} on the host, {la} on the joiner")
             if isinstance(ha, dict) and isinstance(a0, dict) and isinstance(c0, dict) and isinstance(c2, dict):
@@ -1568,8 +1535,7 @@ def scripted(h, L, car, tracked, cars):
     if want("aud-place-cost"):
         print("\n=== what the position check costs: both players by the car, nothing else going on, a minute each way", flush=True)
         beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0)); time.sleep(5)
-        for on in (False, True, False, True):
-            h.s(f"set {T}.CensusPlaces {on}"); L.s(f"set {T}.CensusPlaces {on}")
+        for on in (True,):
             h("net meter reset"); L("net meter reset"); time.sleep(60)
             for who, p in (("host", h), ("joiner", L)):
                 m = p("net meter")
@@ -1591,7 +1557,6 @@ def scripted(h, L, car, tracked, cars):
             if c1 != c0 or left: finding("aud-share", f"{o.label} keeps a can {who.label} deleted ({c0} -> {c1}, entity left {left})")
     if want("aud-ghost"):
         print("\n=== a car deleted while the other player is 3 km away: do its parts come back when they return?", flush=True)
-        if "--oldslot" in sys.argv: L(f"set {T_}.RemoveFarMembers false")
         names = ("Car06PFRDoor", "Car06P(Clone)", "BARREL")
         def counts(p): return {k: p.s(f"mp namecount {k} 0")["count"] for k in names}
         beside(h, h.ent(car)); time.sleep(2)
@@ -1869,7 +1834,7 @@ def scripted(h, L, car, tracked, cars):
                     other.try_act("detach", net=can, item=0); time.sleep(0.3); other.try_act("pickup", net=can, item=0); time.sleep(1.5); other.try_act("drop", net=can, item=0); time.sleep(3)
                     a, b = h.ents().get(can), L.ents().get(can)
                     note(f"  try {tr + 2}: host attached {a and a['attached']}, joiner attached {b and b['attached']}, owner {a and a['owner']}")
-            for rr in (rim, can): tracked.discard(rr) if False else None
+            for rr in (rim, can): None
     if want("mount"):
         print("\n=== the host glues an item on the joiner's car, takes it off again", flush=True)
         beside(h, h.ent(car)); n = spawn(h, "sponge"); tracked.add(n)
@@ -1942,7 +1907,7 @@ def monkey(h, L, car, tracked, cars, seed, steps):
             elif op == "detach":
                 m = glued(p, car) or bolted(p, car)
                 if m:
-                    x = rng.choice(m); 
+                    x = rng.choice(m);
                     if not p.seated(): beside(p, e[car])
                     known = set(e)
                     p.try_act("detach", net=car, item=x["i"]); time.sleep(0.5)
@@ -1972,7 +1937,6 @@ with game.ProtectedSession():
         for s_ in (h, L):
             s_(f"set TLDRevamp.ReproPlayback.Active True"); s_("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
             s_("set UnityEngine.Application.runInBackground True")
-        if "--oldglue" in sys.argv: h(f"set {T}.GluedPartOff False")
         near_cars = lambda: [e for e in h.ents().values() if e["car"] and not e.get("dormant")]
         wait(8, near_cars)
         g = h("gpos")

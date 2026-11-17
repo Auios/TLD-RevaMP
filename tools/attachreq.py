@@ -11,14 +11,14 @@ the host, for good). Two machines over the relay; the host's Car06Full.
                  now); the host claims the car back → the hubcap goes with it (the server's owner cascade); the host
                  takes it off → loose on both, at the same place (playround.py R3: bolted on one machine, loose 6 m
                  away on the other — the part stayed the laptop's).
-  tools/attachreq.py [--no-build] [--relay iad|off] [--only A,B,C] [--old: no requests (A, B), no cascade (C)]"""
+  tools/attachreq.py [--no-build] [--relay iad|off] [--only A,B,C]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_cmd
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 ONLY = arg("--only", "A,B,C").split(",")
 T = "TLDRevamp.Net.Entities"; SLOT = "DisztarcsaSlotCol"
 VERDICTS = []
@@ -51,8 +51,7 @@ with game.ProtectedSession():
         h("mp host 27070"); L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityAttachments.AttachRequests {not OLD}"); s_(f"set {T}.OwnerCascade {not OLD}")
-        print(f"  {'OLD (no attach requests)' if OLD else 'NEW'}", flush=True)
+        print(f"  {'NEW'}", flush=True)
         lid = L("mp entities")["me"]
         hp = h("gpos")
         h(f"tpground {hp['gx'] + 15} {hp['gz']}"); L(f"tpground {hp['gx'] + 15} {hp['gz'] + 6}"); time.sleep(4)
@@ -140,7 +139,7 @@ with game.ProtectedSession():
         print("  errors:", [s_("errors")["errors"] for s_ in (h, L)], flush=True)
     finally:
         for s_ in (h, L):
-            try: s_(f"set TLDRevamp.Net.EntityAttachments.AttachRequests True"); s_(f"set {T}.OwnerCascade True"); s_(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False"); s_(f"mp forceheld 0")
+            try: pass; s_(f"set TLDRevamp.Net.EntityProxyTools.TestAsPlayer False"); s_(f"mp forceheld 0")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

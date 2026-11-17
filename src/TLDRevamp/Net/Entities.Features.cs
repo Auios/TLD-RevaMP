@@ -75,8 +75,6 @@ namespace TLDRevamp.Net
         // Cargo boundary. Map walks and server authority stay in the kernel.
         internal static bool CargoInSession => InSession;
         internal static int CargoLocalId => MyId;
-        internal static bool CargoClaimsEnabled => CargoClaims;
-        internal static bool CargoItemClaims => ItemClaims;
         internal static float CargoItemMinSpeed => ItemMinSpeed;
         internal static byte PushMessage => PushIn;
         internal static Ent CargoCopyOf(Transform root) => ProxyOf(root);
@@ -102,10 +100,6 @@ namespace TLDRevamp.Net
         internal static bool TryCargoContactCar(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
         internal static bool TryItemContactSource(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
         internal static bool TryPushTarget(uint net, out Ent entity) => ByNet.TryGetValue(net, out entity);
-        // End cargo boundary.
-
-        // Attachment boundary. Identity, ownership and server records stay in the kernel.
-        internal static bool AttachmentCarriesParts => CarriedPartsShared;
         internal static bool AttachmentApplying => _applyingAttach || _applyingState;
         internal static bool AttachmentApplyingDetach => _applyingDetach;
         internal static bool AttachmentPlayerActing => PlayerActing;
@@ -238,7 +232,6 @@ namespace TLDRevamp.Net
         }
         // Hitch client boundary. Server records and map walks stay in the kernel.
         public const byte HitchRequest = 99, HitchCommand = 100, HitchFreeze = 101, HitchFrozen = 102, HitchResult = 103;
-        internal static bool HitchCommandExpires => HitchTransferTimeout;
         internal static bool HitchInSession => InSession;
         internal static int HitchLocalId => MyId;
         internal static bool HitchPlayerActing => PlayerActing;
@@ -324,7 +317,7 @@ namespace TLDRevamp.Net
         /// Server: nearest ready player or moving car, with the original hold and switch distances.
         internal static void ChooseRabbitOwner(float dt, ref float elapsed, System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<int, Vector3d>> anchors)
         {
-            if (Mp.Server == null || !EntityRabbits.RabbitSync || !EntityRabbits.RabbitOwners) return;
+            if (Mp.Server == null) return;
             elapsed += dt;
             if (elapsed < 0.25f) return;
             elapsed = 0f;
@@ -545,13 +538,11 @@ namespace TLDRevamp.Net
             if (!Server.TryGetValue(net, out var se)) return;
             if (slot != 255 && (slot > 15 || !EntityNumbers.Finite(lp) || lp.sqrMagnitude > 4f)) return;   // on the head: within 2 m of it
             if (se.OwnerId != from && !WornTakesBack(se, from, slot)) return;
-            if (!EntityHands.WornLateOk && !ClaimEpochOk(se, from, epoch)) return;
             se.WornBy = slot == 255 ? -1 : from; se.WornSlot = slot == 255 ? -1 : slot; se.WornLp = lp; se.WornLq = lq;
             EntityHands.RelayWorn(from, se.NetId, ServerWornNow(se), se.WornBy, se.WornSlot, se.WornLp, se.WornLq);
         }
         private static bool WornTakesBack(SEnt se, int from, byte slot)
         {
-            if (!EntityHands.WornLateOk) return false;
             if (slot == 255) return false;   // taken off: the new owner's game has it off already
             if (se.PrevOwnerId != from || Time.realtimeSinceStartup - se.PrevOwnerAt > HandoverAcceptS || se.Held || se.Stored || ServerWornNow(se) || se.HitchCar != 0)
             {

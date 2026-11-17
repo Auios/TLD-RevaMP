@@ -33,19 +33,16 @@ try:
         time.sleep(8)
         # the laptop, variants of how copies move: ms per call of LookPointCalc (the frame's first physics query pays the
         # collider sync — the game runs with autoSyncTransforms on)
-        variants = [("bodies, interpolated", {"CopiesMoveByBody": True, "CopiesInterpolate": True}),
-                    ("bodies, no interpolation", {"CopiesMoveByBody": True, "CopiesInterpolate": False}),
-                    ("transform writes (old)", {"CopiesMoveByBody": False, "CopiesInterpolate": True})]
+        variants = ["bodies, interpolated"]
         print("\nLAPTOP VARIANTS (LookPointCalc ms/call, frame p50 ms):", flush=True)
-        for name, sw in variants:
-            for k, v in sw.items(): L(f"set TLDRevamp.Net.EntityPhysics.{k} {v}")
+        for name in variants:
             time.sleep(3); L("profile start fpscontroller.LookPointCalc"); time.sleep(1)
             L("reset"); time.sleep(WINDOW)   # profiler hooked before the counters reset: hooking stalls its frame
             st = L("stats"); p = L("profile stop 5")
             lp = next((m for m in p.get("byTime", []) if "LookPointCalc" in m["m"]), None)
             per = lp["msPerSec"] / max(1, lp["callsPerSec"]) if lp else float("nan")
             print(f"   {name:28} {per:8.2f} ms/call   frame p50 {st['p50ms']} ms", flush=True)
-        L("set TLDRevamp.Net.EntityPhysics.CopiesMoveByBody True"); L("set TLDRevamp.Net.EntityPhysics.CopiesInterpolate True"); time.sleep(3)
+        time.sleep(3)
         print("\nLAPTOP COLLIDER GROUPS OFF (LookPointCalc ms/call, frame p50 ms):", flush=True)
         for grp in ("wheelcols", "jointcols", "restcols"):
             r_ = L(f"mp copies {grp} off"); time.sleep(3); L("profile start fpscontroller.LookPointCalc"); time.sleep(1)

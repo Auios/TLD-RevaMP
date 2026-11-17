@@ -12,7 +12,6 @@ namespace TLDRevamp.Net
     /// copy paints nothing (its raycast stroke is the owner's alone: Fire is not called here).
     internal static partial class EntityEffects
     {
-        internal static bool SprayFx = true;   // A/B: false = the copies stay silent (before v0.65.23)
         public static long SprayShown;
         private static readonly HashSet<Ent> _spraying = new HashSet<Ent>();
 
@@ -44,7 +43,6 @@ namespace TLDRevamp.Net
             {
                 var sp = e.Root != null && e.Proxy && e.Spraying ? e.Root.GetComponent<sprayscript>() : null;
                 if (sp == null) { (gone ?? (gone = new List<Ent>())).Add(e); continue; }
-                if (!SprayFx) continue;
                 sp.firing = true;
                 sp.valve = Mathf.Lerp(sp.valve, 1f, dt * sp.valveSpeed);
             }

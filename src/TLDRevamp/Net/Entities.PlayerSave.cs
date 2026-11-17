@@ -38,7 +38,7 @@ namespace TLDRevamp.Net
 
         /// Server: in this player's inventory or hands, or on their head?
         internal static bool ServerInPocket(uint net, int player) =>
-            Server.TryGetValue(net, out var se) && se.OwnerId == player && (se.Stored || se.Held || (EntityHands.WornSync && ServerWornNow(se)));
+            Server.TryGetValue(net, out var se) && se.OwnerId == player && (se.Stored || se.Held || (ServerWornNow(se)));
 
         /// Host: the local save ids of a shared object's copy here (every member, or the root while it is dormant).
         internal static void LocalIdsOf(uint net, HashSet<uint> into)

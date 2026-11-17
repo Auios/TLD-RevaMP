@@ -189,7 +189,6 @@ namespace TLDRevamp.Net
     }
     internal static partial class EntityAuthorityInterest
     {
-        internal static bool InterestRelay = true;
     }
 
     public static partial class RemotePlayers { internal static bool Visible; internal static bool EntityViewerNear(Vector3d at, double range) => Visible; }

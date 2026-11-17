@@ -13,8 +13,8 @@ namespace TLDRevamp.Net
         internal struct Tail { internal double VisualAt; internal bool Active; }
         internal struct RestWindow { internal double Since; internal bool Active; }
 
-        internal static bool RestEligible(bool enabled, bool driven, bool held, bool stored, bool locked, bool riding, bool limbs, bool spraying) =>
-            enabled && !driven && !held && !stored && !locked && !riding && !limbs && !spraying;
+        internal static bool RestEligible(bool driven, bool held, bool stored, bool locked, bool riding, bool limbs, bool spraying) =>
+            !driven && !held && !stored && !locked && !riding && !limbs && !spraying;
 
         internal static bool RestPoseChanged(double distanceSquared, float angle) =>
             distanceSquared > RestWakeM * RestWakeM || angle > RestWakeDeg;

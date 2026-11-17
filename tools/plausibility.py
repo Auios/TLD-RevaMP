@@ -5,7 +5,7 @@
   C  a car teleported by its owner (the laptop moves itself and its car 3 km, no request): the car flagged
   D  a teleport the host accepted (/tpa, /y) with the car: not flagged (grace)
   E  --enforce: the self-teleport's states are dropped: the host keeps the laptop where it was
-  tools/plausibility.py [--no-build] [--relay iad|off] [--old: check off — nothing flagged]"""
+  tools/plausibility.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game

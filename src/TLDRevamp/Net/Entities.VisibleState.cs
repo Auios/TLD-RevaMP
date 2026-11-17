@@ -7,8 +7,8 @@ namespace TLDRevamp.Net
     {
         internal static bool ReadCompactMoving;
 
-        internal static bool FinalState(bool locked, uint lockFrame, bool wasteFixes, BandwidthRules.Quiet quiet, bool moving, bool driven) =>
-            locked && lockFrame != 0 || wasteFixes && (quiet == BandwidthRules.Quiet.Final || !moving && !driven);
+        internal static bool FinalState(bool locked, uint lockFrame, BandwidthRules.Quiet quiet, bool moving, bool driven) =>
+            locked && lockFrame != 0 || (quiet == BandwidthRules.Quiet.Final || !moving && !driven);
 
         internal static double PoseStamp(double physics, double previous, bool first) =>
             first ? physics : System.Math.Max(physics, System.Math.Round(previous * 1000.0) / 1000.0 + 0.001);

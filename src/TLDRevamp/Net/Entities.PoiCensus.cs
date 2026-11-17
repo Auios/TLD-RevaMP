@@ -14,7 +14,6 @@ namespace TLDRevamp.Net
     internal static partial class EntityRepair
     {
         private static readonly NetWriter W = new NetWriter();
-        public static bool PoiCensusOn = true;
         public static float PoiCensusEveryS = 5f, PoiCensusRadiusM = 250f, PoiCensusNearM = 120f;
         public static long PoiCensusSent, PoiCensusIn, PoiDiffers;
         private static float _poiCensusAt;
@@ -26,7 +25,7 @@ namespace TLDRevamp.Net
 
         internal static void PoiCensusTick()
         {
-            if (!PoiCensusOn || Time.realtimeSinceStartup - _poiCensusAt < PoiCensusEveryS) return;
+            if (Time.realtimeSinceStartup - _poiCensusAt < PoiCensusEveryS) return;
             _poiCensusAt = Time.realtimeSinceStartup;
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
             var pl = mainscript.s != null ? mainscript.s.player : null;

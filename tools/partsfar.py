@@ -9,7 +9,7 @@ Two machines over the relay: the laptop owns a car01; the host watches it.
   far : the part off, its copy stored on the host; the laptop takes the car and the part 1 km on (the host's copy of the
         car is stored away) and bolts it back there; the host walks up.
   Every cycle: the car's parts on both machines (`mp carparts`), the part's copy state on the host.
-  tools/partsfar.py [--no-build] [--relay iad|off] [--modes near,far] [--old: the release rule as in v0.66.7]"""
+  tools/partsfar.py [--no-build] [--relay iad|off] [--modes near,far]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -17,7 +17,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 from roadkit import CAR01
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 MODES = arg("--modes", "near,far").split(",")
 T = "TLDRevamp.Net.Entities"; FAR = 1000
 INTERIOR = ("Napellenzo", "Radio", "FrontMirror"); USED = set()   # a part once off is an object of its own: each cycle another
@@ -72,9 +72,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        if OLD:
-            for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe False"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer False"); s_(f"set {T}.DriveClaimRootOnly False")
-        print(f"  {'OLD (v0.66.7 release)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         time.sleep(5)
         lid = L("mp entities")["me"]
         hp = h("gpos"); L(f"tpground {hp['gx'] + 3} {hp['gz'] + 3}"); time.sleep(3)
@@ -149,9 +147,6 @@ with game.ProtectedSession():
             until(lambda: (ent(h, car) or {}).get("dormant") is False, 30); time.sleep(4)
         print("  errors:", [s_("errors")["errors"] for s_ in (h, L)], flush=True)
     finally:
-        for s_ in (h, L):
-            try: s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe True"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer True"); s_(f"set {T}.DriveClaimRootOnly True")
-            except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

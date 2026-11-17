@@ -12,7 +12,7 @@ until it left the sand, one every 15-45 min.
   D  the setting Off: the spawner comes due, no storm on either machine; Rare: the wait follows (60-150 min, the next
      storm rolled again from now)
   Storm rows: [id, prefab, gx, gz, size, speed, xdir, ydir, life, distanceLerp, fadeDist, destroyDist]
-  tools/stormfreq.py [--no-build] [--relay iad|off] [--old] [--n NSPAWN]"""
+  tools/stormfreq.py [--no-build] [--relay iad|off] [--n NSPAWN]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game

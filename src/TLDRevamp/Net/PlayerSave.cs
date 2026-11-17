@@ -17,17 +17,10 @@ namespace TLDRevamp.Net
     /// the host's world save (they live in the records). Enabled false = before v0.67.0 (everyone starts fresh).
     public static class PlayerSave
     {
-        public static bool Enabled = true;
         public static float RecordEveryS = 30f;
         public const byte Record = 67;    // client → server: str player json, pos, u8 dead, varuint n × (u32 local id, u32 net, varuint len, bytes), [varuint m × u32 local id worn]
         public const byte Restore = 68;   // server → client: str player json, pos, u8 dead, varuint n × (u32 local id, varuint len, bytes), [varuint m × u32 local id worn]
-        public static bool ShareWornLate = true;   // A/B: false = before v0.68.5 (shared loose, then put on)
-        public static bool KeepWorn = true;   // A/B: false = before v0.68.2 (what they wore stayed in the world without them)
         public const int MaxRecordBytes = 4 << 20, MaxItems = 64;
-        /// A/B: false = before: the host forgot a pocket the moment it sent it, so a joiner whose game stopped while it loaded,
-        /// or who couldn't spawn an item, lost it for good (docs/MESSAGES.md). Now the host keeps what it handed back until the
-        /// joiner's record names it as restored.
-        public static bool RestoreConfirmed = true;
         public static long RestoreKept, RestoreConfirmedItems;
         public static long RecordsSent, RecordsIn, RecordsRefused, Pocketed, Restored, ItemsRestored, ItemsDropped, FilesWritten, SaveFiltered, WornRestored;
         public static string Last = "";
@@ -65,7 +58,7 @@ namespace TLDRevamp.Net
             // joiner's checks on purpose: the heal must not depend on being a client.
             SessionRules.DeathSyncWithGame();
             var c = Mp.Client;
-            if (!Enabled || c == null || c.Player != null || !c.Ready) return;
+            if (c == null || c.Player != null || !c.Ready) return;
             var b = Budget();
             // The budget decides; the sending path commits what it really sent. A record that could not be sent
             // (no player yet, the game not ready) must not use up the budget and must not be counted.
@@ -132,7 +125,7 @@ namespace TLDRevamp.Net
             if (sp.heldItem && sp.heldItemID != 0 && !ids.Contains(sp.heldItemID)) ids.Add(sp.heldItemID);
             // what they wear (hats, glasses: fpscontroller.weared) — save_player keeps no list of it
             var worn = new List<uint>();
-            if (KeepWorn && pl.weared != null)
+            if (pl.weared != null)
                 foreach (var wp in pl.weared)
                 {
                     var wt = wp != null ? (wp.tosave != null ? wp.tosave : wp.GetComponent<tosaveitemscript>()) : null;
@@ -172,7 +165,7 @@ namespace TLDRevamp.Net
         internal static void ClientLeaving()
         {
             var c = Mp.Client;
-            if (!Enabled || c == null || c.Player != null || !c.Ready) return;
+            if (c == null || c.Player != null || !c.Ready) return;
             if (_pending != null) ClientReady();   // the player wasn't there yet
             // A dead player leaves: the record that goes out is the death one (at the anchor), not a fresh one.
             if (SessionRules.HasDeathAnchor) { SendDeathRecord(); return; }
@@ -186,7 +179,7 @@ namespace TLDRevamp.Net
 
         internal static void ClientRestoreIn(NetReader r)
         {
-            if (!Enabled || Mp.Client == null || Mp.Client.Player != null) return;
+            if (Mp.Client == null || Mp.Client.Player != null) return;
             if ((DevHooks.RestoreDrop?.Invoke() ?? "") == "all") { Last = "restore: ignored (test)"; return; }
             var copy = new NetReader(); copy.Load(r.Remaining); Buffer.BlockCopy(r.Buf, r.Pos, copy.Buf, 0, r.Remaining);
             _pending = copy;
@@ -246,7 +239,7 @@ namespace TLDRevamp.Net
                     if (!m.TryGetValue(rootOld, out uint rootNew) || !savedatascript.s.items.TryGetValue(rootNew, out var root) || root == null) continue;
                     map[oldId] = rootNew;
                     // what they wore is shared once it is on their head again (the share then says so: EntityHands.WornInShare)
-                    if (ShareWornLate && !dead && wornOld.Contains(oldId)) shareAfterWear.Add(root);
+                    if (!dead && wornOld.Contains(oldId)) shareAfterWear.Add(root);
                     else Entities.ShareItem(root, null);
                     ItemsRestored++;
                 }
@@ -293,17 +286,6 @@ namespace TLDRevamp.Net
             public int HandedSent;   // the first so many of Handed went out; the rest stay for the next join (MaxItems)
         }
         private static readonly Dictionary<ulong, Rec> _recs = new Dictionary<ulong, Rec>();
-        private static int _seed;
-
-        /// The records on disk go with the world save they were written with: a file next to it (`<save>.players`, as the
-        /// lease table's `.leases`), written with every save of the world and moved with the autosave rotation. Before,
-        /// one file per world seed, also written when a player left and when the host stopped. Going to the main menu
-        /// stops the session without saving the world, so the next session loaded an older world with newer records: a
-        /// lamp picked up after the last save lay on the ground (old world) and came back in the pocket (new record),
-        /// twice; one dropped after it was in neither (menunosave.py). And a new world with the same seed took the old
-        /// world's records (rejoin.py, fixed seed). Now a world loaded from a save has the records saved with it, a new
-        /// world none.
-        public static bool WithSaveFile = true;   // A/B: false = one file per seed, written on leave and stop too (v0.68.2)
         private static int _sceneLoads, _recsScene = -1;
         internal static void SceneLoaded() { _sceneLoads++; }
 
@@ -313,7 +295,6 @@ namespace TLDRevamp.Net
             if (_recsScene == _sceneLoads) return;
             _recsScene = _sceneLoads;
             _recs.Clear();
-            if (!Enabled) return;
             var save = EntityWorldLeases.WorldSaveFile;
             if (save == null) { Plugin.Log.LogInfo("player save: new world, no records"); return; }
             try
@@ -329,29 +310,13 @@ namespace TLDRevamp.Net
         /// memory, newer than the file).
         internal static void ServerStart()
         {
-            if (WithSaveFile)
-            {
-                EnsureWorldRecs();
-                foreach (var rec in _recs.Values) rec.Present = false;
-                return;
-            }
-            if (_seed != Mp.Seed()) _recs.Clear();
+            EnsureWorldRecs();
             foreach (var rec in _recs.Values) rec.Present = false;
-            _seed = Mp.Seed();
-            if (!Enabled) return;
-            try
-            {
-                var f = ReadFile(SeedFilePath(_seed));
-                if (f == null) return;
-                foreach (var kv in f) if (!_recs.ContainsKey(kv.Key)) _recs[kv.Key] = kv.Value;
-                Plugin.Log.LogInfo($"player save: {_recs.Count} players' records loaded for this world");
-            }
-            catch (Exception e) { Plugin.Log.LogWarning("player save: records not loaded: " + e.Message); }
         }
 
         internal static void ServerRecord(int from, ulong steam, string name, NetReader r)
         {
-            if (!Enabled || steam == 0) return;   // no player save without an authenticated Steam account (MpServer.Identify)
+            if (steam == 0) return;   // no player save without an authenticated Steam account (MpServer.Identify)
             string json = r.Str(); var g = Protocol.ReadPos(r); bool dead = r.U8() == 1; int n = (int)r.VarU32();
             if (r.Bad || n < 0 || n > MaxItems || !EntityNumbers.Finite(g)) { RecordsRefused++; return; }
             var rec = new Rec { Name = name ?? "", Json = json ?? "", G = g, Dead = dead, Present = true, PlayerId = from };
@@ -389,7 +354,7 @@ namespace TLDRevamp.Net
         /// A joiner left (or the host stops): what is still in their pocket leaves the world with them.
         internal static void ServerOnLeave(int playerId, ulong steam)
         {
-            if (!Enabled || steam == 0 || !_recs.TryGetValue(steam, out var rec) || !rec.Present || rec.PlayerId != playerId) return;
+            if (steam == 0 || !_recs.TryGetValue(steam, out var rec) || !rec.Present || rec.PlayerId != playerId) return;
             rec.Present = false;
             var keep = new List<Item>();
             foreach (var it in rec.Items)
@@ -403,15 +368,12 @@ namespace TLDRevamp.Net
             TakeHandedBack(rec);
             Last = $"player {playerId} left: {keep.Count} items in their pocket ({rec.Worn.Count} worn)";
             Plugin.Log.LogInfo("player save: " + Last);
-            if (keep.Count > 0 && !WithSaveFile) WriteFile(SeedFilePath(_seed));   // else: on disk with the next save of the world
         }
 
         /// The host ends the session: everyone's pocket leaves the world, the records go to disk.
         internal static void ServerStopping(List<Session.Player> players)
         {
-            if (!Enabled) return;
             foreach (var p in players) if (!p.Host) ServerOnLeave(p.Id, p.SteamId);
-            if (!WithSaveFile) WriteFile(SeedFilePath(_seed));   // else: the session-end save (or a later save of this world)
             foreach (var rec in _recs.Values) rec.Present = false;
         }
 
@@ -419,7 +381,7 @@ namespace TLDRevamp.Net
         internal static bool ServerSpot(ulong steam, out double gx, out double gz)
         {
             gx = gz = 0;
-            if (!Enabled || steam == 0 || !_recs.TryGetValue(steam, out var rec) || rec.Present || rec.Dead) return false;
+            if (steam == 0 || !_recs.TryGetValue(steam, out var rec) || rec.Present || rec.Dead) return false;
             gx = rec.G.x; gz = rec.G.z;
             return true;
         }
@@ -427,7 +389,7 @@ namespace TLDRevamp.Net
         /// After the JoinSpot: their record back to them (their next record replaces it here).
         internal static void ServerSendRestore(int playerId, ulong steam, Action<NetWriter> send)
         {
-            if (!Enabled || steam == 0 || !_recs.TryGetValue(steam, out var rec) || rec.Present) return;
+            if (steam == 0 || !_recs.TryGetValue(steam, out var rec) || rec.Present) return;
             var w = new NetWriter();
             int count = Math.Min(rec.Items.Count, MaxItems);   // a pocket of MaxItems and an item that couldn't come back last time: the rest next time
             w.U8(Restore); w.Str(rec.Dead ? "" : rec.Json); Protocol.WritePos(w, rec.G); w.U8((byte)(rec.Dead ? 1 : 0));
@@ -438,7 +400,7 @@ namespace TLDRevamp.Net
             send(w);
             ItemsDropped += rec.Dead ? rec.Items.Count : 0;
             // handed back: from here their own game has them (its next record names the new copies)
-            if (RestoreConfirmed) { rec.Handed = rec.Items; rec.HandedWorn = rec.Worn; rec.HandedSent = count; }
+            { rec.Handed = rec.Items; rec.HandedWorn = rec.Worn; rec.HandedSent = count; }
             rec.Items = new List<Item>(); rec.Worn = new List<uint>(); rec.Present = true; rec.PlayerId = playerId; rec.Dead = false;
             Plugin.Log.LogInfo($"player save: {rec.Name} is back");
         }
@@ -469,7 +431,6 @@ namespace TLDRevamp.Net
         /// assembly: every file ever written was "{}" (found 2026-10-17, menunosave.py), so after a restart of the host's
         /// game no joiner got their pocket back, and those items had left the world with them.
         private const uint FileMagic = 0x31505254;   // "TRP1"
-        private static string SeedFilePath(int seed) => Path.Combine(pathscript.SavePath(), "revamp-players-" + seed + ".bin");
 
         /// The file, or when it is missing or unreadable (the game stopped while it was being written), the one being
         /// written (.tmp) or the one before (.bak).
@@ -512,7 +473,6 @@ namespace TLDRevamp.Net
 
         private static void WriteFile(string path)
         {
-            if (!Enabled) return;
             try
             {
                 var w = new NetWriter();
@@ -542,7 +502,7 @@ namespace TLDRevamp.Net
             [HarmonyPostfix]
             private static void Postfix(savedata _data)
             {
-                if (!Enabled || Mp.Server == null || _data == null || _data.itemData == null) return;
+                if (Mp.Server == null || _data == null || _data.itemData == null) return;
                 try
                 {
                     var drop = new HashSet<uint>();
@@ -553,7 +513,6 @@ namespace TLDRevamp.Net
                     if (drop.Count > 0) SaveFiltered += EntityPlayerSave.DropFromSave(_data.itemData, drop);
                 }
                 catch (Exception e) { Plugin.Log.LogWarning("player save: pocket items not kept out of the save: " + e.Message); }
-                if (!WithSaveFile) WriteFile(SeedFilePath(_seed));
             }
         }
 
@@ -563,12 +522,12 @@ namespace TLDRevamp.Net
         private static class RecordsWithSave
         {
             [HarmonyPrefix]   // before the lease table's postfix moves the world on to the new file
-            private static void Prefix() { if (Enabled && WithSaveFile && Mp.Client == null) EnsureWorldRecs(); }
+            private static void Prefix() { if (Mp.Client == null) EnsureWorldRecs(); }
 
             [HarmonyPostfix]
             private static void Postfix(string _text, bool __runOriginal)
             {
-                if (!Enabled || !WithSaveFile || !__runOriginal || Mp.Client != null || _recsScene != _sceneLoads) return;
+                if (!__runOriginal || Mp.Client != null || _recsScene != _sceneLoads) return;
                 try
                 {
                     var path = pathscript.SaveDataName(pathscript.UnDuckStringBecauseItIsDuckedByDefault(_text)) + ".players";
@@ -587,7 +546,7 @@ namespace TLDRevamp.Net
         public static List<Away> AwayPlayers()
         {
             var list = new List<Away>();
-            if (!Enabled || Mp.Server == null) return list;
+            if (Mp.Server == null) return list;
             foreach (var kv in _recs)
                 if (!kv.Value.Present)
                     list.Add(new Away { Steam = kv.Key, Name = kv.Value.Name, Dead = kv.Value.Dead, Items = kv.Value.Items.Count, Worn = kv.Value.Worn.Count, G = kv.Value.G });
@@ -600,12 +559,11 @@ namespace TLDRevamp.Net
         public static long Forgotten;
         public static bool Forget(ulong steam)
         {
-            if (!Enabled || Mp.Server == null || !_recs.TryGetValue(steam, out var rec) || rec.Present) return false;
+            if (Mp.Server == null || !_recs.TryGetValue(steam, out var rec) || rec.Present) return false;
             _recs.Remove(steam);
             Forgotten++;
             Last = $"forgot {rec.Name}: {rec.Items.Count} items gone with the record";
             Plugin.Log.LogInfo("player save: " + Last);
-            if (!WithSaveFile) WriteFile(SeedFilePath(_seed));
             return true;
         }
 
@@ -617,7 +575,7 @@ namespace TLDRevamp.Net
                 rows.Add("{\"steam\":" + kv.Key + ",\"name\":" + Json.Str(kv.Value.Name) + ",\"present\":" + (kv.Value.Present ? "true" : "false") + ",\"dead\":" + (kv.Value.Dead ? "true" : "false") +
                          ",\"items\":" + kv.Value.Items.Count + ",\"gx\":" + kv.Value.G.x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) +
                          ",\"gz\":" + kv.Value.G.z.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "}");
-            return "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"sent\":" + RecordsSent + ",\"in\":" + RecordsIn + ",\"refused\":" + RecordsRefused +
+            return "{\"enabled\":" + ("true") + ",\"sent\":" + RecordsSent + ",\"in\":" + RecordsIn + ",\"refused\":" + RecordsRefused +
                    ",\"pocketed\":" + Pocketed + ",\"restored\":" + Restored + ",\"itemsRestored\":" + ItemsRestored + ",\"wornRestored\":" + WornRestored + ",\"wornLog\":" + Json.Str(WornLog) + ",\"files\":" + FilesWritten +
                    ",\"saveFiltered\":" + SaveFiltered + ",\"forgotten\":" + Forgotten + ",\"deathAnchor\":" + SessionRules.DeathStats() + ",\"last\":" + Json.Str(Last) + ",\"players\":[" + string.Join(",", rows) + "]}";
         }

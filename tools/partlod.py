@@ -9,7 +9,7 @@ the wheel fell through the desert floor. Two players:
      takes the wheel (its own, simulated here) and it stays on the ground
 --old runs with LodKeepsPartsOff off (before). --bot: one game, the other player a player bot in it (`mp pbot`) that
 gets in the car; A only (a bot can't make a part come off), for when the machine has no room for a second game.
-  tools/partlod.py [--no-build] [--relay iad|off] [--old] [--bot] [--car Car06Full]"""
+  tools/partlod.py [--no-build] [--relay iad|off] [--bot] [--car Car06Full]"""
 import sys, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game

@@ -62,7 +62,6 @@ namespace TLDRevamp.Net
     {
         public sealed partial class Ent { public float LetGoAt = -100; }
         public const byte PushIn = 53;
-        internal static bool ItemClaims = true;
         internal static float ItemMinSpeed = .5f;
         internal static float CargoGhostMarginM = .1f;
         internal static long LetGoInCarClaimed;

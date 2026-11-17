@@ -41,7 +41,7 @@ def area_scenarios():
 
 
 ALL_FIXES = ["TLDRevamp.Fixes.RoadPlaceCache.Enabled", "TLDRevamp.Fixes.Vector3dComparer.Enabled",
-             "TLDRevamp.Fixes.AsyncTerrain.Enabled", "TLDRevamp.Fixes.RoadNearestPrune.Enabled",
+             "TLDRevamp.Fixes.AsyncTerrain.Enabled",
              "TLDRevamp.Fixes.ParallelRoadGen.Enabled", "TLDRevamp.Fixes.DotChunkMemo.Enabled",
              "TLDRevamp.Fixes.ItemSpawnSpread.Enabled"]
 

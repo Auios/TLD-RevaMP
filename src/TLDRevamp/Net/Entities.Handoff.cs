@@ -16,11 +16,9 @@ namespace TLDRevamp.Net
     /// stored and kept it; handoff run 3.)
     public static partial class Entities
     {
-        public static bool HandoffEnabled = true;
         public static double HandFarM, HandNearM;     // 0: the game's own (freeze / unfreeze distance)
         public static int HandPerTick = 16;
         public static long Handoffs, HandoffKeptCarried, HandoffLogged;
-        public static bool HandoffKeepCarried = true;   // A/B: false = before v0.65.55 (invsync.py --carry)
         public static long HandoffKeptMounted;
         private static float _handAcc;
         private static readonly List<KeyValuePair<int, Vector3d>> _handPlayers = new List<KeyValuePair<int, Vector3d>>();
@@ -39,7 +37,7 @@ namespace TLDRevamp.Net
 
         private static void ServerHandoffTick(float dt)
         {
-            if (Mp.Server == null || !HandoffEnabled) return;
+            if (Mp.Server == null) return;
             _handAcc += dt;
             if (_handAcc < 1f) return;
             _handAcc = 0f;
@@ -60,8 +58,8 @@ namespace TLDRevamp.Net
                 if (se.HitchCar != 0 || se.CrashReturnTo >= 0 || se.PartIndex >= 0 && !LooseSplit(se)) continue;
                 if (Mounted(se)) { HandoffKeptMounted++; continue; }   // goes with what it's on
                 if (se.Driven && Time.realtimeSinceStartup - se.DrivenAt < 1f) continue;        // its driver keeps it
-                if (HandoffKeepCarried && (se.Held || se.Stored)) { HandoffKeptCarried++; continue; }   // in someone's hands or inventory: theirs, wherever it was last seen
-                if (EntityHands.WornSync && ServerWornNow(se)) { HandoffKeptCarried++; continue; }   // on its owner's head (Entities.Worn)
+                if ((se.Held || se.Stored)) { HandoffKeptCarried++; continue; }   // in someone's hands or inventory: theirs, wherever it was last seen
+                if (ServerWornNow(se)) { HandoffKeptCarried++; continue; }   // on its owner's head (Entities.Worn)
                 double ownerD2 = double.MaxValue, bestD2 = nearM * nearM;              // owner not playing: as far as it gets
                 int best = -1;
                 foreach (var p in _handPlayers)

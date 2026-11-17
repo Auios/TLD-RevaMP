@@ -41,6 +41,7 @@ static partial class EntitySplitTest
         // Exhaust every combination, including attached versus scan/held/stored refusals.
         for (int bits = 0; bits < 512; bits++)
         {
+            if ((bits & 4) == 0) continue;   // Only the finished safe-lock behaviour remains.
             Entities.ByNet.Clear();
             bool scan = (bits & 1) != 0, session = (bits & 2) != 0, safe = (bits & 4) != 0;
             var car = new tosaveitemscript(); var item = new tosaveitemscript { attachable = new attachablescript { attached = (bits & 8) != 0 } };
@@ -49,20 +50,21 @@ static partial class EntitySplitTest
             var ce = new Entities.Ent { NetId = 1, Root = car, OwnerId = 2, Proxy = (bits & 16) != 0 };
             var pe = new Entities.Ent { NetId = 2, Root = item, OwnerId = (bits & 32) != 0 ? 2 : 3, Proxy = (bits & 64) != 0, Held = (bits & 128) != 0, Stored = (bits & 256) != 0 };
             Entities.ByNet[1] = ce; Entities.ByNet[2] = pe;
-            Entities.InSession = session; Put("CopyLockSafe", safe); Put("_containerScan", scan); Put("_scanning", mount);
+            Entities.InSession = session; Put("_containerScan", scan); Put("_scanning", mount);
             long refused = (long)Field(owner, "ContainerStoresRefused"), attached = (long)Field(owner, "AttachedStoresRefused");
             var hook = owner.GetNestedType("ContainerStore", BindingFlags.NonPublic).GetMethod("Prefix", Static);
             Row("store-" + bits, hook.Invoke(null, new object[] { mount, p }) + ":" + ((long)Field(owner, "ContainerStoresRefused") - refused) + ":" + ((long)Field(owner, "AttachedStoresRefused") - attached));
         }
-        Put("_containerScan", false); Put("_scanning", null); Put("CopyLockSafe", true); Entities.InSession = true;
+        Put("_containerScan", false); Put("_scanning", null); Entities.InSession = true;
         for (int bits = 0; bits < 8; bits++)
         {
-            Put("CopyStartFreezeOff", (bits & 1) != 0); Entities.InSession = (bits & 2) != 0;
+            if ((bits & 1) == 0) continue;
+            Entities.InSession = (bits & 2) != 0;
             Entities.ByNet.Clear(); var root = new tosaveitemscript(); var mount = new mountStuff { ParentComponent = root };
             Entities.ByNet[1] = new Entities.Ent { Root = root, Proxy = (bits & 4) != 0 };
             Row("freeze-" + bits, owner.GetNestedType("CopyStartFreeze", BindingFlags.NonPublic).GetMethod("Prefix", Static).Invoke(null, new object[] { mount }));
         }
-        Entities.InSession = true; Put("CopyStartFreezeOff", true); Put("CopyLockByBox", false);
+        Entities.InSession = true;
         foreach (float distance in new[] { 0f, 5f, 5.001f, 20f })
         foreach (bool held in new[] { false, true })
         {
@@ -75,17 +77,18 @@ static partial class EntitySplitTest
                 Row("release-" + distance.ToString(CultureInfo.InvariantCulture) + "-" + held + "-" + now.ToString(CultureInfo.InvariantCulture), (p.physlock != null) + ":" + e.LockOffSince.ToString(CultureInfo.InvariantCulture) + ":" + e.ReleaseGhost + ":" + root.transform.position.x.ToString(CultureInfo.InvariantCulture));
             }
         }
-        Put("CopyLockByBox", true);
+
         Entities.ByNet.Clear();
         var parent = new Entities.Ent { NetId = 90, Root = new tosaveitemscript() }; parent.Items.Add(parent.Root);
         var address = new mountStuff { parentTosave = parent.Root }; address.transform.parent = parent.Root.transform; parent.Root.Children.Add(address);
         var child = new Entities.Ent { NetId = 91, Root = new tosaveitemscript(), Proxy = true, Epoch = 3, ReceivedStateEpoch = 3, LockLocalPos = new Vector3(2, 0, 0) };
         child.Root.P = new pickupable { tosave = child.Root }; Entities.ByNet[90] = parent; Entities.ByNet[91] = child;
         parent.Root.transform.position = new Vector3(10, 0, 0);
+        int poseRow = 558;   // Keep the retained golden row names when old switch combinations are removed.
         foreach (uint frame in new uint[] { 90, 90, 0, 999, 90 })
         {
             typeof(Entities).GetMethod("ApplyPoseLock", Static).Invoke(null, new object[] { child, true, frame, 0, 0, 0u });
-            Row("pose-" + rows.Count, child.PoseLocked + ":" + child.LockFrame + ":" + (child.Root.P.physlock == address) + ":" + child.Root.P.transform.position.x.ToString(CultureInfo.InvariantCulture) + ":" + address.Stores);
+            Row("pose-" + poseRow++,  child.PoseLocked + ":" + child.LockFrame + ":" + (child.Root.P.physlock == address) + ":" + child.Root.P.transform.position.x.ToString(CultureInfo.InvariantCulture) + ":" + address.Stores);
         }
         var args = new object[] { child, address, child.Root.P.transform, null, null, null, null };
         Row("frame", typeof(Entities).GetMethod("LockedFrame", Static).Invoke(null, args)); Row("frame-address", args[5] + ":" + args[6]);
@@ -130,15 +133,14 @@ static partial class EntitySplitTest
         var prefix = scan.GetMethod("Prefix", Static); var finalizer = scan.GetMethod("Finalizer", Static);
         var mount = new mountStuff();
         foreach (bool session in new[] { false, true })
-        foreach (bool enabled in new[] { false, true })
         {
-            Entities.InSession = session; EntityLocks.CopyContainersInert = enabled;
+            Entities.InSession = session;
             Set(owner, "_containerScan", false); prefix.Invoke(null, new object[] { mount });
-            Check((bool)Field(owner, "_containerScan") == (session && enabled), "scan guard preserves session and switch order");
+            Check((bool)Field(owner, "_containerScan") == session, "scan guard preserves session");
             var error = new Exception("game scan failed");
             Check(ReferenceEquals(finalizer.Invoke(null, new object[] { error }), error) && !(bool)Field(owner, "_containerScan"), "scan finalizer clears guard and returns the same exception");
         }
-        Entities.InSession = true; EntityLocks.CopyContainersInert = true; Set(owner, "_scanning", null);
+        Entities.InSession = true; Set(owner, "_scanning", null);
         var store = owner.GetNestedType("ContainerStore", BindingFlags.NonPublic).GetMethod("Prefix", Static);
         Check((bool)store.Invoke(null, new object[] { mount, null }), "null store payload remains a game decision");
         var glued = owner.GetNestedType("GluedCraftedOff", BindingFlags.NonPublic).GetMethod("Postfix", Static);
@@ -194,11 +196,11 @@ static partial class EntitySplitTest
         car.Proxy = false;
         Check(!Entities.LockContainerMotion(car.Root.transform, 2, out same, out velocity, out pose) && !same && pose == null && velocity == Vector3.zero, "own container exports no invented copy motion");
         Check(EntityLocks.OwnerHasItOut(e, p), "unshared stationary container uses local mount box");
-        EntityLocks.MountBox = false; e.Ip.LastPos = new Vector3d(104, 0, 0);
+        p.physlock.col = null; e.Ip.LastPos = new Vector3d(104, 0, 0);
         Check(!EntityLocks.OwnerHasItOut(e, p), "missing collider box falls back to old release reach");
         e.Ip.LastPos = new Vector3d(106, 0, 0);
         Check(EntityLocks.OwnerHasItOut(e, p), "fallback container box refuses outside pose");
-        EntityLocks.MountBox = true; EntityLocks.OutOfContainerSeen = outside;
+        EntityLocks.OutOfContainerSeen = outside;
         Entities.ByNet.Clear();
         var own = new Transform(); var self = new Collider(); self.transform.parent = own; own.ChildComponent = new carscript();
         Physics.Overlaps = new[] { self };

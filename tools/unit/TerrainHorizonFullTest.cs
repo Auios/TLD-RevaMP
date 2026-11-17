@@ -69,13 +69,9 @@ internal static class TerrainHorizonFullTest
               "null elements also consume the finite visit budget");
         Check(TerrainHorizon.SignatureVisits >= before || before == TerrainHorizon.SignatureMaxElements,
               "visit diagnostics remain monotonic across walks");
-
-        // the whole rebuild in one Tick (before), then spread over frames: one element or one mesh a frame, and the
-        // world shifted between the slices of a rebuild
-        TerrainHorizon.SpreadRebuild = false; RibbonRebase(false);
-        TerrainHorizon.SpreadRebuild = true; TerrainHorizon.StepBudgetMs = 0; RibbonRebase(true);
+        TerrainHorizon.StepBudgetMs = 0; RibbonRebase(true);
         TerrainHorizon.CellBatches = false; RibbonRebase(true); TerrainHorizon.CellBatches = true;
-        TerrainHorizon.SpreadRebuild = false; CellReuse();
+        CellReuse();
         Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
         return _failures == 0 ? 0 : 1;
     }

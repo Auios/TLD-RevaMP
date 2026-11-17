@@ -14,15 +14,11 @@ namespace TLDRevamp.Net
     /// still alive are never claimed (Pushable, ClaimCargo, and the server refuses).
     internal static partial class EntityCargoInteraction
     {
-        /// The item's velocity relative to the car it lies on (a stack in it too), if any: a can riding in our car at
-        /// 20 m/s isn't moving (review 2026-10-22, #22: driving past someone's roadside items, our cargo took everything
-        /// within ~1.35 m of it, around the car's own approach rule). On the ground: its own velocity.
-        public static bool RideRelative = true;   // A/B: false = its own velocity (before #22)
 
         /// From ContactRelay: a loose item simulated here touched a loose copy (it moved there faster than the margin covered).
         internal static void ItemContact(uint net, Collision c)
         {
-            if (!Entities.CargoItemClaims || !Entities.CargoInSession) return;
+            if (!Entities.CargoInSession) return;
             var orb = c.rigidbody;
             if (orb == null || !orb.isKinematic || !Entities.TryItemContactSource(net, out var mine)) return;
             var rb = MovingItemBody(mine);
@@ -35,7 +31,6 @@ namespace TLDRevamp.Net
 
         internal static Vector3 RideVelocity(Entities.Ent e, Rigidbody rb)
         {
-            if (!RideRelative) return rb.velocity;
             var under = SurfaceUnder(e, out var body);
             var car = under != null ? under.GetComponentInChildren<carscript>() : null;
             var crb = car != null ? car.RB : body;
@@ -60,7 +55,6 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        public static bool ItemClaims = true;          // A/B: false = a moving item meets a frozen copy of the other
         public static float ItemNearM = 0.15f, ItemMinSpeed = 0.5f, ItemNearSteps = 3f;
         public static long ItemClaimedNear, ItemClaimedOnContact;
         private static readonly Collider[] _itemNear = new Collider[32];
@@ -68,7 +62,7 @@ namespace TLDRevamp.Net
         /// Per physics step, before the copies move (Entities.Physical): loose copies ahead of loose items moving here.
         private static void ItemNearTick(float dt)
         {
-            if (!ItemClaims || !InSession) return;
+            if (!InSession) return;
             foreach (var e in Placed())
             {
                 var rb = EntityCargoInteraction.MovingItemBody(e);

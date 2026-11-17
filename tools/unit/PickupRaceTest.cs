@@ -19,7 +19,6 @@ namespace TLDRevamp.Net
         static string DriverSeatClaimRefusal(SEnt se, int from) => null;
         static string LastOwnerReason;
         static void OwnerLog(SEnt se, int to, string why) { LastOwnerReason = why; }
-        static bool OwnerCascade = true;
         static long OwnerCascaded;
         static void CascadeHitches(SEnt se) { }
         static readonly System.Collections.Generic.List<byte[]> OwnerPackets = new System.Collections.Generic.List<byte[]>();
@@ -126,8 +125,6 @@ namespace TLDRevamp.Net
                     "a copy handed to another remote player takes the new owner's states (its clock behind the old owner's)");
                 ByNet.Clear();
             }
-
-            CargoClaims = true;
             var car = new Ent { NetId = 7, OwnerId = MyId }; ByNet[7] = car;
             item = new Ent { NetId = 8, Proxy = true, OwnerId = 0, CarriedBy = 7, Held = true }; item.Root.P = new TestPickup(); ByNet[8] = item;
             EntityCodec.ReadCarriedBy = 0; EntityCodec.ReadLockedState = true;
@@ -154,19 +151,17 @@ namespace TLDRevamp.Net
             ServerClaim(MyId, new NetReader { Buf = Uploaded, Pos = 1, End = Uploaded.Length });
             IdleTrafficTest.Check(sledServer.OwnerId == MyId && sledServer.Epoch == 2 && !sledServer.Held && heldRabbit.OwnerId == MyId && heldRabbit.Held &&
                 LastOwnerReason == "claim: RabbitObjectNear", "sled claim changes only the separate sled and names its producer");
-            ByNet.Clear(); Server.Clear(); CargoClaims = false; OwnerReplies.Clear(); OwnerPackets.Clear();
+            ByNet.Clear(); Server.Clear(); OwnerReplies.Clear(); OwnerPackets.Clear();
         }
     }
     internal static partial class EntityHands
     {
-        internal static bool WornSync = false;
     }
 
 
     internal static partial class EntityRabbits
     {
         internal static float RabbitHoldS = 2,RabbitNearM = 60,RabbitSwitchM = 5,RabbitCarMoveMps = 1.5f;
-        internal static bool RabbitSync = true,RabbitOwners = true;
     }
 
 }

@@ -8,7 +8,7 @@ on, and every copy of it collided with nothing. Two machines over the relay.
   2 after 3 s: the server's record (`mp sent`) — owner the car's owner, not held; the laptop's copy not held; the
     host's own part not held
   3 the host takes it off again, the laptop picks it up: a claim, not refused
-  tools/heldattach.py [--no-build] [--relay iad|off] [--old]"""
+  tools/heldattach.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -16,7 +16,7 @@ from mplib import Agent, ensure_both, seeded_both, join_cmd
 from roadkit import CAR01
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 VERDICTS = []
 def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok)); print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
@@ -43,8 +43,7 @@ with game.ProtectedSession():
         h("mp host 27070"); L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.Entities.ClearHeldOnAttach {not OLD}")
-        print(f"  {'OLD (fix off)' if OLD else 'NEW (fix on)'}", flush=True)
+        print(f"  {'NEW (fix on)'}", flush=True)
         time.sleep(5)
         hp = h("gpos"); me = h("mp entities")["me"]; lme = L("mp entities")["me"]
         cx, cz = hp["gx"] + 8, hp["gz"] + 8
@@ -101,7 +100,7 @@ with game.ProtectedSession():
         print("  refusal reasons:", h("mp entities").get("refusedWhy"), flush=True)
     finally:
         for s_ in (h, L):
-            try: s_("set TLDRevamp.Net.Entities.ClearHeldOnAttach True"); s_("mp forceheld 0")
+            try: pass; s_("mp forceheld 0")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

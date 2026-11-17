@@ -7,7 +7,6 @@ would (EntityAiTools.TestObjectHit), from near and from far.
      allowed
   B  2.5 km away: the same four refused, logged as [anomaly]; a shot at the creature from 600 m allowed, a blow from
      there refused
-  C  --old (HitCheck.ObjectsEnabled off): from 2.5 km everything passes, as before
   D  no errors
   tools/objecthits.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
@@ -72,16 +71,9 @@ with game.ProtectedSession():
         send("break", cre, 0, 2); time.sleep(1.5); c2 = hc(h)
         blow_refused = c2["objRefused"] - c1["objRefused"] == 1
         verdict("B 600 M: A SHOT ALLOWED, A BLOW REFUSED", shot_ok and blow_refused, f"shot allowed {shot_ok}, blow refused {blow_refused}, last {c2['lastObj']}")
-        # ---- C
-        h("set TLDRevamp.Net.HitCheck.ObjectsEnabled False")
-        tp(L, x + 2500, z); time.sleep(4)
-        chk, alw, ref, last = round_("old")
-        verdict("C --old: NOTHING CHECKED", chk == 0 and ref == 0, f"checked {chk}, refused {ref}")
-        h("set TLDRevamp.Net.HitCheck.ObjectsEnabled True")
         er = [x_("errors") for x_ in (h, L)]
         verdict("D NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er), str([(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er]))
     finally:
-        h("set TLDRevamp.Net.HitCheck.ObjectsEnabled True")
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

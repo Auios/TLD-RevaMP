@@ -19,15 +19,6 @@ namespace TLDRevamp.Net
         private static bool _applyingAttach;
         public static long AttachesSent, AttachesApplied, AttachesSame, AttachesFailed, DetachSyncsSent, DetachSyncsApplied;
         public static string AttachFails = "", UnmountTrace = "";
-
-        /// Parented into what it's attached to: its transform follows the parent on every machine, nothing to stream.
-        /// An attach or detach of an object whose copy here is in the far store (we're far from it): before v0.66.2 it was
-        /// dropped ("nopart" — 15 in the 2026-10-09 playtest's client log) and the copy came back as it was before: a door
-        /// bolted back on while we were away was missing, a wheel taken off still on (meetagain.py A1/B1). Now the
-        /// stored records change the way the game's own save would have them: the attach record written (the game's
-        /// placing loads it), the object's record moved to its parent's; a detach drops the record (DetachStored).
-        /// A parent that is loaded here: the part is placed now (the game's GetOne) and attached the normal way.
-        public static bool StoredAttach = true;   // A/B: false = before v0.66.2
         public static long AttachesStored, DetachesStored;
 
         private static bool AttachStored(Ent pe, int attachType, int indexType, int index, uint parentNet, int parentIdx, int poigen, Vector3d poiid, Vector3d lpos, Vector3d gpos)
@@ -51,7 +42,7 @@ namespace TLDRevamp.Net
                 MoveRecord(list, k, pt.pos, pt.rot.Load());   // stored with its parent: placed back together
             }
             else if (attachType > 0) MoveRecord(list, k, gpos, list[k].transform.rot.Load());
-            if (EntityLocks.CopyLockSafe) { DropFromLockRecords(data.itemData, pe.RootId); pe.Ip = new PoseInterpolator(); }   // bolted on: in no container, no stale pose
+            { DropFromLockRecords(data.itemData, pe.RootId); pe.Ip = new PoseInterpolator(); }   // bolted on: in no container, no stale pose
             data.itemData.attachable.RemoveAll(a => a != null && a.id == pe.RootId);
             _boltIdx.Invalidate();
             data.itemData.attachable.Add(new save_attachable { id = pe.RootId, attachType = attachType, indexType = indexType, index = index, parentid = parentId,
@@ -79,8 +70,6 @@ namespace TLDRevamp.Net
                 EntityLocks.LockRecordsDropped++;
             }
         }
-
-        public static bool ClearHeldOnAttach = true;   // A/B: false = before v0.66.2 (heldattach.py)
         public static long HeldClearedOnAttach;
 
         internal static bool RidesParent(Ent e)
@@ -116,10 +105,6 @@ namespace TLDRevamp.Net
             foreach (var e in ByNet.Values) if (e.Root == ts) return e;
             return null;
         }
-
-        public static bool AttachReqBecomesSync = true;   // A/B: false = relayed as a request every copy ignores (before)
-        public static bool StaleDetachDirect = true;    // A/B: false = through the reach and rate checks of ServerDetachReq
-        public static bool StaleOwnerForwards = true;   // A/B: false = a bolt or an unbolt from a player who just lost the object is dropped (before)
         public static long StaleAttachesForwarded, StaleDetachesForwarded;
         public static long AttachReqsSent, AttachReqsApplied, AttachReqsRefused;
 
@@ -202,9 +187,6 @@ namespace TLDRevamp.Net
             if (r.Bad || !Server.TryGetValue(partNet, out var se)) return;
             if (se.OwnerId != from)
             {
-                // the sender bolted it before it heard it no longer owns it: bolted on its screen, off on every other one
-                // for good (itemchaos door-stale). The owner does it now, as for an AttachReq.
-                if (!StaleOwnerForwards) return;
                 StaleAttachesForwarded++;
                 SessionLog.Event("attach-forwarded", partNet, parentNet, from: from, to: se.OwnerId, result: "sender no longer owns it");
                 WS.Reset(); WS.U8(AttachReq); WS.Bytes(r.Buf, 1, r.End - 1);
@@ -214,7 +196,7 @@ namespace TLDRevamp.Net
             SetLiveRecordFloor(new UsableKey { Net = partNet, Epoch = se.Epoch, Item = 0 }, SessionLog.St);
             r.Pos = 0; int len = r.End;
             // its claim went through first (ServerAttachReq): for everyone else, and for later joiners, an attach, not a request
-            if (AttachReqBecomesSync && r.Buf[0] == AttachReq) r.Buf[0] = AttachSync;
+            if (r.Buf[0] == AttachReq) r.Buf[0] = AttachSync;
             WS.Reset(); WS.Bytes(r.Buf, 0, len);
             ServerSendAll(WS, true, from);
             // kept for whoever gets these objects later: a joiner gets the part's own record (taken when it came off:
@@ -227,7 +209,7 @@ namespace TLDRevamp.Net
             // bolted on: in nobody's hands. The owner sends no more states for it (it rides its parent), so the "held" of
             // its last one stayed — and the server refused everyone's claims on it from then on (playtest 2026-10-09:
             // parts locked for both players)
-            if (ClearHeldOnAttach && (se.Held || se.Stored)) { se.Held = false; se.Stored = false; HeldClearedOnAttach++; }
+            if ((se.Held || se.Stored)) { se.Held = false; se.Stored = false; HeldClearedOnAttach++; }
             if (attachType == 1 && Server.TryGetValue(parentNet, out var parent) && parent.OwnerId != se.OwnerId)
             {
                 OwnerLog(se, parent.OwnerId, "attached onto net " + parentNet);
@@ -252,7 +234,7 @@ namespace TLDRevamp.Net
             else EntityDoors.ForgetStoredDoorAttach(partNet);
             SessionLog.Event("attach-received", partNet, parentNet, item: parentIdx, slot: index, to: MyId);
             if (hasPose && indexType == 2) { hasPose = false; SlotPosesSkipped++; }   // an older sender's, a kept one
-            if (ByNet.TryGetValue(partNet, out var pd) && !Resolve(pd) && StoredAttach && AttachStored(pd, attachType, indexType, index, parentNet, parentIdx, poigen, poiid, lpos, gpos))
+            if (ByNet.TryGetValue(partNet, out var pd) && !Resolve(pd) && AttachStored(pd, attachType, indexType, index, parentNet, parentIdx, poigen, poiid, lpos, gpos))
                 return;
             if (!ByNet.TryGetValue(partNet, out var pe) || !Resolve(pe) || pe.Root == null || pe.Root.attachable == null)
             { SessionLog.Event("attach-refused", partNet, parentNet, slot: index, result: "part absent"); AttachesFailed++; if (AttachFails.Length < 400) AttachFails += "nopart" + partNet + " "; return; }
@@ -278,7 +260,7 @@ namespace TLDRevamp.Net
             }
             // a copy a container here holds: out of it first (its body back), then attached the normal way — attached in
             // the container it kept the lock, and the release rule later took it off the car (partsfar.py near)
-            if (EntityLocks.CopyLockSafe && pe.Proxy && pe.Root.P != null && pe.Root.P.physlock != null) { pe.Root.P.UnPhysicsLock(); LocksOpenedForAttach++; }
+            if (pe.Proxy && pe.Root.P != null && pe.Root.P.physlock != null) { pe.Root.P.UnPhysicsLock(); LocksOpenedForAttach++; }
             if (at.attached)
             {
                 _applyingDetach = true;
@@ -291,22 +273,15 @@ namespace TLDRevamp.Net
             if (!at.attached) { SessionLog.Event("attach-refused", partNet, parentNet, slot: index, result: "loader did not attach"); AttachesFailed++; AttachFails += "load" + partNet + " "; return; }
             if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) EntityAttachments.ApplyAttachPose(pe, at, poseLp, poseLq);
             if (pe.Proxy) { ApplyProxyBodies(pe); pe.Ip = new PoseInterpolator(); }
-            if (ClearHeldOnAttach && pe.Held) ShowHeld(pe, false);   // bolted on: no more states come — its copy collides again
-            if (ClearHeldOnAttach && pe.Stored) ShowStored(pe, false);
+            if (pe.Held) ShowHeld(pe, false);   // bolted on: no more states come — its copy collides again
+            if (pe.Stored) ShowStored(pe, false);
             AttachesApplied++;
             SessionLog.Event("attach-applied", partNet, parentNet, item: parentIdx, slot: index, to: MyId, epoch: pe.Epoch);
         }
-
-        /// A part arrives for a slot that still shows another one here. The player who bolted it saw that slot empty: the
-        /// part it holds was off on their screen and on on this one. The game's loader adds the new part beside the old
-        /// one and neither machine lets go of its version: two doors in one slot, for good, and in the save (2026-10-29:
-        /// "double doors": the other player saw no door and put one on). The newest bolt wins, the old part comes off:
-        /// the owner of the old part takes it off for everyone, a copy lets it fall here.
-        public static bool SlotReplaces = true;   // A/B: false = the loader adds the second part to the slot (before)
         public static long SlotPartsReplaced;
         private static void ClearSlotFor(attachablescript at, tosaveitemscript parent, int index)
         {
-            if (!SlotReplaces || at.utanfuto != null || parent == null || parent.partslotscripts == null || index < 0 || index >= parent.partslotscripts.Count) return;
+            if (at.utanfuto != null || parent == null || parent.partslotscripts == null || index < 0 || index >= parent.partslotscripts.Count) return;
             var slot = parent.partslotscripts[index];
             if (slot == null || slot.attachTarget || !slot.hasPart()) return;
             foreach (var old in new List<attachablescript>(slot.parts))
@@ -320,17 +295,11 @@ namespace TLDRevamp.Net
                 Plugin.Log.LogWarning($"slot {index} of {parent.name} still had {old.name} here when {at.name} was bolted into it: {old.name} comes off");
             }
         }
-
-        /// Server: an object's owner changed — what is bolted onto it goes along, all the way down (a hubcap on a wheel on
-        /// a car). Without it, a part bolted on while another player held the car (a claim, a hand-off) stayed that
-        /// player's when the car went back: its owner, 850 m away with the car stored, answered nothing when the car's
-        /// owner took it off — loose on one machine, bolted on the other (playround.py R3, 2026-10-09).
-        public static bool OwnerCascade = true;   // A/B: false = before v0.66.5
         public static long OwnerCascaded;
         private static void CascadeOwner(SEnt se, int depth = 0)
         {
             CascadeHitches(se);
-            if (!OwnerCascade || se.AttachKids == null || depth > 8) return;
+            if (se.AttachKids == null || depth > 8) return;
             foreach (var kid in new List<uint>(se.AttachKids))
             {
                 if (kid == se.NetId || !Server.TryGetValue(kid, out var k) || k.AttachParent != se.NetId || k.HitchCar != 0 || k.OwnerId == se.OwnerId || k.Held || k.Stored) continue;
@@ -361,15 +330,10 @@ namespace TLDRevamp.Net
         }
 
         public static long AttachesKept, AttachesReplayed;
-
-        /// SendObject: the object's last attach once what it's attached to is known to that player, and the last attaches
-        /// of objects attached onto it that the player knows (after their Add/part messages: the joiner's copy exists).
-        /// And its parts' own: one bolted onto something the player was sent before (AttachReplay).
-        public static bool ReplayPartAttaches = true;   // A/B: false = a part's attach is replayed only as its parent's kid
         private static readonly System.Collections.Generic.List<uint> _replay = new System.Collections.Generic.List<uint>();
         private static void ReplayAttaches(int playerId, SEnt se)
         {
-            AttachReplay.Pick(se.NetId, se.LastAttach != null, se.AttachParent, se.AttachKids, ReplayPartAttaches ? se.Parts : null,
+            AttachReplay.Pick(se.NetId, se.LastAttach != null, se.AttachParent, se.AttachKids, se.Parts,
                 n => Server.TryGetValue(n, out var k) && k.LastAttach != null, n => Server.TryGetValue(n, out var k) ? k.AttachParent : 0,
                 n => KnownTo(playerId, n), _replay);
             foreach (var n in _replay) SendKept(playerId, n == se.NetId ? se : Server[n]);
@@ -392,13 +356,10 @@ namespace TLDRevamp.Net
             if (r.Bad || !Server.TryGetValue(net, out var se)) return;
             if (se.OwnerId != from)
             {
-                // the same for taking it off: no door on that player's screen, still on on the other one; a second door
-                // bolted on top of it followed (double doors, 2026-10-29; itemchaos door-stale)
-                if (!StaleOwnerForwards) return;
                 StaleDetachesForwarded++;
                 SessionLog.Event("detach-forwarded", net, from: from, to: se.OwnerId, result: "sender no longer owns it");
                 // not through the checks of a player's request: it has already happened on their screen, a refusal is this bug again
-                if (StaleDetachDirect && se.PrevOwnerId == from && Time.realtimeSinceStartup - se.PrevOwnerAt <= HandoverAcceptS)
+                if (se.PrevOwnerId == from && Time.realtimeSinceStartup - se.PrevOwnerAt <= HandoverAcceptS)
                 {
                     W.Reset(); W.U8(DetachReq); W.U32(net); W.VarU32(0u);
                     ServerSendTo(se.OwnerId, W, true);
@@ -426,8 +387,6 @@ namespace TLDRevamp.Net
 
         internal static long AttachPosesSent, AttachPosesApplied, AttachPosesBad;
 
-        public static bool AttachRequests = true;   // A/B: false = before v0.66.4 (a copy bolted by the player stays local)
-
         [HarmonyLib.HarmonyPatch(typeof(attachablescript), nameof(attachablescript.Attach), new[] { typeof(Transform) })]
         private static class AttachHook
         {
@@ -451,7 +410,7 @@ namespace TLDRevamp.Net
                     // the local player bolted a part this machine doesn't simulate (a pickup claim still on its way, or
                     // overtaken: another player's car claimed it as it was set down): the owner does it — a local-only
                     // attach stayed bolted here and loose everywhere else (buglist2m 3b, full sequence)
-                    if (AttachRequests && Entities.AttachmentPlayerActing) { Entities.SendAttachment(pe, __instance, Entities.AttachReq); Entities.RefreshAttachmentBodies(pe); pe.Ip = new PoseInterpolator(); }
+                    if (Entities.AttachmentPlayerActing) { Entities.SendAttachment(pe, __instance, Entities.AttachReq); Entities.RefreshAttachmentBodies(pe); pe.Ip = new PoseInterpolator(); }
                     return;
                 }
                 Entities.SendAttachment(pe, __instance);

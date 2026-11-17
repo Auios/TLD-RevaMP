@@ -52,7 +52,6 @@ def drive(b, net, slot, w_net):
 def run(b, cfg):
     p = b("gpos"); b(f"tpground {p['gx'] + 15} {p['gz']}"); time.sleep(3)
     b("mp host 27070")
-    b(f"set {T}.CargoClaims False")   # the bot's wheel waits beside the car, not in it
     before = set(ents(b))
     print(f"  [{cfg}] car:", b(f"devspawn {CAR}"), flush=True); time.sleep(8)
     net = next(n for n, e in ents(b).items() if n not in before and e["car"])
@@ -105,7 +104,7 @@ with game.ProtectedSession():
         try: run(b, cfg)
         except Exception as ex: verdict(f"{cfg}: RAN", False, repr(ex))
         finally:
-            try: b(f"set {T}.CargoClaims True"); b("mp stop")
+            try: pass; b("mp stop")
             except Exception: pass
             b(f"set kaposztaleves.s.settings.god {god if god is not None else False}")
 game.quit_game()

@@ -19,11 +19,9 @@ namespace TLDRevamp.Fixes
     /// Fix, exact otherwise: a record PlaceStuff dropped while its object was on its way out (preDestroyed) is put back;
     /// a dying object leaves the id to the object that holds it now.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.StreamRace.Enabled
     [HarmonyPatch]
     public static class StreamRace
     {
-        public static bool Enabled = true;
         public static long RecordsKept, IdsKept;
         private static readonly List<KeyValuePair<uint, save_item>> _dying = new List<KeyValuePair<uint, save_item>>();
 
@@ -33,7 +31,7 @@ namespace TLDRevamp.Fixes
         {
             _dying.Clear();
             var s = savedatascript.s;
-            if (!Enabled || s == null || s.data == null || s.data.itemData == null) return;
+            if (s == null || s.data == null || s.data.itemData == null) return;
             var list = s.data.itemData.items;
             foreach (var kv in s.items)
             {
@@ -60,7 +58,7 @@ namespace TLDRevamp.Fixes
         private static void BeforeDestroy(tosaveitemscript __instance, out tosaveitemscript __state)
         {
             __state = null;
-            if (!Enabled || savedatascript.s == null) return;
+            if (savedatascript.s == null) return;
             if (savedatascript.s.items.TryGetValue(__instance.idInSave, out var now) && now != null && now != __instance) __state = now;
         }
 

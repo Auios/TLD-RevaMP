@@ -5,14 +5,14 @@ would show exactly that — the holder's contents, someone else's building — a
 machines over the relay: a building ~0.5-3 km away; on the laptop it is made another type before it is spawned there
 (`poiretype`: what a different game generates); the host goes there first (it spawns the contents: the lease holder),
 then the laptop → an [anomaly] "building differs at <key>" line on the host and on the laptop, with both types.
-  tools/leasetype.py [--no-build] [--relay iad|off] [--old: no type in the lease request, before v0.66.8]"""
+  tools/leasetype.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 T = "TLDRevamp.Net.Entities"
 VERDICTS = []
 def verdict(name, ok, detail=""):
@@ -53,8 +53,7 @@ with game.ProtectedSession():
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, s_("get kaposztaleves.s.settings.god").get("value")); s_("set kaposztaleves.s.settings.god True")
-            s_(f"set TLDRevamp.Net.EntityWorldLeases.LeaseTypeCheck {not OLD}")
-        print(f"  {'OLD (no type in the lease request)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         time.sleep(10)
         ph, pl = pois(h), pois(L)
         cand = sorted((p for k, p in ph.items() if k in pl and 400 < p["d"] < 3000 and not p["items"] and not pl[k]["items"]), key=lambda p: p["d"])
@@ -80,7 +79,7 @@ with game.ProtectedSession():
         print("  errors:", [(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er], flush=True)
     finally:
         for s_, v in gods.values():
-            try: s_(f"set kaposztaleves.s.settings.god {v}"); s_(f"set TLDRevamp.Net.EntityWorldLeases.LeaseTypeCheck True")
+            try: s_(f"set kaposztaleves.s.settings.god {v}")
             except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")

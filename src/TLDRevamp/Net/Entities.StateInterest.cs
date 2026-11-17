@@ -33,7 +33,7 @@ namespace TLDRevamp.Net
         }
 
         private static bool OwnerAudience(Vector3d at) =>
-            !EntityAuthorityInterest.InterestRelay || IsHost || RemotePlayers.EntityViewerNear(at, InterestM);
+            IsHost || RemotePlayers.EntityViewerNear(at, InterestM);
 
         // Called after sampling, so suppressed poses still advance motion/rest detection. Finals therefore
         // describe the actual stop, rather than waiting for the next far-store refresh to notice it.
@@ -46,7 +46,7 @@ namespace TLDRevamp.Net
 
         private static bool RabbitReceiverNear(int player, SEnt se)
         {
-            if (player == 0 || !EntityAuthorityInterest.InterestRelay || Mp.Server == null) return true;
+            if (player == 0 || Mp.Server == null) return true;
             bool has = Mp.Server.PeerPos(player, out var pos);
             if (InterestRules.Within(has, pos.x - se.Where.x, pos.z - se.Where.z, EntityAuthorityInterest.StateInterestM)) return true;
             SkippedByInterest(player); return false;
@@ -55,11 +55,11 @@ namespace TLDRevamp.Net
         internal static bool PoseReceiverDue(int player, uint net, bool hasPosition, Vector3d viewer, Vector3d at,
                                              bool essential, double now, double sentAt)
         {
-            if (WasteFixes && !StateKnown(player, net))
+            if (!StateKnown(player, net))
             { StatesSkippedUnknown++; SkippedByInterest(player); return false; }
             bool near = InterestRules.Within(hasPosition, viewer.x - at.x, viewer.z - at.z, MpServer.CarFarM);
             // Known far copies still need maintenance and transitions to keep their saved records current.
-            if (!EntityAuthorityInterest.InterestRelay || InterestRules.Due(near, essential, now, sentAt, MpServer.CarBeyondInterval)) return true;
+            if (InterestRules.Due(near, essential, now, sentAt, MpServer.CarBeyondInterval)) return true;
             SkippedByInterest(player); return false;
         }
 

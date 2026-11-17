@@ -18,7 +18,6 @@ namespace TLDRevamp.Net
         private sealed class Schema { public FieldInfo[] Fields; }
         private static readonly Dictionary<Type, Schema> Schemas = new Dictionary<Type, Schema>();
         public static string Unsupported = "";
-        public static bool StripWorn = true;   // A/B: false = before v0.68.2 (a worn item's record put it on the loader's player)
         public static long WornStripped;
 
         private static Schema Of(Type t)
@@ -144,7 +143,7 @@ namespace TLDRevamp.Net
             // a record captured while its item was worn names the wearer (save_wear.player = their playerIndex, 1 on every
             // machine): loaded here, the game put it on OUR player (save_wear.Load → fpscontroller.Wear). Who wears a
             // shared item is Entities.Worn's business; the records carry nobody.
-            if (StripWorn && d.wear != null && d.wear.Count > 0)
+            if (d.wear != null && d.wear.Count > 0)
             {
                 foreach (var w in d.wear) if (w != null && w.player != 0) { w.player = 0; WornStripped++; }
             }

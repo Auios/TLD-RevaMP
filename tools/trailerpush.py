@@ -26,11 +26,10 @@ with game.ProtectedSession():
     if "--no-build" not in sys.argv: game.build()
     else: game.local_mods()
     results = {}
-    for on in (False, True):
+    for on in (True,):
         game.quit_game(); game.launch(); game.newgame()
         b = Bridge(); time.sleep(3)
         b("set TLDRevamp.DriveLab.Recover False")
-        b(f"set TLDRevamp.Fixes.TrailerCreep.Enabled {on}")
         rp = b("roadpoint"); F = (math.sin(math.radians(rp["yaw"])), math.cos(math.radians(rp["yaw"])))
         r0 = clear_road(b, rp["gx"], rp["gz"], F[0], F[1]); yaw = r0["yaw"]
         F = (math.sin(math.radians(yaw)), math.cos(math.radians(yaw))); R = (math.cos(math.radians(yaw)), -math.sin(math.radians(yaw)))
@@ -49,9 +48,8 @@ with game.ProtectedSession():
         p1 = trailer_at(b, (tx, tz)); held = b("get TLDRevamp.Fixes.TrailerCreep.Held")["value"] - held0
         pushed = math.dist((p0[0], p0[2]), (p1[0], p1[2])) if p0 and p1 else -1
         results[on] = pushed
-        print(f"  fix {'on' if on else 'off'}: trailer pushed {pushed:.2f} m in {SECS:.0f} s at {MS} m/s asked; held {held} steps", flush=True)
-    verdict("the car pushes it without the fix", results[False] > 3, f"{results[False]:.2f} m")
-    verdict("the car pushes it as far with the fix (within 25 %)", results[True] > 0.75 * results[False], f"{results[True]:.2f} m vs {results[False]:.2f} m")
+        print(f"  fix {'on'}: trailer pushed {pushed:.2f} m in {SECS:.0f} s at {MS} m/s asked; held {held} steps", flush=True)
+    verdict("the car pushes the trailer", results[True] > 3, f"{results[True]:.2f} m")
     if "--keep" not in sys.argv: game.quit_game()
 
 print(f"{sum(ok for _, ok in VERDICTS)}/{len(VERDICTS)} passed")

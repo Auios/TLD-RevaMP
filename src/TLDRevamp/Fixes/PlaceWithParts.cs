@@ -18,11 +18,9 @@ namespace TLDRevamp.Fixes
     /// A part the streaming selected near here and is about to place (FarItemLookup's spread) is left to
     /// its own turn: placed within frames anyway, and the car's frame doesn't carry all its parts.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.PlaceWithParts.Enabled
     [HarmonyPatch(typeof(itemPlaceRemoveScript), nameof(itemPlaceRemoveScript.PlaceOne))]
     public static class PlaceWithParts
     {
-        public static bool Enabled = true;
         public static float StrayM = 15f;   // a part's record this far from its car's counts as a stray (logged)
         public static long Placed, Strays, LeftToStreaming;
         public static string LastStray = "";
@@ -38,7 +36,7 @@ namespace TLDRevamp.Fixes
         private static void Prefix()
         {
             if (_depth++ != 0) return;
-            _snapshot = Enabled && ReuseIndex;
+            _snapshot = ReuseIndex;
             var data = savedatascript.s != null && savedatascript.s.data != null ? savedatascript.s.data.itemData : null;
             if (_snapshot && data != null && data.attachable != null && (_store != data || _kidsFrame != Time.frameCount || _kidsCount != data.attachable.Count)) Index(data.attachable);
         }
@@ -57,7 +55,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPostfix]
         private static void Postfix(tosaveitemscript __result)
         {
-            if (!Enabled || __result == null || savedatascript.s == null || itemPlaceRemoveScript.s == null) return;
+            if (__result == null || savedatascript.s == null || itemPlaceRemoveScript.s == null) return;
             var data = savedatascript.s.data != null ? savedatascript.s.data.itemData : null;
             if (data == null || data.attachable == null || data.attachable.Count == 0) return;
             if (!_snapshot && (_kidsFrame != Time.frameCount || _kidsCount != data.attachable.Count)) Index(data.attachable);

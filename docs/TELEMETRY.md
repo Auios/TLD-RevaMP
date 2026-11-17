@@ -377,7 +377,7 @@ These counters cover all ragdolls on the machine, not just the selected net id. 
 tails the server could not size; those States still go on and the first misses are logged.
 `ReplaysWithoutKey` counts join and interest replays that had no usable ragdoll Key: the pose still goes, a Delta
 without its limbs (the copy keeps the limbs it has) and an unsized tail as it is; the first ones are logged as `[anomaly]`.
-`EntityRagdolls.RagdollDelta` switches between Key/Delta and Frame for A/B checks.
+Ragdolls use Key/Delta blocks; vehicle limbs retain Frame blocks.
 Two-copy measurement with a twitching dead rabbit (14 limbs, about 20 states/s): ragdoll block data was
 5.5 KB/s before and about 1.9 KB/s after. This excludes the rest of the State and transport overhead.
 
@@ -401,8 +401,7 @@ Numbers and raw bridge evidence go only into the requested private out directory
 candidates/recipients, not bytes saved; `deadAnimation` counts only candidates whose original dead animation
 inputs would have sent. The one-second live non-rabbit creature refresh is retained; dead and rabbit animation have no periodic refresh. Network history copies these
 values with its intervals. `owned` remains the existing all-owned gauge, including resting roots.
-Compare counter deltas and category bytes with `Entities.WasteFixes` off and on; the switch changes neither
-the wire protocol nor `mp share`.
+Compare counter deltas and category bytes between recordings. Pose filtering keeps the wire protocol and `mp share` unchanged.
 
 Every frame **over 500 ms** bypasses the ordinary hitch-line rate limit and adds `long` to its hitch line and a
 record to black-box `long.rows` (**64 records / 35 s**, with `overwritten`). It keeps `st`, `ms`, `instantiated`,

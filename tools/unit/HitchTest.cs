@@ -329,8 +329,7 @@ namespace TLDRevamp.Net
             CascadeOwner(Server[10]); var transfer = _hitchTransfers[20];
             Time.realtimeSinceStartup = HitchTimeoutS - 0.01f; ServerHitchTick();
             check(Server[20].OwnerId == 1 && _hitchTransfers.ContainsKey(20), "silent takeover waits for the freeze until its deadline");
-            HitchTransferTimeout = false; Time.realtimeSinceStartup = HitchTimeoutS; ServerHitchTick();
-            check(Server[20].OwnerId == 1, "timeout A/B switch preserves the old wait"); HitchTransferTimeout = true;
+            Time.realtimeSinceStartup = HitchTimeoutS;
             ServerHitchTick();
             check(Server[20].OwnerId == 0 && Server[20].Epoch == 2 && !_hitchTransfers.ContainsKey(20), "silent trailer follows car after timeout with an epoch fence");
             var fallback = Reader(Packets.Find(p => p.target == 0 && p.data[0] == HitchFrozen).data);
@@ -347,8 +346,6 @@ namespace TLDRevamp.Net
 
             // The frozen source can acknowledge, but the destination has never been offered these objects at 3 km.
             RecoverySetup(2, 1, false); Known[2] = new HashSet<uint>();
-            HitchEnsureKnown = false; Server[20].HitchCar = 10; HitchOwnerKnows(Server[20], 2); Server[20].HitchCar = 0;
-            check(Packets.Count == 0 && KnownBy(2).Count == 0, "interest A/B switch leaves dependencies to ordinary offers"); HitchEnsureKnown = true;
             var op = new HitchOp { Trailer = 20, Car = 10, TrailerEpoch = 1, CarEpoch = 1, Slot = 0, Connect = true };
             var request = new NetWriter(); request.U8(HitchRequest); EntityHitches.WriteHitch(request, op); ServerPacket(Copy(request), 0);
             var pending = _hitchTransfers[20]; Packets.Clear();
@@ -377,8 +374,6 @@ namespace TLDRevamp.Net
                 if (transferring) CascadeHitches(Server[10]);
                 _hitchOps[20] = new HitchOp { Trailer = 20, Car = 10, Connect = true };
                 Packets.Clear();
-                HitchReleaseOnRemove = false; RemoveHitches(10);
-                check(Server[20].HitchCar == 10, "deletion A/B switch preserves old hitch"); HitchReleaseOnRemove = true;
                 RemoveHitches(10);
                 check(Server[20].HitchCar == 0 && Server[20].AttachParent == 0 && Server[20].LastAttach == null && Server[10].AttachKids.Count == 0,
                     "deleted tow car drops live and replayed hitch metadata");

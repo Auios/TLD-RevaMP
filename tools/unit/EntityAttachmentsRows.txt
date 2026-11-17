@@ -30,7 +30,6 @@ hook-offline||False
 hook-missing|live;|False
 hook-proxy|live;send:62;|True
 hook-proxy-inactive|live;|False
-hook-proxy-disabled|live;|False
 carried-wire|-2|True|1A580200000900000000000000000000104000000000000014400000000000001840CDCCCC3DCDCC4C3E9A99993E6666663F00|1
 cache-63|64
 cache-64|65

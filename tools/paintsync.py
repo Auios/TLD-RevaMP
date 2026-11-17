@@ -5,7 +5,7 @@
   3 both players leave 5 km (the car into the far store on both) and come back
   4 the laptop leaves the session and joins again
 Each time: the colours the same on both machines, and the painted part the colour last sprayed.
-  tools/paintsync.py [--no-build] [--relay iad|off] [--ab: first with the v0.65.20 fix off]"""
+  tools/paintsync.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -76,14 +76,6 @@ with game.ProtectedSession():
                 time.sleep(2)
             for nm, s_ in (("host", h), ("laptop", L)): print(f"  {nm} wheels: {s_(f'mount bodies {NET}').get('wheels(name,en,active,motor,brake,rpm,grounded,rb)')}", flush=True)
             raise SystemExit
-        if "--ab" in sys.argv:
-            for s_ in (h, L): s_("set TLDRevamp.Net.Entities.RepaintOnApply False")
-            r = L(f"mp paint {NET} 0.2 0.8 0.2"); print("  (fix off) laptop paints green:", r, flush=True)
-            hd, _, ix = r["painted"].rpartition("#"); P0 = (hd or "<root>") + "#" + ix
-            time.sleep(6)
-            print(f"  (fix off) on screen: host {colours(h).get(P0)} laptop {colours(L).get(P0)}", flush=True)
-            verdict("0 (FIX OFF, the old behaviour) THE OWNER SHOWS THE OTHER PLAYER'S PAINT", all(abs(a - b) < 0.02 for a, b in zip(colours(h).get(P0) or (9, 9, 9), (0.2, 0.8, 0.2))))
-            for s_ in (h, L): s_("set TLDRevamp.Net.Entities.RepaintOnApply True")
         r = L(f"mp paint {NET} 0.9 0.05 0.05"); print("  laptop paints:", r, flush=True)
         head, _, idx = r["painted"].rpartition("#")
         PART = (head or "<root>") + "#" + idx

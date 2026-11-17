@@ -5,7 +5,7 @@ in that car, and the game's streaming removed the whole car every second, 35 m f
 relay: the laptop's car01 and the laptop's lamp lying 6 m from it; on the host the lamp's copy is stored into the copy
 of the car (`mp copystore`: what the copy's own scan did by mistake); the laptop moves its car 800 m; the host goes to
 it → the host's copy of the car placed and it stays, the lamp's copy where the laptop has it.
-  tools/copylock.py [--no-build] [--relay iad|off] [--old: no release, before v0.66.7]"""
+  tools/copylock.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -13,7 +13,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 from roadkit import CAR01
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 T = "TLDRevamp.Net.Entities"; LAMP = 320
 VERDICTS = []
 def verdict(name, ok, detail=""):
@@ -52,8 +52,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.EntityLocks.CopyLockRelease {not OLD}")
-        print(f"  {'OLD (no release)' if OLD else 'NEW'}", flush=True)
+        print(f"  {'NEW'}", flush=True)
         time.sleep(5)
         lid = L("mp entities")["me"]
         hp = h("gpos"); L(f"tpground {hp['gx'] + 3} {hp['gz'] + 3}"); time.sleep(3)
@@ -89,9 +88,6 @@ with game.ProtectedSession():
                 f"{gap and round(gap, 2)} m apart (host copy dormant {(eh or {}).get('dormant')}); released {h(f'get TLDRevamp.Net.EntityLocks.CopyLocksReleased')['value']}")
         print("  errors:", [s_("errors")["errors"] for s_ in (h, L)], flush=True)
     finally:
-        for s_ in (h, L):
-            try: s_(f"set TLDRevamp.Net.EntityLocks.CopyLockRelease True")
-            except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

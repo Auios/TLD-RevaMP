@@ -11,7 +11,7 @@ namespace TLDRevamp.Net
         internal static void RabbitRole(Ent e, bool proxy)
         {
             var ny = NyOf(e);
-            if (ny == null || !RabbitSync) return;
+            if (ny == null) return;
             var a = ny.AI;
             if (ny.playerDeathTrigger != null) ny.playerDeathTrigger.SetActive(false);
             if (ny.attacking || ny.roaring) { ny.attacking = false; ny.roaring = false; if (a != null) a.goToTarget = true; }
@@ -28,7 +28,7 @@ namespace TLDRevamp.Net
         internal static void SendRabbitHandover(Ent e, uint epoch)
         {
             var ny = NyOf(e);
-            if (!RabbitSync || ny == null || ny.AI == null || !Entities.IsFinite(ny.AI.interestPos)) return;
+            if (ny == null || ny.AI == null || !Entities.IsFinite(ny.AI.interestPos)) return;
             var target = mainscript.GlobalFromUnityPos(ny.AI.interestPos);
             var w = new NetWriter();
             RabbitStateCodec.Write(w, new RabbitStateCodec.State {

@@ -163,7 +163,6 @@ def run(h, args):
         right = (math.cos(math.radians(yaw)), -math.sin(math.radians(yaw)))
         x, z = rp["gx"] + right[0] * 1.8, rp["gz"] + right[1] * 1.8
         auto_save = h("get TLDRevamp.TestSafetyTools.BlockAutoSave")["value"]
-        safety = h("get TLDRevamp.Fixes.MissingTrailerSlot.Enabled")["value"]
         h("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         # A single-machine host gives the existing stock hitch path and shared-object diagnostics.
         started = True
@@ -226,12 +225,6 @@ def run(h, args):
                     verdict(label + ": drawbar seated on target", measure["gap"] is not None and measure["gap"] < 0.05)
                     restored = probe(h, "RecordRoundTrip", car["save"], False)
                     verdict(label + ": save record returns to same owner/slot", restored["attached"] and restored["inSlot"] and restored["index"] == row["slot"])
-                    try:
-                        h("set TLDRevamp.Fixes.MissingTrailerSlot.Enabled False")
-                        stock = probe(h, "RecordRoundTrip", car["save"], True)
-                        verdict(label + ": game unknown-slot fallback attaches without slot", stock["attached"] and not stock["inSlot"])
-                    finally:
-                        h("set TLDRevamp.Fixes.MissingTrailerSlot.Enabled True")
                     missing = probe(h, "RecordRoundTrip", car["save"], True)
                     verdict(label + ": removed slot leaves trailer loose", not missing["attached"] and not missing["inSlot"])
                     if args.keep_save_pair:
@@ -264,8 +257,6 @@ def run(h, args):
     finally:
         try:
             restore = ["mp stop"] if started else []
-            if safety is not None:
-                restore.append(f"set TLDRevamp.Fixes.MissingTrailerSlot.Enabled {safety}")
             if auto_save is not None:
                 restore.append(f"set TLDRevamp.TestSafetyTools.BlockAutoSave {auto_save}")
             for command in restore:

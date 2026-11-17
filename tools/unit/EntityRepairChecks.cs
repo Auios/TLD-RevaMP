@@ -45,7 +45,7 @@ static partial class EntitySplitTest
 
         EntityRepair.ResetPoiCensus();
         EntityRepair.PoiCensusSent = EntityRepair.PoiCensusIn = EntityRepair.PoiDiffers = 0;
-        EntityRepair.PoiCensusOn = true; EntityRepair.PoiCensusEveryS = 5; EntityRepair.PoiCensusRadiusM = 250; EntityRepair.PoiCensusNearM = 120;
+        EntityRepair.PoiCensusEveryS = 5; EntityRepair.PoiCensusRadiusM = 250; EntityRepair.PoiCensusNearM = 120;
         Entities.Packets.Clear(); Entities.IsHost = false;
         RF.Menu.s = null; RF.Main.s = null; RF.Settings.s = null;
         void Tick(float now) { Time.realtimeSinceStartup = now; Call("PoiCensusTick"); }
@@ -70,7 +70,6 @@ static partial class EntitySplitTest
         Tick(15); Row("wire-radius-xz-key-order-first-generator-null", Convert.ToHexString(Entities.Packets.Last().Bytes));
         RF.Menu.s.currentMainMap.poiGens.RemoveAt(0);
         Tick(20); Row("wire-first-generator-distances", Convert.ToHexString(Entities.Packets.Last().Bytes));
-        EntityRepair.PoiCensusOn = false; Tick(30); Row("tick-disabled-keeps-time", Sent()); EntityRepair.PoiCensusOn = true;
         RF.Menu.s.currentMainMap.poiGens.Clear();
         for (int g = 0; g < 2; g++)
         {

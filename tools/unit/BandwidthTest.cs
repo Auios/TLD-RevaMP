@@ -55,12 +55,12 @@ static class BandwidthTest
         Check(!BandwidthRules.RestPoseChanged(.02 * .02, 1f), "rest envelope includes exactly 2 cm and 1 degree");
         Check(BandwidthRules.RestPoseChanged(.02001 * .02001, 0), "position outside rest envelope wakes");
         Check(BandwidthRules.RestPoseChanged(0, 1.001f), "rotation outside rest envelope wakes");
-        Check(BandwidthRules.RestEligible(true, false, false, false, false, false, false, false), "ordinary objects may settle");
-        for (int exempt = 0; exempt < 8; exempt++)
+        Check(BandwidthRules.RestEligible(false, false, false, false, false, false, false), "ordinary objects may settle");
+        for (int exempt = 1; exempt < 8; exempt++)
         {
-            bool eligible = BandwidthRules.RestEligible(exempt != 0, exempt == 1, exempt == 2, exempt == 3,
+            bool eligible = BandwidthRules.RestEligible(exempt == 1, exempt == 2, exempt == 3,
                 exempt == 4, exempt == 5, exempt == 6, exempt == 7);
-            Check(!eligible && !BandwidthRules.RestQuiet(eligible, true, false, 60), "switch off and each exemption keep existing decisions");
+            Check(!eligible && !BandwidthRules.RestQuiet(eligible, true, false, 60), "each exemption keeps existing decisions");
             var window = new BandwidthRules.RestWindow { Active = true, Since = 1 };
             Check(!BandwidthRules.RestReference(ref window, 60, eligible, false, false) && !window.Active,
                 "an exemption clears the old settling window");
@@ -114,9 +114,7 @@ namespace TLDRevamp.Net
             BandwidthTest.Check(RagdollFrame(body) == body.Root.transform, "vehicle limbs keep car frame");
             body.Root.car = null; body.IsLimp = false;
             BandwidthTest.Check(RagdollFrame(body) == body.Root.transform, "live creature keeps root frame");
-            body.IsLimp = true; WasteFixes = false;
-            BandwidthTest.Check(RagdollFrame(body) == body.Root.transform, "waste switch restores original corpse frame");
-            WasteFixes = true;
+            body.IsLimp = true;
             Mp.Server = new MpServer();
             var candidate = new SEnt { NetId = 3 };
             var creature = new NetReader { Buf = new byte[] { 128, 0, 0 }, End = 3 };
@@ -126,8 +124,6 @@ namespace TLDRevamp.Net
             Mp.Server.Spots.Add(new MpServer.PeerSpot { Id = 3 });
             RelayCreature(candidate, 0, creature);
             BandwidthTest.Check(Mp.Server.Sends == 1 && StatesSkippedUnknown == 1 && StatesSkippedCreatureRange == 1, "relay sends only to known nearby viewers");
-            Mp.Server.Sends = 0; WasteFixes = false; RelayCreature(candidate, 0, creature); WasteFixes = true;
-            BandwidthTest.Check(Mp.Server.Sends == 3, "relay switch off restores fanout");
             Mp.Server.Sends = 0; RelayCreature(candidate, 1, creature);
             BandwidthTest.Check(delivered == 1 && Mp.Server.Sends == 0, "host always keeps owner state, sender excluded");
 

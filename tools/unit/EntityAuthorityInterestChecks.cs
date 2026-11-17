@@ -28,7 +28,7 @@ static partial class EntitySplitTest
             EntityAuthorityInterest.ResetRelay(); AK._staleEnts.Clear();
             foreach (string name in new[] { "ResyncRelayed", "ResyncHeldBack", "ResyncCaughtUp", "PoiRelayed", "PoiHeldBack", "PoiCaughtUp", "SharesDropped", "SharesKicked" }) Set(typeof(EntityAuthorityInterest), name, 0L);
             ((IDictionary)Field(typeof(EntityAuthorityInterest), "_shareBuckets")).Clear(); ((IList)Field(typeof(EntityAuthorityInterest), "_kickQ")).Clear();
-            EntityAuthorityInterest.InterestRelay = true; EntityAuthorityInterest.StateInterestM = 1000;
+            EntityAuthorityInterest.StateInterestM = 1000;
             EntityAuthorityInterest.ShareBurst = 2; EntityAuthorityInterest.ShareRefillPerS = 1; EntityAuthorityInterest.ShareMaxRecordBytes = 10; EntityAuthorityInterest.ShareKickDrops = 4;
             AK.Records.Clear(); AK.Pois.Clear(); AK.Events.Clear(); AK.DuringSend = null; AK.InterestCatchUpLimit = 2;
             AK.Records[7] = (default, new byte[] { 31, 7, 9, 11 });
@@ -44,8 +44,7 @@ static partial class EntitySplitTest
         AM.Server.Spots[1] = new AS.PeerSpot { Id = 2, HasPos = true };
         Relay(); State("stale-next-relay-sends-full");
         Relay(0); State("host-source-not-delivered");
-        EntityAuthorityInterest.InterestRelay = false; Relay(); State("disabled-broadcast");
-        EntityAuthorityInterest.InterestRelay = true; AM.Server = null; Relay(); State("no-server-broadcast");
+        AM.Server = null; Relay(); State("no-server-broadcast");
 
         Setup(); Relay(); AK.Events.Clear();
         AM.Server.Spots[1] = new AS.PeerSpot { Id = 2, HasPos = true };

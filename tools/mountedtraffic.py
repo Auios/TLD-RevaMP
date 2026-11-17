@@ -8,14 +8,14 @@ mounted"). Two games: the host owns car H, the joiner owns car J (both Car05Full
 Then, for every one of those parts (now its own object on the network), states sent and received are counted on both
 machines: parked, while both cars drive, the joiner leaving and joining again, H's owner changing, and another rejoin. Each
 part must also sit in its slot on both screens.
-  tools/mountedtraffic.py [--no-build] [--relay off|iad] [--old: Entities.ReplayPartAttaches False]"""
+  tools/mountedtraffic.py [--no-build] [--relay off|iad]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "off"), "--old" in sys.argv
+RELAY = arg('--relay', 'off')
 T = "TLDRevamp.Net.Entities"; CAR05 = 154
 HUB, ENGINE = "DisztarcsaSlotCol", "EngineSlotCollider"
 VERDICTS = []
@@ -146,10 +146,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")
-        for s_ in (h, L):
-            try: s_(f"set {T}.ReplayPartAttaches {not OLD}")
-            except RuntimeError as ex: print(f"  no switch ReplayPartAttaches in this build: {ex}", flush=True)
-        print(f"  {'OLD (ReplayPartAttaches off)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         hid, lid = h("mp entities")["me"], L("mp entities")["me"]
         time.sleep(6)
         q = h("gpos"); gx, gz = q["gx"] + 8, q["gz"] + 8
@@ -205,5 +202,5 @@ with game.ProtectedSession():
         try: L("mp stop"); h("mp stop")
         except Exception: pass
 passed = sum(1 for _, ok in VERDICTS if ok)
-print(f"\nSUMMARY mountedtraffic {'OLD' if OLD else 'NEW'}: {passed}/{len(VERDICTS)} passed", flush=True)
+print(f"\nSUMMARY mountedtraffic {'NEW'}: {passed}/{len(VERDICTS)} passed", flush=True)
 sys.exit(0 if passed == len(VERDICTS) else 1)

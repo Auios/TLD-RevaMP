@@ -3,9 +3,8 @@
 can, stands at the host's car and sprays it (the game's own Fire per frame, as holding the left button). On the host the
 copy of the can must show the spray: valve open, mist emitting, hiss playing — then stop when the laptop stops. The
 paint itself is paintsync.py's.
-  A (--ab) the effect off (before v0.65.23): the copy stays silent
   B        the effect on
-  tools/spraytest.py [--no-build] [--relay iad|off] [--ab]"""
+  tools/spraytest.py [--no-build] [--relay iad|off]"""
 import sys, time, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -57,10 +56,9 @@ with game.ProtectedSession():
         until(lambda: can in ents(h), 20); time.sleep(1)
         print("  laptop picks it up:", L(f"mp pickupnet {can}"), flush=True); time.sleep(2)
         print("  laptop's can:", L(f"mp sprayfx {can}"), flush=True)
-        runs = [False, True] if "--ab" in sys.argv else [True]
-        for fx in runs:
-            h(f"set TLDRevamp.Net.EntityEffects.SprayFx {fx}")
-            tag = "B THE EFFECT ON" if fx else "A (EFFECT OFF, the old behaviour)"
+        runs = [True]
+        for fx in (True,):
+            tag = "B THE EFFECT ON"
             print(f"=== {tag}", flush=True)
             print("  laptop sprays:", L("mp sprayhold 4"), flush=True)
             seen = []
@@ -71,7 +69,7 @@ with game.ProtectedSession():
                 if k == 2:
                     try: print("    host looks at the can:", h(f"mp lookat {can}"), flush=True)   # the laptop's player spraying the car
                     except RuntimeError as ex: print("    look:", ex, flush=True)
-                if k == 3: h(f"shot spray_{'on' if fx else 'off'}")
+                if k == 3: h(f"shot spray_{'on'}")
             time.sleep(3.5)
             after = h(f"mp sprayfx {can}"); print(f"  after the laptop stopped: host's copy {after} | laptop's own {L(f'mp sprayfx {can}')}", flush=True)
             showing = sum(1 for q in seen[1:] if q.get("mist") and q.get("hiss") and q.get("valve", 0) > 0.3 and q.get("particles", 0) > 0)
@@ -81,8 +79,6 @@ with game.ProtectedSession():
             verdict(f"{tag}: AND IT STOPS", after.get("valve", 1) < 0.05, f"valve {after.get('valve')} (mist rate and hiss volume follow it)")
             time.sleep(2)
     finally:
-        try: h("set TLDRevamp.Net.EntityEffects.SprayFx True")
-        except Exception: pass
         for name, (s_, v) in gods.items():
             try: s_(f"set kaposztaleves.s.settings.god {v if v is not None else False}")
             except Exception as ex: print("god restore", name, ex)

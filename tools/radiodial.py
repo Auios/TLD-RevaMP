@@ -3,7 +3,7 @@
 drives its car at --kmh, the laptop rides as a passenger in its copy; on the laptop, every frame, the game's look ray
 from the camera towards the tuning dial as it is drawn (Diagnostics.AimLab): how often it hits the dial, and how far
 the drawn dial is from its collider. Parked first (the reference), then at speed.
-  tools/radiodial.py [--no-build] [--relay iad|off] [--kmh 100] [--secs 12] [--old: copies interpolated while aboard]"""
+  tools/radiodial.py [--no-build] [--relay iad|off] [--kmh 100] [--secs 12]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game

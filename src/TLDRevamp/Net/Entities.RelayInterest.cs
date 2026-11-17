@@ -16,7 +16,6 @@ namespace TLDRevamp.Net
     /// world always gets everything (its world is the save).
     internal static partial class EntityAuthorityInterest
     {
-        internal static bool InterestRelay = true;   // A/B: false = to every player (before v0.69.2)
         internal static double StateInterestM = Protocol.NearM;
         public static long ResyncRelayed, ResyncHeldBack, ResyncCaughtUp, PoiRelayed, PoiHeldBack, PoiCaughtUp;
         private static readonly Dictionary<int, HashSet<PoiKey>> _stalePoi = new Dictionary<int, HashSet<PoiKey>>();   // player → building usables likewise
@@ -41,7 +40,7 @@ namespace TLDRevamp.Net
         /// all of them instead.
         internal static void RelayResync(uint net, Vector3d where, int from, NetWriter msg)
         {
-            if (!InterestRelay || Mp.Server == null) { Entities.SendToPeers(msg, true, from); return; }
+            if (Mp.Server == null) { Entities.SendToPeers(msg, true, from); return; }
             Mp.Server.ReadySpots(_relaySpots);
             foreach (var s in _relaySpots)
             {
@@ -56,7 +55,7 @@ namespace TLDRevamp.Net
         /// ServerPoiUsable: a usable's change, to the players near its building.
         internal static void RelayPoi(PoiKey k, NetWriter msg, int from, bool reliable = true)
         {
-            if (!InterestRelay || Mp.Server == null) { Entities.SendToPeers(msg, reliable, from); return; }
+            if (Mp.Server == null) { Entities.SendToPeers(msg, reliable, from); return; }
             Mp.Server.ReadySpots(_relaySpots);
             foreach (var s in _relaySpots)
             {
@@ -72,7 +71,7 @@ namespace TLDRevamp.Net
         /// Twice a second (ServerInterestTick): what changed while a player was away, now that they are near it.
         internal static void ServerCatchUpTick()
         {
-            if (!InterestRelay || Mp.Server == null) return;
+            if (Mp.Server == null) return;
             Mp.Server.ReadySpots(_relaySpots);
             foreach (var s in _relaySpots)
             {
@@ -97,7 +96,7 @@ namespace TLDRevamp.Net
         {
             int ents = Entities.CountInterestStale(), pois = 0;
             foreach (var s in _stalePoi.Values) pois += s.Count;
-            return "{\"on\":" + (InterestRelay ? "true" : "false") + ",\"rangeM\":" + StateInterestM.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) +
+            return "{\"on\":" + ("true") + ",\"rangeM\":" + StateInterestM.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) +
                    ",\"resync\":{\"relayed\":" + ResyncRelayed + ",\"heldBack\":" + ResyncHeldBack + ",\"caughtUp\":" + ResyncCaughtUp + ",\"owed\":" + ents + "}" +
                    ",\"poi\":{\"relayed\":" + PoiRelayed + ",\"heldBack\":" + PoiHeldBack + ",\"caughtUp\":" + PoiCaughtUp + ",\"owed\":" + pois + "}}";
         }

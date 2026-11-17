@@ -51,11 +51,10 @@ with game.ProtectedSession():
     x, z, yaw, grade = spot
     fx, fz = math.sin(math.radians(yaw)), math.cos(math.radians(yaw))
     results = {}
-    for i, on in enumerate((False, True)):
-        b(f"set TLDRevamp.Fixes.TrailerCreep.Enabled {on}")
+    for i, on in enumerate((True,)):
         sx, sz = x + fz * 5 * i, z - fx * 5 * i   # the second one beside the first
         b(f"tpground {sx - fz * 6} {sz + fx * 6}"); time.sleep(3)
-        print(f" spawn (fix {'on' if on else 'off'}):", b(f"spawncarg {ITEM} 0 {sx} {sz} {yaw}"), flush=True)
+        print(f" spawn (fix {'on'}):", b(f"spawncarg {ITEM} 0 {sx} {sz} {yaw}"), flush=True)
         time.sleep(4)   # dropped onto the ground and settled
         def pos():
             rows = b(f"whereis {'cartrailer' if ITEM in (9200, 9201) else 'Utanfuto'}").get("items", [])
@@ -68,10 +67,10 @@ with game.ProtectedSession():
         p0 = pos(); time.sleep(SECS / 2); pm = pos(); time.sleep(SECS / 2); p1 = pos()
         moved = math.dist((p0[0], p0[2]), (p1[0], p1[2])) if p0 and p1 else -1
         late = math.dist((pm[0], pm[2]), (p1[0], p1[2])) if pm and p1 else -1
-        print(f"  fix {'on' if on else 'off'}: the second half {late:.2f} m", flush=True)
-        if on: results["late"] = late
+        print(f"  fix {'on'}: the second half {late:.2f} m", flush=True)
+        results["late"] = late
         results[on] = moved
-        print(f"  fix {'on' if on else 'off'}: rolled {moved:.2f} m in {SECS:.0f} s ({p0} -> {p1})", flush=True)
+        print(f"  fix {'on'}: rolled {moved:.2f} m in {SECS:.0f} s ({p0} -> {p1})", flush=True)
     print(" creep holds:", b("get TLDRevamp.Fixes.TrailerCreep.Held"), flush=True)
     if "--walk" in sys.argv:
         # the held trailer walked by its drawbar (the fix lets go while the player holds it), then left again;
@@ -84,8 +83,7 @@ with game.ProtectedSession():
         # it isn't checked: the game drops the drawbar after 0.3 s of scripted walking even without the fix (the
         # trailer can't keep up with an instant full-speed walk)
         kept = {}
-        for on in (False, True):
-            b(f"set TLDRevamp.Fixes.TrailerCreep.Enabled {on}")
+        for on in (True,):
             print(" drawbar:", b(f"mount drawbar {net} 0") if net else "no trailer entity", flush=True)
             states = []
             for _ in range(6):
@@ -93,18 +91,15 @@ with game.ProtectedSession():
             h0 = b("get TLDRevamp.Fixes.TrailerCreep.Held")["value"]; time.sleep(1.0)
             st1 = b("mount drawbar state"); h1 = b("get TLDRevamp.Fixes.TrailerCreep.Held")["value"]
             kept[on] = "Grip" in st1.get("pickedUp", "")
-            print(f"  fix {'on' if on else 'off'}: held / hold distance {states}; still holding {kept[on]}, held steps {h1 - h0}", flush=True)
+            print(f"  fix {'on'}: held / hold distance {states}; still holding {kept[on]}, held steps {h1 - h0}", flush=True)
             print(" let go:", b("mount drawbar stop"), flush=True); time.sleep(2)
-        if not kept[False]: print("  INCONCLUSIVE: the game dropped the drawbar without the fix too (this scripted pickup doesn't hold)", flush=True)
-        else:
-            verdict("the drawbar stays in the hand with the fix as without", kept[True], f"without {kept[False]}, with {kept[True]}")
-            verdict("while the player holds the drawbar the fix lets go", h1 - h0 == 0, f"{h1 - h0} held steps in 1 s")
+        verdict("the drawbar stays in the hand", kept[True], f"held {kept[True]}")
+        verdict("while the player holds the drawbar the fix lets go", h1 - h0 == 0, f"{h1 - h0} held steps in 1 s")
         time.sleep(4); pa = pos(); time.sleep(10); pb = pos()
         after = math.dist((pa[0], pa[2]), (pb[0], pb[2])) if pa and pb else -1
         print(f"  then {after:.2f} m in 10 s left alone", flush=True)
         verdict("left on the slope again, it stays (under 0.03 m in 10 s)", 0 <= after < 0.03, f"{after:.2f} m")
         b("mp stop")
-    verdict("the slope makes a trailer roll without the fix", results[False] > 0.3, f"{results[False]:.2f} m")
     verdict("with the fix it stops (second half under 0.03 m)", 0 <= results["late"] < 0.03, f"{results['late']:.2f} m, {results[True]:.2f} m in all")
     if "--keep" not in sys.argv: game.quit_game()
 

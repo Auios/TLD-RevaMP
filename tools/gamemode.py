@@ -5,7 +5,7 @@ survival on and peaceful enemies; the laptop's own mode is survival off, enemies
   B  joined: the laptop plays by the host's mode (survival on: food it loses stays lost; enemies peaceful)
   C  its own settings file is never written meanwhile (the game's SaveSettings is held back)
   D  after leaving: its own mode again
-  tools/gamemode.py [--no-build] [--relay iad|off] [--old: Sync off — the joiner keeps its own mode]"""
+  tools/gamemode.py [--no-build] [--relay iad|off]"""
 import sys, time, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -13,7 +13,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 from roadkit import g
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 VERDICTS = []
 def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok)); print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
@@ -32,11 +32,10 @@ with game.ProtectedSession():
     try:
         h(f"set {S}.survival 2"); h(f"set {S}.peacefulEnemies 2")
         L(f"set {S}.survival 1"); L(f"set {S}.peacefulEnemies 1")
-        L(f"set TLDRevamp.Net.GameMode.Sync {not OLD}")
         if RELAY != "off": relay_both(h, L, RELAY)
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        print(f"  {'OLD (the joiner keeps its own mode)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         sid = h("net me")["steamId"]
         time.sleep(4)
         fh = L(f"mp friendhost {sid}"); print("  the host as the laptop's menu sees it:", fh, flush=True)
@@ -46,12 +45,10 @@ with game.ProtectedSession():
         L(f"set mainscript.s.player.survival.food {mf * 0.5:.3f}"); time.sleep(3)
         food = num(g(L, "mainscript.s.player.survival.food"))
         print(f"  joined: survival {surv}, peaceful {peace}, food after 3 s {food:.2f} of {mf:.2f}; {L('mp gamemode')}", flush=True)
-        if OLD: verdict("B OLD: THE LAPTOP KEEPS ITS OWN MODE", surv == 1 and food > 0.9 * mf, f"survival {surv}, food {food:.2f}")
-        else: verdict("B THE LAPTOP PLAYS BY THE HOST'S MODE", surv == 2 and peace == 2 and food < 0.6 * mf, f"survival {surv}, peaceful {peace}, food {food:.2f}")
-        if not OLD:
-            b0 = L("mp gamemode")["savesBlocked"]
-            L("call gamemodesettingsscript.s.SaveSettings")
-            verdict("C ITS OWN SETTINGS FILE IS NOT WRITTEN", L("mp gamemode")["savesBlocked"] == b0 + 1, str(L("mp gamemode")))
+        verdict("B THE LAPTOP PLAYS BY THE HOST'S MODE", surv == 2 and peace == 2 and food < 0.6 * mf, f"survival {surv}, peaceful {peace}, food {food:.2f}")
+        b0 = L("mp gamemode")["savesBlocked"]
+        L("call gamemodesettingsscript.s.SaveSettings")
+        verdict("C ITS OWN SETTINGS FILE IS NOT WRITTEN", L("mp gamemode")["savesBlocked"] == b0 + 1, str(L("mp gamemode")))
         L("mp stop"); time.sleep(2)
         surv, peace = g(L, f"{S}.survival"), g(L, f"{S}.peacefulEnemies")
         verdict("D AFTER LEAVING: ITS OWN MODE", surv == 1 and peace == 1, f"survival {surv}, peaceful {peace}")
@@ -59,7 +56,6 @@ with game.ProtectedSession():
         verdict("NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er), str([(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er]))
     finally:
         try:
-            L("set TLDRevamp.Net.GameMode.Sync True")
             for k, v in own.items(): L(f"set {S}.{k} {v}")
         except Exception as ex: print("restore", ex)
         L("mp stop"); h("mp stop")

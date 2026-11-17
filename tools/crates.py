@@ -7,14 +7,14 @@ machines over the relay.
   2 the laptop breaks a crate the host owns (a hit on its copy → the owner breaks it)
 After each: everything within 12 m of the crate on both machines, by model and place (`mp sitestate`) — the same loot on
 both, nothing extra, nothing missing; the crate gone on both.
-  tools/crates.py [--no-build] [--relay iad|off] [--old] [--box 62]"""
+  tools/crates.py [--no-build] [--relay iad|off] [--box 62]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, BOX, OLD = arg("--relay", "iad"), arg("--box", 62, int), "--old" in sys.argv
+RELAY, BOX = arg('--relay', 'iad'), arg('--box', 62, int)
 R = 12
 VERDICTS = []
 def verdict(name, ok, detail=""):
@@ -57,8 +57,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.Entities.ReshareSurvivors {not OLD}")
-        print(f"  {'OLD (fix off)' if OLD else 'NEW (fix on)'}", flush=True)
+        print(f"  {'NEW (fix on)'}", flush=True)
         time.sleep(5)
         hp = h("gpos")
         L(f"tpground {hp['gx'] + 4} {hp['gz'] - 6}"); time.sleep(3)

@@ -8,10 +8,10 @@ the real send -> server relay -> playback path, no microphone needed).
   5 the host's session setting "everyone hears everyone": the laptop's plain voice from 150 m reaches the host, and the
     host's reaches the laptop, both 2D; the laptop's snapshot says so; off again: nothing from 150 m
   6 back near: it works again, 3D
-  7 bursty Wi-Fi: gaps in the host's voice on the laptop (--ab: the fixed 80 ms buffer first)
+  7 bursty Wi-Fi: gaps in the host's voice on the laptop
   8 the MP screen's Session settings panel on both: four rows, the Voice row toggles on the host (the laptop's row and
     snapshot follow), the laptop's click changes nothing; screenshots `shot voice-everyone-panel-host|laptop`
-  tools/voicesync.py [--no-build] [--relay iad|off] [--ab]"""
+  tools/voicesync.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -81,8 +81,7 @@ with game.ProtectedSession():
                 f"in {pin}, played {played}, level {best and best['level']}, blend {best and best.get('spatialBlend')}")
         # 7 the laptop's bursty Wi-Fi (power saving, ~300 ms bursts): mid-speech gaps in the host's voice on the laptop
         #   (underruns beyond the one at the end of each utterance), adaptive buffer off (A) then on (B)
-        for adaptive in ([False, True] if "--ab" in sys.argv else [True]):
-            L(f"set TLDRevamp.Net.Voice.AdaptiveJitter {adaptive}")
+        for adaptive in ((True,)):
             gaps, primes = 0, []
             for k in range(3):
                 u0 = (speaker(L, 0)[1] or {}).get("underruns", 0)
@@ -90,9 +89,8 @@ with game.ProtectedSession():
                 sp = speaker(L, 0)[1] or {}
                 gaps += max(0, sp.get("underruns", 0) - u0 - 1); primes.append(sp.get("primeMs"))
                 time.sleep(1.5)
-            tag = "B ADAPTIVE BUFFER" if adaptive else "A FIXED 80 MS (before v0.65.31)"
-            verdict(f"7 {tag}: THE HOST'S VOICE ON THE LAPTOP WITHOUT GAPS (one while it learns the link)", gaps <= 1 if adaptive else True, f"{gaps} gaps in 3 x 6 s; buffer {primes} ms")
-        L("set TLDRevamp.Net.Voice.AdaptiveJitter True")
+            tag = "B ADAPTIVE BUFFER"
+            verdict(f"7 {tag}: THE HOST'S VOICE ON THE LAPTOP WITHOUT GAPS (one while it learns the link)", gaps <= 1, f"{gaps} gaps in 3 x 6 s; buffer {primes} ms")
         # 8 the MP screen's Session settings panel: four rows, the Voice row toggles on the host, read-only on the laptop
         # opened the player's way: the pause menu first, its Multiplayer button a moment later
         for s_ in (h, L): s_("call mainscript.s.PressedEscape False False")

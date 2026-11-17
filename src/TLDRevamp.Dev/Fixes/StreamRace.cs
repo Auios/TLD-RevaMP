@@ -41,7 +41,7 @@ namespace TLDRevamp.Fixes
                 return "{\"car\":" + Json.Str(car.name) + ",\"id\":" + car.idInSave + ",\"members\":" + members + ",\"part\":" + Json.Str(part.name) +
                        ",\"dist\":" + best.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ",\"preDestroyed\":" + (car.preDestroyed ? "true" : "false") +
                        ",\"recordAfterUpd\":" + (rec ? "true" : "false") + ",\"recordsKept\":" + (RecordsKept - kept0) +
-                       ",\"spawnDist\":" + ips.itemSpawnDist.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"removeDist\":" + ips.itemRemoveDist.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"enabled\":" + (Enabled ? "true" : "false") + "}";
+                       ",\"spawnDist\":" + ips.itemSpawnDist.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"removeDist\":" + ips.itemRemoveDist.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"enabled\":" + ("true") + "}";
             }
             if (parts[0] == "check" && parts.Length > 1 && uint.TryParse(parts[1], out uint id))
             {

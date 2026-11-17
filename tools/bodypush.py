@@ -8,15 +8,14 @@ a row of the host's jerry cans on flat ground, the laptop's player beside them.
      and the ownership did not churn (owner changes counted in the host's owner log)
   C  STANDING STILL AGAINST A CAN (the laptop leans on one) → no claim: standing against a copy took it every step before
   D  no errors on either machine
-  --old: EntityCargoInteraction.BodyClaims False on both (the A/B: items stay frozen until their owner moves them)
-  tools/bodypush.py [--no-build] [--relay iad|off] [--old]"""
+  tools/bodypush.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_both
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 JERRYCAN, N = 72, 5
 T = "TLDRevamp.Net.Entities"
 VERDICTS = []
@@ -54,8 +53,8 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L): s_("set kaposztaleves.s.settings.god True"); s_(f"set TLDRevamp.Net.EntityCargoInteraction.BodyClaims {not OLD}")
-        print(f"  {'OLD (no body claims)' if OLD else 'NEW (body claims)'}", flush=True)
+        for s_ in (h, L): s_("set kaposztaleves.s.settings.god True")
+        print(f"  {'NEW (body claims)'}", flush=True)
         lid, hid = L("mp entities")["me"], h("mp entities")["me"]
         rp = h("roadpoint"); x, z = rp["gx"] + 12, rp["gz"] + 12
         h(f"tpground {x} {z}"); L(f"tpground {x} {z + 6}"); time.sleep(4)
@@ -82,8 +81,7 @@ with game.ProtectedSession():
         print("  [A] after:", [r[:4] for r in rows], f"middle can moved {moved:.2f} m on the host", flush=True)
         print("  [A] owner log:", [l for c in cans for l in h(f"mp ownerlog {c}")["log"]], flush=True)
         print("  [A] laptop player at", L("gpos"), "cans at", [[round(v, 1) for v in ents(h)[c]["pos"]] for c in cans], flush=True)
-        if not OLD:
-            verdict("A1 THE LAPTOP'S NOW, AND PUSHED", rows[len(cans) // 2][1] == lid and moved > 0.05, f"host sees owner {rows[len(cans) // 2][1]}, moved {moved:.2f} m")
+        verdict("A1 THE LAPTOP'S NOW, AND PUSHED", rows[len(cans) // 2][1] == lid and moved > 0.05, f"host sees owner {rows[len(cans) // 2][1]}, moved {moved:.2f} m")
         verdict("A2 EVERY CAN AT THE SAME PLACE ON BOTH", all(r[3] is not None and r[3] < 0.3 for r in rows), str([(r[0], r[3]) for r in rows]))
         others = [r for r in rows if r[0] != mid]
         verdict("A3 THE CANS NOBODY WALKED INTO KEPT THEIR OWNER", all(r[1] == hid and r[2] == hid for r in others),
@@ -120,9 +118,6 @@ with game.ProtectedSession():
         er = [s_("errors") for s_ in (h, L)]
         verdict("D NO ERRORS", all(x_["errors"] == 0 and x_["exceptions"] == 0 for x_ in er), str([(x_["errors"], x_["exceptions"], (x_.get("kinds") or [])[:3]) for x_ in er]))
     finally:
-        for s_ in (h, L):
-            try: s_(f"set TLDRevamp.Net.EntityCargoInteraction.BodyClaims True")
-            except Exception: pass
         try: L("mp stop"); h("mp stop")
         except Exception: pass
         if RELAY != "off":

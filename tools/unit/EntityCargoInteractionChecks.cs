@@ -35,8 +35,7 @@ static partial class EntitySplitTest
             Time.realtimeSinceStartup = 10; Time.realtimeSinceStartupAsDouble = 10; Time.time = 10; Time.deltaTime = .02f;
             Physics.Hits = Physics.Sweeps = Array.Empty<RaycastHit>(); Physics.Overlaps = Array.Empty<Collider>();
             mainscript.s = new mainscript { player = new fpscontroller { RB = new Rigidbody(), CBody = new CargoCapsule() } };
-            foreach (string name in new[] { "BodyClaims", "LoosePartClaims", "LetGoClaims", "SeamlessClaims", "RideRelative" }) Set(CargoOwner, name, true);
-            foreach (string name in new[] { "CargoClaimed", "LetGoClaimTries", "BodyClaimedNear", "BodyClaimedOnContact", "PushFrames", "PushesSent", "PushesApplied", "PushesRejected", "GripClaims", "GripLost", "GripRefused" }) Set(CargoOwner, name, 0L);
+                foreach (string name in new[] { "CargoClaimed", "LetGoClaimTries", "BodyClaimedNear", "BodyClaimedOnContact", "PushFrames", "PushesSent", "PushesApplied", "PushesRejected", "GripClaims", "GripLost", "GripRefused" }) Set(CargoOwner, name, 0L);
             Set(CargoOwner, "ClaimTrace", false); Set(CargoOwner, "CargoClaimCooldownS", 2f); Set(CargoOwner, "_gripNet", 0u); Set(CargoOwner, "_pushSendAcc", 0f);
             ((IDictionary)Field(CargoOwner, "PushOut")).Clear();
         }
@@ -113,15 +112,15 @@ static partial class EntitySplitTest
         var car = new carscript { RB = new Rigidbody { PointVelocity = new Vector3(3, 0, 0) } }; var carCol = new Collider { attachedRigidbody = car.RB }; carCol.transform.parent = car.transform;
         car.transform.ChildComponent = car;
         Physics.Hits = new[] { new RaycastHit { collider = own, distance = .1f }, new RaycastHit { collider = looseCol, distance = .2f }, new RaycastHit { collider = carCol, distance = 1 } };
-        foreach (bool skips in new[] { true, false })
+        foreach (bool skips in new[] { true })
         {
-            EntityCargoInteraction.SurfaceSkipsItems = skips; object[] args = { surfaceItem, null }; var first = CargoCall("SurfaceUnder", args);
+            object[] args = { surfaceItem, null }; var first = CargoCall("SurfaceUnder", args);
             Row("surface-" + skips, ReferenceEquals(first, car.transform) + ":" + ReferenceEquals(args[1], car.RB));
             var rb = new Rigidbody { velocity = new Vector3(10, 0, 0) }; Row("ride-" + skips, ((Vector3)CargoCall("RideVelocity", surfaceItem, rb)).x);
         }
-        foreach (bool relative in new[] { true, false })
+        foreach (bool relative in new[] { true })
         {
-            EntityCargoInteraction.SurfaceSkipsItems = true; EntityCargoInteraction.RideRelative = relative; car.RB.isKinematic = true;
+            car.RB.isKinematic = true;
             Entities.ByNet[400] = new Entities.Ent { NetId = 400, Root = new tosaveitemscript { car = car }, LastVel = new Vector3(4, 0, 0) };
             Row("ride-proxy-" + relative, ((Vector3)CargoCall("RideVelocity", surfaceItem, new Rigidbody { velocity = new Vector3(10, 0, 0) })).x);
         }
@@ -140,14 +139,6 @@ static partial class EntitySplitTest
             Clean(); var e = Item(); e.PoseLocked = locked; e.CarriedBy = carried ? 1u : 0; e.Stored = stored;
             e.Root.ChildComponent = new Rigidbody(); e.Ip = new PoseInterpolator { Ready = true, Value = new PoseInterpolator.Sample { Pos = new Vector3d(5, 6, 7), Rot = Quaternion.identity, Vel = new Vector3(2, 0, 0) } };
             CargoCall("PlaceAtNewest", e); Row("newest-" + locked + "-" + carried + "-" + stored, e.Root.transform.position.x + ":" + e.LastVel.x);
-        }
-        foreach (bool stored in new[] { false, true })
-        foreach (float distance in new[] { 0f, 1.049f, 1.051f, 3f })
-        {
-            Clean(); var e = Item(); var container = new carscript(); e.Root.transform.position = new Vector3(distance, 0, 0);
-            if (stored) { e.Root.P.physlock = new mountStuff(); e.Root.P.physlock.transform.parent = container.transform; }
-            EntityCargoInteraction.ContentsOverCar = false; object[] args = { container, e, false };
-            Row("contents-" + stored + "-" + distance, CargoCall("InCar", args) + ":" + args[2]);
         }
         foreach (int bits in Enumerable.Range(0, 8))
         {

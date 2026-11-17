@@ -7,7 +7,7 @@ host's copy of that car 5-16 m off it, "car tweaking", "heavy positional desync"
   B  the joiner drives its car off and stops: the host's copy follows it and rests where the car rests
   C  the joiner glues a second thing on the HOST's car: the host drives it, and it drives as without the thing
 --old runs with CopyJointsFree off (the joints stay locked on copies, as before).
-  tools/copyjoint.py [--no-build] [--relay iad|off] [--old] [--car Car06Full] [--item Attachable07]"""
+  tools/copyjoint.py [--no-build] [--relay iad|off] [--car Car06Full] [--item Attachable07]"""
 import sys, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game

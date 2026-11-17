@@ -44,7 +44,7 @@ with game.ProtectedSession():
     if RELAY != "off": relay_both(h, L, RELAY)
     if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-    for i, a in enumerate(sys.argv):   # --set EntityHands.RidingFrames=False (A/B flags under TLDRevamp.Net, both games)
+    for i, a in enumerate(sys.argv):   # --set EntityHands.HandItemDraw=False (A/B flags under TLDRevamp.Net, both games)
         if a == "--set":
             k, v = sys.argv[i + 1].split("=", 1)
             for s_ in (h, L): s_(f"set TLDRevamp.Net.{k} {v}")

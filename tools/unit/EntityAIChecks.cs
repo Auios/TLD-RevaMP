@@ -140,7 +140,6 @@ static partial class EntitySplitTest
         Physics.Hits = new[] { new RaycastHit { distance = .5f, collider = new Collider { ParentComponent = local } } };
         PlayerCombat.RayDistance = -1; long kept = EntityAI.AiKeptOnRemote; prefix = new object[] { a, 0f };
         AIPatch("AiUpdate", "Prefix", prefix); Check(EntityAI.AiKeptOnRemote == kept + 1 && a.fov == -1 && AITable("AiChasing").Count == 1, "sticky remote target survives missed sight frame"); AIPatch("AiUpdate", "Finalizer", a, prefix[1], null);
-        EntityAI.AiStickyRemote = false; prefix = new object[] { a, 0f }; AIPatch("AiUpdate", "Prefix", prefix); Check(AITable("AiChasing").Count == 0 && float.IsNaN((float)prefix[1]), "sticky switch removes remote target without overriding local sight"); EntityAI.AiStickyRemote = true;
         PlayerCombat.RayDistance = 1; Physics.Hits = Array.Empty<RaycastHit>(); local.transform.position = Vector3.zero;
         gamemodesettingsscript.s.S.peacefulEnemies = 2; seen = EntityAI.AiRemoteSeen; prefix = new object[] { a, 0f }; AIPatch("AiUpdate", "Prefix", prefix); Check(EntityAI.AiRemoteSeen == seen && float.IsNaN((float)prefix[1]), "peaceful mode skips remote AI hunting"); gamemodesettingsscript.s.S.peacefulEnemies = 0;
     }
@@ -202,7 +201,7 @@ static partial class EntitySplitTest
     static void AIWorldChecks(breakablescript world, byte[] bytes)
     {
         AICall("BreaksReset"); long applied = EntityAI.WorldBreaksApplied, late = EntityAI.WorldBreaksLate, scans = EntityAI.WorldBreakScans;
-        EntityAI.WorldBreaksKept = true; world.destroyed = false; world.Gib = new GameObject(); world.reducedGib = new GameObject(); var gib = world.Gib;
+        world.destroyed = false; world.Gib = new GameObject(); world.reducedGib = new GameObject(); var gib = world.Gib;
         UnityEngine.Object.Found = new object[] { world }; AICall("ApplyWorldBreak", Reader(bytes));
         Check(!world.destroyed && AIList("_worldBreaksWaiting").Count == 1, "world break queues until grouped scan");
         Time.realtimeSinceStartup = 60; AICall("WorldBreakTick");
@@ -213,7 +212,6 @@ static partial class EntitySplitTest
         scans = EntityAI.WorldBreakScans; Time.realtimeSinceStartup = 63; AICall("WorldBreakTick"); Check(EntityAI.WorldBreakScans == scans, "world break backoff avoids scan before due");
         mainscript.s.player.transform.position = new Vector3(1000, 0, 0); Time.realtimeSinceStartup = 65; AICall("WorldBreakTick"); Check(EntityAI.WorldBreakScans == scans, "far world break waits for local streaming range"); mainscript.s.player.transform.position = Vector3.zero;
         world.destroyed = false; UnityEngine.Object.Found = new object[] { world }; AICall("WorldBreakTick"); Check(AIList("_worldBreaksWaiting").Count == 0 && world.destroyed, "world piece applies after returning to range");
-        EntityAI.WorldBreaksKept = false; long missed = EntityAI.WorldBreaksMissed; AICall("ApplyWorldBreak", Reader(bytes)); Check(EntityAI.WorldBreaksMissed == missed + 1 && AIList("_worldBreaksWaiting").Count == 0, "old world mode counts immediate miss without retention"); EntityAI.WorldBreaksKept = true;
         AICall("ApplyWorldBreak", Reader(bytes.Take(10).ToArray())); Check(AIList("_worldBreaksWaiting").Count == 0, "truncated world break never queues");
         var wrong = bytes.ToArray(); BitConverter.GetBytes(double.NaN).CopyTo(wrong, 1); AICall("ApplyWorldBreak", Reader(wrong)); Check(AIList("_worldBreaksWaiting").Count == 0, "NaN world position rejected");
         AICall("ServerKeepWorldBreak", Reader(bytes)); int sends = Entities.Packets.Count;
@@ -223,7 +221,6 @@ static partial class EntitySplitTest
         long sent = EntityAI.WorldBreaksSent; world.ParentComponent = item; AICall("WorldBreakOut", world); Check(EntityAI.WorldBreaksSent == sent, "unshared item gib never names a generated world piece"); world.ParentComponent = null;
         AICall("BreaksReset"); for (int i = 0; i < EntityAI.MaxWorldBreaks + 2; i++) AICall("ServerKeepWorldBreak", Reader(bytes));
         Check(AIList("_worldBreaks").Count == EntityAI.MaxWorldBreaks, "server world break history retains original 4096 cap");
-        EntityAI.WorldBreaksKept = false; AICall("BreaksReset"); AICall("ServerKeepWorldBreak", Reader(bytes)); Check(AIList("_worldBreaks").Count == 0, "world keep switch disables server history"); EntityAI.WorldBreaksKept = true;
     }
 
     static void AITumbleChecks()

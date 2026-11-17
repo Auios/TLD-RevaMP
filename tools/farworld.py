@@ -13,7 +13,7 @@ they did there, and is the place as it was left when someone else comes — live
               loads that save — what reached the host from 200 km away, untouched by its own visit (the user's call)
 Views: `mp sitestate` — every item within R of the site by model + global position + saved state (fuel, part
 conditions, switches, attached), independent of network ids.
-  tools/farworld.py [--no-build] [--km 200] [--relay iad|off] [--only 0,1,A,B,C] [--set Net.Entities.X=False,...] [--old66]"""
+  tools/farworld.py [--no-build] [--km 200] [--relay iad|off] [--only 0,1,A,B,C] [--set Net.Entities.X=False,...]"""
 import sys, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -147,11 +147,7 @@ def farstore(label, sides, sx, sz):
               f"died {s('get mainscript.s.player.died')['value']}", flush=True)
 
 # --set A=v,B=v : TLDRevamp field values set on both machines before every session (re-applied after the restart);
-# --old66 : every v0.66.x fix off (A/B)
-OLD66 = ("Net.PoseInterpolator.FreshAfterIdle=False,Net.Entities.FarMoveAttached=False,Net.Entities.StoredAttach=False,"
-         "Net.Entities.ClearHeldOnAttach=False,Net.Entities.ReshareSurvivors=False,Net.EntityLocks.CopyContainersInert=False,"
-         "Net.Entities.ScopedEdits=False,Net.EntityLocks.CopyStartFreezeOff=False")
-SETS = [kv.split("=") for kv in ((sys.argv[sys.argv.index("--set") + 1] if "--set" in sys.argv else "") + ("," + OLD66 if "--old66" in sys.argv else "")).split(",") if kv]
+SETS = [kv.split("=") for kv in ((sys.argv[sys.argv.index("--set") + 1] if "--set" in sys.argv else "") + ("")).split(",") if kv]
 
 def host_and_join(b, L):
     for k, v in SETS:
@@ -173,7 +169,6 @@ try:
         for s in (b, L): s("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
         _SIDES[:] = [(b, "desktop"), (L, "laptop")]; _DEATHS0.update(deaths_now())
         AI_IDS.update(x[0] for x in b("mp aiids")["ai"])
-        if "--no-handoff" in sys.argv: print("hand-off OFF (A/B):", b("set TLDRevamp.Net.Entities.HandoffEnabled False"), flush=True)
         time.sleep(8)
         host_and_join(b, L)
         sides = {"desktop": b, "laptop": L}

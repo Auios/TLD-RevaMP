@@ -3,7 +3,7 @@
 trailer with another Car01 on its deck. As transporter.py, with the trailer as the carrier.
   A. the deck holds the car;  B. the laptop sees it there;  C. the host tows (laptop rides along): the cargo stays on the
   deck and the trailer behind the car, on both machines;  D. the same with the laptop driving (host rides along)
-  TLD_TEST_MODS=CarTrailer tools/cartrailer.py [--no-build] [--relay iad|off] [--kmh 40] [--old] [--assists]"""
+  TLD_TEST_MODS=CarTrailer tools/cartrailer.py [--no-build] [--relay iad|off] [--kmh 40] [--assists]"""
 import os
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer")
 import sys, time, math, pathlib, statistics
@@ -94,9 +94,6 @@ with game.ProtectedSession():
     if "--assists" in sys.argv:   # the optional driving assists on for both drivers (Fixes.DrivingAssists)
         for s_ in (h, L):
             for k in ("Sway", "Roll", "Traction"): s_(f"set TLDRevamp.Fixes.DrivingAssists.{k} True")
-    if "--old" in sys.argv:
-        for s_ in (h, L): s_("set TLDRevamp.Net.Entities.CarCargoClaims False")   # A/B: a carried car stays with its last owner
-    print("  carried cars follow the carrier:", g(h, "TLDRevamp.Net.Entities.CarCargoClaims"), flush=True)
     h("set settingsscript.s.S.BAutoShift True"); L("set settingsscript.s.S.BAutoShift True")
     for s_ in (h, L): s_("set TLDRevamp.DriveLab.Recover False")   # backing up to get unstuck jackknifes a trailer (runs 13-14)
     print("  physics lock (host):", g(h, "settingsscript.s.S.IPhysicsLock"), flush=True)

@@ -16,7 +16,7 @@ disappear for a moment at the edge of your rendering and come back"). Two machin
             must show where the car is from the first frames (no glide in from where it went out of view), and be placed
             once (no stream-out/in flicker at the edge)
 Census: `mp carparts <net>` — every part bolted into the car (slot → model) and the wheels in the car's frame.
-  tools/meetagain.py [--no-build] [--relay iad|off] [--only D,E,A,B] [--cycles 4] [--drive 40] [--old] [--car 2] [--leftoff]"""
+  tools/meetagain.py [--no-build] [--relay iad|off] [--only D,E,A,B] [--cycles 4] [--drive 40] [--car 2] [--leftoff]"""
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -148,10 +148,6 @@ with game.ProtectedSession():
         h("mp host 27070"); L(join_cmd(h, sid))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")   # (the join reloads the world)
-        OLD = "--old" in sys.argv   # A/B: both v0.66.2 fixes off on both machines
-        for s_ in (h, L):
-            s_(f"set TLDRevamp.Net.PoseInterpolator.FreshAfterIdle {not OLD}"); s_(f"set TLDRevamp.Net.Entities.FarMoveAttached {not OLD}")
-        print(f"  {'OLD (fixes off)' if OLD else 'NEW (fixes on)'}: FreshAfterIdle {h('get TLDRevamp.Net.PoseInterpolator.FreshAfterIdle')['value']}/{L('get TLDRevamp.Net.PoseInterpolator.FreshAfterIdle')['value']}", flush=True)
         time.sleep(8)
         rem = h("get itemPlaceRemoveScript.s.itemRemoveDist")["value"]; spawnd = h("get itemPlaceRemoveScript.s.itemSpawnDist")["value"]
         print(f"  item range: remove beyond {rem} m, place within {spawnd} m", flush=True)

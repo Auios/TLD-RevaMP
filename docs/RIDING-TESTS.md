@@ -42,8 +42,7 @@ tolerance. These are synthetic replay results, not measurements from the interne
 
 The bridge `ridingcheck.py` tests front/rear seats, the roof and rear aisle, with both host and joiner driving. It
 captures synchronized format-3 marks on both machines and checks sent/received cadence, held frames, corrections,
-render pauses, matching car/rider clocks and local pelvis/root offsets. Its before phase switches off RidingFrames
-and restores physics-only seated drawing on this build; its after phase enables the fix. The offline selftest
+render pauses, matching car/rider clocks and local pelvis/root offsets. Riding frames are always on. The offline selftest
 rejects missing traces, clock mismatch, starvation, held motion, jitter and a stable 0.4 m trailing pelvis; the
 synthetic fixed-frame pair has zero offset. Actual bus articulation, ground contact, camera comfort, interaction
 aim and internet loss/jitter still require the two-copy run or a real playtest. No game was run for this change.

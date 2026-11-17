@@ -8,7 +8,6 @@ namespace TLDRevamp.Net
     {
         internal const byte AttachReq = 62, PartOff = 26;
         internal static readonly System.Collections.Generic.List<(int Player, string Notice)> AttachmentNotices = new System.Collections.Generic.List<(int, string)>();
-        internal static bool CarriedPartsShared = true;
         internal static void SendAttach(Ent entity, attachablescript at, byte type = AttachSync) => AttachmentTestTrace += "send:" + type + ";";
         internal static string AttachmentTestTrace = "";
         internal static void LiveUsablesChanged(tosaveitemscript item) => AttachmentTestTrace += "live;";

@@ -9,13 +9,12 @@ namespace TLDRevamp.Fixes
         new[] { typeof(attachablescript), typeof(int), typeof(int), typeof(uint), typeof(int), typeof(Vector3d), typeof(int), typeof(Vector3d), typeof(Vector3d) })]
     public static class MissingTrailerSlot
     {
-        public static bool Enabled = true;
         public static long Detached;
 
         [HarmonyPrefix]
         internal static bool Prefix(attachablescript _script, int _indexType, int _attachType, uint _parentid, int _index)
         {
-            if (!Enabled || _script == null || _script.utanfuto == null || _indexType != 2 || _attachType != 1 || _index < 0 ||
+            if (_script == null || _script.utanfuto == null || _indexType != 2 || _attachType != 1 || _index < 0 ||
                 itemPlaceRemoveScript.s == null || !itemPlaceRemoveScript.s.GetOne(_parentid, out var parent) ||
                 parent == null || parent.car == null || parent.partslotscripts == null || _index < parent.partslotscripts.Count) return true;
             if (_script.attached) _script.Detach();

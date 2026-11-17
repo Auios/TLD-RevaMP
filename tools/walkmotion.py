@@ -3,7 +3,7 @@
 car 40 m off for 10 s (FillLab walk: forward held); the other machine's body of them is measured in-game, every frame:
 speed mean / p10 / p50 / p90 over the last 240 frames (`mp players` motion). Smooth walking: p10 near the mean; bursts
 (states arriving in clumps, then a stop) show as p10 ~0 and a high p90.
-  tools/walkmotion.py [--no-build] [--relay iad|off] [--tag <label>] [--old: before v0.65.32] [--old-poses: before v0.65.33]"""
+  tools/walkmotion.py [--no-build] [--relay iad|off] [--tag <label>]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -21,10 +21,6 @@ with game.ProtectedSession():
     h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-    if "--old-poses" in sys.argv:   # poses handed over as they arrive (before v0.65.33)
-        for s_ in (h, L): s_("set TLDRevamp.Net.RemotePlayers.PacePoses False")
-    if "--old" in sys.argv:   # A: bodies ease towards the newest state (before v0.65.32)
-        for s_ in (h, L): s_("set TLDRevamp.Net.RemotePlayers.InterpBodies False")
     gods = {}
     try:
         for name, s_ in (("host", h), ("laptop", L)):

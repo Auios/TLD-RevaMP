@@ -123,10 +123,9 @@ namespace TLDRevamp.Net
                     {
                         ByNet.Remove(e.NetId);
                         CopiesLost++;
-                        if (RefetchParts && e.PartIndex >= 0) _lostParts[e.NetId] = new LostPart { Car = e.ParentNet, Idx = e.PartIndex, Hanging = HangingOn(e.ParentNet, e.PartIndex, __instance) };
+                        if (e.PartIndex >= 0) _lostParts[e.NetId] = new LostPart { Car = e.ParentNet, Idx = e.PartIndex, Hanging = HangingOn(e.ParentNet, e.PartIndex, __instance) };
                         // the members it let go (a crate's loot) would stay as frozen copies nobody moves, next to the
                         // fresh ones the refetch or the owner's re-share brings
-                        if (ReshareSurvivors)
                         {
                             SuppressDestroyEcho = true;
                             try
@@ -144,7 +143,7 @@ namespace TLDRevamp.Net
                         if (again)
                         {
                             // not now, but not never: it left ByNet, so no census, and the server has it as known, so no Add
-                            if (RefetchLater) _refetchLater[e.NetId] = last + RefetchEveryS;
+                            _refetchLater[e.NetId] = last + RefetchEveryS;
                             return;
                         }
                         _refetchedAt[e.NetId] = now2;
@@ -161,8 +160,7 @@ namespace TLDRevamp.Net
                     // box. The receivers destroy the whole group with the object (DestroyLocalCopy) — the survivors go out
                     // again as objects of their own next frame, once the game has let them go (playtest 2026-10-09:
                     // "crates are not synced" — the loot was on the breaker's machine only)
-                    if (ReshareSurvivors)
-                        for (int i = 0; i < e.Items.Count; i++)
+                    for (int i = 0; i < e.Items.Count; i++)
                             if (e.Items[i] != null && e.Items[i] != __instance) _reshare.Add(e.Items[i]);
                     return;
                 }
@@ -244,8 +242,6 @@ namespace TLDRevamp.Net
             part.Where = part.HasState ? part.Pos : mainscript.GlobalFromUnityPos(pe.Root.transform.position);
             foreach (var kv in Known) if (kv.Value.Contains(car.NetId)) kv.Value.Add(part.NetId);   // they have it already
         }
-
-        public static bool ReshareSurvivors = true;   // A/B: false = before v0.66.2 (crates.py)
         public static long Reshared, OrphansCleared;
         private static readonly List<tosaveitemscript> _reshare = new List<tosaveitemscript>();
 
@@ -285,7 +281,6 @@ namespace TLDRevamp.Net
         public const byte Refetch = 58;
         public static long Replaced, CopiesLost, Refetched;
         private static readonly Dictionary<uint, float> _refetchedAt = new Dictionary<uint, float>();
-        public static bool RefetchLater = true;   // A/B: false = before (a copy lost twice within 30 s stayed away for the session)
         public static float RefetchEveryS = 30f;
         public static long RefetchedLater;
         private static readonly Dictionary<uint, float> _refetchLater = new Dictionary<uint, float>();
@@ -304,10 +299,6 @@ namespace TLDRevamp.Net
                 W.Reset(); W.U8(Refetch); W.U32(net); WriteLostPart(W, net); ToServer(W, true);
             }
         }
-
-        /// A/B: false = before: a lost part's refetch sent its car again, which this machine still had (a duplicate), and the part
-        /// off that car, which it no longer had to take off ("part absent"): the part stayed gone for the session.
-        public static bool RefetchParts = true;
         public static long PartsRefetched, PartsRefetchNoRecord, PartsCameBack;
         private sealed class LostPart { public uint Car; public int Idx; public List<Hung> Hanging; }
         private struct Hung { public int Member, Prefab; public Vector3 Local; }
@@ -439,8 +430,6 @@ namespace TLDRevamp.Net
             foreach (var set in _poseNear.Values) set.Remove(net);
             foreach (var set in _rabbitNear.Values) set.Remove(net);
         }
-
-        public static bool RemoveFarMembers = true;   // A/B: false = a far object's members stay in the far store
         public static long FarMembersRemoved;
 
         private static void DestroyLocalCopy(uint net)
@@ -462,7 +451,7 @@ namespace TLDRevamp.Net
                 RemoveRecord(e.RootId);
                 // and its members' records, or they come back loose where the object was, its doors and barrels on one
                 // machine only (itemchaos aud-ghost: a car deleted with the other player 3 km away). What came off stays.
-                if (RemoveFarMembers && e.ItemIds != null)
+                if (e.ItemIds != null)
                     for (int i = 0; i < e.ItemIds.Count; i++)
                     {
                         uint id = e.ItemIds[i];

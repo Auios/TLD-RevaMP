@@ -136,15 +136,8 @@ namespace TLDRevamp.Net
             public bool Everyone;                  // the last packet was sent to everyone: played 2D
             public readonly float[] Gaps = new float[30]; public int GapN;   // recent arrival gaps within an utterance
         }
-
-        /// A fixed 80 ms buffer ran dry whenever packets came in bursts — a laptop on power-saving Wi-Fi gets everything
-        /// in ~300 ms bursts (twocars, 10-08): 3 gaps in 3 s of speech (tools/voicesync.py), heard as crackle. Each
-        /// talker's buffer now covers the longest arrival gap of its last 30 packets (+30 ms), 80-400 ms; the lag cap
-        /// sits 250 ms above it. Smooth over a bursty link at the cost of that much more delay, only for that talker.
-        public static bool AdaptiveJitter = true;
         private static void NoteArrival(Speaker sp, float now)
         {
-            if (!AdaptiveJitter) { sp.Prime = PrimeS; return; }
             float gap = now - sp.LastAt;
             if (gap > 1f) return;   // a new utterance: the silence before it is no gap
             sp.Gaps[sp.GapN++ % sp.Gaps.Length] = gap;

@@ -5,7 +5,7 @@ machines over the relay:
      (mp lockdiag on the laptop's copy, sampled while it waits)
   D  RADIATOR on the laptop's own car (--car, default Car02; the Car01's needs Fixes.SliceGuard): its radiator
      holds a little gas and goes off: gone on the laptop and on the host
-  tools/pallet.py [--no-build] [--relay iad|off] [--old] [--car <prefab part>] (switches off: MemberGoneSync, CopyLockByBox, ProxyByOwnRoot, MountBox, Fixes.SliceGuard)"""
+  tools/pallet.py [--no-build] [--relay iad|off] [--car <prefab part>] (switches off: MemberGoneSync, CopyLockByBox, ProxyByOwnRoot, MountBox, Fixes.SliceGuard)"""
 import sys, os, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -15,10 +15,9 @@ from roadkit import g, car_ready, clear_road
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")   # the example mods stay installed
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 CARNAME = arg("--car", "Car02")
 T = "TLDRevamp.Net.Entities"; REP = "TLDRevamp.Net.Reports"
-SWITCHES = [f"{T}.MemberGoneSync", f"TLDRevamp.Net.EntityLocks.CopyLockByBox", f"{T}.ProxyByOwnRoot", f"TLDRevamp.Net.EntityLocks.MountBox", "TLDRevamp.Fixes.SliceGuard.Enabled"]
 JERRYCAN, LAMP = 72, "regizseblampa"
 VERDICTS = []
 def verdict(name, ok, detail=""):
@@ -52,9 +51,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L):
-            for sw in SWITCHES: s_(f"set {sw} {not OLD}")
-        print(f"  {'OLD (switches off)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
         h("set settingsscript.s.S.IPhysicsLock 3")
@@ -118,10 +115,6 @@ with game.ProtectedSession():
         for s_, v in list(gods.values()): s_(f"set kaposztaleves.s.settings.god {v}")
         try: h(f"set settingsscript.s.S.IPhysicsLock {lock_h}")
         except Exception: pass
-        for s_ in (h, L):
-            try:
-                for sw in SWITCHES: s_(f"set {sw} True")
-            except Exception: pass
         try: L("mp stop"); h("mp stop")
         except Exception: pass
     print(f"\n{sum(ok for _, ok in VERDICTS)}/{len(VERDICTS)} passed", flush=True)

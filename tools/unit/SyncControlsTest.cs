@@ -41,7 +41,6 @@ static class SyncControlsTest
         Check(string.Join(",", shown) == "2,2,3,3,3,3,4,4", "stepped knob turned through interpolated values only moves forward, in whole steps: " + string.Join(",", shown));
         UsableMerge.Apply(vol, 0, 0, 0, 0, 9.99985f); Check(vol.tunedFloat == 10, "16-bit round trip of the top step lands on it");
         UsableMerge.Apply(vol, 0, 0, 0, 0, 10.6f); Check(vol.tunedFloat == 10, "never past the knob's range");
-        UsableMerge.SnapSteps = false; UsableMerge.Apply(vol, 0, 0, 0, 0, 2.4f); Check(vol.tunedFloat == 2.4f, "A/B off: the value as it came"); UsableMerge.SnapSteps = true;
         var free = new usablescript { tuneAble = true, tunedFloatMax = 10 };
         UsableMerge.Apply(free, 0, 0, 0, 0, 2.4f); Check(free.tunedFloat == 2.4f, "a knob without steps (the tuning dial) keeps its exact value");
         Check(UsableMerge.Ignition(false, true, true) && !UsableMerge.Ignition(true, true, false), "live owner ignition wins over older car records in both directions");
@@ -73,7 +72,7 @@ namespace TLDRevamp.Net
         internal static void RecordLifetimeFallOff() => SuppressedFallOff++;
         internal static bool InSession = true; static bool Near = true, Token = true;
         static long DetachReqsSent, EditsOutOfReach, AutoDetachesIgnored, SuppressedFallOff, PartsReported, DetachSyncsSent, DetachSyncsApplied, DetachesStored;
-        static bool _applyingDetach, PlayerActing = true, StoredAttach = true;
+        static bool _applyingDetach, PlayerActing = true;
         static tosaveitemscript _handFor;
         static float _handAt;
         static tosaveitemscript Handed;
@@ -96,7 +95,6 @@ namespace TLDRevamp.Net
         internal static void SendToServer(NetWriter w, bool reliable) => ToServer(w, reliable);
         internal static void SendToPeer(int id, NetWriter w, bool reliable) => ServerSendTo(id, w, reliable);
         static bool AtObject(int from, SEnt e) => Near;
-        static bool CarriedPartsShared = true;
         internal static bool TakeToken(object bucket, int from, float rate, float burst) => Token;
         static void ToServer(NetWriter w, bool reliable) => Sent++;
         static void ServerSendTo(int id, NetWriter w, bool reliable) { Target = id; Sent++; }

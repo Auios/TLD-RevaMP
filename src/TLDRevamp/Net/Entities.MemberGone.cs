@@ -23,7 +23,6 @@ namespace TLDRevamp.Net
     public static partial class Entities
     {
         public const byte MemberGone = 86;
-        public static bool MemberGoneSync = true;   // A/B: false = members destroyed on the owner's machine only (before v0.68.3)
         public static long MembersGoneSent, MembersGoneApplied, MembersGoneRejected;
 
         private struct GoneMember { public uint Net; public int Idx; public string Name; }
@@ -32,7 +31,6 @@ namespace TLDRevamp.Net
         /// From ItemDestroyed (a real deletion, not streaming): a member of a group this machine owns.
         private static void NoteMemberDestroyed(tosaveitemscript it)
         {
-            if (!MemberGoneSync) return;
             var e = SharedGroupOf(it);
             if (e == null || e.Root == null || e.Root == it || e.Proxy || e.OwnerId != MyId) return;
             int idx = e.Items.IndexOf(it);

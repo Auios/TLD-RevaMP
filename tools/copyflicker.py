@@ -5,7 +5,7 @@ removed the whole car every second, "copy placed again 1.0 s after a displaced s
 machines over the relay: the host's item on the ground next to its car; on the laptop the item's copy stored into the
 laptop's copy of that car (`mp copystore`); the host drives off at --kmh for --drive s with the laptop riding along as a
 passenger → the laptop's copy of the car is never stored out, the item's copy ends up where the host has it.
-  tools/copyflicker.py [--no-build] [--relay iad|off] [--kmh 60] [--drive 40] [--item 320] [--old: v0.66.7]"""
+  tools/copyflicker.py [--no-build] [--relay iad|off] [--kmh 60] [--drive 40] [--item 320]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -13,7 +13,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 from roadkit import g, car_ready, clear_road
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD, KMH, DRIVE_S, ITEM = arg("--relay", "iad"), "--old" in sys.argv, arg("--kmh", 60.0, float), arg("--drive", 40.0, float), arg("--item", 320, int)
+RELAY, KMH, DRIVE_S, ITEM = arg('--relay', 'iad'), arg('--kmh', 60.0, float), arg('--drive', 40.0, float), arg('--item', 320, int)
 T = "TLDRevamp.Net.Entities"
 VERDICTS = []
 def verdict(name, ok, detail=""):
@@ -51,9 +51,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L):
-            s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe {not OLD}"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer {not OLD}"); s_(f"set {T}.DriveClaimRootOnly {not OLD}")
-        print(f"  {'OLD (v0.66.7)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
         h("set settingsscript.s.S.BAutoShift True")
@@ -115,9 +113,6 @@ with game.ProtectedSession():
         except Exception: pass
         for s_, v in gods.values(): s_(f"set kaposztaleves.s.settings.god {v}")
         h(f"set settingsscript.s.S.BAutoShift {shift_h}")
-        for s_ in (h, L):
-            try: s_(f"set TLDRevamp.Net.EntityLocks.CopyLockSafe True"); s_(f"set TLDRevamp.Net.EntityLocks.CopyLockByContainer True"); s_(f"set {T}.DriveClaimRootOnly True")
-            except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

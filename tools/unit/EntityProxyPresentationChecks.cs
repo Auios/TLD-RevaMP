@@ -101,8 +101,9 @@ static partial class EntitySplitTest
         for (int mask = 0; mask < 64; mask++)
         {
             bool Bit(int bit) => (mask & 1 << bit) != 0;
+            if (Bit(2))
             foreach (BandwidthRules.Quiet quiet in Enum.GetValues<BandwidthRules.Quiet>())
-                Row("final-" + mask + "-" + quiet, EntityProxyPresentation.FinalState(Bit(0), Bit(1) ? 1u : 0u, Bit(2), quiet, Bit(3), Bit(4)));
+                Row("final-" + mask + "-" + quiet, EntityProxyPresentation.FinalState(Bit(0), Bit(1) ? 1u : 0u, quiet, Bit(3), Bit(4)));
             Row("release-car", EntityProxyPresentation.LooseRelease(Bit(0) ? 1u : 0, Bit(1) ? 2u : 0, Bit(2), Bit(3)));
             Row("let-go", EntityProxyPresentation.LetGoInCar(Bit(0), Bit(1), Bit(2) ? 1u : 0, Bit(3), Bit(4)));
             bool active = Bit(0), moving = Bit(1);

@@ -78,8 +78,7 @@ static partial class EntitySplitTest
         Entities.ByNet.Clear(); Entities.Packets.Clear(); RemotePlayers.Targets.Clear(); Entities.Known.Clear();
         RabbitCall("RabbitReset");
         foreach (string timer in new[] { "_rabScanAt", "_rabSendAt", "_rabDmgFlushAt", "_rabBreakFlushAt", "_rabSrvAcc" }) Set(RabbitOwner, timer, 0f);
-        EntityRabbits.RabbitSync = EntityRabbits.RabbitOwners = true;
-        Entities.IsHost = false; Entities.InSession = true; Entities.WasteFixes = Entities.TestAudience = true;
+        Entities.IsHost = false; Entities.InSession = true; Entities.TestAudience = true;
         Entities.HostReceive = null; Entities.PeerReceive = null;
         mainscript.s = new mainscript { player = new fpscontroller() };
         Time.time = Time.unscaledTime = Time.realtimeSinceStartup = 10; Time.deltaTime = .02f;
@@ -183,8 +182,6 @@ static partial class EntitySplitTest
         long sizes = EntityRabbits.RabbitSizesRolled; EntityRabbits.RabbitNextSize = .95f; ny.started = false;
         EntityRabbits.RabbitBeforeShare(e.Root); EntityRabbits.RabbitBeforeShare(e.Root);
         Check(ny.size == .95f && EntityRabbits.RabbitNextSize == -1 && EntityRabbits.RabbitSizesRolled == sizes + 1, "size rolls once before sharing and consumes override");
-        ny.started = false; EntityRabbits.RabbitSync = false; EntityRabbits.RabbitNextSize = .2f; EntityRabbits.RabbitBeforeShare(e.Root);
-        Check(ny.size == .95f && EntityRabbits.RabbitNextSize == .2f, "disabled rabbit sync leaves size override untouched"); EntityRabbits.RabbitSync = true; EntityRabbits.RabbitNextSize = -1;
         long stored = EntityRabbits.RabStoredSkips; var a = new aiscript();
         Check((bool)RabbitCall("RabBodyGone", a) && EntityRabbits.RabStoredSkips == stored + 1, "missing stored body skips AI");
         a.ChildComponent = new Rigidbody(); a.ragdoll = new ragdollactivatescript { RBs = new Rigidbody[] { null } };
@@ -247,7 +244,6 @@ static partial class EntitySplitTest
             Put(gate.Item1, gate.Item2); EntityRabbits.ServerRabbitTick(.25f); Check(Owner() == 1, "nearest owner respects " + gate.Item1); Put(gate.Item1, gate.Item3);
         }
         EntityRabbits.RabbitNearM = 3; EntityRabbits.ServerRabbitTick(.25f); Check(Owner() == 1, "nearest player outside range does not take rabbit"); EntityRabbits.RabbitNearM = 60;
-        EntityRabbits.RabbitOwners = false; EntityRabbits.ServerRabbitTick(.25f); Check(Owner() == 1, "ownership switch gates server choice"); EntityRabbits.RabbitOwners = true;
         Mp.Server.Peers[1] = new KeyValuePair<int, Vector3d>(2, new Vector3d(100, 0, 0));
         Entities.TestServer(302, 2); var car = server[302u]; car.GetType().GetField("HasState").SetValue(car, true); car.GetType().GetField("Speed").SetValue(car, 2f); car.GetType().GetField("Where").SetValue(car, new Vector3d(1, 0, 0));
         EntityRabbits.ServerRabbitTick(.25f); Check(Owner() == 2, "moving car anchors the simulator near rabbit");

@@ -41,7 +41,7 @@ namespace TLDRevamp.Net
         private static bool _placedDirty = true; private static int _placedFrame = -1, _fullFrame = -1000, _itemsSeen = -1, _netsSeen = -1;
         private static int LockBindingRevision;
         internal static bool _applyingDetach, _tpaSending, _tpaSendFailed;
-        public static bool SuppressDestroyEcho,StoredContentsApart = true,SplitPartsApart = true,FarMoveAttached = true,FarPartsByAttach = true,FarGroupLog,RemoveFarMembers = true,ReshareSurvivors = true,RefetchParts = true,RefetchLater = true,AnomalyWatch,ReplayBareDetach,LoopPlacedOnly = true,HitchReleaseOnRemove = true,OwnerCascade = true;
+        public static bool SuppressDestroyEcho,StoredContentsApart = true,FarGroupLog,AnomalyWatch,ReplayBareDetach,LoopPlacedOnly = true;
         public static long AttachesKept, OwnerCascaded;
         private static readonly FarBoltIndex<save_attachable> _boltIdx = new(a => a != null && a.attachType == 1 ? a.parentid : 0);
         private static readonly Queue<uint> _boltQ = new();
@@ -146,7 +146,7 @@ namespace TLDRevamp.Net
             Mp.Server = host ? new() : null; Mp.Client = host ? null : new(); Mp.SceneTearingDown = false; EntityTeleportRefresh.Deferred = false;
             _nextNet = 100; _placedDirty = true; _placedFrame = -1; _fullFrame = -1000; _itemsSeen = _netsSeen = -1; LockBindingRevision = 0;
             SuppressDestroyEcho = _applyingDetach = _tpaSending = _tpaSendFailed = false; W.Reset(); WS.Reset();
-            StoredContentsApart = SplitPartsApart = FarMoveAttached = FarPartsByAttach = RemoveFarMembers = ReshareSurvivors = RefetchParts = RefetchLater = EntityPhysics.LodKeepsPartsOff = EntityLocks.GhostEndsOnOwn = EntityPhysics.CrashLeaveKeep = LoopPlacedOnly = HitchReleaseOnRemove = OwnerCascade = true;
+            StoredContentsApart = EntityPhysics.LodKeepsPartsOff = LoopPlacedOnly = true;
             FarGroupLog = AnomalyWatch = ReplayBareDetach = false; StoreOutTrace = 0; PartRejects = UnmountTrace = AddRejectLast = "";
             Time.frameCount = 1; Time.realtimeSinceStartup = Time.time = 10;
         }
@@ -226,7 +226,6 @@ namespace TLDRevamp.Net
         {
             Fresh(); var e = Seed(owner: 3, proxy: true); Row("remove-received", () => ApplyRemoveItem(7)); Row("remove-received-flush", RegistryFakes.Flush); Row("remove-missing", () => ApplyRemoveItem(7));
             Fresh(); e = Seed(owner: 3, proxy: true); e.Root = null; e.Split = new() { 1 }; Store(70); Store(71); Store(72); e.ItemIds.Add(72); Row("remove-far-keeps-split", () => ApplyRemoveItem(7));
-            Fresh(); e = Seed(); e.Root = null; Store(70); Store(71); RemoveFarMembers = false; Row("remove-far-switch-off", () => ApplyRemoveItem(7));
             Fresh(true); e = Seed(owner: 3, proxy: true); var se = ServerSeed(owner: 3); KnownBy(2).Add(7); _staleEnts[2] = new() { 7 }; _serverLocked.Add(se); var part = ServerSeed(8, 3); part.ParentNet = 7; part.PartIndex = 1; se.Parts.Add(8);
             Row("server-remove-retains-known-debt", () => ServerRemoveItem(2, 7)); Row("server-remove-flush", RegistryFakes.Flush);
             Fresh(); e = Seed(); Row("destroy-owner", () => DestroyHook(e.Root)); Row("destroy-owner-survivors-queued", RegistryFakes.Flush);
@@ -291,14 +290,13 @@ namespace TLDRevamp.Net
     }
     internal static partial class EntityPhysics
     {
-        internal static bool LodKeepsPartsOff = true,CrashLeaveKeep = true;
+        internal static bool LodKeepsPartsOff = true;
         internal static long CrashLeasesKept;
     }
 
 
     internal static partial class EntityLocks
     {
-        internal static bool GhostEndsOnOwn = true;
     }
 
 
@@ -309,7 +307,6 @@ namespace TLDRevamp.Net
 
     internal static partial class EntityHands
     {
-        internal static bool WornSync = true;
     }
 
 

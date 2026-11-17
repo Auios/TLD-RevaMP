@@ -237,11 +237,8 @@ namespace TLDRevamp.Net
             }
             finally { AutoSaving = previous; }
         }
-
-        public static bool RotateOnSaveTail = true;   // A/B: false = before v0.65.57
         private static bool RotateAutosaves()
         {
-            if (!RotateOnSaveTail) return false;
             string d1 = pathscript.SaveDataName(pathscript.autosaveName1), p1 = pathscript.SavePropertiesName(pathscript.autosaveName1), t1 = pathscript.SaveThumbnailName(pathscript.autosaveName1);
             string d2 = pathscript.SaveDataName(pathscript.autosaveName2), p2 = pathscript.SavePropertiesName(pathscript.autosaveName2), t2 = pathscript.SaveThumbnailName(pathscript.autosaveName2);
             string d3 = pathscript.SaveDataName(pathscript.autosaveName3), p3 = pathscript.SavePropertiesName(pathscript.autosaveName3), t3 = pathscript.SaveThumbnailName(pathscript.autosaveName3);
@@ -476,7 +473,7 @@ namespace TLDRevamp.Net
                     // same version and protocol, other code: the records it decodes can differ (BuildCheck). No mod
                     // download fixes that, so before OfferMods.
                     var bc = BuildCheck.Compare(build, Plugin.BuildIdentity);
-                    if (bc == BuildCheck.Result.Differs && BuildCheck.Refuse)
+                    if (bc == BuildCheck.Result.Differs)
                     {
                         BuildRefused++;
                         Plugin.Log.LogWarning(BuildCheck.AnomalyLine(Session.CleanName(name), bc, build, Plugin.BuildIdentity) + " - refused");
@@ -909,7 +906,6 @@ namespace TLDRevamp.Net
         /// every far player's stored copy where the car was when it last came near them: arriving there showed a parked
         /// ghost of a car that was 50 km away, and their save kept it there. ~60 bytes per car per 5 s per player.
         public static float CarBeyondInterval = 5f;
-        public static bool CarTiers = true;   // A/B: false = every state to everyone within CarFarM (before v0.57.89)
         public long CarStatesSent, CarStatesThinned;
         public readonly long[] CarTierSends = new long[4];
         internal void SendCreatureState(NetWriter w, int except, uint net, Vector3d pos)
@@ -934,9 +930,9 @@ namespace TLDRevamp.Net
                 }
                 // Compact animals and limb-only movement kept every pose before interest filtering.
                 // Preserve that cadence for relevant viewers; it is not a far-store maintenance requirement.
-                bool forceHere = force || fullRate && (tier < 3 || !EntityAuthorityInterest.InterestRelay);
-                if (tier == 3 && !CarTiers && !forceHere) continue;   // A/B: the old cut-off
-                if (CarTiers && tier > 0 && !forceHere)
+                bool forceHere = force || fullRate && (tier < 3);
+                if (tier == 3 && false && !forceHere) continue;   // A/B: the old cut-off
+                if (tier > 0 && !forceHere)
                 {
                     float iv = tier == 1 ? CarMidInterval : tier == 2 ? CarFarInterval : CarBeyondInterval;
                     // states arrive ~50 ms apart with jitter: due a little early rather than a whole state late
@@ -1619,26 +1615,19 @@ namespace TLDRevamp.Net
             if (last != null && pose.Stamp <= last.Stamp) return;
             rp.Riding.Add(pose);
             if (last != null && (last.Net != pose.Net || last.Epoch != pose.Epoch || last.Seat != pose.Seat)) { rp.PoseQ.Clear(); rp.PosePlaying = false; }
-            if (RidingFrames && pose.Net != 0)
+            if (pose.Net != 0)
             {
                 PlayerActs.Apply(rp.Mp, pose.Acts);
                 if (rp.Mp.GMenus != null) mainscript.s.SetMenus(pose.Menus, rp.Mp.GMenus);
                 Poses++;
                 return;
             }
-            if (!PacePoses) { ApplyPose(rp, pose); return; }
             rp.PoseQ.Enqueue(pose);
             while (rp.PoseQ.Count > 12) rp.PoseQ.Dequeue();
         }
-
-        /// The game eases limbs and head from one pose to the next over the time since the previous one ARRIVED
-        /// (playeranimationscript.setPose). Poses arriving in clumps (power-saving Wi-Fi: ~300 ms bursts) made heads and
-        /// hands jump, then freeze. They are queued and handed over at the rate they were sent (20 Hz), behind a depth
-        /// that follows this body's interpolation delay — limbs in step with the body (v0.65.33).
-        public static bool PacePoses = true;
         private static void PaceTick(Rp rp)
         {
-            if (!PacePoses || rp.PoseQ.Count == 0) return;
+            if (rp.PoseQ.Count == 0) return;
             float now = Time.unscaledTime, step = 1f / Protocol.StateHz;
             int depth = rp.Ip != null && rp.Ip.Ready ? Mathf.Clamp(Mathf.RoundToInt(rp.Ip.DelayMs / (step * 1000f)), 1, 8) : 1;
             if (!rp.PosePlaying)
@@ -1732,7 +1721,7 @@ namespace TLDRevamp.Net
                         t.rotation = ground.rotation * lr;
                         FootShownFrames++;
                     }
-                    else if (InterpBodies && rp.Ip != null && rp.Ip.Ready)
+                    else if (rp.Ip != null && rp.Ip.Ready)
                     {
                         // from the sender's clock, through an adaptive delay — states that come in clumps (a laptop on
                         // power-saving Wi-Fi: ~300 ms bursts) no longer make the body stop and lurch (tools/walkmotion.py)
@@ -1778,12 +1767,9 @@ namespace TLDRevamp.Net
         }
 
         public static long FootShownFrames;
-        public static bool InterpBodies = true;   // A/B: false = ease towards the newest state (before v0.65.32)
         public static long FarHiddenChanges;
-        public static bool HideFarSeated = true;   // A/B: false = before v0.65.30
         private static bool FarCarGone(Rp rp)
         {
-            if (!HideFarSeated) return false;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var ip = itemPlaceRemoveScript.s;
             if (pl == null || ip == null) return false;

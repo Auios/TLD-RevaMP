@@ -5,7 +5,7 @@
   A  on leave: both lamps leave the world with it (gone on the host, nothing on the ground), the host keeps 2 items
   B  back: placed where it left (< 3 m), food and water as they were, both lamps back (one in the hand, one stored),
      shared again and the laptop's
-  tools/rejoin.py [--no-build] [--relay iad|off] [--old: PlayerSave off — fresh at the join spot, lamps left behind]"""
+  tools/rejoin.py [--no-build] [--relay iad|off]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -13,7 +13,7 @@ from mplib import Agent, ensure_both, seeded_both, join_both, relay_both, join_c
 from roadkit import until, g
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 LAMP = arg("--item", 320, int)
 VERDICTS = []
 def verdict(name, ok, detail=""):
@@ -34,10 +34,9 @@ with game.ProtectedSession():
     if RELAY != "off": relay_both(h, L, RELAY)
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.PlayerSave.Enabled {not OLD}")
         h("set gamemodesettingsscript.s.S.survival 2")   # the host plays with hunger; joiners take its mode (GameMode)
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        print(f"  {'OLD (no per-player saves)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         rp = h("roadpoint"); x, z = rp["gx"], rp["gz"]
         h(f"tpground {x} {z}"); L(f"tpground {x + 3} {z}"); time.sleep(4)
 
@@ -74,10 +73,8 @@ with game.ProtectedSession():
         ps = h("mp playersave"); print("  host:", ps, flush=True)
         on_host = [n for n in (a, b) if row(h, n) is not None]
         mine = next((p for p in ps.get("players", [])), None)
-        if OLD: verdict("A OLD: THE LAMPS STAY IN THE HOST'S WORLD", len(on_host) == 2, f"on the host: {on_host}")
-        else:
-            verdict("A ON LEAVE: BOTH LAMPS LEAVE THE WORLD", not on_host, f"still on the host: {on_host}")
-            verdict("A THE HOST KEEPS THEM", mine is not None and mine["items"] == 2 and not mine["present"], str(mine))
+        verdict("A ON LEAVE: BOTH LAMPS LEAVE THE WORLD", not on_host, f"still on the host: {on_host}")
+        verdict("A THE HOST KEEPS THEM", mine is not None and mine["items"] == 2 and not mine["present"], str(mine))
 
         # ---- back
         L("set gamemodesettingsscript.s.S.survival 2")   # (does the setting survive the world reload?)
@@ -98,7 +95,6 @@ with game.ProtectedSession():
         moves = [t for i, t in enumerate(trace) if i == 0 or math.dist(t[1:3], trace[i - 1][1:3]) > 1 or t[3:] != trace[i - 1][3:]]
         print("  rejoin trace (s, gx, gz, ready, placing):", moves, flush=True)
         print("  join spot:", g(L, "TLDRevamp.Net.Mp.JoinSpotLast"), "placed", g(L, "TLDRevamp.Net.Mp.JoinPlaced"), L("tpground status"), flush=True)
-        for s_ in (h, L): s_(f"set TLDRevamp.Net.PlayerSave.Enabled {not OLD}")
         surv = g(L, "gamemodesettingsscript.s.S.survival")
         print("  survival mode after the rejoin:", surv, "food now", g(L, "mainscript.s.player.survival.food"), flush=True)
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
@@ -112,22 +108,16 @@ with game.ProtectedSession():
         me = L("mp status")["client"]["id"]
         mine_now = [e for e in ents(h) if e["owner"] == me and not e["car"]]
         print(f"  back: {d:.1f} m from where it left, food {food1:.2f}, water {water1:.2f}, hand {hand}, laptop's objects on the host {[(e['net'], e['name'], e['stored']) for e in mine_now]}", flush=True)
-        if OLD:
-            verdict("B OLD: FRESH AT THE JOIN SPOT", d > 20, f"{d:.1f} m")
-        else:
-            verdict("B PLACED WHERE IT LEFT", d < 3, f"{d:.1f} m")
-            if surv != 2: print(f"INVALID  B FOOD AND WATER: the laptop's world has survival mode {surv} after the reload (food and water are refilled every frame; the joiner's game mode is its own)", flush=True)
-            else: verdict("B FOOD AND WATER AS THEY WERE", abs(food1 - food0) < 0.05 * mf + 0.01 and abs(water1 - water0) < 0.05 * mw + 0.01 and food0 < 0.6 * mf, f"food {food0:.1f} → {food1:.1f}, water {water0:.1f} → {water1:.1f}")
-            verdict("B BOTH LAMPS BACK, ONE IN THE HAND", lps.get("itemsRestored", 0) >= 2, lps.get("last", ""))
-            verdict("B IN THE HAND", isinstance(hand, str) and "(Clone)" in hand, f"picked {held}, right hand {inhand}")
-            verdict("B SHARED AGAIN, THE LAPTOP'S, ONE STORED", len(mine_now) >= 2 and any(e["stored"] for e in mine_now), str([(e['net'], e['stored']) for e in mine_now]))
+        verdict("B PLACED WHERE IT LEFT", d < 3, f"{d:.1f} m")
+        if surv != 2: print(f"INVALID  B FOOD AND WATER: the laptop's world has survival mode {surv} after the reload (food and water are refilled every frame; the joiner's game mode is its own)", flush=True)
+        else: verdict("B FOOD AND WATER AS THEY WERE", abs(food1 - food0) < 0.05 * mf + 0.01 and abs(water1 - water0) < 0.05 * mw + 0.01 and food0 < 0.6 * mf, f"food {food0:.1f} → {food1:.1f}, water {water0:.1f} → {water1:.1f}")
+        verdict("B BOTH LAMPS BACK, ONE IN THE HAND", lps.get("itemsRestored", 0) >= 2, lps.get("last", ""))
+        verdict("B IN THE HAND", isinstance(hand, str) and "(Clone)" in hand, f"picked {held}, right hand {inhand}")
+        verdict("B SHARED AGAIN, THE LAPTOP'S, ONE STORED", len(mine_now) >= 2 and any(e["stored"] for e in mine_now), str([(e['net'], e['stored']) for e in mine_now]))
         er = [x_("errors") for x_ in (h, L)]
         print("  errors:", [(e["errors"], e["exceptions"], (e.get('kinds') or [])[:3]) for e in er], flush=True)
         verdict("NO ERRORS", all(e["errors"] == 0 and e["exceptions"] == 0 for e in er))
     finally:
-        for s_ in (h, L):
-            try: s_("set TLDRevamp.Net.PlayerSave.Enabled True")
-            except Exception: pass
         L("mp stop"); h("mp stop")
         if RELAY != "off": h("net relay off"); L("net relay off")
 print("\nSUMMARY"); [print(f"  {'PASS' if ok else 'FAIL'}  {n}") for n, ok in VERDICTS]

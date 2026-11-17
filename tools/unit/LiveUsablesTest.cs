@@ -61,7 +61,6 @@ namespace TLDRevamp.Net
         static Group GroupRecord(SEnt se) => se.Record;
         static bool IsProxy(object it) => false;
         static bool AtObject(int from, SEnt se) => true;
-        static bool CarriedPartsShared = true;
         static void ServerSendTo(int id, NetWriter w, bool reliable) { }
         internal static bool IsFinite(double n) => EntityNumbers.Finite(n);
         internal static bool IsFinite(float n) => EntityNumbers.Finite(n);

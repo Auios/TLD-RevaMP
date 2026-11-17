@@ -91,8 +91,6 @@ static partial class EntitySplitTest
         Check(BridgeReflect.Set("TLDRevamp.Net.EntityEffects.ShotFxSent", "23") == "23" && EntityEffects.ShotFxSent == 23, "shot counter owner path writes its owner");
         Check(BridgeReflect.Set("TLDRevamp.Net.EntityExplosions.ExplosionsSent", "29") == "29" && EntityExplosions.ExplosionsSent == 29, "blast counter owner path writes its owner");
         Check(BridgeReflect.Get("TLDRevamp.Net.EntityExplosions._blastDepth") == "0", "private blast guard owner path");
-        Check(BridgeReflect.Set("TLDRevamp.Net.EntityEffects.SprayFx", "False") == "false" && !EntityEffects.SprayFx, "spray switch forwards to its owner");
-        EntityEffects.SprayFx = true;
 
         foreach (var row in new[] { ("sound0", effects, "ServerPlayerSound"), ("sound1", effects, "ServerPlayerSound"), ("shotObject", effects, "ServerShotFx"), ("explosion", blasts, "ServerExplosionFx") })
         {
@@ -149,8 +147,6 @@ static partial class EntitySplitTest
         long shown = EntityEffects.SprayShown; EntityEffects.ShowSpraying(e, true); EntityEffects.ShowSpraying(e, true);
         int devTicks = 0; DevHooks.SprayTick = () => devTicks++;
         EntityEffects.SprayTick(.1f); Check(devTicks == 1 && spray.firing && spray.valve > .2f && EntityEffects.SprayShown == shown + 1, "spray hook precedes copy valve display and duplicate starts do not count twice");
-        EntityEffects.SprayFx = false; spray.firing = false; float valve = spray.valve; EntityEffects.SprayTick(.1f);
-        Check(!spray.firing && spray.valve == valve, "spray switch disables display only"); EntityEffects.SprayFx = true;
         EntityEffects.ShowSpraying(e, false); Check(!e.Spraying, "spray stop clears flag and registry");
         EntityEffects.ShowSpraying(e, true); e.Proxy = false; EntityEffects.SprayTick(.1f); Check(!e.Spraying, "spray copy gone or ownership change clears stale flag");
         EntityEffects.ResetSpraying(); DevHooks.SprayTick = null;

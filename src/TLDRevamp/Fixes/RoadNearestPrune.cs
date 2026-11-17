@@ -19,13 +19,12 @@ namespace TLDRevamp.Fixes
     /// Boxes are cached per road once `generated` is true. Bones are only added/changed inside roadClass.Generate,
     /// before that flag is set. Also called from AsyncTerrain workers, so everything here is thread-safe.
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.RoadNearestPrune.Enabled / .Verify
+    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.RoadNearestPrune.Verify
     [HarmonyPatch(typeof(roadGenScript), nameof(roadGenScript.NearestPointOnRoadBone),
         new[] { typeof(Vector3d), typeof(List<roadGenScript.roadClass>), typeof(Vector3d) },
         new[] { ArgumentType.Normal, ArgumentType.Normal, ArgumentType.Out })]
     public static class RoadNearestPrune
     {
-        public static bool Enabled = true;
         public static bool Verify = false;
 
         public static long Calls, RoadsChecked, RoadsSkipped, VerifyChecks, VerifyMismatches;
@@ -41,7 +40,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPrefix]
         private static bool Prefix(Vector3d _gpos, List<roadGenScript.roadClass> _nearRoads, ref Vector3d _result, ref roadGenScript.roadClass __result)
         {
-            if (!Enabled || _nearRoads == null) return true;
+            if (_nearRoads == null) return true;
             if (_nearRoads.Count < SortThreshold && !Verify)
             {
                 System.Threading.Interlocked.Increment(ref Calls);
@@ -171,7 +170,7 @@ namespace TLDRevamp.Fixes
         }
 
         public static string Stats =>
-            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"patched\":" + Patched + ",\"calls\":" + Calls + ",\"roadsChecked\":" + RoadsChecked +
+            "{\"enabled\":" + ("true") + ",\"patched\":" + Patched + ",\"calls\":" + Calls + ",\"roadsChecked\":" + RoadsChecked +
             ",\"roadsSkipped\":" + RoadsSkipped + ",\"verifyChecks\":" + VerifyChecks + ",\"verifyMismatches\":" + VerifyMismatches +
             ",\"lastMismatch\":" + Json.Str(LastMismatch) + "}";
     }

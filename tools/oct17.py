@@ -14,7 +14,7 @@ the road), one run:
      radiator still gone on the laptop
   I  IDENTITY: the laptop joining with a Steam ID that isn't its connection's: refused; then joins as itself
   R  REPORT: the laptop's report with sharing on reaches the host; another one started right after: dropped
-  tools/oct17.py [--no-build] [--relay iad|off] [--old: MemberGoneSync, CopyLockByBox off]"""
+  tools/oct17.py [--no-build] [--relay iad|off]"""
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -24,9 +24,8 @@ from roadkit import g, car_ready, clear_road
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")   # the example mods stay installed
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-RELAY, OLD = arg("--relay", "iad"), "--old" in sys.argv
+RELAY = arg('--relay', 'iad')
 T = "TLDRevamp.Net.Entities"; REP = "TLDRevamp.Net.Reports"
-SWITCHES = [f"{T}.MemberGoneSync", f"TLDRevamp.Net.EntityLocks.CopyLockByBox"]
 JERRYCAN, LAMP = 72, "regizseblampa"
 VERDICTS = []
 def verdict(name, ok, detail=""):
@@ -61,9 +60,7 @@ with game.ProtectedSession():
     try:
         if not join_both(h, L): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafetyTools.BlockAutoSave True")
-        for s_ in (h, L):
-            for sw in SWITCHES: s_(f"set {sw} {not OLD}")
-        print(f"  {'OLD (switches off)' if OLD else 'CURRENT BUILD'}", flush=True)
+        print(f"  {'CURRENT BUILD'}", flush=True)
         for name, s_ in (("host", h), ("laptop", L)):
             gods[name] = (s_, g(s_, "kaposztaleves.s.settings.god")); s_("set kaposztaleves.s.settings.god True")
         h("set settingsscript.s.S.IPhysicsLock 3")
@@ -206,10 +203,6 @@ with game.ProtectedSession():
         for k, s_, v in ((f"{REP}.Share", L, share0), (f"{REP}.AskPlayers", h, ask0), (f"{REP}.StartGapS", h, 30), ("TLDRevamp.Net.ClientSimulation.TestClaimSteamId", L, 0),
                          ("settingsscript.s.S.IPhysicsLock", h, lock_h)):
             try: s_(f"set {k} {v}")
-            except Exception: pass
-        for s_ in (h, L):
-            try:
-                for sw in SWITCHES: s_(f"set {sw} True")
             except Exception: pass
         try: L("mp stop"); h("mp stop")
         except Exception: pass

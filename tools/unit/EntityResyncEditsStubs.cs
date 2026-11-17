@@ -51,7 +51,6 @@ namespace TLDRevamp.Net
         internal static void BeginResyncFrame() { _resyncFrameMs = 0; _resyncFrameWorked = false; _resyncDeferred = false; }
         internal static void TestResync(Ent e, float dt) => ResyncTick(e, dt);
         internal static bool TestDeferred => _resyncDeferred;
-        internal static bool EditsComeBack = true;
         internal static long EditsReturned;
         internal static string TestEditValidation, TestAddsValidation;
         private static string CheckEdit(SEnt entity, int item, int kinds, byte[] record) => TestEditValidation;

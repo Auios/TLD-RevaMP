@@ -176,7 +176,7 @@ namespace TLDRevamp.Net
             foreach (var kv in new List<KeyValuePair<uint, HitchOp>>(_hitchCommands))
             {
                 var op = kv.Value;
-                if (Entities.HitchCommandExpires && Time.realtimeSinceStartup >= op.Until) { _hitchCommands.Remove(kv.Key); continue; }
+                if (Time.realtimeSinceStartup >= op.Until) { _hitchCommands.Remove(kv.Key); continue; }
                 if (!Entities.TryHitchEntity(op.Trailer, out var tr) || !Entities.TryHitchEntity(op.Car, out var car)) continue;
                 if (tr.HitchWaiting) continue;
                 _hitchCommands.Remove(kv.Key);
@@ -317,9 +317,6 @@ namespace TLDRevamp.Net
 
     public static partial class Entities
     {
-        public static bool HitchTransferTimeout = true;   // A/B: false = wait indefinitely for the old simulator/result
-        public static bool HitchEnsureKnown = true;       // A/B: false = rely on ordinary distance-based Add delivery
-        public static bool HitchReleaseOnRemove = true;   // A/B: false = keep the deleted car's hitch record
 
         private const float HitchTimeoutS = 5f;
 
@@ -411,7 +408,7 @@ namespace TLDRevamp.Net
 
         private static void HitchOwnerKnows(SEnt tr, int target)
         {
-            if (!HitchEnsureKnown || target == 0) return;   // the host already has the world's records
+            if (target == 0) return;   // the host already has the world's records
             // Control messages bypass interest. Their Add dependencies must do so too, before the ownership fence.
             if (Server.TryGetValue(tr.HitchCar, out var car) && !KnownBy(target).Contains(car.NetId)) SendObject(target, car);
             if (!KnownBy(target).Contains(tr.NetId)) SendObject(target, tr);
@@ -521,7 +518,7 @@ namespace TLDRevamp.Net
 
         private static void ServerHitchTick()
         {
-            if (!IsHost || !HitchTransferTimeout || _hitchTransfers.Count == 0 && _hitchOps.Count == 0) return;
+            if (!IsHost || _hitchTransfers.Count == 0 && _hitchOps.Count == 0) return;
             foreach (var kv in new List<KeyValuePair<uint, HitchAuthority.Transfer>>(_hitchTransfers))
             {
                 if (Time.realtimeSinceStartup < kv.Value.Until) continue;
@@ -548,7 +545,6 @@ namespace TLDRevamp.Net
 
         private static void RemoveHitches(uint net)
         {
-            if (!HitchReleaseOnRemove) return;
             foreach (var tr in new List<SEnt>(Server.Values))
                 if (tr.NetId != net && (tr.HitchCar == net || tr.Hitch && tr.AttachParent == net)) ReleaseHitch(tr, "tow car removed");
             _hitchTransfers.Remove(net); _hitchOps.Remove(net); EntityHitches.RemoveCommand(net);

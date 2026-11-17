@@ -8,18 +8,15 @@ bot tests couldn't show — real latency, a real second game applying attaches/r
     player's hand, theirs; they bolt it back on: the host's game applies it, the host's again (bolted onto its car)
   4 a lost copy: the laptop's game loses its copy of the host's car (the vanilla streaming race, forced there): the
     host's car stays in the world, the laptop gets its copy back (Refetch)
-  tools/buglist2m.py [--no-build] [--relay iad|off] [--only 1,2,3,4] [--car Car06Full] [--set Net.Entities.X=False,...] [--old66]"""
+  tools/buglist2m.py [--no-build] [--relay iad|off] [--only 1,2,3,4] [--car Car06Full] [--set Net.Entities.X=False,...]"""
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_cmd
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
-# --set A=v,... : TLDRevamp field values on both machines once joined; --old66: every v0.66.x fix off (A/B)
-OLD66 = ("Net.PoseInterpolator.FreshAfterIdle=False,Net.Entities.FarMoveAttached=False,Net.Entities.StoredAttach=False,"
-         "Net.Entities.ClearHeldOnAttach=False,Net.Entities.ReshareSurvivors=False,Net.EntityLocks.CopyContainersInert=False,"
-         "Net.Entities.ScopedEdits=False,Net.EntityLocks.CopyStartFreezeOff=False")
-SETS = [kv.split("=") for kv in ((sys.argv[sys.argv.index("--set") + 1] if "--set" in sys.argv else "") + ("," + OLD66 if "--old66" in sys.argv else "")).split(",") if kv]
+# --set A=v,... : TLDRevamp field values on both machines once joined
+SETS = [kv.split("=") for kv in ((sys.argv[sys.argv.index("--set") + 1] if "--set" in sys.argv else "") + ("")).split(",") if kv]
 ONLY = (sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else "1,2,3,4").split(",")
 PUSH = float(sys.argv[sys.argv.index("--push") + 1]) if "--push" in sys.argv else 2.0   # 7a: the car's pace, m/s
 CAR = sys.argv[sys.argv.index("--car") + 1] if "--car" in sys.argv else "Car06Full"
@@ -311,9 +308,7 @@ with game.ProtectedSession():
 
         if "4" in ONLY:
             L(f"tpground {cp[0] + 4} {cp[2] + 4}"); time.sleep(2)
-            L("set TLDRevamp.Fixes.StreamRace.Enabled False")   # the vanilla race, on the laptop only: its copy is lost
             a = L(f"streamrace arm {net}"); print("  laptop loses its copy:", a, flush=True)
-            L("set TLDRevamp.Fixes.StreamRace.Enabled True")
             time.sleep(6)
             hc = ents(h).get(net); lc = ents(L).get(net)
             print(f"  host car {hc and hc['pos']}; laptop copy {lc and (lc['pos'], lc['proxy'], lc['dormant'])}", flush=True)
