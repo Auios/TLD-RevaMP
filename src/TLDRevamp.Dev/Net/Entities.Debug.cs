@@ -1,6 +1,7 @@
 using static TLDRevamp.Net.Entities;
 using System.Linq;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -884,6 +885,95 @@ namespace TLDRevamp.Net
                    ",\"serverLockedGone\":" + gone + ",\"rows\":[" + string.Join(",", rows) + "]}";
         }
 
+        /// `mp registry`, `mp registryserver`, `mp registrystore <ids>` (registrycheck.py): what the registry keeps for each
+        /// object - proxy markers and wheel/engine bindings, the placed cache, the server's per-player sets, and the save's
+        /// rows and chunk entries for given save ids. Read only.
+        // Requested snapshots only: do not resolve, rebuild a cache, sample physics, or send anything here.
+        internal static string RegistryList()
+        {
+            int deadItems = 0, deadWheels = 0, deadEngines = 0, goneWheels = 0;
+            foreach (var go in ProxyItems) if (go == null) deadItems++;
+            foreach (var kv in ProxyWheelOwner)
+            {
+                if (kv.Key == null) deadWheels++;
+                if (!ObservedEntities.TryGetValue(kv.Value.NetId, out var now) || now != kv.Value) goneWheels++;
+            }
+            foreach (var kv in ProxyEngineOwner) if (kv.Key == null) deadEngines++;
+            var markers = new List<string>();
+            foreach (var go in ProxyItems) markers.Add("{\"id\":" + go.GetInstanceID() + ",\"dead\":" + (go == null ? "true" : "false") + "}");
+            var rows = new List<string>();
+            foreach (var e in ObservedEntities.Values)
+            {
+                var ids = new List<string>();
+                if (e.ItemIds != null) foreach (uint id in e.ItemIds) ids.Add(id.ToString());
+                var objects = new List<string>();
+                foreach (var it in e.Items) if (it != null) objects.Add(it.gameObject.GetInstanceID().ToString());
+                int bound = 0, deadBound = 0, deadEnginesBound = 0;
+                foreach (var kv in ProxyWheelOwner) if (kv.Value == e) { bound++; if (kv.Key == null) deadBound++; }
+                foreach (var kv in ProxyEngineOwner) if (kv.Value == e && kv.Key == null) deadEnginesBound++;
+                int wheels = 0, missing = 0, wrong = 0;
+                if (e.Proxy && e.Root != null)
+                {
+                    var ws = e.Root.GetComponentsInChildren<wheelgraphicsscript>(true);
+                    wheels = ws.Length;
+                    for (int i = 0; i < ws.Length; i++)
+                    {
+                        if (!ProxyWheelOwner.TryGetValue(ws[i], out var owner)) missing++;
+                        else if (owner != e || !ProxyWheelIndex.TryGetValue(ws[i], out int index) || index != i) wrong++;
+                    }
+                }
+                rows.Add("{\"net\":" + e.NetId + ",\"rootId\":" + e.RootId + ",\"loaded\":" + (e.Root != null ? "true" : "false") +
+                         ",\"placed\":" + (ObservedInPlaced(e) ? "true" : "false") + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"ids\":[" + string.Join(",", ids) +
+                         "],\"objects\":[" + string.Join(",", objects) + "],\"boundWheels\":" + bound + ",\"deadBoundWheels\":" + deadBound + ",\"deadBoundEngines\":" + deadEnginesBound + ",\"wheels\":" + wheels + ",\"missingWheels\":" + missing + ",\"wrongWheels\":" + wrong + "}");
+            }
+            rows.Sort(StringComparer.Ordinal);
+            ObservePlacedCache(out int cacheFrame, out int fullFrame, out bool dirty, out int netsSeen, out int itemsSeen);
+            return "{\"frame\":" + Time.frameCount + ",\"cacheFrame\":" + cacheFrame + ",\"fullFrame\":" + fullFrame +
+                   ",\"dirty\":" + (dirty ? "true" : "false") + ",\"nets\":" + ObservedEntities.Count + ",\"netsSeen\":" + netsSeen +
+                   ",\"items\":" + (savedatascript.s != null ? savedatascript.s.items.Count : -1) + ",\"itemsSeen\":" + itemsSeen + ",\"proxyItems\":" + ProxyItems.Count + ",\"deadItems\":" + deadItems + ",\"wheelOwners\":" + ProxyWheelOwner.Count +
+                   ",\"wheelIndexes\":" + ProxyWheelIndex.Count + ",\"deadWheels\":" + deadWheels + ",\"goneWheels\":" + goneWheels +
+                   ",\"markers\":[" + string.Join(",", markers) + "],\"engineOwners\":" + ProxyEngineOwner.Count + ",\"deadEngines\":" + deadEngines + ",\"rows\":[" + string.Join(",", rows) + "]}";
+        }
+
+        internal static string RegistryServerList()
+        {
+            var rows = new List<string>();
+            foreach (string name in new[] { "known", "debt", "pose", "rabbit" })
+                foreach (var kv in ObservedServerSet(name))
+                    foreach (uint net in kv.Value)
+                        rows.Add("{\"set\":" + Json.Str(name) + ",\"player\":" + kv.Key + ",\"net\":" + net + ",\"gone\":" + (!ObservedServerEntity(net) ? "true" : "false") + "}");
+            rows.Sort(StringComparer.Ordinal);
+            return "{\"server\":" + ObservedServerCount + ",\"rows\":[" + string.Join(",", rows) + "]}";
+        }
+
+        // Local save ids are retained by the caller before deletion, so this also works after ByNet loses the object.
+        internal static string RegistryStoreList(string text)
+        {
+            var rows = new List<string>();
+            var save = savedatascript.s;
+            var data = save != null && save.data != null ? save.data.itemData : null;
+            if (data == null) return "{\"error\":\"no save data\"}";
+            foreach (string part in text.Split(','))
+            {
+                if (!uint.TryParse(part, out uint id)) continue;
+                int chunks = 0, records = 0, items = 0;
+                foreach (var ids in save.itemChunks.Values) foreach (uint n in ids) if (n == id) chunks++;
+                foreach (var field in ItemSnapshot.ListFields)
+                {
+                    if (!(field.GetValue(data) is IList list)) continue;
+                    foreach (var entry in list)
+                    {
+                        if (entry == null) continue;
+                        var idf = EntityLifetimeStreaming._idField(entry);
+                        if (idf == null || (uint)idf.GetValue(entry) != id) continue;
+                        records++;
+                        if (field.Name == "items") items++;
+                    }
+                }
+                rows.Add("{\"id\":" + id + ",\"items\":" + items + ",\"components\":" + (records - items) + ",\"chunks\":" + chunks + "}");
+            }
+            return "{\"rows\":[" + string.Join(",", rows) + "]}";
+        }
         /// The shared objects here, with the ids a test needs to say exactly which object it means: the network id,
         /// the game's own save id (the id every machine agrees on), the owner's player id and the global position.
         /// `filter` narrows it to a name (a "PlayerRagdol" corpse, an item's name); "" is everything.

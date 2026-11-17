@@ -65,6 +65,9 @@ namespace TLDRevamp
                 case "mp awake": { var ci = System.Globalization.CultureInfo.InvariantCulture; return Net.EntityDebug.Awake(double.Parse(ma[1], ci), double.Parse(ma[2], ci), ma.Length > 3 ? double.Parse(ma[3], ci) : 60); }
                 case "mp shared": return Net.EntityDebug.SharedList(ma.Length > 1 ? ma[1] : "");
                 case "mp relays": return Net.EntityDebug.RelayList();
+                case "mp registry": return Net.EntityDebug.RegistryList();
+                case "mp registryserver": return Net.EntityDebug.RegistryServerList();
+                case "mp registrystore": return Net.EntityDebug.RegistryStoreList(ma.Length > 1 ? ma[1] : "");
                 case "mp itement": { var ci = System.Globalization.CultureInfo.InvariantCulture; return Net.EntityDebug.ItemEnt(double.Parse(ma[1], ci), double.Parse(ma[2], ci), double.Parse(ma[3], ci)); }
                 case "mp partposes": return Net.EntityDebug.PartPoses(uint.Parse(ma[1]));
                 case "mp members": return Net.EntityDebug.Members(uint.Parse(ma[1]));

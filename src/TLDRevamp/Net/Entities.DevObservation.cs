@@ -54,6 +54,18 @@ namespace TLDRevamp.Net
             count = _serverLocked.Count; gone = 0;
             foreach (var se in _serverLocked) if (!Server.TryGetValue(se.NetId, out var now) || now != se) gone++;
         }
+        /// `mp registry` / `mp registryserver` (Dev, registrycheck.py): the placed cache's bookkeeping and the server's
+        /// per-player sets, read as they are (nothing is rebuilt or resolved).
+        internal static bool ObservedInPlaced(Ent e) => _placed.Contains(e);
+        internal static void ObservePlacedCache(out int cacheFrame, out int fullFrame, out bool dirty, out int netsSeen, out int itemsSeen)
+        { cacheFrame = _placedFrame; fullFrame = _fullFrame; dirty = _placedDirty; netsSeen = _netsSeen; itemsSeen = _itemsSeen; }
+        internal static int ObservedServerCount => Server.Count;
+        internal static System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<int, System.Collections.Generic.IReadOnlyCollection<uint>>> ObservedServerSet(string name)
+        {
+            var sets = name == "known" ? Known : name == "debt" ? _staleEnts : name == "pose" ? _poseNear : name == "rabbit" ? _rabbitNear : null;
+            if (sets == null) yield break;
+            foreach (var kv in sets) yield return new System.Collections.Generic.KeyValuePair<int, System.Collections.Generic.IReadOnlyCollection<uint>>(kv.Key, kv.Value);
+        }
         private static void OwnerLog(SEnt se, int to, string why) => DevHooks.OwnerDecision?.Invoke(se.NetId, se.OwnerId, se.Epoch, to, why);
         private static void LogJump(Ent e, float dev, float devY, float dt) => DevHooks.CopyJump?.Invoke(e, dev, devY, dt);
     }

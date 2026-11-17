@@ -59,6 +59,9 @@ namespace TLDRevamp
             DebugBridge.Register("mp awake", arg => EntityCommands.Run("mp awake", arg));
             DebugBridge.Register("mp shared", arg => EntityCommands.Run("mp shared", arg));
             DebugBridge.Register("mp relays", arg => EntityCommands.Run("mp relays", arg));
+            DebugBridge.Register("mp registry", arg => EntityCommands.Run("mp registry", arg));
+            DebugBridge.Register("mp registryserver", arg => EntityCommands.Run("mp registryserver", arg));
+            DebugBridge.Register("mp registrystore", arg => EntityCommands.Run("mp registrystore", arg));
             DebugBridge.Register("mp itement", arg => EntityCommands.Run("mp itement", arg));
             DebugBridge.Register("mp partposes", arg => EntityCommands.Run("mp partposes", arg));
             DebugBridge.Register("mp members", arg => EntityCommands.Run("mp members", arg));
