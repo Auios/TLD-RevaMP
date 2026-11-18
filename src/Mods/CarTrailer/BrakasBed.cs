@@ -93,7 +93,7 @@ namespace CarTrailer
         }
 
         /// Names left out wherever they are (the Brakas's exhaust runs under its bed).
-        public static string[] SkipNames = { "muffler" };
+        public static readonly string[] SkipNames = { "muffler" };
 
         private static bool Excluded(Transform t, Transform root, Transform skip)
         {
@@ -125,7 +125,7 @@ namespace CarTrailer
         /// The triangles of `mesh` (placed by m) wholly inside `region`, as a new mesh in the region's space.
         /// Cut triangles this close to the region's front (+z) also get a back face: the bed's front wall was the cab's
         /// back wall, whose front side is inside the cab and was never modelled (seen from the tow car: no face).
-        public static float FrontFaceBand = 0.15f;
+        public static readonly float FrontFaceBand = 0.15f;
 
         private static Mesh CutMesh(Mesh mesh, Matrix4x4 m, Bounds region, out int tris, float frontBand)
         {

@@ -36,12 +36,12 @@ namespace HeadUnit
         public bool Ready => Player != null && Player.isPrepared && Texture != null && !_placeholder.Contains(Player);
         /// Width over height of the picture (16:9 until the video says).
         public float Aspect = 16f / 9f;
-        public static float SeekOverS = 1.0f, NudgeOverS = 0.08f, RetryS = 30f, SeekGapS = 3f;
-        public static int MaxTextureWidth = 1920;
+        public static readonly float SeekOverS = 1.0f, NudgeOverS = 0.08f, RetryS = 30f, SeekGapS = 3f;
+        public static readonly int MaxTextureWidth = 1920;
         public static bool Trace = false;   // makes, drops and seeks in the log
         public static float MakeGapS = 1.5f;
         /// Tries of a video that failed, after the first (each needs a new player, see above).
-        public static int MaxRetries = 2;
+        public static readonly int MaxRetries = 2;
         private readonly Dictionary<string, int> _retries = new Dictionary<string, int>();
 
         /// Players done with: paused, silent, kept for the next video. Picture textures go a second after their player.
@@ -120,7 +120,7 @@ namespace HeadUnit
         /// About 20 MB each (huprev.py: 3.89 → 4.01 GB over six videos). Past PoolKeep the oldest, idle IdleDestroyS,
         /// is destroyed after all: under Proton the next video may then crash the game (huprev.py, a kept player
         /// destroyed after 12 s idle: the next one crashed), so only after a long session (100 videos, ~2 GB).
-        public static int PoolKeep = 100; public static float IdleDestroyS = 60f;
+        public static readonly int PoolKeep = 100; public static readonly float IdleDestroyS = 60f;
         public static long Destroyed;
 
         /// Kept players beyond PoolKeep, idle for IdleDestroyS, destroyed one at a time.

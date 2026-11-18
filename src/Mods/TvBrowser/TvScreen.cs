@@ -185,7 +185,7 @@ namespace TvBrowser
             }
         }
 
-        public static float ScrollSlack = 24f;
+        public static readonly float ScrollSlack = 24f;
 
         /// The driver's address bar (or the start page, url ""): the shared page goes there, this machine's at once.
         public void Go(string url)

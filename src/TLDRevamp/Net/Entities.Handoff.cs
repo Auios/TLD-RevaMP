@@ -16,7 +16,7 @@ namespace TLDRevamp.Net
     /// stored and kept it; handoff run 3.)
     public static partial class Entities
     {
-        public static double HandFarM, HandNearM;     // 0: the game's own (freeze / unfreeze distance)
+        public static readonly double HandFarM, HandNearM;     // 0: the game's own (freeze / unfreeze distance)
         public static int HandPerTick = 16;
         public static long Handoffs, HandoffKeptCarried, HandoffLogged;
         public static long HandoffKeptMounted;

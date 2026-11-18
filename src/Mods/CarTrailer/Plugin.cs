@@ -30,20 +30,20 @@ namespace CarTrailer
 
         // the Brakas's bed in its own space (prefab dump, `mount prefab 397`): wheel tracks' tops at y 0.125, from
         // behind the cab (z 0.6) to the tail (z -4.75), frame rails down to y -0.33; sides kept low
-        public static float BrakasFloor = 0.125f, BedFront = 0.6f, BedRear = -4.75f, BedBottom = -0.36f, BedTop = 0.45f, BedHalfWidth = 0.95f;
+        public static readonly float BrakasFloor = 0.125f, BedFront = 0.6f, BedRear = -4.75f, BedBottom = -0.36f, BedTop = 0.45f, BedHalfWidth = 0.95f;
         // the trailer: wheels where the Brakas has its rear ones (so the floor is as high above them as on the Brakas)
-        public static float DrawbarClear = 1.0f;
+        public static readonly float DrawbarClear = 1.0f;
         // How it tows (tools/cartrailersway.py, cartrailerride.py). The game's small trailer weighs about 200 kg on
         // springs for that: the car trailer, five metres long, was 244 kg on them and swung out and jackknifed from a
         // sideways push at 72 km/h (the game's trailer recovers). About 550 kg, springs for a car on top, and the
         // weight a little further ahead of the axles (more on the hitch) keep it behind the car.
-        public static float ExtraMass = 306f;   // on top of the game trailer's own and its wheels': about 550 kg in all
-        public static float Spring = 40000f, Damper = 3500f;   // the game's trailer: 16000, 1200
+        public static readonly float ExtraMass = 306f;   // on top of the game trailer's own and its wheels': about 550 kg in all
+        public static readonly float Spring = 40000f, Damper = 3500f;   // the game's trailer: 16000, 1200
         // it rides higher on them (the game's: 0.5 of 0.3 m): the Brakas's frame under the bed and its tail caught the
         // road on bumps at speed, and its underside slides instead of gripping when it does touch
-        public static float SpringTarget = 0.3f, SpringTravel = 0.35f, UnderbodyFriction = 0.05f;
-        public static float SwayDamping = 8000f;   // N·m per rad/s of swing against the car (SwayDamper)
-        public static float HitchedWeightAhead = 0.9f;   // the centre of mass ahead of the axles' middle when hitched: ~12% on the hitch
+        public static readonly float SpringTarget = 0.3f, SpringTravel = 0.35f, UnderbodyFriction = 0.05f;
+        public static readonly float SwayDamping = 8000f;   // N·m per rad/s of swing against the car (SwayDamper)
+        public static readonly float HitchedWeightAhead = 0.9f;   // the centre of mass ahead of the axles' middle when hitched: ~12% on the hitch
 
         internal static ManualLogSource Log;
         private static GameObject _holder, _prefab, _full;

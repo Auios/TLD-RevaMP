@@ -117,7 +117,7 @@ namespace HeadUnit
 
         /// YouTube's videos for words (yt-dlp's ytsearch: its first SearchCount results, as YouTube's own search would
         /// list them), live streams left out (nothing to download). Callback on the main thread; null on failure.
-        public static int SearchCount = 15;
+        public static readonly int SearchCount = 15;
         public static void Search(string words, Action<List<Entry>> done)
         {
             string q = Regex.Replace(words ?? "", "[\"\r\n\t]", " ").Trim();
@@ -206,7 +206,7 @@ namespace HeadUnit
         public static string CachedFile(string videoId, int h) => Path.Combine(CacheDir, $"{videoId}_{h}.{(Plugin.Convert.Value ? "webm" : "mp4")}");
 
         /// The VP8 copy's picture bitrate by its lines; at most 720 lines (VP8 is slow to encode).
-        public static int ConvertMaxLines = 720;
+        public static readonly int ConvertMaxLines = 720;
         private static string ConvertWhy = "";
 
         /// mp4 → VP8/Vorbis webm (ffmpeg, its fastest VP8 setting), then the mp4 deleted. Progress[videoId] "c<percent>".
@@ -253,7 +253,7 @@ namespace HeadUnit
         public static string[] Clients = { "mweb" };
         /// With ffmpeg: yt-dlp's own clients first (they offer the separate 720p/1080p picture and the AAC sound; mweb
         /// doesn't without a token), then mweb's 360p file.
-        public static string[] MergeClients = { null, "mweb" };
+        public static readonly string[] MergeClients = { null, "mweb" };
 
         private static string FileUrl(string path) => "file:///" + path.Replace('\\', '/');
 

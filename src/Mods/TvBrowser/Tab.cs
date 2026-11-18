@@ -157,7 +157,7 @@ namespace TvBrowser
         // ------------------------------------------------------------------ the pointer on the picture
 
         /// How long the pointer stays on the picture after the mouse last did something (it hides over a still page).
-        public static float PointerShowSeconds = 4f;
+        public static readonly float PointerShowSeconds = 4f;
 
         // an arrow, 1 its outline and 2 its inside, drawn at Scale picture pixels a dot
         private static readonly string[] Arrow =

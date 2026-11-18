@@ -20,8 +20,8 @@ namespace TLDLoader
     /// an optional modifier, read with Unity's Input.
     public class Keybind
     {
-        public static List<Keybind> Keybinds = new List<Keybind>();
-        public static List<Keybind> DefaultKeybinds = new List<Keybind>();
+        public static readonly List<Keybind> Keybinds = new List<Keybind>();
+        public static readonly List<Keybind> DefaultKeybinds = new List<Keybind>();
 
         public string ID { get; set; }
         public string Name { get; set; }

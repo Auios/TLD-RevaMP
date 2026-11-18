@@ -198,7 +198,7 @@ namespace TvBrowser
             }
         }
 
-        public static float DoubleClickSeconds = 0.5f;
+        public static readonly float DoubleClickSeconds = 0.5f;
 
         /// Into this machine's page now; queued for the others, where a move after a move takes its place.
         public static void MouseCmd(Command c)

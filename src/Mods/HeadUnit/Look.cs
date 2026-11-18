@@ -8,7 +8,7 @@ namespace HeadUnit
     public static class Look
     {
         public const string ScreenName = "HeadUnitScreen", BezelName = "HeadUnitBezel";
-        public static float ScreenW = 0.20f, ScreenH = 0.11f, Proud = 0.03f;   // metres: a double-DIN face, standing out of the radio over its knobs
+        public static readonly float ScreenW = 0.20f, ScreenH = 0.11f, Proud = 0.03f;   // metres: a double-DIN face, standing out of the radio over its knobs
 
         public static void Dress(GameObject prefab, Units.Model m)
         {

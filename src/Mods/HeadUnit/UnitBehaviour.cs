@@ -15,7 +15,7 @@ namespace HeadUnit
     public sealed partial class UnitBehaviour : MonoBehaviour
     {
         public static readonly List<UnitBehaviour> All = new List<UnitBehaviour>();
-        public static float ActiveRangeM = 40f;
+        public static readonly float ActiveRangeM = 40f;
 
         public Units.Model Model;
         public radioscript Radio;
@@ -276,9 +276,9 @@ namespace HeadUnit
             Touch.Layout(key, top, bottom, list, cols: cols, listTop: _dialog == Dialog.Results ? 0.2f : Tab == Mode.Radio ? 0.3f : 0f);
         }
 
-        public static int ListRows = 5;
+        public static readonly int ListRows = 5;
         /// Search results: fewer, taller rows than the queue (a title in two lines big enough to read from the seat).
-        public static int ResultRows = 4, ResultChars = 52;
+        public static readonly int ResultRows = 4, ResultChars = 52;
 
         /// The queue list moved by `rows` (from where it shows now).
         private void ScrollList(int rows, UnitState s)

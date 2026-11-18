@@ -17,7 +17,7 @@ namespace TLDRevamp.Net
         // carries the body along with the anchor for these frames, then leaves it to the game's own hold.
         private static readonly List<Transform> _itemCheckBodyRoots = new List<Transform>();
         private static int _itemCheckSettleFrames;
-        internal static int ItemCheckSettleFrames = 45;
+        internal static readonly int ItemCheckSettleFrames = 45;
 
         private static void ItemCheckSettle(fpscontroller pl)
         {

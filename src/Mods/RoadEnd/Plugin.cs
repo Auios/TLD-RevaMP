@@ -25,10 +25,10 @@ namespace RoadEnd
         public static bool Enabled = true, Verbose;
         public static int Sign = 1;                 // the way the road is driven from the start: +1 north (+z), -1 south
         public static double EndKm = 5000;
-        public static double ObjectClearance = 15;     // no tree or rock this close to the end of the road
-        public static double BuildingClearance = 80;   // no building this close to it
-        public static double GraveDistance = 6, NoteDistance = 2.5;
-        public static float GraveYaw = 0f, NoteYaw = 0f, NoteWidth = 0.6f;
+        public static readonly double ObjectClearance = 15;     // no tree or rock this close to the end of the road
+        public static readonly double BuildingClearance = 80;   // no building this close to it
+        public static readonly double GraveDistance = 6, NoteDistance = 2.5;
+        public static readonly float GraveYaw = 0f, NoteYaw = 0f, NoteWidth = 0.6f;
         public static string Text = "Sorry she died....", FontName = "";
 
         private void Awake()

@@ -42,7 +42,7 @@ namespace HeadUnit
     {
         public static readonly List<INavProvider> Providers = new List<INavProvider> { new RoadShape() };
         public static readonly List<NavEvent> Events = new List<NavEvent>();
-        public static float LookAheadM = 1500f;
+        public static readonly float LookAheadM = 1500f;
         /// The road ahead found last (for the map).
         public static List<Vector3d> Path => _path;
         public static string Problem;
@@ -136,7 +136,7 @@ namespace HeadUnit
     public sealed class RoadShape : INavProvider
     {
         public string Name => "road shape";
-        public static float BendMinDeg = 25f, SlopeMinPct = 6f;
+        public static readonly float BendMinDeg = 25f, SlopeMinPct = 6f;
 
         public void Scan(in NavContext c, List<NavEvent> into)
         {

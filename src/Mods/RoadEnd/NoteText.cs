@@ -6,7 +6,7 @@ namespace RoadEnd
     /// into a render texture, copied into an ordinary texture (so the sheet can use a lit material).
     public static class NoteText
     {
-        public static Color Paper = new Color(0.93f, 0.90f, 0.82f), Ink = new Color(0.04f, 0.04f, 0.08f);
+        public static readonly Color Paper = new Color(0.93f, 0.90f, 0.82f), Ink = new Color(0.04f, 0.04f, 0.08f);
         const int Layer = 31;   // no game object uses it; the camera sees nothing else
 
         public static Texture2D Render(string text, int width, int height)

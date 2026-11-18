@@ -36,7 +36,7 @@ namespace TLDRevamp.VR.Native
         private static VrHoldMode _mode;
         private static Vector3 _offPos;
         private static Quaternion _offRot = Quaternion.identity;
-        private static bool[] _grabbedThisPress = new bool[2];
+        private static readonly bool[] _grabbedThisPress = new bool[2];
 
         // the hand's recent path, for the throw
         private const int History = 8;

@@ -15,7 +15,7 @@ namespace HeadUnit
         public int Zoom = 2;
         public Texture2D Texture;
         private readonly Color32[] _px = new Color32[Wpx * Hpx], _clear = new Color32[Wpx * Hpx];
-        public static float FrameS = 1f / 30f;
+        public static readonly float FrameS = 1f / 30f;
         private readonly Color32 _bg = new Color32(14, 17, 22, 255), _road = new Color32(150, 155, 165, 255), _unbuilt = new Color32(70, 74, 82, 255), _main = new Color32(240, 222, 120, 255), _ahead, _car;
         private float _next;
         private static float _roadsAt; private static readonly List<List<Vector3d>> _roads = new List<List<Vector3d>>(); private static readonly List<bool> _built = new List<bool>(), _mainRoad = new List<bool>();   // the main road (roadTypeEmu.mainRoad): its own colour

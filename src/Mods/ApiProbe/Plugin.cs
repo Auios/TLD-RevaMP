@@ -73,7 +73,7 @@ namespace ApiProbe
         public static ModInfo Mod;
         public static BeaconType Type;
         public static SessionSetting RuleSetting;
-        public static float ViewRangeM = 800f, StateRangeM = 300f;
+        public static readonly float ViewRangeM = 800f, StateRangeM = 300f;
         public static string Rule = "easy";
         public static int Placed, Stored, RuleApplied;
 

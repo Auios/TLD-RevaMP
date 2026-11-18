@@ -13,7 +13,7 @@ namespace TvBrowser
     /// A key: one byte (0: off or nothing showing; 1: a picture follows), then the JPEG.
     internal static class ReplayTv
     {
-        public static float RecordEvery = 2f;
+        public static readonly float RecordEvery = 2f;
         public static int Recorded, Shown, Failed;
         private static readonly Dictionary<Renderer, (Material Mat, Texture2D Tex)> Copies = new Dictionary<Renderer, (Material, Texture2D)>();
 

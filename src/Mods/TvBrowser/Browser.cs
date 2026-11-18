@@ -671,7 +671,7 @@ namespace TvBrowser
             else _idleSince = -1f;
         }
 
-        public static float IdleSeconds = 60f;
+        public static readonly float IdleSeconds = 60f;
 
         private static void OnEvent(Cdp.Message m)
         {
