@@ -4,8 +4,8 @@ using UnityEngine;
 namespace TLDRevamp.Fixes
 {
     /// Optional driving assists for the car the local player drives (Settings → Revamp, all off by default): trailer
-    /// sway reduction, roll correction and traction control. The ideas are Long Haul Overhaul's (QuantumRage & Wisher,
-    /// LGPL-3.0), written anew here against the beta and kept simple.
+    /// sway reduction, roll correction and traction control. The ideas are Long Haul Overhaul's (QuantumRage & Wisher),
+    /// written anew here against the beta and kept simple.
     ///
     /// They push only bodies this machine simulates (not kinematic): the driver's car and the trailers it tows, which
     /// go with it (Net/Entities). Another player in the car feels them through the driver's physics, so a car handles

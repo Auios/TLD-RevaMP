@@ -4,8 +4,8 @@ using UnityEngine;
 namespace TLDRevamp.Fixes
 {
     /// An unhitched trailer creeps: its wheels roll freely and nothing holds the drawbar, so on the slightest slope a
-    /// parked trailer slowly rolls off (the idea from Long Haul Overhaul's trailer friction fix, QuantumRage & Wisher,
-    /// LGPL-3.0; written anew here against the beta's utanfutoscript).
+    /// parked trailer slowly rolls off (the idea from Long Haul Overhaul's trailer friction fix, QuantumRage & Wisher;
+    /// written anew here against the beta's utanfutoscript).
     ///
     /// Here a trailer that isn't hitched (utanfutoscript.attached), stands on at least one wheel and moves slower than
     /// CreepMs loses its speed along the ground each physics step, and its turning about the vertical, and the slope's
