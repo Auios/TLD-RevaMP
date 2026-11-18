@@ -93,14 +93,20 @@ namespace TLDRevamp
                 "\n\nOn: the lens is only rendered while it's on screen (+3% FPS).",
                 () => BinocularLensCamera.Enabled ? 1 : 0, v => BinocularLensCamera.Enabled = v == 1);
 
-            Choice("antialiasing", "Anti-aliasing", AntiAliasingChoice.Options, 0,
-                "The game's Antialiasing switch turns on two methods at once: temporal anti-aliasing and 8x MSAA. Nearly all of " +
-                "its cost is the MSAA: measured at 1080p, about +1.4 ms of graphics-card time a frame, the most expensive picture " +
-                "setting.\n\nPick one here instead (graphics-card time per frame, measured): FXAA +0.1 ms, slightly soft. SMAA " +
-                "+0.1 ms, sharper. TAA about free, smoothest edges, can blur or trail a little in motion. MSAA 2x/4x/8x +0.2/+0.5/" +
-                "+1.6 ms; smooths the outlines of objects only, not where two flat surfaces meet in the distance or texture " +
-                "shimmer.\n\nGame's own: the game's switch decides, as before.",
-                () => AntiAliasingChoice.Mode, AntiAliasingChoice.Set);
+            Choice(AaMsaaKey, "Anti-aliasing: MSAA", AntiAliasingChoice.MsaaOptions, AntiAliasingChoice.DefaultMsaa,
+                "Works with the filter below, both only while the game's Antialiasing switch is on (off: no anti-aliasing). " +
+                "The game's own anti-aliasing is MSAA 8x + TAA (game's tuning).\n\n" +
+                "MSAA smooths the true outlines of objects, also very thin ones like power lines, and never flickers. Its cost " +
+                "grows with what is drawn close to you: with a car carrying hundreds of items in view (1080p, RTX 4070) the " +
+                "frame took 6.7 ms with none, 9.6 ms with 2x, 10.1 ms with 4x, 17.3 ms with 8x.",
+                () => AntiAliasingChoice.Msaa, AntiAliasingChoice.SetMsaa);
+            Choice(AaFilterKey, "Anti-aliasing: filter", AntiAliasingChoice.FilterOptions, AntiAliasingChoice.DefaultFilter,
+                "Smooths the finished picture, on its own or on top of MSAA, for about +0.1 ms.\n\n" +
+                "SMAA: sharp, never flickers; with MSAA 2x it looks about like 8x (the default), with 4x smoother than 8x. " +
+                "FXAA: a little softer. TAA (tuned): blends slightly shifted frames, the smoothest edges, but speckled shiny " +
+                "things like glass bottles shimmer and fast motion can leave a faint trail. TAA (game's tuning): what the game " +
+                "uses, shifted so little it barely smooths anything.",
+                () => AntiAliasingChoice.Filter, AntiAliasingChoice.SetFilter);
             Header("Performance fixes",
                 "These make the game do the same work faster or skip work that changes nothing. The world, the physics and " +
                 "what you see stay exactly the same. Only switch one off if you suspect it causes a problem.");
@@ -399,6 +405,11 @@ namespace TLDRevamp
         internal static void Choice(string key, string label, string[] options, int def, string help, Func<int> get, Action<int> set) =>
             Entries.Add(new Entry { Key = key, Label = label, Help = help, Kind = Kind.Choice, Options = options, Default = def, Get = get, Set = set });
 
+        /// Anti-aliasing: MSAA and a filter, two choices that combine (2026-11-18). Before, one list under "antialiasing"
+        /// (every value is written, so 0 = the old default for players who never picked one); test builds of 2026-11-18
+        /// wrote "antialiasingMethod". A pick there is carried over once (AntiAliasingChoice.FromOldMode).
+        internal const string AaMsaaKey = "aaMsaa", AaFilterKey = "aaFilter", OldAntiAliasingKey = "antialiasing", TestAntiAliasingKey = "antialiasingMethod";
+
         /// The terrain picked on the new-game screen for the next new game (TerrainNewGameUi).
         internal const string NewGameTerrainKey = "newGameTerrain";
 
@@ -429,6 +440,14 @@ namespace TLDRevamp
                 foreach (var pair in saved) if (pair.Key != "hostPassword" && !Entries.Exists(e => e.Key == pair.Key)) Unclaimed[pair.Key] = pair.Value;
                 foreach (var e in Entries)
                     if (e.Key != null && !e.RuntimeOnly && saved.TryGetValue(e.Key, out string text) && int.TryParse(text, out int v)) e.Set(v);
+                if (!saved.ContainsKey(AaMsaaKey) && !saved.ContainsKey(AaFilterKey))
+                {
+                    bool test = saved.TryGetValue(TestAntiAliasingKey, out string oldAa);
+                    if ((test || saved.TryGetValue(OldAntiAliasingKey, out oldAa)) && int.TryParse(oldAa, out int picked) &&
+                        AntiAliasingChoice.FromOldMode(picked, test, out int msaa, out int filter))
+                    { SetChoice(AaMsaaKey, msaa); SetChoice(AaFilterKey, filter); }
+                }
+                Unclaimed.Remove(OldAntiAliasingKey); Unclaimed.Remove(TestAntiAliasingKey);
                 TextValues.Clear(); IntegerValues.Clear();
                 Loaded?.Invoke(saved);
                 // The host password is not a persisted value: the old plaintext line is removed by the migration

@@ -3,39 +3,68 @@ using UnityEngine;
 
 namespace TLDRevamp.Fixes
 {
-    /// Anti-aliasing as a choice. The game's one switch (Settings > Graphics > Antialiasing) turns on two methods at
-    /// once: temporal AA on every post-processing layer (pplayermelle.TurnOn, from mainscript.SettingsRefreshed and
-    /// pplayermelle.FStart) and 8x MSAA (settingsscript.RefreshInMain: QualitySettings.antiAliasing = 8). Both smooth the
-    /// same edges; together they were the one setting that made the graphics card the limit (GPU 1.7 -> 3.0 ms a frame,
-    /// PerfA 2026-11-03). Settings > Revamp > Anti-aliasing picks one: the post-processing stack's own FXAA, SMAA or TAA
-    /// (with the game's TAA tuning), or MSAA 2x/4x/8x, or none. MSAA works here (every camera renders forward with
-    /// allowMSAA): it smooths object outlines (a car 20 m off at 2x/4x/8x) but not where the deck meets the terrain in the
-    /// distance, two nearly flat surfaces whose edge the depth test decides the same way in every sample. Most of its cost
-    /// is the HDR targets: 8x with HDR off costs about a third (PerfA 2026-11-03), not an option as it changes the picture.
-    /// "Game's own" (the default) leaves the game's switch in charge, exactly as before. Not in VR: VrPerf manages
-    /// anti-aliasing there.
+    /// Anti-aliasing as two choices that combine: MSAA (off, 2x, 4x, 8x) and a filter on the finished picture (none,
+    /// FXAA, SMAA, TAA tuned, TAA with the game's tuning). The game's one switch (Settings > Graphics > Antialiasing)
+    /// still decides whether there is any anti-aliasing: when it is off, both are off, as the game does it. What the switch
+    /// turns on by itself is 8x MSAA (settingsscript.RefreshInMain: QualitySettings.antiAliasing = 8) plus temporal AA on
+    /// every post-processing layer (pplayermelle.TurnOn, from mainscript.SettingsRefreshed and pplayermelle.FStart):
+    /// "MSAA 8x" + "TAA (game's tuning)" here is exactly that.
+    ///
+    /// Measured 2026-11-18 on a player's saves (1080p, RTX 4070, a car carrying ~960 mounted items and a pile of glass
+    /// bottles in view; FrameProbe -frameprobe-aa2/-frameprobe-flicker):
+    /// - 8x MSAA costs more the more is drawn close by: 17.3 ms a frame against 6.7 ms with none. 2x/4x: 9.6/10.1 ms.
+    /// - The game's TAA has a jitter spread of 0.1: the camera barely moves between frames, so there is almost nothing to
+    ///   blend and edges stay jagged. With the stack's defaults (jitter 0.75, stationary 0.95, motion 0.85, sharpness
+    ///   0.25) TAA smooths like 8x MSAA for ~0.1 ms, but speckled glass textures shimmer (4% of the bottles' pixels change
+    ///   visibly frame to frame, 0.05% without TAA); lower jitter that stops it also stops the smoothing.
+    /// - SMAA/FXAA cost ~0.1 ms and never flicker; on top of MSAA they smooth what it leaves: MSAA 2x + SMAA had about
+    ///   8x's edge smoothness at 9.3 ms, 4x + SMAA was smoother than 8x at 11.3 ms. The default is MSAA 2x + SMAA.
+    /// MSAA works here (every camera renders forward with allowMSAA). Not in VR: VrPerf manages anti-aliasing there.
     public static class AntiAliasingChoice
     {
-        public static readonly string[] Options = { "Game's own (TAA + 8x MSAA when on)", "Off", "FXAA", "SMAA", "TAA", "MSAA 2x", "MSAA 4x", "MSAA 8x" };
-        public static int Mode;   // 0: the game's own
+        public static readonly string[] MsaaOptions = { "Off", "2x", "4x", "8x" };
+        public static readonly string[] FilterOptions = { "None", "FXAA", "SMAA", "TAA (tuned)", "TAA (game's tuning)" };
+        public const int DefaultMsaa = 1, DefaultFilter = 2;   // MSAA 2x + SMAA
+        public static int Msaa = DefaultMsaa, Filter = DefaultFilter;
         public static long Applied;
 
-        public static void Set(int v)
+        /// Temporal AA tuning: the post-processing stack's defaults (jitter spread, stationary blending, motion blending,
+        /// sharpness), not the game's 0.1 jitter.
+        internal const float TaaJitter = .75f, TaaStationary = .95f, TaaMotion = .85f, TaaSharpness = .25f;
+
+        public static void SetMsaa(int v) { Msaa = Mathf.Clamp(v, 0, MsaaOptions.Length - 1); Apply(); }
+        public static void SetFilter(int v) { Filter = Mathf.Clamp(v, 0, FilterOptions.Length - 1); Apply(); }
+
+        /// The two choices from the single list the setting had before (2026-11-03 .. 11-18): 0 the game's own, 1 off,
+        /// 2 FXAA, 3 SMAA, 4 TAA (the game's tuning), 5/6/7 MSAA 2x/4x/8x. Test builds of 2026-11-18 had 4 = TAA tuned and
+        /// 8 = MSAA 2x + TAA tuned (tunedTaa). Returns false for 0 and unknown values (keep the defaults).
+        internal static bool FromOldMode(int mode, bool tunedTaa, out int msaa, out int filter)
         {
-            int was = Mode;
-            Mode = Mathf.Clamp(v, 0, Options.Length - 1);
-            if (Mode != 0) Apply();
-            else if (was != 0) GameOwn();
+            msaa = 0; filter = 0;
+            switch (mode)
+            {
+                case 1: return true;
+                case 2: filter = 1; return true;
+                case 3: filter = 2; return true;
+                case 4: filter = tunedTaa ? 3 : 4; return true;
+                case 5: msaa = 1; return true;
+                case 6: msaa = 2; return true;
+                case 7: msaa = 3; return true;
+                case 8 when tunedTaa: msaa = 1; filter = 3; return true;
+                default: return false;
+            }
         }
 
-        private static int Msaa => Mode == 5 ? 2 : Mode == 6 ? 4 : Mode == 7 ? 8 : 0;
+        private static int Samples => Msaa == 1 ? 2 : Msaa == 2 ? 4 : Msaa == 3 ? 8 : 0;
 
-        private static bool Active => Mode != 0 && mainscript.s != null && !mainscript.IsVR();
+        /// Ours is in charge: the game's switch on, not VR. (Switch off: the game's own code turns everything off.)
+        private static bool Active => mainscript.s != null && !mainscript.IsVR() &&
+                                      settingsscript.s != null && settingsscript.s.S != null && settingsscript.s.S.BAntialiasing;
 
         internal static void Apply()
         {
             if (!Active) return;
-            QualitySettings.antiAliasing = Msaa;
+            QualitySettings.antiAliasing = Samples;
             if (mainscript.s.pplayers != null)
                 foreach (var pl in mainscript.s.pplayers) Layer(pl);
             Applied++;
@@ -49,7 +78,8 @@ namespace TLDRevamp.Fixes
         {
             var layer = pl ? LayerField?.GetValue(pl) as Component : null;
             if (!layer) return;
-            if (Mode == 4)
+            if (Filter == 3) { pl.TurnOn(TaaJitter, TaaStationary, TaaMotion, TaaSharpness); return; }
+            if (Filter == 4)
             {
                 var ms = mainscript.s;
                 pl.TurnOn(ms.AntialiasingJitterSpread, ms.AntialiasingStationaryBlending, ms.AntialiasingMotionBlending, ms.AntialiasingSharpness);
@@ -57,24 +87,8 @@ namespace TLDRevamp.Fixes
             }
             if (_modeField == null) _modeField = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.PostProcessLayer:antialiasingMode", layer.GetType());
             if (_modeField == null) return;
-            string name = Mode == 2 ? "FastApproximateAntialiasing" : Mode == 3 ? "SubpixelMorphologicalAntialiasing" : "None";
+            string name = Filter == 1 ? "FastApproximateAntialiasing" : Filter == 2 ? "SubpixelMorphologicalAntialiasing" : "None";
             _modeField.SetValue(layer, System.Enum.Parse(_modeField.FieldType, name));
-        }
-
-        /// Back to "Game's own": what the game's switch does, as its own code does it.
-        private static void GameOwn()
-        {
-            var ms = mainscript.s;
-            if (ms == null || settingsscript.s == null || settingsscript.s.S == null || mainscript.IsVR()) return;
-            bool on = settingsscript.s.S.BAntialiasing;
-            QualitySettings.antiAliasing = on ? 8 : 0;
-            if (ms.pplayers != null)
-                foreach (var pl in ms.pplayers)
-                {
-                    if (!pl || !(LayerField?.GetValue(pl) as Component)) continue;
-                    if (on) pl.TurnOn(ms.AntialiasingJitterSpread, ms.AntialiasingStationaryBlending, ms.AntialiasingMotionBlending, ms.AntialiasingSharpness);
-                    else pl.TurnOff();
-                }
         }
 
         [HarmonyPatch(typeof(mainscript), nameof(mainscript.SettingsRefreshed))]
@@ -86,7 +100,7 @@ namespace TLDRevamp.Fixes
         [HarmonyPatch(typeof(settingsscript), "RefreshInMain")]
         private static class AfterRefreshInMain
         {
-            [HarmonyPostfix] private static void Postfix() { if (Active) QualitySettings.antiAliasing = Msaa; }
+            [HarmonyPostfix] private static void Postfix() { if (Active) QualitySettings.antiAliasing = Samples; }
         }
 
         [HarmonyPatch(typeof(pplayermelle), nameof(pplayermelle.FStart))]
@@ -94,8 +108,5 @@ namespace TLDRevamp.Fixes
         {
             [HarmonyPostfix] private static void Postfix(pplayermelle __instance) { if (Active) Layer(__instance); }
         }
-
-        internal static string Stats() =>
-            "{\"mode\":" + Mode + ",\"name\":" + Json.Str(Options[Mode]) + ",\"msaa\":" + QualitySettings.antiAliasing + ",\"applied\":" + Applied + "}";
     }
 }

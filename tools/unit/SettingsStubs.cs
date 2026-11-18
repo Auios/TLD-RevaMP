@@ -39,7 +39,31 @@ namespace TLDRevamp.Fixes
     static class IdleCarParticles { internal static bool Enabled; }
     static class TrailerBrakes { internal static bool Enabled; }
     static class DrivingAssists { internal static bool Roll; internal static bool Sway; internal static bool Traction; }
-    static class AntiAliasingChoice { internal static readonly string[] Options = { "Game's own", "Off", "FXAA", "SMAA", "TAA", "MSAA 2x", "MSAA 4x", "MSAA 8x" }; internal static int Mode; internal static void Set(int v) { Mode = v; } }
+    static class AntiAliasingChoice
+    {
+        internal static readonly string[] MsaaOptions = { "Off", "2x", "4x", "8x" };
+        internal static readonly string[] FilterOptions = { "None", "FXAA", "SMAA", "TAA (tuned)", "TAA (game's tuning)" };
+        internal const int DefaultMsaa = 1, DefaultFilter = 2;
+        internal static int Msaa = DefaultMsaa, Filter = DefaultFilter;
+        internal static void SetMsaa(int v) { Msaa = v; }
+        internal static void SetFilter(int v) { Filter = v; }
+        internal static bool FromOldMode(int mode, bool tunedTaa, out int msaa, out int filter)
+        {
+            msaa = 0; filter = 0;
+            switch (mode)
+            {
+                case 1: return true;
+                case 2: filter = 1; return true;
+                case 3: filter = 2; return true;
+                case 4: filter = tunedTaa ? 3 : 4; return true;
+                case 5: msaa = 1; return true;
+                case 6: msaa = 2; return true;
+                case 7: msaa = 3; return true;
+                case 8 when tunedTaa: msaa = 1; filter = 3; return true;
+                default: return false;
+            }
+        }
+    }
 }
 namespace TLDRevamp.WorldGen
 {

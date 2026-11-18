@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Steamworks;
 using TLDRevamp;
+using TLDRevamp.Fixes;
 using TLDRevamp.Net;
 
 static class NetworkConditionsTest
@@ -45,6 +46,32 @@ static class NetworkConditionsTest
             Check(TLDRevamp.WorldGen.TerrainChoice.Selected == TLDRevamp.WorldGen.TerrainMode.OldTerrain,
                 "a terrain number that is no mode changes nothing");
             TLDRevamp.WorldGen.TerrainChoice.Selected = TLDRevamp.WorldGen.TerrainModes.Default;
+            System.IO.File.Delete(file);
+
+            // Anti-aliasing: MSAA and a filter that combine. The old single list ("antialiasing", 0 = the old default
+            // written for everyone) carries a pick over; 0 keeps the new defaults (MSAA 2x + SMAA).
+            var msaaRow = RevampSettings.Entries.Find(e => e.Key == RevampSettings.AaMsaaKey);
+            var filterRow = RevampSettings.Entries.Find(e => e.Key == RevampSettings.AaFilterKey);
+            Check(msaaRow != null && filterRow != null && AntiAliasingChoice.MsaaOptions[msaaRow.Default] == "2x" &&
+                  AntiAliasingChoice.FilterOptions[filterRow.Default] == "SMAA", "anti-aliasing defaults to MSAA 2x + SMAA");
+            void Aa(int msaa, int filter) { AntiAliasingChoice.Msaa = msaa; AntiAliasingChoice.Filter = filter; }
+            void LoadAa(params string[] lines) { Aa(AntiAliasingChoice.DefaultMsaa, AntiAliasingChoice.DefaultFilter); System.IO.File.WriteAllLines(file, lines); RevampSettings.Load(); }
+            LoadAa(RevampSettings.OldAntiAliasingKey + "=0");
+            Check(AntiAliasingChoice.Msaa == 1 && AntiAliasingChoice.Filter == 2, "the old default (game's own) becomes MSAA 2x + SMAA");
+            LoadAa(RevampSettings.OldAntiAliasingKey + "=6");
+            Check(AntiAliasingChoice.Msaa == 2 && AntiAliasingChoice.Filter == 0, "an old pick (MSAA 4x) is kept");
+            LoadAa(RevampSettings.OldAntiAliasingKey + "=4");
+            Check(AntiAliasingChoice.Msaa == 0 && AntiAliasingChoice.Filter == 4, "an old TAA pick keeps the game's tuning");
+            LoadAa(RevampSettings.TestAntiAliasingKey + "=8");
+            Check(AntiAliasingChoice.Msaa == 1 && AntiAliasingChoice.Filter == 3, "a test build's MSAA 2x + tuned TAA is kept");
+            LoadAa(RevampSettings.OldAntiAliasingKey + "=6", RevampSettings.AaMsaaKey + "=3", RevampSettings.AaFilterKey + "=2");
+            Check(AntiAliasingChoice.Msaa == 3 && AntiAliasingChoice.Filter == 2, "the new keys win over the old one (MSAA 8x + SMAA combine)");
+            RevampSettings.Save();
+            string aaSaved = System.IO.File.ReadAllText(file);
+            Check(aaSaved.Contains(RevampSettings.AaMsaaKey + "=3") && aaSaved.Contains(RevampSettings.AaFilterKey + "=2") &&
+                  !aaSaved.Contains(RevampSettings.OldAntiAliasingKey + "=") && !aaSaved.Contains(RevampSettings.TestAntiAliasingKey + "="),
+                  "both choices are saved and the old keys are dropped");
+            Aa(AntiAliasingChoice.DefaultMsaa, AntiAliasingChoice.DefaultFilter);
             System.IO.File.Delete(file);
 
             var runtime = RevampSettings.Entries.FindAll(e => e.RuntimeOnly);
