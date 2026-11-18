@@ -1,0 +1,9 @@
+# what Unity adds when the project is opened or built (build a copy outside the repository: README.md)
+Library/
+Temp/
+Logs/
+UserSettings/
+ProjectSettings/
+Out/
+*.csproj
+*.sln

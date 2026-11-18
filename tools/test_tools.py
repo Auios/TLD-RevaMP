@@ -56,6 +56,30 @@ class PrivacyScan(unittest.TestCase):
         self.assertEqual(kinds, [("bad.py", "a LAN or private IP address"), ("bad.py", "a Steam ID"), ("bad.py", "a home folder path"),
                                  ("bad.py", "decompiled game code"), ("x.dll", "a binary file")])
 
+    def test_unity_bundle_is_unpacked_and_scanned(self):
+        sys.path.insert(0, str(TOOLS)); import privacy_scan
+        d = pathlib.Path(tempfile.mkdtemp())
+        privacy_scan.ROOT = d
+
+        def bundle(payload):
+            # a UnityFS bundle as tools/fsr3bundle builds one (format 8): one LZ4 block holding only literals
+            lit = len(payload)
+            block = bytes([0xF0]) + bytes([255] * ((lit - 15) // 255)) + bytes([(lit - 15) % 255]) + payload
+            info = bytes(16) + (1).to_bytes(4, "big") + lit.to_bytes(4, "big") + len(block).to_bytes(4, "big") + (2).to_bytes(2, "big")
+            head = b"UnityFS\x00" + (8).to_bytes(4, "big") + b"5.x.x\x00" + b"2022.3.12f1\x00" + bytes(8)
+            head += len(info).to_bytes(4, "big") + len(info).to_bytes(4, "big") + (0).to_bytes(4, "big")
+            head += bytes(-len(head) % 16)
+            return head + info + block
+
+        rel = sorted(privacy_scan.BUNDLES)[0]
+        (d / rel).parent.mkdir(parents=True)
+        (d / rel).write_bytes(bundle(b"packages/fidelityfx.fsr/shaders/ffx_fsr3upscaler_accumulate_pass.compute" + b" " * 300))
+        self.assertEqual(privacy_scan.scan([rel]), [])
+        (d / rel).write_bytes(bundle(b"built in /ho" + b"me/alice/project" + b" " * 300))   # in pieces: this file passes the scan
+        self.assertEqual([f[2] for f in privacy_scan.scan([rel])], ["a home folder path"])
+        (d / rel).write_bytes(b"not a bundle")
+        self.assertEqual([f[2] for f in privacy_scan.scan([rel])], ["not a readable Unity asset bundle"])
+
 
 class FasterTests(unittest.TestCase):
     """mplib's build fingerprint and machine lock, suite.py's verdict count and table"""

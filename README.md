@@ -327,7 +327,9 @@ these are the folders that matter:
 ## Credits and licence
 
 RevaMP bundles BepInEx 5 (MIT) with its HarmonyX, MonoMod and Mono.Cecil (MIT) and UnityDoorstop (LGPL-2.1)
-unmodified, each under its own licence (the texts ship in the release zip as `BepInEx\licenses`). The Long Drive is by
+unmodified, each under its own licence (the texts ship in the release zip as `BepInEx\licenses`). The FSR 3.1 native AA
+option is AMD FidelityFX FSR 3.1 (MIT) through Nico de Poel's FSR3Unity (MIT), built into `TLDRevamp.dll`; its shaders
+are rebuilt with `tools/fsr3bundle`. The Long Drive is by
 Gab and Genesz. RevaMP is an unofficial fan project, not made, endorsed or supported by them; it contains no game
 files or game code, and every player needs their own copy of the game. Thanks also to Killenger for his
 TLDAutopilot mod, used in testing.

@@ -13,5 +13,7 @@
     <Reference Include="$(MSBuildThisFileDirectory)../../lib/*.dll" Private="false" />
     <ProjectReference Include="../TLDRevamp.Multiplayer/TLDRevamp.Multiplayer.csproj" Private="false" />
     <ProjectReference Include="../TLDRevamp.Preloader/TLDRevamp.Preloader.csproj" ReferenceOutputAssembly="false" />
+    <!-- FSR 3.1's compute shaders, built for the game's Unity by tools/fsr3bundle (Fixes/FsrNativeAa.cs) -->
+    <EmbeddedResource Include="Assets/Fsr3Upscaler.bundle" LogicalName="TLDRevamp.Fsr3Upscaler.bundle" />
   </ItemGroup>
 </Project>

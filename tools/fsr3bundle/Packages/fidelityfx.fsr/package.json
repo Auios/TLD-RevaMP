@@ -1,0 +1,11 @@
+{
+  "name": "fidelityfx.fsr",
+  "version": "1.0.1",
+  "displayName": "FidelityFX FSR",
+  "description": "FidelityFX Super Resolution 3 Upscaler shaders (from FSR3Unity, ppv2-3.4.0d-fsr3.1; the FSR 2 shaders are left out)",
+  "unity": "2020.1",
+  "documentationUrl": "https://github.com/ndepoel/FSR3Unity",
+  "author": {
+    "name": "Nico de Poel"
+  }
+}

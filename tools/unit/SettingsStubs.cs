@@ -42,7 +42,7 @@ namespace TLDRevamp.Fixes
     static class AntiAliasingChoice
     {
         internal static readonly string[] MsaaOptions = { "Off", "2x", "4x", "8x" };
-        internal static readonly string[] FilterOptions = { "None", "FXAA", "SMAA", "TAA (tuned)", "TAA (game's tuning)" };
+        internal static readonly string[] FilterOptions = { "None", "FXAA", "SMAA", "TAA (tuned)", "TAA (game's tuning)", "FSR 3.1 native AA" };
         internal const int DefaultMsaa = 1, DefaultFilter = 2;
         internal static int Msaa = DefaultMsaa, Filter = DefaultFilter;
         internal static void SetMsaa(int v) { Msaa = v; }

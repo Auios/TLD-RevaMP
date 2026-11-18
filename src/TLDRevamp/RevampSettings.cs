@@ -105,7 +105,9 @@ namespace TLDRevamp
                 "SMAA: sharp, never flickers; with MSAA 2x it looks about like 8x (the default), with 4x smoother than 8x. " +
                 "FXAA: a little softer. TAA (tuned): blends slightly shifted frames, the smoothest edges, but speckled shiny " +
                 "things like glass bottles shimmer and fast motion can leave a faint trail. TAA (game's tuning): what the game " +
-                "uses, shifted so little it barely smooths anything.",
+                "uses, shifted so little it barely smooths anything.\n\nFSR 3.1 native AA (AMD FidelityFX): blends shifted frames " +
+                "like TAA but follows every pixel with depth and motion, so edges and thin lines come out smoother than 8x MSAA " +
+                "without TAA's shimmer, for about +0.3 ms. The MSAA row is not used with it.",
                 () => AntiAliasingChoice.Filter, AntiAliasingChoice.SetFilter);
             Header("Performance fixes",
                 "These make the game do the same work faster or skip work that changes nothing. The world, the physics and " +

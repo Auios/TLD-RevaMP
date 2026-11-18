@@ -101,6 +101,66 @@ PROGRAMS = {f"src/Mods/TvBrowser/Host/linux-x64/{n}" for n in ("tvbrowser-host",
            {"src/Mods/TvBrowser/Host/windows-x64/tvbrowser-host.dll"}
 
 
+# Unity asset bundles the mod embeds, by exact path: each must be a UnityFS bundle whose blocks unpack (LZ4 or none),
+# and the readable strings inside pass the same checks as text.
+BUNDLES = {"src/TLDRevamp/Assets/Fsr3Upscaler.bundle"}   # tools/fsr3bundle
+
+
+def lz4_block(src, size):
+    """One LZ4 block (no frame), as Unity stores bundle blocks."""
+    out, i, n = bytearray(), 0, len(src)
+    while i < n:
+        token = src[i]; i += 1
+        lit = token >> 4
+        if lit == 15:
+            while True:
+                b = src[i]; i += 1; lit += b
+                if b != 255: break
+        out += src[i:i + lit]; i += lit
+        if i >= n: break
+        off = src[i] | src[i + 1] << 8; i += 2
+        ml = token & 15
+        if ml == 15:
+            while True:
+                b = src[i]; i += 1; ml += b
+                if b != 255: break
+        ml += 4
+        start = len(out) - off
+        if off <= 0 or start < 0: raise ValueError("bad LZ4 offset")
+        if off >= ml: out += out[start:start + ml]
+        else:
+            for k in range(ml): out.append(out[start + k])
+    if len(out) != size: raise ValueError("LZ4 block is %d bytes, expected %d" % (len(out), size))
+    return bytes(out)
+
+
+def bundle_bytes(data):
+    """The unpacked contents of a UnityFS bundle (format 6-8; blocks stored plain or LZ4), or None."""
+    def unpack(raw, kind, size):
+        if kind == 0: return raw[:size]
+        if kind in (2, 3): return lz4_block(raw, size)
+        raise ValueError("compression %d" % kind)
+    if data[:8] != b"UnityFS\x00": return None
+    try:
+        i = 8; ver = int.from_bytes(data[i:i + 4], "big"); i += 4
+        for _ in range(2): i = data.index(b"\x00", i) + 1        # player version, engine version
+        i += 8                                                   # total size
+        csize, usize, flags = (int.from_bytes(data[i + k:i + k + 4], "big") for k in (0, 4, 8)); i += 12
+        if ver >= 7: i = (i + 15) & ~15
+        at_end = flags & 0x80
+        info_raw = data[len(data) - csize:] if at_end else data[i:i + csize]
+        if not at_end: i += csize
+        info = unpack(info_raw, flags & 0x3F, usize)
+        if flags & 0x200: i = (i + 15) & ~15
+        count = int.from_bytes(info[16:20], "big"); j, out = 20, []
+        for _ in range(count):
+            u, c, f = (int.from_bytes(info[j + a:j + b], "big") for a, b in ((0, 4), (4, 8), (8, 10)))
+            out.append(unpack(data[i:i + c], f & 0x3F, u)); i += c; j += 10
+        return b"".join(out)
+    except (ValueError, IndexError):
+        return None
+
+
 def program_strings(p):
     data = p.read_bytes()
     if data[:4] != b"\x7fELF" and data[:2] != b"MZ": return None
@@ -125,6 +185,11 @@ def scan(paths):
         if rel in SKIP: continue
         p = ROOT / rel
         if not p.is_file(): continue
+        if rel in BUNDLES:
+            data = bundle_bytes(p.read_bytes())
+            if data is None: found.append((rel, 0, "not a readable Unity asset bundle", ""))
+            else: found.extend(scan_text(rel, "\n".join(m.decode("ascii") for m in re.findall(rb"[\x20-\x7e]{4,}", data))))
+            continue
         if rel in PROGRAMS:
             text = program_strings(p)
             if text is None: found.append((rel, 0, "not an ELF or PE program", ""))

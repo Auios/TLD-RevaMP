@@ -19,11 +19,15 @@ namespace TLDRevamp.Fixes
     ///   visibly frame to frame, 0.05% without TAA); lower jitter that stops it also stops the smoothing.
     /// - SMAA/FXAA cost ~0.1 ms and never flicker; on top of MSAA they smooth what it leaves: MSAA 2x + SMAA had about
     ///   8x's edge smoothness at 9.3 ms, 4x + SMAA was smoother than 8x at 11.3 ms. The default is MSAA 2x + SMAA.
+    /// - FSR 3.1 native AA (FsrNativeAa, AMD FidelityFX, MIT) does what tuned TAA does but follows each pixel with depth
+    ///   and motion vectors: +0.3 ms, the least shimmer measured (0.02%), edges smoother than 8x MSAA. MSAA is not used
+    ///   with it (FSR takes the finished picture; MSAA under it would only cost time).
     /// MSAA works here (every camera renders forward with allowMSAA). Not in VR: VrPerf manages anti-aliasing there.
     public static class AntiAliasingChoice
     {
         public static readonly string[] MsaaOptions = { "Off", "2x", "4x", "8x" };
-        public static readonly string[] FilterOptions = { "None", "FXAA", "SMAA", "TAA (tuned)", "TAA (game's tuning)" };
+        public static readonly string[] FilterOptions = { "None", "FXAA", "SMAA", "TAA (tuned)", "TAA (game's tuning)", "FSR 3.1 native AA" };
+        public const int FsrFilter = 5;
         public const int DefaultMsaa = 1, DefaultFilter = 2;   // MSAA 2x + SMAA
         public static int Msaa = DefaultMsaa, Filter = DefaultFilter;
         public static long Applied;
@@ -55,7 +59,7 @@ namespace TLDRevamp.Fixes
             }
         }
 
-        private static int Samples => Msaa == 1 ? 2 : Msaa == 2 ? 4 : Msaa == 3 ? 8 : 0;
+        private static int Samples => Filter == FsrFilter ? 0 : Msaa == 1 ? 2 : Msaa == 2 ? 4 : Msaa == 3 ? 8 : 0;
 
         /// Ours is in charge: the game's switch on, not VR. (Switch off: the game's own code turns everything off.)
         private static bool Active => mainscript.s != null && !mainscript.IsVR() &&
@@ -63,7 +67,7 @@ namespace TLDRevamp.Fixes
 
         internal static void Apply()
         {
-            if (!Active) return;
+            if (!Active) { FsrNativeAa.DetachAll(); return; }
             QualitySettings.antiAliasing = Samples;
             if (mainscript.s.pplayers != null)
                 foreach (var pl in mainscript.s.pplayers) Layer(pl);
@@ -78,6 +82,8 @@ namespace TLDRevamp.Fixes
         {
             var layer = pl ? LayerField?.GetValue(pl) as Component : null;
             if (!layer) return;
+            var cam = layer.GetComponent<Camera>();
+            if (Filter == FsrFilter) FsrNativeAa.Attach(cam); else FsrNativeAa.Detach(cam);
             if (Filter == 3) { pl.TurnOn(TaaJitter, TaaStationary, TaaMotion, TaaSharpness); return; }
             if (Filter == 4)
             {

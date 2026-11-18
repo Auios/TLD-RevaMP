@@ -83,3 +83,5 @@ CREDITS
     MonoMod (https://github.com/neo4j-project/Neo4j.MonoMod, BepInEx\core\MonoMod.*.dll) - MIT
   Built into TLDRevamp.dll, its licence text also in BepInEx\licenses:
     Fira Sans Bold (https://github.com/mozilla/Fira, the letters of the corner mark) - SIL OFL 1.1
+    AMD FidelityFX FSR 3.1 (https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK, FSR 3.1 native AA) - MIT
+    FSR3Unity by Nico de Poel (https://github.com/ndepoel/FSR3Unity, FSR 3.1 for Unity) - MIT
