@@ -98,6 +98,14 @@
       "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/TerrainChoice",
       "versions": [
         {
+          "version": "0.4.2",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/terrainchoice-v0.4.2/TerrainChoice-0.4.2.zip",
+          "file": "BepInEx/plugins/TerrainChoice/TerrainChoice.dll",
+          "sha256": "b93271c508d6655273de67a47b8b014908fd974e2a13605a8d16c7b478676f66",
+          "size": 27877,
+          "revamp": "0.69.1"
+        },
+        {
           "version": "0.4.1",
           "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/terrainchoice-v0.4.1/TerrainChoice-0.4.1.zip",
           "file": "BepInEx/plugins/TerrainChoice/TerrainChoice.dll",
