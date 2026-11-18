@@ -8,7 +8,7 @@ namespace TLDRevamp.Fixes
     /// and the game's run key (Left Shift unless rebound) brakes the trailers alone while driving: steadies a swaying
     /// trailer, holds a downhill run. The trailer's brake lights come on with it. In the game a trailer's wheels only
     /// brake by its own lever on the drawbar (utanfutoscript.brake), and its lights follow the car (rearlights).
-    /// The idea is Long Haul Overhaul's (QuantumRage & Wisher, LGPL-3.0), written anew here against the beta.
+    /// The idea is Long Haul Overhaul's (QuantumRage & Wisher), written anew here against the beta.
     ///
     /// The torque goes on top of the game's own on the machine that simulates the trailer (its body isn't kinematic):
     /// the tow car's driver's, as hitched trailers go with the tow car (Net/Entities). The car's own inputs are read

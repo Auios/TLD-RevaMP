@@ -333,7 +333,7 @@ files or game code, and every player needs their own copy of the game. Thanks al
 TLDAutopilot mod, used in testing.
 
 The trailer-creep fix, trailer brakes and the optional driving assists follow ideas from *Long Haul Overhaul* by
-QuantumRage & Wisher (LGPL-3.0); they are written anew here and no code from it is included.
+QuantumRage & Wisher; they are written anew here and no code from it is included.
 
 **This Mod was created using AI.**
 
