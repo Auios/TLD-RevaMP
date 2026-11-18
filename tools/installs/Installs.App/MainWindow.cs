@@ -33,6 +33,8 @@ public sealed class MainWindow : Window
     readonly TextBlock rootText = new() { TextWrapping = TextWrapping.Wrap, FontSize = 13 };
     readonly TextBlock steamText = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
     readonly TextBlock emptyText = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap, IsVisible = false };
+    /// <summary>The copies hidden from the cards (CopyInfo.Hidden), each with a way back; only there while there are any.</summary>
+    readonly Button hiddenButton = new() { FontSize = 12, Padding = new Thickness(10, 3), Margin = new Thickness(0, 0, 0, 10), IsVisible = false };
     readonly TextBox nameBox = new() { Watermark = "e.g. release-0.68.5" };
     readonly ComboBox releaseBox = new() { HorizontalAlignment = HorizontalAlignment.Stretch, PlaceholderText = "loading the releases…" };
     readonly RadioButton rbClean = new() { GroupName = "kind" }, rbVanilla = new() { GroupName = "kind" }, rbRelease = new() { GroupName = "kind", IsChecked = true },
@@ -101,7 +103,8 @@ public sealed class MainWindow : Window
         // the cards
         var list = new StackPanel();
         Res(emptyText, TextBlock.ForegroundProperty, "Muted");
-        emptyText.Text = "No copies yet. Make one with the New copy panel: clean for the game alone, vanilla without gameplay mods, a release, a dev build of this checkout, or the test copy the test tools run.";
+        ToolTip.SetTip(hiddenButton, "copies you hid: nothing in them was changed or deleted; pick one to show its card again");
+        list.Children.Add(hiddenButton);
         list.Children.Add(emptyText);
         list.Children.Add(cards);
         var scroll = new ScrollViewer { Content = list, Padding = new Thickness(24, 4, 10, 10), HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -274,11 +277,14 @@ public sealed class MainWindow : Window
         var options = Btn("Launch options");
         ToolTip.SetTip(options, "variables, a wrapper like gamemoderun %command%, and game arguments, as in Steam (used from the next launch)");
         options.Click += async (_, _) => await EditOptions(c);
+        var hide = Btn("Hide");
+        ToolTip.SetTip(hide, "takes this card away without deleting anything (files, saves, settings stay); bring it back from Hidden copies at the top");
+        hide.Click += (_, _) => SetHidden(c, true);
         var remove = Btn("Remove");
         remove.Click += async (_, _) => await Remove(c);
-        foreach (var b in new[] { launch, update, open, options, remove })
+        foreach (var b in new[] { launch, update, open, options, hide, remove })
         {
-            b.IsEnabled = !busy && (b == launch || b == open || b == options || !isRunning) && (b != remove || !running2.Contains(c.Name));
+            b.IsEnabled = !busy && (b == launch || b == open || b == options || !isRunning) && (b != remove && b != hide || !running2.Contains(c.Name));
             buttons.Children.Add(b);
         }
         s.Children.Add(buttons);
@@ -421,7 +427,7 @@ public sealed class MainWindow : Window
         sourceChecked = DateTime.UtcNow;
         try
         {
-            foreach (var c in store.List().Where(c => c.Kind == Kind.Source))
+            foreach (var c in store.List().Where(c => c.Kind == Kind.Source && !c.Hidden))
             {
                 try { newer[c.Name] = await Task.Run(() => new SourceBuild(_ => { }).Newer(c)); }
                 catch (UserError e) { Log("Source status: " + e.Message); }
@@ -481,12 +487,36 @@ public sealed class MainWindow : Window
         rootText.Text = store.Root;
         steamText.Text = steam == null ? "Steam's game: not found"
             : $"Steam's game: {steamBranch ?? "unknown"} branch, build {steamBuild ?? "?"} · Steam {(Steam.ClientRunning() ? "running" : "not running (start it to launch a copy)")}";
-        var sig = string.Join("|", copies.Select(c => $"{c.Name}:{c.Kind}:{c.GameBranch}:{c.GameBuildId}:{c.Updated}:{c.LastLaunched}:{c.SizeBytes}:{running.Contains(c.Name)}:{running2.Contains(c.Name)}:{c.LaunchOptions}:{(c.HasRevamp ? c.InstalledSourceLabel : "")}:{(SecondAccount.Supported(c) ? SecondAccount.Behind(c) : "")}")) + $"|{busy}|{steamBranch}|{steamBuild}|{releases.Count}";
+        var sig = string.Join("|", copies.Select(c => $"{c.Name}:{c.Kind}:{c.GameBranch}:{c.GameBuildId}:{c.Updated}:{c.LastLaunched}:{c.SizeBytes}:{running.Contains(c.Name)}:{running2.Contains(c.Name)}:{c.LaunchOptions}:{c.Hidden}:{(c.HasRevamp ? c.InstalledSourceLabel : "")}:{(SecondAccount.Supported(c) ? SecondAccount.Behind(c) : "")}")) + $"|{busy}|{steamBranch}|{steamBuild}|{releases.Count}";
         if (!force && sig == signature) return;
         signature = sig;
         cards.Children.Clear();
-        foreach (var c in copies) cards.Children.Add(Card(c));
-        emptyText.IsVisible = copies.Count == 0;
+        // a hidden copy that is running keeps its card, so it can always be stopped
+        var shown = copies.Where(c => !c.Hidden || running.Contains(c.Name) || running2.Contains(c.Name)).ToList();
+        foreach (var c in shown) cards.Children.Add(Card(c));
+        var hidden = copies.Where(c => c.Hidden).ToList();
+        hiddenButton.IsVisible = hidden.Count > 0;
+        hiddenButton.Content = $"Hidden copies ({hidden.Count}) ▾";
+        hiddenButton.IsEnabled = !busy;
+        var menu = new MenuFlyout();
+        foreach (var c in hidden)
+        {
+            var item = new MenuItem { Header = $"Show {c.Name}  ·  {(c.HasRevamp ? "TLD RevaMP " + c.RevampVersion : c.KindLabel)}" + (c.LastLaunched is { } l ? $"  ·  last launched {l.ToLocalTime():d MMM yyyy}" : "") };
+            item.Click += (_, _) => SetHidden(c, false);
+            menu.Items.Add(item);
+        }
+        if (hidden.Count > 1)
+        {
+            menu.Items.Add(new Separator());
+            var all = new MenuItem { Header = "Show all" };
+            all.Click += (_, _) => { foreach (var c in hidden) SetHidden(c, false, reload: false); Reload(force: true); };
+            menu.Items.Add(all);
+        }
+        hiddenButton.Flyout = menu;
+        emptyText.Text = copies.Count == 0
+            ? "No copies yet. Make one with the New copy panel: clean for the game alone, vanilla without gameplay mods, a release, a dev build of this checkout, or the test copy the test tools run."
+            : "Every copy is hidden. Show them again from Hidden copies above.";
+        emptyText.IsVisible = shown.Count == 0;
     }
 
     void KindChanged()
@@ -667,6 +697,18 @@ public sealed class MainWindow : Window
             Log(line == null ? $"'{c.Name}': launch options cleared" : $"'{c.Name}': launch options {line}");
             Reload(force: true);
         }).ShowDialog(this);
+    }
+
+    /// <summary>Hide a copy's card, or show it again: only its copy.json changes.</summary>
+    void SetHidden(CopyInfo c, bool hidden, bool reload = true)
+    {
+        try
+        {
+            store.SetHidden(c.Name, hidden);
+            Log(hidden ? $"'{c.Name}' hidden (nothing deleted; Hidden copies at the top brings it back)" : $"'{c.Name}' shown again");
+        }
+        catch (Exception e) when (e is UserError or IOException or UnauthorizedAccessException) { Log("✗ " + e.Message); }
+        if (reload) Reload(force: true);
     }
 
     async Task Remove(CopyInfo c)

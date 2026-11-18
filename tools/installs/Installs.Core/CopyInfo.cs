@@ -49,6 +49,9 @@ public sealed class CopyInfo
     public int SecondMonitor { get; set; }
     /// <summary>Launch options in Steam's form (TLDInstalls.LaunchOptions): variables, a wrapper around %command%, game arguments.</summary>
     public string? LaunchOptions { get; set; }
+    /// <summary>Left out of the window's cards (kept on disk as it is: files, saves, settings); the Hidden menu or
+    /// `tld-installs show NAME` brings it back. Nothing else treats a hidden copy differently.</summary>
+    public bool Hidden { get; set; }
 
     [JsonIgnore] public string Dir { get; set; } = "";
     [JsonIgnore] public string GameDir => Path.Combine(Dir, "game");
@@ -131,6 +134,14 @@ public sealed class Store
     public CopyInfo? Get(string name) => ValidName(name) ? CopyInfo.Load(Path.Combine(Root, name)) : null;
 
     public CopyInfo Need(string name) => Get(name) ?? throw new UserError($"no copy called '{name}' in {Root}");
+
+    /// <summary>Hide a copy from the window's cards, or show it again. The copy itself is not touched (only copy.json).</summary>
+    public CopyInfo SetHidden(string name, bool hidden)
+    {
+        var c = Need(name);
+        if (c.Hidden != hidden) { c.Hidden = hidden; c.Save(); }
+        return c;
+    }
 
     public string PathOf(string name) => Path.Combine(Root, name);
 }

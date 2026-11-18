@@ -14,6 +14,7 @@ tld-installs: copies of The Long Drive next to Steam's, each with its own saves 
   tld-installs make NAME --source [REF] --player   the same, built as the player edition (what a release gives players)
   tld-installs build NAME                    fetch and rebuild a source copy now
   tld-installs player NAME [on|off]          show or set whether a source copy is a player build (rebuilt at the next build)
+  tld-installs hide NAME / show NAME         take a copy's card out of the window, or bring it back (nothing is deleted)
   tld-installs update NAME --ref REF         switch a source copy to another branch or commit
   tld-installs make NAME --test               BepInEx + this checkout's test build, debug bridge on (what the test tools run)
   tld-installs update NAME [--release VERSION]   game files up to Steam's, then the mod again (a release copy keeps its
@@ -79,7 +80,7 @@ try
                 Console.WriteLine(JsonSerializer.Serialize(copies.Select(c =>
                 {
                     var identity = c.InstalledIdentity();
-                    return new { c.Name, Kind = c.KindLabel, c.LaunchOptions, c.RevampVersion, c.RevampSource, c.Commit, InstalledCommit = identity.Commit, InstalledDirty = identity.Dirty, identity.LabelDiffers, c.SourceRef, c.UpdateBeforeLaunch, c.NewerCommits, c.GameBuildId, c.GameBranch, c.Bridge, Dir = c.Dir, c.Compat, Running = Launcher.IsRunning(c), c.SizeBytes, c.OwnBytes, c.LastLaunched, SecondAccountBehind = SecondAccount.Supported(c) ? SecondAccount.Behind(c) : null };
+                    return new { c.Name, Kind = c.KindLabel, c.LaunchOptions, c.RevampVersion, c.RevampSource, c.Commit, InstalledCommit = identity.Commit, InstalledDirty = identity.Dirty, identity.LabelDiffers, c.SourceRef, c.UpdateBeforeLaunch, c.NewerCommits, c.Hidden, c.GameBuildId, c.GameBranch, c.Bridge, Dir = c.Dir, c.Compat, Running = Launcher.IsRunning(c), c.SizeBytes, c.OwnBytes, c.LastLaunched, SecondAccountBehind = SecondAccount.Supported(c) ? SecondAccount.Behind(c) : null };
                 }), new JsonSerializerOptions { WriteIndented = true }));
                 return 0;
             }
@@ -89,7 +90,7 @@ try
             {
                 var behind = steamBuild.BuildId != null && (c.GameBuildId != steamBuild.BuildId || c.GameBranch != steamBuild.Branch)
                     ? $"  (Steam has the {steamBuild.Branch ?? "unknown"} branch, build {steamBuild.BuildId}: tld-installs update {c.Name})" : "";
-                Console.WriteLine($"{c.Name,-12} {c.KindLabel,-9} {(Launcher.IsRunning(c) ? "RUNNING " : "")}{Builder.Describe(c)}{behind}");
+                Console.WriteLine($"{c.Name,-12} {c.KindLabel,-9} {(Launcher.IsRunning(c) ? "RUNNING " : "")}{(c.Hidden ? "(hidden) " : "")}{Builder.Describe(c)}{behind}");
                 Console.WriteLine($"{"",-12} {c.Dir}" + (c.LastLaunched is { } l ? $", last launched {l.ToLocalTime():yyyy-MM-dd HH:mm}" : ""));
                 if (!string.IsNullOrWhiteSpace(c.LaunchOptions)) Console.WriteLine($"{"",-12} launch options: {c.LaunchOptions}");
             }
@@ -125,6 +126,13 @@ try
             if (c.Kind != Kind.Source) throw new UserError("player builds are for source copies");
             if (argv.Count > 2) { c.PlayerEdition = argv[2] switch { "on" => true, "off" => false, _ => throw new UserError("player: on or off") }; c.Save(); }
             Console.WriteLine($"{c.Name}: " + (c.PlayerEdition ? "player build" : "dev build") + (c.BuiltPlayerEdition != c.PlayerEdition ? " (rebuilt at the next build or launch)" : ""));
+            return 0;
+        }
+        case "hide":
+        case "show":
+        {
+            var c = store.SetHidden(Name(), argv[0] == "hide");
+            Console.WriteLine($"{c.Name}: " + (c.Hidden ? "hidden from the window (nothing deleted; tld-installs show " + c.Name + " brings it back)" : "shown in the window"));
             return 0;
         }
         case "sync":

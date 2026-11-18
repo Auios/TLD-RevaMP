@@ -203,6 +203,29 @@ public sealed class CoreTests : IDisposable
     }
 
     [Fact]
+    public void HidingACopyKeepsEverythingAndShowingBringsItBack()
+    {
+        var store = new Store(Path.Combine(tmp, "copies"));
+        var c = new CopyInfo { Name = "source-old", Kind = Kind.Source, Dir = store.PathOf("source-old"), RevampVersion = "0.69.1-dev.abc1234", PlayerEdition = true };
+        Directory.CreateDirectory(c.Dir); c.Save();
+        var save = Write("copies/source-old/UserData/Saves/world.tlds", "a world");
+        var plugin = Write("copies/source-old/game/BepInEx/plugins/TLDRevamp/TLDRevamp.dll", "the build");
+
+        Assert.False(store.Need("source-old").Hidden);   // copies made before hiding existed load as shown
+        Assert.True(store.SetHidden("source-old", true).Hidden);
+        var hidden = store.Need("source-old");
+        Assert.True(hidden.Hidden);
+        Assert.Contains(store.List(), x => x.Name == "source-old");   // still a copy: the window decides what to draw
+        Assert.Equal(("0.69.1-dev.abc1234", true), (hidden.RevampVersion, hidden.PlayerEdition));
+        Assert.Equal("a world", File.ReadAllText(save));
+        Assert.Equal("the build", File.ReadAllText(plugin));
+
+        Assert.False(store.SetHidden("source-old", false).Hidden);
+        Assert.False(store.Need("source-old").Hidden);
+        Assert.Throws<UserError>(() => store.SetHidden("no-such-copy", true));
+    }
+
+    [Fact]
     public void RecoversOldWindowsSwapIntoUserData()
     {
         var docs = Path.Combine(tmp, "Documents");

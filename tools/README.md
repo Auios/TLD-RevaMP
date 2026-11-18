@@ -197,7 +197,8 @@ weakened - including if the launch ever falls back to a visible one.
 has it, no BepInEx or mods (**clean**), without gameplay mods (**vanilla**), a TLD RevaMP **release**, a **dev build** of
 the checkout, the **newest dev built here** from an app-owned clone, or the **test** copy the test tools run. Steam's own install is only read; it is never changed. The window
 (TLDCopies) shows a card per copy (what's in it, branch and game build, size, last launch) with Launch/Stop, Update,
-Open folder and Remove, and a New copy panel. A copy with RevaMP also has a **Report a bug** box: the text is sent as an
+Open folder, Hide and Remove, and a New copy panel. Hide takes a card away without touching the copy (its files, saves and
+settings stay); **Hidden copies** above the cards lists them and shows one again (`tld-installs hide|show NAME`). A copy with RevaMP also has a **Report a bug** box: the text is sent as an
 issue in the releases' repository (`TLD_REPO`) with the copy's RevaMP version, BepInEx and game build in its body, then
 put on the bug board (`TLD_BUG_PROJECT`, default `Normal99/1`) in To triage. It uses the GitHub sign-in (`gh auth
 login`; the board also needs `gh auth refresh -s project`). Choose the related marks and report zips to keep in one
@@ -209,7 +210,7 @@ summaries; the developers will ask for the files privately if needed. The issue 
 
 ```sh
 dotnet run --project tools/installs/Installs.App -c Release          # the window
-dotnet run --project tools/installs/Installs.Cli -c Release -- list  # tld-installs list | make | update | sync | run | stop | options | check | remove | releases | where
+dotnet run --project tools/installs/Installs.Cli -c Release -- list  # tld-installs list | make | update | sync | run | stop | options | check | hide | show | remove | releases | where
 tools/installs/publish.py                                            # single files that need no .NET: dist/installs/<linux-x64|win-x64>/
 dotnet test tools/installs/Installs.Tests
 tld-installs report NAME "what's broken"                             # choose private files, then send the public description
