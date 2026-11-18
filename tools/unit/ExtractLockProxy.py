@@ -26,9 +26,10 @@ target.parent.mkdir(parents=True, exist_ok=True)
 roles = method('SetProxy') + '\n' + method('ApplyProxyBodies')
 roles += '\n' + method('ForgetProxyMap<T>') + '\n' + method('ForgetProxyMaps') + '\n' + method('RefreshProxyMaps')
 roles += '\n' + method('RefuseClaim')
-owner = source.split('                case Owner:\n                {', 1)[1].split('\n                }', 1)[0]
-roles += '\n        static void ApplyOwner(NetReader r) {\n' + owner.replace('                    break;', '                    return;') + '\n        }\n'
-control = source.split('                    bool control = ', 1)[1].split(';', 1)[0].replace('e.SentMoving', 'sentMoving')
+owner_method = method('ClientOwner')
+owner = owner_method[owner_method.index('{') + 1:owner_method.rindex('}')]
+roles += '\n        static void ApplyOwner(NetReader r) {\n' + owner + '\n        }\n'
+control = source.split('bool control = ', 1)[1].split(';', 1)[0].replace('e.SentMoving', 'sentMoving')
 roles += '\n        private static bool SampleControl(bool lockChange, bool wStored, bool wHeld, bool wSig, bool wSpray, bool wDriver, bool velocityMoving, bool sentMoving, bool wHand = false) => ' + control + ';\n'
 source = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Cargo.cs').read_text(encoding='utf-8')
 cargo_claim = method('ClaimCargo', 'bool')

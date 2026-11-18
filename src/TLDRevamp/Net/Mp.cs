@@ -443,241 +443,301 @@ namespace TLDRevamp.Net
             }
             switch (type)
             {
-                case Protocol.Hello:
-                {
-                    ushort ver = r.U16(); string mod = r.Str(); ulong sid = r.U64(); string name = r.Str();
-                    string refusal = JoinChecks.HelloRefusal(r.Bad, ver, mod, Protocol.Version, Plugin.Version, sourceIdentity: true);
-                    if (refusal != null)
-                    {
-                        Plugin.Log.LogWarning($"[anomaly] join refused: {Session.CleanName(name)}: {refusal}");
-                        Reject(c, refusal, Protocol.RejectOther);
-                        return;
-                    }
-                    string pw = r.Remaining > 0 ? r.Str() : "";
-                    string gameBuild = r.Remaining > 0 ? r.Str() : "";
-                    var mods = ModObjects.CheckModList(r);
-                    string build = BuildCheck.Read(r);   // after the mod list: older hosts never read it
-                    WorldCheckRules.Read(r, out string gameData, out string genPatches);
-                    var loaderMods = LoaderModCheck.Read(r);   // last: hosts before this check never read it
-                    if (!Identify(c, p, sid, name, out ulong steamId, out bool saved)) return;
-                    if (!Admit(c, p, steamId, pw)) return;
-                    // mods using the multiplayer API must match. Unlike the game's build (announced, not refused): a mod
-                    // object a player can't build, or reads with another record layout, is a broken world for them. What
-                    // the host can send, it offers (ModTransfer: the joiner checks each file against its approved list).
-                    if (mods.Problems.Count > 0)
-                    {
-                        Plugin.Log.LogWarning($"[anomaly] mods differ: {Session.CleanName(name)} refused: {mods.Describe()}");
-                        Reject(c, mods.Describe(), Protocol.RejectOther);
-                        return;
-                    }
-                    // same version and protocol, other code: the records it decodes can differ (BuildCheck). No mod
-                    // download fixes that, so before OfferMods.
-                    var bc = BuildCheck.Compare(build, Plugin.BuildIdentity);
-                    if (bc == BuildCheck.Result.Differs)
-                    {
-                        BuildRefused++;
-                        Plugin.Log.LogWarning(BuildCheck.AnomalyLine(Session.CleanName(name), bc, build, Plugin.BuildIdentity) + " - refused");
-                        Reject(c, BuildCheck.Refusal(Plugin.Version, build, Plugin.BuildIdentity), Protocol.RejectOther);
-                        return;
-                    }
-                    if (BuildCheck.RefuseUnknown(bc, mod, Plugin.Version))
-                    {
-                        BuildRefused++;
-                        Plugin.Log.LogWarning(BuildCheck.AnomalyLine(Session.CleanName(name), bc, build, Plugin.BuildIdentity) + " - other version, refused");
-                        Reject(c, JoinChecks.HelloRefusal(false, ver, mod, Protocol.Version, Plugin.Version), Protocol.RejectOther);
-                        return;
-                    }
-                    // TLD Loader mods: their items are shared as game items, right only when both have the same mods.
-                    // Before the world check: a mod patching the generators is named here, not as "other generator patches".
-                    string loader = LoaderModCheck.Refusal(loaderMods == null ? null : LoaderModCheck.Differences(ModHost.JoinList(), loaderMods));
-                    if (loader != null)
-                    {
-                        if (ModHost.MustMatch)
-                        {
-                            ModHost.JoinsRefused++;
-                            Plugin.Log.LogWarning($"[anomaly] TLD Loader mods differ: {Session.CleanName(name)} refused: {loader}");
-                            Reject(c, loader, Protocol.RejectOther);
-                            return;
-                        }
-                        ModHost.JoinsAdmittedDiffering++;
-                        Plugin.Log.LogWarning($"[anomaly] TLD Loader mods differ: {Session.CleanName(name)} admitted (Mods.LoaderModsMustMatch off): {loader}");
-                    }
-                    // every machine generates the world itself: another game, or other mods patching the generators, give
-                    // another world. The patches only once the API mods match: a missing mod the host offers comes first.
-                    string world = WorldCheck.Check(gameBuild, gameData, genPatches, comparePatches: mods.Same);
-                    if (world != null)
-                    {
-                        Reject(c, world, Protocol.RejectOther);
-                        return;
-                    }
-                    if (p == null) { p = new Peer { Conn = c, Id = _nextId++ }; _peers[c.m_HSteamNetConnection] = p; }
-                    TelemetryPrivacy.Identity(steamId);
-                    if (SteamTransport.SteamReady && steamId != 0) Session.Persona(new Steamworks.CSteamID(steamId));
-                    p.SteamId = steamId; p.Saved = saved; p.Name = Session.CleanName(name); p.Ready = false; p.GameBuild = gameBuild; p.BuildHash = build;
-                    p.ReportAccount = SteamCompat.RemoteSteamId(c, out _);
-                    if (!mods.Same)
-                    {
-                        OfferMods(p, mods.Send);
-                        return;
-                    }
-                    // the client now loads the host's world (seed + start car + map) and sends Ready when it stands in it
-                    if (!DedicatedServer.Enabled) Joined(c, 0, Mp.MySteamId(), Session.MyName());
-                    _w.Reset(); _w.U8(Protocol.Welcome); _w.VarU32((uint)p.Id); _w.I32(Mp.Seed()); _w.U16(Protocol.StateHz);
-                    _w.I32((int)mainscript.s.StartCar); _w.I32(Mp.MapType());
-                    _w.F32(mainscript.s != null ? mainscript.s.GetCurrentT() : 0f);   // world time: a joiner must not land at dawn in the host's dusk
-                    _w.F32(savedatascript.s.data.sandstormLastTime); _w.F32(savedatascript.s.data.sandstormNextTime);   // E5: the storm schedule rides along
-                    GameMode.Write(_w);   // the host's game mode: the joiner plays by it (GameMode)
-                    _w.Str(SessionLog.Sid); _w.F64(Time.realtimeSinceStartupAsDouble); _w.Str(SessionLog.SessionDate);
-                    SessionSettings.Write(_w);
-                    // The host's terrain mode is the LAST byte of Welcome, so the protocol 50 settings snapshot
-                    // keeps its exact place in the message (protocol 51).
-                    _w.U8(TerrainModeSync.HostModeFor(WorldGen.TerrainChoice.Active));
-                    T.Send(c, _w, SteamTransport.SendReliable);
-                    break;
-                }
-                case Protocol.SpotReq:
-                {
-                    // a joiner whose world is loaded asks where to stand: next to the host (4 m to its right), not at the
-                    // world's start — the host may be 50 km down the road (v0.65.35). Off, or a dedicated server: the start.
-                    if (p == null) return;
-                    var pl = mainscript.s != null ? mainscript.s.player : null;
-                    bool back = PlayerSave.ServerSpot(p.SaveId, out double bx, out double bz);   // a returning player: where they left
-                    bool has = back || (JoinAtHost && !DedicatedServer.Enabled && pl != null);
-                    _w.Reset(); _w.U8(Protocol.JoinSpot); _w.U8((byte)(has ? 1 : 0));
-                    if (back) { _w.F64(bx); _w.F64(bz); }
-                    else if (has)
-                    {
-                        var hg = Mp.LocalGlobal(); float yaw = Mp.LocalYaw() * Mathf.Deg2Rad;
-                        _w.F64(hg.x + Math.Cos(yaw) * 4.0); _w.F64(hg.z - Math.Sin(yaw) * 4.0);
-                    }
-                    T.Send(c, _w, SteamTransport.SendReliable);
-                    PlayerSave.ServerSendRestore(p.Id, p.SaveId, w => T.Send(c, w, SteamTransport.SendReliable));
-                    break;
-                }
-                case Protocol.Ready:
-                {
-                    if (p == null || p.Ready) return;
-                    // The joiner was admitted before it was ready: a settings change published while it was loading
-                    // its world never reached it. It gets the current snapshot now, before it starts playing.
-                    SendSessionSettingsTo(p);
-                    p.Ready = true;
-                    // the newcomer learns about everyone (host = id 0), everyone learns about the newcomer.
-                    // Dedicated server: the phantom is not a player — no announcement, no ghost in the list.
-                    if (!DedicatedServer.Enabled) Joined(c, 0, Mp.MySteamId(), Session.MyName());
-                    foreach (var o in _peers.Values) if (o != p && o.Ready) Joined(c, o.Id, o.SteamId, o.Name);
-                    foreach (var o in _peers.Values) if (o != p && o.Ready) Joined(o.Conn, p.Id, p.SteamId, p.Name);
-                    RemotePlayers.Joined(p.Id, p.Name, p.SteamId);
-                    Entities.ServerOnJoin(p.Id);
-                    if (r.Remaining > 0 && r.U8() == 1)
-                    {
-                        var at = Protocol.ReadPos(r);
-                        if (!r.Bad) Entities.ServerJoinLoading(p.Id, at);
-                    }
-                    ModObjects.ServerOnJoin(p.Id);
-                    Notice(p.Name + " joined the game");
-                    if (p.GameBuild != Plugin.GameBuild)
-                    {
-                        // older joiners may not have supplied a world hash: the worlds can differ (buildings)
-                        GameBuildMismatches++;
-                        Plugin.Log.LogWarning($"[anomaly] game build differs: {p.Name} has The Long Drive {(p.GameBuild.Length > 0 ? p.GameBuild : "(unknown)")}, the host {Plugin.GameBuild}");
-                        Notice(p.Name + " has a different version of The Long Drive than the host. Buildings and other parts of the world can differ between you; update the game on both (Steam beta branch).");
-                    }
-                    var bres = BuildCheck.Compare(p.BuildHash, Plugin.BuildIdentity);
-                    if (bres != BuildCheck.Result.Same)
-                    {
-                        // a joiner from before the check (no hash), or a different build let in with BuildCheck.Refuse off
-                        BuildMismatches++;
-                        Plugin.Log.LogWarning(BuildCheck.AnomalyLine(p.Name, bres, p.BuildHash, Plugin.BuildIdentity));
-                        Notice(BuildCheck.Announcement(p.Name, bres));
-                    }
-                    // what everyone looks like
-                    if (PlayerLook.LocalOutfit(out int sel, out var en, out var col))
-                    {
-                        _w.Reset(); _w.U8(Protocol.OtherOutfit); _w.VarU32(0); PlayerLook.WriteOutfit(_w, sel, en, col);
-                        T.Send(c, _w, SteamTransport.SendReliable);
-                    }
-                    foreach (var o in _peers.Values)
-                        if (o != p && o.Ready && o.Outfit != null)
-                        {
-                            _w.Reset(); _w.U8(Protocol.OtherOutfit); _w.VarU32((uint)o.Id); _w.Bytes(o.Outfit, 0, o.Outfit.Length);
-                            T.Send(c, _w, SteamTransport.SendReliable);
-                        }
-                    break;
-                }
-                case Protocol.State:
-                {
-                    if (p == null || !p.Ready) return;
-                    ushort seq = r.U16(); double stamp = Protocol.ReadStamp(r); var pos = Protocol.ReadPos(r); float yaw = Protocol.ReadYaw(r);
-                    Protocol.ReadSeat(r, out uint seatNet, out int seatIdx, out var foot);
-                    if (r.Bad) return;
-                    if (!Plausibility.PlayerState(p.Id, p.Name, pos, seatNet != 0, foot.Net != 0)) return;
-                    p.Pos = pos; p.Yaw = yaw; p.Seq = seq; p.Stamp = stamp; p.HasPos = true; p.SeatNet = seatNet; p.SeatIdx = seatIdx; p.Foot = foot;
-                    HitCheck.Record(p.Id, pos);
-                    RemotePlayers.State(p.Id, seq, pos, yaw, seatNet, seatIdx, stamp, foot);
-                    // relayed in Tick by interest tier
-                    break;
-                }
-                case Protocol.Pose:
-                {
-                    if (p == null || !p.Ready || !p.HasPos) return;
-                    int start = r.Pos, len = r.Remaining;
-                    var pose = PlayerLook.ReadPose(r);
-                    if (pose == null) return;
-                    RemotePlayers.Pose(p.Id, pose);
-                    // limbs only matter to players who can see them
-                    _w.Reset(); _w.U8(Protocol.OtherPose); _w.VarU32((uint)p.Id); _w.Bytes(r.Buf, start, len);
-                    var host = Mp.LocalGlobal();
-                    foreach (var o in _peers.Values)
-                    {
-                        if (o == p || !o.Ready) continue;
-                        var v = o.HasPos ? o.Pos : host;
-                        double dx = v.x - p.Pos.x, dz = v.z - p.Pos.z;
-                        if (dx * dx + dz * dz > PlayerLook.PoseRangeM * PlayerLook.PoseRangeM) continue;
-                        Queue(o, _w);
-                        PosesRelayed++;
-                    }
-                    break;
-                }
+                case Protocol.Hello: MessageHello(c, p, r); return;
+                case Protocol.SpotReq: MessageSpotReq(c, p); return;
+                case Protocol.Ready: MessageReady(c, p, r); return;
+                case Protocol.State: MessageState(p, r); return;
+                case Protocol.Pose: MessagePose(p, r); return;
                 case Entities.Share: case Entities.State: case Entities.CompactState: case Entities.Claim: case Entities.PartOff: case Entities.Resync: case Entities.Edit: case Entities.ShotgunIn: case Entities.PushIn:
                 case Entities.RemoveItem: case Entities.SleepSync: case Entities.ContactImpulse: case Entities.DetachReq: case Entities.AttachSync: case Entities.HitchRequest: case Entities.HitchCommand: case Entities.HitchFreeze: case Entities.HitchFrozen: case Entities.HitchResult: case Entities.AttachReq: case Entities.CensusRepair: case Entities.CensusAsk: case Entities.CensusReply: case Entities.DetachSync: case PlayerCombat.PlayerDamage: case Entities.ShotFx: case Entities.ExplodeReq: case Entities.ExplosionFx: case Entities.PlayerSound: case Entities.BreakHit: case Entities.BreakFx: case Entities.CarTune: case Entities.WorldBreak: case Entities.AiState: case Entities.AiSound: case Entities.PoiUsable:
                 case Protocol.LiveUsable: case Entities.RabbitState: case Entities.RabbitFx: case Entities.IgnitionKey:
-                case Entities.CrashClaim: case Entities.CrashRelease: case Entities.Refetch: case Entities.HandoverState: case Entities.PoiCensus: case Entities.Worn: case Entities.MemberGone:
-                    // one path for everything from players: the host's own messages enter ServerReceive directly
-                    if (p != null && p.Ready) { r.Pos = 0; r.U8(); Entities.ServerReceive(p.Id, type, r); }
-                    break;
-                case ModTransfer.ModFetch: if (p != null && !p.Ready) ModFetchFrom(p, r); break;   // a joiner getting a mod, before its world
+                case Entities.CrashClaim: case Entities.CrashRelease: case Entities.Refetch: case Entities.HandoverState: case Entities.PoiCensus: case Entities.Worn: case Entities.MemberGone: MessageEntities(p, type, r); return;
+                case ModTransfer.ModFetch: MessageModTransferModFetch(p, r); return;
                 case ModObjects.ModShare: case ModObjects.ModRecord: case ModObjects.ModEdit: case ModObjects.ModRemove: case ModObjects.ModPose:
-                case ModObjects.ModEvent: case ModObjects.ModClaim: case ModObjects.ModClock: case ModObjects.ModState:
-                    if (p != null && (p.Ready || type == ModObjects.ModClock && p.Id > 0)) ModObjects.ServerReceive(p.Id, type, r);
-                    break;
-                case Entities.LeaseReq: case Entities.LeaseDone:
-                    // lease traffic is valid before Ready: the gate fires while the client's world is still loading
-                    // (it asked then, was dropped, and its LeaseAsked set would keep it from ever asking again)
-                    if (p != null) { r.Pos = 0; r.U8(); Entities.ServerReceive(p.Id, type, r); }
-                    break;
-                case Protocol.Chat: if (p != null && p.Ready) ChatFrom(p, r); break;
-                case PlayerSave.Record: if (p != null && p.Ready) PlayerSave.ServerRecord(p.Id, p.SaveId, p.Name, r); break;
-                case Reports.ShareState: if (p != null && p.Ready) Reports.ServerConsent(p.Id, r); break;
-                case Reports.ReportChunk: if (p != null && p.Ready) Reports.ServerChunk(p.Id, p.ReportAccount, p.Name, r); break;
-                case TelemetryMarks.Message: if (p != null && p.Ready) MarkRequest(p.Id, p.SaveId, r); break;
-                case Reports.MarkRename: if (p != null && p.Ready) Reports.ServerRename(p.Id, r); break;
+                case ModObjects.ModEvent: case ModObjects.ModClaim: case ModObjects.ModClock: case ModObjects.ModState: MessageModObjects(p, type, r); return;
+                case Entities.LeaseReq: case Entities.LeaseDone: MessageLeases(p, type, r); return;
+                case Protocol.Chat: MessageChat(p, r); return;
+                case PlayerSave.Record: MessagePlayerSaveRecord(p, r); return;
+                case Reports.ShareState: MessageReportsShareState(p, r); return;
+                case Reports.ReportChunk: MessageReportsReportChunk(p, r); return;
+                case TelemetryMarks.Message: MessageTelemetryMarksMessage(p, r); return;
+                case Reports.MarkRename: MessageReportsMarkRename(p, r); return;
                 // Object comparison keeps its wire ids reserved when the optional handler is absent.
                 case 105:
-                case 107: if (p != null && p.Ready) DiagnosticMessage?.Invoke(this, p.Id, type, r); break;
-                case Protocol.Voice: if (p != null && p.Ready) VoiceFrom(p, r); break;
-                case Protocol.Outfit:
-                {
-                    if (p == null || !p.Ready) return;
-                    int start = r.Pos, len = r.Remaining;
-                    if (!PlayerLook.ReadOutfit(r, out int sel, out var en, out var col)) return;
-                    p.Outfit = new byte[len];
-                    Buffer.BlockCopy(r.Buf, start, p.Outfit, 0, len);
-                    RemotePlayers.Outfit(p.Id, sel, en, col);
-                    _w.Reset(); _w.U8(Protocol.OtherOutfit); _w.VarU32((uint)p.Id); _w.Bytes(p.Outfit, 0, len);
-                    foreach (var o in _peers.Values) if (o != p && o.Ready) T.Send(o.Conn, _w, SteamTransport.SendReliable);
-                    break;
-                }
+                case 107: MessageDiagnostic(p, type, r); return;
+                case Protocol.Voice: MessageVoice(p, r); return;
+                case Protocol.Outfit: MessageOutfit(p, r); return;
             }
+        }
+
+        private void MessageHello(HSteamNetConnection c, Peer p, NetReader r)
+        {
+            ushort ver = r.U16(); string mod = r.Str(); ulong sid = r.U64(); string name = r.Str();
+            string refusal = JoinChecks.HelloRefusal(r.Bad, ver, mod, Protocol.Version, Plugin.Version, sourceIdentity: true);
+            if (refusal != null)
+            {
+                Plugin.Log.LogWarning($"[anomaly] join refused: {Session.CleanName(name)}: {refusal}");
+                Reject(c, refusal, Protocol.RejectOther);
+                return;
+            }
+            string pw = r.Remaining > 0 ? r.Str() : "";
+            string gameBuild = r.Remaining > 0 ? r.Str() : "";
+            var mods = ModObjects.CheckModList(r);
+            string build = BuildCheck.Read(r);   // after the mod list: older hosts never read it
+            WorldCheckRules.Read(r, out string gameData, out string genPatches);
+            var loaderMods = LoaderModCheck.Read(r);   // last: hosts before this check never read it
+            if (!Identify(c, p, sid, name, out ulong steamId, out bool saved)) return;
+            if (!Admit(c, p, steamId, pw)) return;
+            // mods using the multiplayer API must match. Unlike the game's build (announced, not refused): a mod
+            // object a player can't build, or reads with another record layout, is a broken world for them. What
+            // the host can send, it offers (ModTransfer: the joiner checks each file against its approved list).
+            if (mods.Problems.Count > 0)
+            {
+                Plugin.Log.LogWarning($"[anomaly] mods differ: {Session.CleanName(name)} refused: {mods.Describe()}");
+                Reject(c, mods.Describe(), Protocol.RejectOther);
+                return;
+            }
+            // same version and protocol, other code: the records it decodes can differ (BuildCheck). No mod
+            // download fixes that, so before OfferMods.
+            var bc = BuildCheck.Compare(build, Plugin.BuildIdentity);
+            if (bc == BuildCheck.Result.Differs)
+            {
+                BuildRefused++;
+                Plugin.Log.LogWarning(BuildCheck.AnomalyLine(Session.CleanName(name), bc, build, Plugin.BuildIdentity) + " - refused");
+                Reject(c, BuildCheck.Refusal(Plugin.Version, build, Plugin.BuildIdentity), Protocol.RejectOther);
+                return;
+            }
+            if (BuildCheck.RefuseUnknown(bc, mod, Plugin.Version))
+            {
+                BuildRefused++;
+                Plugin.Log.LogWarning(BuildCheck.AnomalyLine(Session.CleanName(name), bc, build, Plugin.BuildIdentity) + " - other version, refused");
+                Reject(c, JoinChecks.HelloRefusal(false, ver, mod, Protocol.Version, Plugin.Version), Protocol.RejectOther);
+                return;
+            }
+            // TLD Loader mods: their items are shared as game items, right only when both have the same mods.
+            // Before the world check: a mod patching the generators is named here, not as "other generator patches".
+            string loader = LoaderModCheck.Refusal(loaderMods == null ? null : LoaderModCheck.Differences(ModHost.JoinList(), loaderMods));
+            if (loader != null)
+            {
+                if (ModHost.MustMatch)
+                {
+                    ModHost.JoinsRefused++;
+                    Plugin.Log.LogWarning($"[anomaly] TLD Loader mods differ: {Session.CleanName(name)} refused: {loader}");
+                    Reject(c, loader, Protocol.RejectOther);
+                    return;
+                }
+                ModHost.JoinsAdmittedDiffering++;
+                Plugin.Log.LogWarning($"[anomaly] TLD Loader mods differ: {Session.CleanName(name)} admitted (Mods.LoaderModsMustMatch off): {loader}");
+            }
+            // every machine generates the world itself: another game, or other mods patching the generators, give
+            // another world. The patches only once the API mods match: a missing mod the host offers comes first.
+            string world = WorldCheck.Check(gameBuild, gameData, genPatches, comparePatches: mods.Same);
+            if (world != null)
+            {
+                Reject(c, world, Protocol.RejectOther);
+                return;
+            }
+            if (p == null) { p = new Peer { Conn = c, Id = _nextId++ }; _peers[c.m_HSteamNetConnection] = p; }
+            TelemetryPrivacy.Identity(steamId);
+            if (SteamTransport.SteamReady && steamId != 0) Session.Persona(new Steamworks.CSteamID(steamId));
+            p.SteamId = steamId; p.Saved = saved; p.Name = Session.CleanName(name); p.Ready = false; p.GameBuild = gameBuild; p.BuildHash = build;
+            p.ReportAccount = SteamCompat.RemoteSteamId(c, out _);
+            if (!mods.Same)
+            {
+                OfferMods(p, mods.Send);
+                return;
+            }
+            // the client now loads the host's world (seed + start car + map) and sends Ready when it stands in it
+            if (!DedicatedServer.Enabled) Joined(c, 0, Mp.MySteamId(), Session.MyName());
+            _w.Reset(); _w.U8(Protocol.Welcome); _w.VarU32((uint)p.Id); _w.I32(Mp.Seed()); _w.U16(Protocol.StateHz);
+            _w.I32((int)mainscript.s.StartCar); _w.I32(Mp.MapType());
+            _w.F32(mainscript.s != null ? mainscript.s.GetCurrentT() : 0f);   // world time: a joiner must not land at dawn in the host's dusk
+            _w.F32(savedatascript.s.data.sandstormLastTime); _w.F32(savedatascript.s.data.sandstormNextTime);   // E5: the storm schedule rides along
+            GameMode.Write(_w);   // the host's game mode: the joiner plays by it (GameMode)
+            _w.Str(SessionLog.Sid); _w.F64(Time.realtimeSinceStartupAsDouble); _w.Str(SessionLog.SessionDate);
+            SessionSettings.Write(_w);
+            // The host's terrain mode is the LAST byte of Welcome, so the protocol 50 settings snapshot
+            // keeps its exact place in the message (protocol 51).
+            _w.U8(TerrainModeSync.HostModeFor(WorldGen.TerrainChoice.Active));
+            T.Send(c, _w, SteamTransport.SendReliable);
+        }
+
+        private void MessageSpotReq(HSteamNetConnection c, Peer p)
+        {
+            // a joiner whose world is loaded asks where to stand: next to the host (4 m to its right), not at the
+            // world's start — the host may be 50 km down the road (v0.65.35). Off, or a dedicated server: the start.
+            if (p == null) return;
+            var pl = mainscript.s != null ? mainscript.s.player : null;
+            bool back = PlayerSave.ServerSpot(p.SaveId, out double bx, out double bz);   // a returning player: where they left
+            bool has = back || (JoinAtHost && !DedicatedServer.Enabled && pl != null);
+            _w.Reset(); _w.U8(Protocol.JoinSpot); _w.U8((byte)(has ? 1 : 0));
+            if (back) { _w.F64(bx); _w.F64(bz); }
+            else if (has)
+            {
+                var hg = Mp.LocalGlobal(); float yaw = Mp.LocalYaw() * Mathf.Deg2Rad;
+                _w.F64(hg.x + Math.Cos(yaw) * 4.0); _w.F64(hg.z - Math.Sin(yaw) * 4.0);
+            }
+            T.Send(c, _w, SteamTransport.SendReliable);
+            PlayerSave.ServerSendRestore(p.Id, p.SaveId, w => T.Send(c, w, SteamTransport.SendReliable));
+        }
+
+        private void MessageReady(HSteamNetConnection c, Peer p, NetReader r)
+        {
+            if (p == null || p.Ready) return;
+            // The joiner was admitted before it was ready: a settings change published while it was loading
+            // its world never reached it. It gets the current snapshot now, before it starts playing.
+            SendSessionSettingsTo(p);
+            p.Ready = true;
+            // the newcomer learns about everyone (host = id 0), everyone learns about the newcomer.
+            // Dedicated server: the phantom is not a player — no announcement, no ghost in the list.
+            if (!DedicatedServer.Enabled) Joined(c, 0, Mp.MySteamId(), Session.MyName());
+            foreach (var o in _peers.Values) if (o != p && o.Ready) Joined(c, o.Id, o.SteamId, o.Name);
+            foreach (var o in _peers.Values) if (o != p && o.Ready) Joined(o.Conn, p.Id, p.SteamId, p.Name);
+            RemotePlayers.Joined(p.Id, p.Name, p.SteamId);
+            Entities.ServerOnJoin(p.Id);
+            if (r.Remaining > 0 && r.U8() == 1)
+            {
+                var at = Protocol.ReadPos(r);
+                if (!r.Bad) Entities.ServerJoinLoading(p.Id, at);
+            }
+            ModObjects.ServerOnJoin(p.Id);
+            Notice(p.Name + " joined the game");
+            if (p.GameBuild != Plugin.GameBuild)
+            {
+                // older joiners may not have supplied a world hash: the worlds can differ (buildings)
+                GameBuildMismatches++;
+                Plugin.Log.LogWarning($"[anomaly] game build differs: {p.Name} has The Long Drive {(p.GameBuild.Length > 0 ? p.GameBuild : "(unknown)")}, the host {Plugin.GameBuild}");
+                Notice(p.Name + " has a different version of The Long Drive than the host. Buildings and other parts of the world can differ between you; update the game on both (Steam beta branch).");
+            }
+            var bres = BuildCheck.Compare(p.BuildHash, Plugin.BuildIdentity);
+            if (bres != BuildCheck.Result.Same)
+            {
+                // a joiner from before the check (no hash), or a different build let in with BuildCheck.Refuse off
+                BuildMismatches++;
+                Plugin.Log.LogWarning(BuildCheck.AnomalyLine(p.Name, bres, p.BuildHash, Plugin.BuildIdentity));
+                Notice(BuildCheck.Announcement(p.Name, bres));
+            }
+            // what everyone looks like
+            if (PlayerLook.LocalOutfit(out int sel, out var en, out var col))
+            {
+                _w.Reset(); _w.U8(Protocol.OtherOutfit); _w.VarU32(0); PlayerLook.WriteOutfit(_w, sel, en, col);
+                T.Send(c, _w, SteamTransport.SendReliable);
+            }
+            foreach (var o in _peers.Values)
+                if (o != p && o.Ready && o.Outfit != null)
+                {
+                    _w.Reset(); _w.U8(Protocol.OtherOutfit); _w.VarU32((uint)o.Id); _w.Bytes(o.Outfit, 0, o.Outfit.Length);
+                    T.Send(c, _w, SteamTransport.SendReliable);
+                }
+        }
+
+        private void MessageState(Peer p, NetReader r)
+        {
+            if (p == null || !p.Ready) return;
+            ushort seq = r.U16(); double stamp = Protocol.ReadStamp(r); var pos = Protocol.ReadPos(r); float yaw = Protocol.ReadYaw(r);
+            Protocol.ReadSeat(r, out uint seatNet, out int seatIdx, out var foot);
+            if (r.Bad) return;
+            if (!Plausibility.PlayerState(p.Id, p.Name, pos, seatNet != 0, foot.Net != 0)) return;
+            p.Pos = pos; p.Yaw = yaw; p.Seq = seq; p.Stamp = stamp; p.HasPos = true; p.SeatNet = seatNet; p.SeatIdx = seatIdx; p.Foot = foot;
+            HitCheck.Record(p.Id, pos);
+            RemotePlayers.State(p.Id, seq, pos, yaw, seatNet, seatIdx, stamp, foot);
+            // relayed in Tick by interest tier
+        }
+
+        private void MessagePose(Peer p, NetReader r)
+        {
+            if (p == null || !p.Ready || !p.HasPos) return;
+            int start = r.Pos, len = r.Remaining;
+            var pose = PlayerLook.ReadPose(r);
+            if (pose == null) return;
+            RemotePlayers.Pose(p.Id, pose);
+            // limbs only matter to players who can see them
+            _w.Reset(); _w.U8(Protocol.OtherPose); _w.VarU32((uint)p.Id); _w.Bytes(r.Buf, start, len);
+            var host = Mp.LocalGlobal();
+            foreach (var o in _peers.Values)
+            {
+                if (o == p || !o.Ready) continue;
+                var v = o.HasPos ? o.Pos : host;
+                double dx = v.x - p.Pos.x, dz = v.z - p.Pos.z;
+                if (dx * dx + dz * dz > PlayerLook.PoseRangeM * PlayerLook.PoseRangeM) continue;
+                Queue(o, _w);
+                PosesRelayed++;
+            }
+        }
+
+        private void MessageEntities(Peer p, byte type, NetReader r)
+        {
+            // one path for everything from players: the host's own messages enter ServerReceive directly
+            if (p != null && p.Ready) { r.Pos = 0; r.U8(); Entities.ServerReceive(p.Id, type, r); }
+        }
+
+        private void MessageModTransferModFetch(Peer p, NetReader r)
+        {
+            if (p != null && !p.Ready) ModFetchFrom(p, r);   // a joiner getting a mod, before its world
+        }
+
+        private void MessageModObjects(Peer p, byte type, NetReader r)
+        {
+            if (p != null && (p.Ready || type == ModObjects.ModClock && p.Id > 0)) ModObjects.ServerReceive(p.Id, type, r);
+        }
+
+        private void MessageLeases(Peer p, byte type, NetReader r)
+        {
+            // lease traffic is valid before Ready: the gate fires while the client's world is still loading
+            // (it asked then, was dropped, and its LeaseAsked set would keep it from ever asking again)
+            if (p != null) { r.Pos = 0; r.U8(); Entities.ServerReceive(p.Id, type, r); }
+        }
+
+        private void MessageChat(Peer p, NetReader r)
+        {
+            if (p != null && p.Ready) ChatFrom(p, r);
+        }
+
+        private void MessagePlayerSaveRecord(Peer p, NetReader r)
+        {
+            if (p != null && p.Ready) PlayerSave.ServerRecord(p.Id, p.SaveId, p.Name, r);
+        }
+
+        private void MessageReportsShareState(Peer p, NetReader r)
+        {
+            if (p != null && p.Ready) Reports.ServerConsent(p.Id, r);
+        }
+
+        private void MessageReportsReportChunk(Peer p, NetReader r)
+        {
+            if (p != null && p.Ready) Reports.ServerChunk(p.Id, p.ReportAccount, p.Name, r);
+        }
+
+        private void MessageTelemetryMarksMessage(Peer p, NetReader r)
+        {
+            if (p != null && p.Ready) MarkRequest(p.Id, p.SaveId, r);
+        }
+
+        private void MessageReportsMarkRename(Peer p, NetReader r)
+        {
+            if (p != null && p.Ready) Reports.ServerRename(p.Id, r);
+        }
+
+        private void MessageDiagnostic(Peer p, byte type, NetReader r)
+        {
+            if (p != null && p.Ready) DiagnosticMessage?.Invoke(this, p.Id, type, r);
+        }
+
+        private void MessageVoice(Peer p, NetReader r)
+        {
+            if (p != null && p.Ready) VoiceFrom(p, r);
+        }
+
+        private void MessageOutfit(Peer p, NetReader r)
+        {
+            if (p == null || !p.Ready) return;
+            int start = r.Pos, len = r.Remaining;
+            if (!PlayerLook.ReadOutfit(r, out int sel, out var en, out var col)) return;
+            p.Outfit = new byte[len];
+            Buffer.BlockCopy(r.Buf, start, p.Outfit, 0, len);
+            RemotePlayers.Outfit(p.Id, sel, en, col);
+            _w.Reset(); _w.U8(Protocol.OtherOutfit); _w.VarU32((uint)p.Id); _w.Bytes(p.Outfit, 0, len);
+            foreach (var o in _peers.Values) if (o != p && o.Ready) T.Send(o.Conn, _w, SteamTransport.SendReliable);
         }
 
         private void Joined(HSteamNetConnection to, int id, ulong sid, string name)
@@ -1100,148 +1160,223 @@ namespace TLDRevamp.Net
             }
             switch (type)
             {
-                case Protocol.Welcome:
-                {
-                    MyId = (int)r.VarU32(); ServerSeed = r.I32(); r.U16(); int car = r.I32(), map = r.I32();
-                    ServerWorldTime = !r.Bad ? r.F32() : -1f;   // -1: an old server without the field
-                    StormLast = !r.Bad ? r.F32() : -1f; StormNext = !r.Bad ? r.F32() : -1f;
-                    if (!EntityNumbers.Finite(ServerWorldTime)) ServerWorldTime = -1f;   // infinity passed the `>= 0` checks
-                    if (!EntityNumbers.Finite(StormLast) || !EntityNumbers.Finite(StormNext)) StormLast = StormNext = -1f;
-                    var hostMode = !r.Bad && r.Remaining >= 16 ? GameMode.Read(r) : default;
-                    string telemetrySid = r.Str(); double hostClock = r.F64(); string telemetryDate = r.Str();
-                    if (r.Bad || !MarkFiles.Date(telemetryDate) || telemetrySid == null || telemetrySid.Length != 16 || !ulong.TryParse(telemetrySid, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out _) || double.IsNaN(hostClock) || double.IsInfinity(hostClock)) return;
-                    if (!SessionSettingsSnapshot.TryRead(r, out var hostSettings))
-                    {
-                        // A malformed session-settings snapshot is REFUSED, and the join ends with a REASON the
-                        // joiner can see. It used to `return` silently: the join then hung with no message at
-                        // all (the joiner's "Connecting to the host" never ended and nothing said why).
-                        RejectReason = SessionSettingsPolicy.MalformedSnapshotReason();
-                        RejectCode = Protocol.RejectOther;
-                        Plugin.Log.LogWarning("join refused: " + RejectReason);
-                        break;
-                    }
-                    // the host's terrain mode (protocol 51): an old host sends none, then the joiner keeps the game's own terrain
-                    bool hasTerrain = TerrainModeSync.Read(r, out var hostTerrain);
-                    if (r.Remaining != 0) return;
-                    // The 2023 world is made on every machine by the 2023 build's own code: without its files here the
-                    // joiner would build a different world, so the join ends with how to get them
-                    string oldRefusal = hasTerrain ? WorldGen.Old2023.OldBuildFiles.JoinRefusal(hostTerrain, WorldGen.Old2023.OldBuild.Available) : null;
-                    if (oldRefusal != null)
-                    {
-                        RejectReason = oldRefusal;
-                        RejectCode = Protocol.RejectOther;
-                        Plugin.Log.LogWarning("join refused: " + RejectReason);
-                        break;
-                    }
-                    // The client is now bound to this host's session token: a later snapshot that carries a
-                    // different token did not come from this session's host and is refused.
-                    SessionSettingsSnapshot.BindToHost(hostSettings.SessionToken);
-                    DeveloperAccess.ApplyClientSnapshot(hostSettings, true);
-                    if (hasTerrain) WorldGen.TerrainHooks.TakeHost(hostTerrain);
-                    if (Player == null) WorldCheck.SessionBegins(host: false);   // before the host's world loads here
-                    if (Player == null)
-                    {
-                        SessionLog.Sid = telemetrySid;
-                        SessionLog.SessionDate = telemetryDate;
-                        ModObjects.ResetClock(hostClock - Time.realtimeSinceStartupAsDouble);
-                        SessionLog.JoinStage("worldData");
-                    }
-                    _outfitCheck = 99f;
-                    if (Player != null) { _readySent = true; W2.Reset(); W2.U8(Protocol.Ready); T.Send(_conn, W2, SteamTransport.SendReliable); break; }
-                    if (map != Mp.MapType()) { RejectReason = "the host plays map type " + map + ", you " + Mp.MapType() + " — change it in the game mode settings"; break; }
-                    // load the host's world: a fresh game with its seed and start car (the connection survives the scene
-                    // load); the host owns the save, so this world never autosaves
-                    TestSafety.InHostWorld = true;
-                    GameMode.TakeHost(hostMode);   // before the world loads: survival, enemies, biome as the host has them
-                    RemotePlayers.Clear();
-                    Entities.ClientWorldReload();
-                    DataFromMenuScript.s.seed = ServerSeed;
-                    DataFromMenuScript.s.startcar = (itemdatabase.CarType)car;
-                    _loadStarted = Time.realtimeSinceStartup;
-                    Mp.HostWorldLoad = true;
-                    if (DataFromMenuScript.s.mainmenu) menuhandler.s.PressedStart(); else menuhandler.s.PressedRestart();
-                    break;
-                }
-                case Protocol.JoinLoading: if (Player == null) JoinLoading.Manifest(r); break;
-                case Protocol.SessionSettings:
-                {
-                    if (SessionSettingsSnapshot.TryRead(r, out var updated) && r.Remaining == 0 && Player == null &&
-                        SessionSettingsSnapshot.AcceptFromBoundHost(updated))
-                    {
-                        DeveloperAccess.ApplyClientSnapshot(updated, false);
-                        // The panel's rows are filled on every refresh now, but the host may have changed a
-                        // setting while this client's panel was closed: the rows are refreshed here so the
-                        // panel never shows a stale value.
-                        MpScreen.RefreshSessionRows();
-                    }
-                    break;
-                }
-                case Protocol.JoinSpot:
-                {
-                    bool has = r.U8() == 1; double gx = has ? r.F64() : 0, gz = has ? r.F64() : 0;
-                    if (r.Bad || _spotState != 1) break;
-                    if (!has) { _spotState = 3; JoinSpotLast = "start"; break; }
-                    GroundPlacement.PlaceAt(gx, gz); JoinPlaced++;
-                    JoinSpotLast = gx.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "," + gz.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
-                    _spotState = 2; _spotAt = Time.realtimeSinceStartup;
-                    break;
-                }
-                case Protocol.Reject:
-                    RejectReason = r.Str(); RejectCode = r.Remaining > 0 ? r.U8() : Protocol.RejectOther;
-                    if (ModBrowser.HasDisabled()) RejectReason += " You have disabled mods installed: enable the required mods in the mod browser and restart before joining again.";
-                    break;
-                case Protocol.Chat: if (Player == null) Session.ChatIn(r); break;
+                case Protocol.Welcome: MessageWelcome(r); return;
+                case Protocol.JoinLoading: MessageJoinLoading(r); return;
+                case Protocol.SessionSettings: MessageSessionSettings(r); return;
+                case Protocol.JoinSpot: MessageJoinSpot(r); return;
+                case Protocol.Reject: MessageReject(r); return;
+                case Protocol.Chat: MessageChat(r); return;
                 case PlayerSave.Restore: PlayerSave.ClientRestoreIn(r); break;
-                case Tpa.GoMsg: if (Player == null) Tpa.GoIn(r); break;
-                case Reports.SharedChunk: if (Player == null) Reports.ClientChunk(r); break;
-                case Reports.ReportAsk: if (Player == null) Reports.ClientAsk(r); break;
-                case TelemetryMarks.Message: if (Player == null) TelemetryMarks.Client(r); break;
-                case Reports.MarkRename: if (Player == null) Reports.ClientRename(r); break;
+                case Tpa.GoMsg: MessageTpaGoMsg(r); return;
+                case Reports.SharedChunk: MessageReportsSharedChunk(r); return;
+                case Reports.ReportAsk: MessageReportsReportAsk(r); return;
+                case TelemetryMarks.Message: MessageTelemetryMarksMessage(r); return;
+                case Reports.MarkRename: MessageReportsMarkRename(r); return;
                 // The developer plugin supplies these diagnostic replies; normal clients need no handler.
                 case 106:
                 case 108:
-                case 109: if (Player == null) DiagnosticMessage?.Invoke(type, r); break;
-                case Protocol.Roster: if (Player == null) Session.RosterIn(r); break;
-                case Protocol.Voice: if (Player == null) Voice.In(r); break;
-                case Protocol.PlayerJoined: { int id = (int)r.VarU32(); ulong sid = r.U64(); string name = Session.CleanName(r.Str()); if (id == 0) HostName = name; if (Player == null) RemotePlayers.Joined(id, name, sid); break; }
-                case Protocol.OtherPose:
-                {
-                    int id = (int)r.VarU32(); var pose = PlayerLook.ReadPose(r);
-                    if (pose == null) return;
-                    PosesIn++;
-                    if (Player == null) RemotePlayers.Pose(id, pose);
-                    break;
-                }
+                case 109: MessageDiagnostic(type, r); return;
+                case Protocol.Roster: MessageRoster(r); return;
+                case Protocol.Voice: MessageVoice(r); return;
+                case Protocol.PlayerJoined: MessagePlayerJoined(r); return;
+                case Protocol.OtherPose: MessageOtherPose(r); return;
                 case Entities.HandoverState:
                 case Entities.WorldClock: case Entities.RadioSync: case Entities.PhysLockSync: case Entities.StormSync: case Entities.Assigned: case Entities.Add: case Entities.RemoveItem: case Entities.SleepSync: case Entities.ContactImpulse: case Entities.DetachReq: case Entities.State: case Entities.CompactState: case Entities.Owner: case Entities.PartDetached: case Entities.LeaseGrant: case Entities.LeaseTaken: case Entities.LeaseFreed: case Entities.Resync: case Entities.Edit: case Entities.ShotgunIn: case Entities.PushIn: case Entities.AttachSync: case Entities.HitchRequest: case Entities.HitchCommand: case Entities.HitchFreeze: case Entities.HitchFrozen: case Entities.HitchResult: case Entities.AttachReq: case Entities.CensusRepair: case Entities.CensusAsk: case Entities.CensusReply: case Entities.DetachSync: case PlayerCombat.PlayerDamage: case Entities.ShotFx: case Entities.ExplodeReq: case Entities.ExplosionFx: case Entities.PlayerSound: case Entities.BreakHit: case Entities.BreakFx: case Entities.CarTune: case Entities.WorldBreak: case Entities.AiState: case Entities.AiSound: case Entities.PoiUsable:
-                case Protocol.LiveUsable: case Entities.RabbitState: case Entities.RabbitFx: case Entities.Worn: case Entities.MemberGone: case Entities.IgnitionKey:
-                    if (Player == null) Entities.ClientReceive(type, r);
-                    break;
-                case Protocol.OtherOutfit:
-                {
-                    int id = (int)r.VarU32();
-                    if (PlayerLook.ReadOutfit(r, out int sel, out var en, out var col) && Player == null) RemotePlayers.Outfit(id, sel, en, col);
-                    break;
-                }
+                case Protocol.LiveUsable: case Entities.RabbitState: case Entities.RabbitFx: case Entities.Worn: case Entities.MemberGone: case Entities.IgnitionKey: MessageEntities(type, r); return;
+                case Protocol.OtherOutfit: MessageOtherOutfit(r); return;
                 case ModTransfer.ModOffer: ModOfferIn(r); break;
                 case ModTransfer.ModChunk: ModChunkIn(r); break;
                 case ModObjects.ModAssigned: case ModObjects.ModAdd: case ModObjects.ModRecord: case ModObjects.ModEdit: case ModObjects.ModOwner:
                 case ModObjects.ModRemove: case ModObjects.ModPose: case ModObjects.ModEvent: case ModObjects.ModClock:
-                case ModObjects.ModState: case ModObjects.ModStore: case ModObjects.ModSetting:
-                    if (Player == null) ModObjects.ClientReceive(type, r);
-                    break;
-                case Protocol.PlayerLeft: { int id = (int)r.VarU32(); if (Player == null) RemotePlayers.Left(id); break; }
-                case Protocol.OtherState:
-                {
-                    int id = (int)r.VarU32(); ushort seq = r.U16(); double stamp = Protocol.ReadStamp(r); var pos = Protocol.ReadPos(r); float yaw = Protocol.ReadYaw(r);
-                    Protocol.ReadSeat(r, out uint seatNet, out int seatIdx, out var foot);
-                    if (r.Bad) return;
-                    StatesIn++;
-                    if (Player == null) SessionLog.JoinStage("firstState");
-                    if (Player == null) RemotePlayers.State(id, seq, pos, yaw, seatNet, seatIdx, stamp, foot);
-                    break;
-                }
+                case ModObjects.ModState: case ModObjects.ModStore: case ModObjects.ModSetting: MessageModObjects(type, r); return;
+                case Protocol.PlayerLeft: MessagePlayerLeft(r); return;
+                case Protocol.OtherState: MessageOtherState(r); return;
             }
+        }
+
+        private void MessageWelcome(NetReader r)
+        {
+            MyId = (int)r.VarU32(); ServerSeed = r.I32(); r.U16(); int car = r.I32(), map = r.I32();
+            ServerWorldTime = !r.Bad ? r.F32() : -1f;   // -1: an old server without the field
+            StormLast = !r.Bad ? r.F32() : -1f; StormNext = !r.Bad ? r.F32() : -1f;
+            if (!EntityNumbers.Finite(ServerWorldTime)) ServerWorldTime = -1f;   // infinity passed the `>= 0` checks
+            if (!EntityNumbers.Finite(StormLast) || !EntityNumbers.Finite(StormNext)) StormLast = StormNext = -1f;
+            var hostMode = !r.Bad && r.Remaining >= 16 ? GameMode.Read(r) : default;
+            string telemetrySid = r.Str(); double hostClock = r.F64(); string telemetryDate = r.Str();
+            if (r.Bad || !MarkFiles.Date(telemetryDate) || telemetrySid == null || telemetrySid.Length != 16 || !ulong.TryParse(telemetrySid, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out _) || double.IsNaN(hostClock) || double.IsInfinity(hostClock)) return;
+            if (!SessionSettingsSnapshot.TryRead(r, out var hostSettings))
+            {
+                // A malformed session-settings snapshot is REFUSED, and the join ends with a REASON the
+                // joiner can see. It used to `return` silently: the join then hung with no message at
+                // all (the joiner's "Connecting to the host" never ended and nothing said why).
+                RejectReason = SessionSettingsPolicy.MalformedSnapshotReason();
+                RejectCode = Protocol.RejectOther;
+                Plugin.Log.LogWarning("join refused: " + RejectReason);
+                return;
+            }
+            // the host's terrain mode (protocol 51): an old host sends none, then the joiner keeps the game's own terrain
+            bool hasTerrain = TerrainModeSync.Read(r, out var hostTerrain);
+            if (r.Remaining != 0) return;
+            // The 2023 world is made on every machine by the 2023 build's own code: without its files here the
+            // joiner would build a different world, so the join ends with how to get them
+            string oldRefusal = hasTerrain ? WorldGen.Old2023.OldBuildFiles.JoinRefusal(hostTerrain, WorldGen.Old2023.OldBuild.Available) : null;
+            if (oldRefusal != null)
+            {
+                RejectReason = oldRefusal;
+                RejectCode = Protocol.RejectOther;
+                Plugin.Log.LogWarning("join refused: " + RejectReason);
+                return;
+            }
+            // The client is now bound to this host's session token: a later snapshot that carries a
+            // different token did not come from this session's host and is refused.
+            SessionSettingsSnapshot.BindToHost(hostSettings.SessionToken);
+            DeveloperAccess.ApplyClientSnapshot(hostSettings, true);
+            if (hasTerrain) WorldGen.TerrainHooks.TakeHost(hostTerrain);
+            if (Player == null) WorldCheck.SessionBegins(host: false);   // before the host's world loads here
+            if (Player == null)
+            {
+                SessionLog.Sid = telemetrySid;
+                SessionLog.SessionDate = telemetryDate;
+                ModObjects.ResetClock(hostClock - Time.realtimeSinceStartupAsDouble);
+                SessionLog.JoinStage("worldData");
+            }
+            _outfitCheck = 99f;
+            if (Player != null) { _readySent = true; W2.Reset(); W2.U8(Protocol.Ready); T.Send(_conn, W2, SteamTransport.SendReliable); return; }
+            if (map != Mp.MapType()) { RejectReason = "the host plays map type " + map + ", you " + Mp.MapType() + " — change it in the game mode settings"; return; }
+            // load the host's world: a fresh game with its seed and start car (the connection survives the scene
+            // load); the host owns the save, so this world never autosaves
+            TestSafety.InHostWorld = true;
+            GameMode.TakeHost(hostMode);   // before the world loads: survival, enemies, biome as the host has them
+            RemotePlayers.Clear();
+            Entities.ClientWorldReload();
+            DataFromMenuScript.s.seed = ServerSeed;
+            DataFromMenuScript.s.startcar = (itemdatabase.CarType)car;
+            _loadStarted = Time.realtimeSinceStartup;
+            Mp.HostWorldLoad = true;
+            if (DataFromMenuScript.s.mainmenu) menuhandler.s.PressedStart(); else menuhandler.s.PressedRestart();
+        }
+
+        private void MessageJoinLoading(NetReader r)
+        {
+            if (Player == null) JoinLoading.Manifest(r);
+        }
+
+        private void MessageSessionSettings(NetReader r)
+        {
+            if (SessionSettingsSnapshot.TryRead(r, out var updated) && r.Remaining == 0 && Player == null &&
+                SessionSettingsSnapshot.AcceptFromBoundHost(updated))
+            {
+                DeveloperAccess.ApplyClientSnapshot(updated, false);
+                // The panel's rows are filled on every refresh now, but the host may have changed a
+                // setting while this client's panel was closed: the rows are refreshed here so the
+                // panel never shows a stale value.
+                MpScreen.RefreshSessionRows();
+            }
+        }
+
+        private void MessageJoinSpot(NetReader r)
+        {
+            bool has = r.U8() == 1; double gx = has ? r.F64() : 0, gz = has ? r.F64() : 0;
+            if (r.Bad || _spotState != 1) return;
+            if (!has) { _spotState = 3; JoinSpotLast = "start"; return; }
+            GroundPlacement.PlaceAt(gx, gz); JoinPlaced++;
+            JoinSpotLast = gx.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "," + gz.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+            _spotState = 2; _spotAt = Time.realtimeSinceStartup;
+        }
+
+        private void MessageReject(NetReader r)
+        {
+            RejectReason = r.Str(); RejectCode = r.Remaining > 0 ? r.U8() : Protocol.RejectOther;
+            if (ModBrowser.HasDisabled()) RejectReason += " You have disabled mods installed: enable the required mods in the mod browser and restart before joining again.";
+        }
+
+        private void MessageChat(NetReader r)
+        {
+            if (Player == null) Session.ChatIn(r);
+        }
+
+        private void MessageTpaGoMsg(NetReader r)
+        {
+            if (Player == null) Tpa.GoIn(r);
+        }
+
+        private void MessageReportsSharedChunk(NetReader r)
+        {
+            if (Player == null) Reports.ClientChunk(r);
+        }
+
+        private void MessageReportsReportAsk(NetReader r)
+        {
+            if (Player == null) Reports.ClientAsk(r);
+        }
+
+        private void MessageTelemetryMarksMessage(NetReader r)
+        {
+            if (Player == null) TelemetryMarks.Client(r);
+        }
+
+        private void MessageReportsMarkRename(NetReader r)
+        {
+            if (Player == null) Reports.ClientRename(r);
+        }
+
+        private void MessageDiagnostic(byte type, NetReader r)
+        {
+            if (Player == null) DiagnosticMessage?.Invoke(type, r);
+        }
+
+        private void MessageRoster(NetReader r)
+        {
+            if (Player == null) Session.RosterIn(r);
+        }
+
+        private void MessageVoice(NetReader r)
+        {
+            if (Player == null) Voice.In(r);
+        }
+
+        private void MessagePlayerJoined(NetReader r)
+        {
+ int id = (int)r.VarU32(); ulong sid = r.U64(); string name = Session.CleanName(r.Str()); if (id == 0) HostName = name; if (Player == null) RemotePlayers.Joined(id, name, sid);
+        }
+
+        private void MessageOtherPose(NetReader r)
+        {
+            int id = (int)r.VarU32(); var pose = PlayerLook.ReadPose(r);
+            if (pose == null) return;
+            PosesIn++;
+            if (Player == null) RemotePlayers.Pose(id, pose);
+        }
+
+        private void MessageEntities(byte type, NetReader r)
+        {
+            if (Player == null) Entities.ClientReceive(type, r);
+        }
+
+        private void MessageOtherOutfit(NetReader r)
+        {
+            int id = (int)r.VarU32();
+            if (PlayerLook.ReadOutfit(r, out int sel, out var en, out var col) && Player == null) RemotePlayers.Outfit(id, sel, en, col);
+        }
+
+        private void MessageModObjects(byte type, NetReader r)
+        {
+            if (Player == null) ModObjects.ClientReceive(type, r);
+        }
+
+        private void MessagePlayerLeft(NetReader r)
+        {
+ int id = (int)r.VarU32(); if (Player == null) RemotePlayers.Left(id);
+        }
+
+        private void MessageOtherState(NetReader r)
+        {
+            int id = (int)r.VarU32(); ushort seq = r.U16(); double stamp = Protocol.ReadStamp(r); var pos = Protocol.ReadPos(r); float yaw = Protocol.ReadYaw(r);
+            Protocol.ReadSeat(r, out uint seatNet, out int seatIdx, out var foot);
+            if (r.Bad) return;
+            StatesIn++;
+            if (Player == null) SessionLog.JoinStage("firstState");
+            if (Player == null) RemotePlayers.State(id, seq, pos, yaw, seatNet, seatIdx, stamp, foot);
         }
 
         public void Tick()

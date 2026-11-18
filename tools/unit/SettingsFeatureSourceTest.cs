@@ -54,7 +54,7 @@ static class SettingsFeatureSourceTest
         int end = text.IndexOf("\n                case ", at + label.Length, StringComparison.Ordinal);
         if (end < 0) end = text.IndexOf("\n                }", at, StringComparison.Ordinal);
         if (end < 0) end = Math.Min(text.Length, at + 2000);
-        return text.Substring(at, end - at);
+        return HotPathSource.Expand(text, text.Substring(at, end - at));
     }
 
     private static int Main(string[] args)
@@ -222,10 +222,10 @@ static class SettingsFeatureSourceTest
         // the refusal ABORTS the handler: the rest of Welcome (the terrain mode, the world load) is not
         // processed, so a malformed snapshot is neither applied nor half-applied.
         int refuseAt = welcome.IndexOf("MalformedSnapshotReason", StringComparison.Ordinal);
-        int breakAt = welcome.IndexOf("break;", Math.Max(0, refuseAt), StringComparison.Ordinal);
+        int returnAt = welcome.IndexOf("return;", Math.Max(0, refuseAt), StringComparison.Ordinal);
         int applyAt = welcome.IndexOf("ApplyClientSnapshot", StringComparison.Ordinal);
         Check("S-P1.20 the malformed snapshot is not applied",
-            refuseAt >= 0 && breakAt > refuseAt && (applyAt < 0 || breakAt < applyAt),
+            refuseAt >= 0 && returnAt > refuseAt && (applyAt < 0 || returnAt < applyAt),
             "the handler continues after the refusal");
 
         // the reason is a sentence a player can read, and it is built by ONE rule (so the text cannot drift)

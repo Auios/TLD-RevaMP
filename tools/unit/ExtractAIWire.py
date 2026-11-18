@@ -28,13 +28,13 @@ target.write_text('using System; using UnityEngine; namespace TLDRevamp.Net {\n'
                   + 'internal static partial class Protocol {\n' + method(protocol, 'WritePos') + '\n'
                   + next(line for line in (root / protocol).read_text(encoding='utf-8').splitlines() if 'int Cm(' in line) + '\n}\n}\n', encoding='utf-8')
 
-# The authority decision stays in the dispatcher. Compile that exact case, including its reader offsets.
-source = (root / 'src/TLDRevamp/Net/Entities.cs').read_text(encoding='utf-8')
-case = source.split('                case AiState:', 1)[1].split('                case AiSound:', 1)[0]
+# Compile the exact authority handler, including its reader offsets.
+handler = method('src/TLDRevamp/Net/Entities.cs', 'ServerMessageAiState')
+case = handler[handler.index('{') + 1:handler.rindex('}')]
 with target.open('a', encoding='utf-8') as output:
     output.write('namespace TLDRevamp.Net { public static partial class Entities {\n'
-                 + 'internal static void TestServerAIState(int from, NetReader r) { switch (AiState) { case AiState:'
-                 + case + '} }\n} }\n')
+                 + 'internal static void TestServerAIState(int from, NetReader r) {'
+                 + case + '}\n} }\n')
 
 # Tumbleweeds have no message of their own. Run their unchanged shared spawn and Share framing, too.
 with target.open('a', encoding='utf-8') as output:

@@ -73,7 +73,8 @@ static class MessageTableTest
             string bodies = string.Join("\n", src.Values.Where(t => Regex.IsMatch(t, @"\bclass\s+" + Regex.Escape(owner) + @"\b")));
             return Regex.Match(bodies, @"void " + name + @"\(.*?\n        \}\n", RegexOptions.Singleline).Value;
         }
-        string server = Method("Entities", "ServerReceive"), client = Method("Entities", "ClientReceive");
+        string entities = File.ReadAllText(Path.Combine(sourceRoot, "Net", "Entities.cs")).Replace("\r\n", "\n");
+        string server = HotPathSource.Expand(entities, Method("Entities", "ServerReceive")), client = HotPathSource.Expand(entities, Method("Entities", "ClientReceive"));
         Check("ContactImpulse: kernel keeps byte decoding and finite guard", client.Contains("if (!r.Bad && EntityNumbers.Finite(imp) && EntityNumbers.Finite(gp)) EntityPhysics.ApplyContactImpulse(net, imp, gp);") && server.Contains("if (!r.Bad && EntityNumbers.Finite(imp) && EntityNumbers.Finite(gp)) ServerContactImpulse(from, net, imp, gp);"));
         Check("ContactImpulse: physics owner applies impulse", Method("EntityPhysics", "ApplyContactImpulse").Contains("rb.AddForceAtPosition(impulse, point, ForceMode.Impulse)"));
         Check("crash arbitration remains kernel owned", Method("Entities", "ServerCrashClaim").Contains("Server.TryGetValue(net") && Method("Entities", "ServerCrashRelease").Contains("ReturnCrash(se)"));
@@ -98,8 +99,8 @@ static class MessageTableTest
         }
         foreach (string name in new[] { "Request", "Frozen", "Result" })
             Check("Hitch" + name + ": authority remains on kernel", server.Contains("case Hitch" + name + ": ServerHitch" + name + "(from, r);") && Method("Entities", "ServerHitch" + name).Contains("Server.TryGetValue("));
-        var toServer = Routed(mp.Substring(serverAt, serverEnd - serverAt), "Entities.ServerReceive(", server, consts);
-        var toClient = Routed(mp.Substring(clientAt), "Entities.ClientReceive(", client, consts);
+        var toServer = Routed(HotPathSource.Expand(mp.Substring(0, serverEnd), mp.Substring(serverAt, serverEnd - serverAt)), "Entities.ServerReceive(", server, consts);
+        var toClient = Routed(HotPathSource.Expand(mp.Substring(serverEnd), mp.Substring(clientAt)), "Entities.ClientReceive(", client, consts);
         Check("the dispatchers route messages", toServer.Count > 10 && toClient.Count > 10);
         foreach (var handler in new[] { ("RabbitState", "EntityRabbits", "ApplyRabbitState"), ("RabbitFx", "EntityRabbits", "ApplyRabbitFx"), ("BreakHit", "EntityAI", "ApplyBreakHit"), ("BreakFx", "EntityAI", "ApplyBreakFx"), ("WorldBreak", "EntityAI", "ApplyWorldBreak"), ("AiState", "EntityAI", "ApplyAiState"), ("AiSound", "EntityAI", "ApplyAiSound"), ("Worn", "EntityHands", "ApplyWorn"), ("IgnitionKey", "EntitySeats", "ApplyKey"), ("ShotgunIn", "EntitySeats", "ApplyShotgun"), ("RadioSync", "EntityRadio", "ApplyRadio"), ("WorldClock", "EntityWorldClock", "ReceiveWorldClock"), ("StormSync", "EntityWeather", "ApplyStorms"), ("ShotFx", "EntityEffects", "ApplyShotFx"), ("PlayerSound", "EntityEffects", "ApplyPlayerSound"), ("ExplodeReq", "EntityExplosions", "ApplyExplodeReq"), ("ExplosionFx", "EntityExplosions", "ApplyExplosionFx") })
         {
@@ -140,11 +141,11 @@ static class MessageTableTest
         Check("Worn: hands reads request payload", Method("EntityHands", "ServerWorn").Contains("r.U32()"));
         Check("CarTune: routes to its owner", client.Contains("case CarTune: EntityCarTuning.ApplyCarTune(r);"));
         Check("CarTune: owner reads its payload", Method("EntityCarTuning", "ApplyCarTune").Contains("r.U32()"));
-        Check("CarTune: keep before reliable forward", server.Contains("case CarTune: if (EntityCarTuning.ServerKeepTune(from, r)) ServerFwdAll(from, r, true); break;"));
-        Check("BreakFx: keep before shared reliable forward", server.Contains("case BreakFx: EntityAI.ServerKeepBreak(r); ServerFwdAll(from, r, true); break;"));
-        Check("WorldBreak: keep before shared reliable forward", server.Contains("case WorldBreak: EntityAI.ServerKeepWorldBreak(r); ServerFwdAll(from, r, true); break;"));
+        Check("CarTune: keep before reliable forward", server.Contains("case CarTune: {\n            if (EntityCarTuning.ServerKeepTune(from, r)) ServerFwdAll(from, r, true);"));
+        Check("BreakFx: keep before shared reliable forward", server.Contains("case BreakFx: {\n            EntityAI.ServerKeepBreak(r); ServerFwdAll(from, r, true);"));
+        Check("WorldBreak: keep before shared reliable forward", server.Contains("case WorldBreak: {\n            EntityAI.ServerKeepWorldBreak(r); ServerFwdAll(from, r, true);"));
         Check("BreakHit: authority and shared writer stay in kernel", server.Contains("case BreakHit: ServerBreakHit(from, r);") && Method("Entities", "ServerBreakHit").Contains("se.OwnerId == from") && Method("Entities", "ServerBreakHit").Contains("ServerSendTo(se.OwnerId, WS, true);"));
-        Check("AiState: stale authority still counted at feature owner", server.Contains("se.OwnerId != from) { EntityAI.AiStatesStale++; break; }") && server.Contains("r.Remaining != 15) { EntityAI.AiStatesStale++; break; }"));
+        Check("AiState: stale authority still counted at feature owner", server.Contains("se.OwnerId != from) { EntityAI.AiStatesStale++; return; }") && server.Contains("r.Remaining != 15) { EntityAI.AiStatesStale++; return; }"));
         Check("AiSound: shared reliable forward unchanged", server.Contains("case AiSound: ServerFwdAll(from, r, true);"));
         var byId = rows.ToDictionary(r => r.Id, r => r, EqualityComparer<int>.Default);
         foreach (int id in toServer.Concat(toClient).Distinct().OrderBy(i => i))

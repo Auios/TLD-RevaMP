@@ -38,7 +38,12 @@ def cases(s, method_name, names, prefix=''):
     result = []
     for name in names:
         start = full.index('                case ' + name + ':')
-        result.append(block(full, start))
+        case = full[start:full.index('\n', start)]
+        handler = re.search(r': (\w+)\(.*\); return;', case)
+        assert handler, case
+        actual = method(s, handler[1])
+        body = actual[actual.index('{') + 1:actual.rindex('}')]
+        result.append('                case ' + name + ': {' + body + '\n                    break;\n                }')
     return prefix + '\n            switch (type) {\n' + '\n'.join(result) + '\n            }'
 
 

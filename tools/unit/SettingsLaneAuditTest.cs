@@ -42,7 +42,7 @@ static class SettingsLaneAuditTest
         int end = text.IndexOf("\n                case ", at + label.Length, StringComparison.Ordinal);
         if (end < 0) end = text.IndexOf("\n                }", at, StringComparison.Ordinal);
         if (end < 0) end = Math.Min(text.Length, at + 2000);
-        return text.Substring(at, end - at);
+        return HotPathSource.Expand(text, text.Substring(at, end - at));
     }
 
     private static int Main(string[] args)
