@@ -1128,9 +1128,9 @@ comparing peer captures. Numeric simPreset/simLatency/simJitter/simLoss/simDupli
 in reports and black-box settings even though these controls never persist across restarts. Off has no sampling
 loop; native transport cost under impairment has not been measured in game.
 
-**Repro recorder**: *Record actions for bug reports* (on by default; a banner shows while it records) starts it by itself
+**Repro recorder**: *Record actions for bug reports* (Settings → Revamp → Multiplayer, off by default; a banner shows while it records) starts it by itself
 when a multiplayer session starts; **Ctrl+Insert** (`Keys.ReproRecorder`) or `/bug note` then takes a bug report (docs/BUG-REPORTS.md).
-By hand: *Repro recorder (save to a file)* in the same section, or `repro start` / `repro stop`.
+By hand: *Repro recorder (save to a file)* (Settings → Revamp → Debugging), or `repro start` / `repro stop`.
 It records local multiplayer actions, 10 Hz player poses, driving input, marks and network-condition changes.
 It caps at 60,000 rows and stops on leaving the world. A recording started by hand saves numeric-only local JSON in the
 marks session folder; the automatic one is kept in memory and ends with the session unless a bug report took it. Notes, chat text, command arguments, paths and player identities are excluded. Nothing is

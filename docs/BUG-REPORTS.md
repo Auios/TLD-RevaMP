@@ -9,13 +9,14 @@ A bug report is one local bundle that an agent (or a developer) can read first a
 - Or type **`/bug`** or **`/bug the barrel fell through the floor`** in chat. It is never sent as chat.
 - Or Settings → Revamp → **Report a bug**.
 
-Do it right after the bug: the recording is already running, so there is nothing to start beforehand.
+Do it right after the bug. To include what you did before it, turn on *Record actions for bug reports*
+(Settings → Revamp → Multiplayer, off by default) before playing; the recording then runs whenever you are in a session.
 
 ## What the player sees
 
-- While the action recorder runs, a banner says **Recording actions · for bug reports**. It starts by itself when a
-  multiplayer session starts and ends with the session. Switch it off with *Record actions for bug reports*
-  (Settings → Revamp → Debugging); then reports have no actions.
+- While the action recorder runs, a banner says **Recording actions · for bug reports**. With *Record actions for bug
+  reports* on (Settings → Revamp → Multiplayer; off by default since 2026-11-19, also in the player edition) it starts by
+  itself when a multiplayer session starts and ends with the session. Off: no banner, and reports have no actions.
 - When the recorder is full (60,000 rows: about 100 minutes standing around, 28 in one busy real session) the banner says so; it
   keeps the first part of the session, which replays, and the latest 30,000 rows, which don't.
 - Taking a report shows **Bug report · saving…**, then **saved** with the file name for twelve seconds, and a toast with

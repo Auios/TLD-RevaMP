@@ -24,9 +24,9 @@ namespace TLDRevamp
         private static int _hitchFrame = -1;
         private static uint _hitchNet;
         internal static bool Recording => _data != null;
-        /// Settings → Revamp → Debugging → "Record actions for bug reports": on, the recorder starts by itself when a
-        /// multiplayer session starts, so a bug can be reported after it happened. Saved with the settings.
-        internal static bool Auto = true;
+        /// Settings → Revamp → Multiplayer → "Record actions for bug reports": on, the recorder starts by itself when a
+        /// multiplayer session starts, so a bug can be reported after it happened. Saved with the settings. Off by default.
+        internal static bool Auto = false;
         /// The setting: off also ends the recording that is running (and its banner).
         internal static void SetAuto(bool on) { Auto = on; if (!on) DiscardAutomatic(); }
         private static bool _auto, _full;

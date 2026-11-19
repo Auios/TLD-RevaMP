@@ -260,6 +260,14 @@ namespace TLDRevamp
                 "in the Multiplayer screen.",
                 () => Math.Max(0, Array.IndexOf(Net.Tpa.Choices, Net.Tpa.Enabled ? Net.Tpa.CooldownS : -1)),
                 v => { int c = Net.Tpa.Choices[Math.Max(0, Math.Min(Net.Tpa.Choices.Length - 1, v))]; Net.Tpa.Enabled = c >= 0; if (c >= 0) Net.Tpa.CooldownS = c; });
+            // In Multiplayer, not Debugging, so the player edition (which hides Debugging) can still turn it off; off by
+            // default since 2026-11-19 (user: "make it off by default"). Saved as "recordActions": the old "bugRecording"
+            // key was saved as 1 for everyone while it defaulted to on, so it is dropped on load (see Load).
+            Toggle("recordActions", "Record actions for bug reports", 0,
+                "While you are in a multiplayer session, keep a record of your own actions and position/look (10 Hz, in memory) so that a bug report can include them. " +
+                "A banner shows while it records. Ctrl+Insert (or /bug note in chat) takes a bug report: a local bundle with the report, these actions and the world save the session started from. " +
+                "No chat text, command arguments or player identities are recorded; the bundle never leaves your computer unless you send it. Off: reports have no actions.",
+                () => ReproRecorder.Auto ? 1 : 0, v => ReproRecorder.SetAuto(v == 1));
             Header("VR",
                 "How VR plays with the headset on. None of this changes anything in flat play, and your own game " +
                 "settings (head bob, motion blur) stay saved as they are.");
@@ -371,11 +379,6 @@ namespace TLDRevamp
                 // but the plugin's C# fields — the overlay included — live on and are used by the mod's runner.
                 () => !ReferenceEquals(Plugin.Instance, null) && Plugin.Instance.Overlay != null && Plugin.Instance.Overlay.Visible ? 1 : 0,
                 v => { if (!ReferenceEquals(Plugin.Instance, null) && Plugin.Instance.Overlay != null) Plugin.Instance.Overlay.Visible = v == 1; });
-            Toggle("bugRecording", "Record actions for bug reports", 1,
-                "While you are in a multiplayer session, keep a record of your own actions and position/look (10 Hz, in memory) so that a bug report can include them. " +
-                "A banner shows while it records. Ctrl+Insert (or /bug note in chat) takes a bug report: a local bundle with the report, these actions and the world save the session started from. " +
-                "No chat text, command arguments or player identities are recorded; the bundle never leaves your computer unless you send it. Off: reports have no actions.",
-                () => ReproRecorder.Auto ? 1 : 0, v => ReproRecorder.SetAuto(v == 1));
             Entries.Add(new Entry { Key = "reproRecording", Label = "Repro recorder (save to a file)", Kind = Kind.Toggle, RuntimeOnly = true,
                 Help = "Start or stop the action recording by hand. Stop saves a JSON file in the marks session folder (also bridge repro start/stop). " +
                     "Stops at 60,000 rows or on leaving the world. Always off at startup.",
@@ -439,7 +442,7 @@ namespace TLDRevamp
                     saved[line.Substring(0, eq).Trim()] = line.Substring(eq + 1).Trim();
                 }
                 Unclaimed.Clear();
-                foreach (var pair in saved) if (pair.Key != "hostPassword" && !Entries.Exists(e => e.Key == pair.Key)) Unclaimed[pair.Key] = pair.Value;
+                foreach (var pair in saved) if (pair.Key != "hostPassword" && pair.Key != "bugRecording" && !Entries.Exists(e => e.Key == pair.Key)) Unclaimed[pair.Key] = pair.Value;   // bugRecording: renamed recordActions, off by default
                 foreach (var e in Entries)
                     if (e.Key != null && !e.RuntimeOnly && saved.TryGetValue(e.Key, out string text) && int.TryParse(text, out int v)) e.Set(v);
                 if (!saved.ContainsKey(AaMsaaKey) && !saved.ContainsKey(AaFilterKey))

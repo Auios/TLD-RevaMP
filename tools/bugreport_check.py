@@ -106,7 +106,9 @@ def main():
 def run_session(b):
     start = time.time()
     b("errors reset")
-    check(bug(b)["auto"] is True, "the action recorder is on by default")
+    check(bug(b)["auto"] is False, "the action recorder is off by default")
+    b("set TLDRevamp.ReproRecorder.Auto True")   # Settings → Revamp → Multiplayer → "Record actions for bug reports"
+    check(bug(b)["auto"] is True, "the action recorder can be turned on")
     r = b("mp save")
     check("error" not in r, "the new world is saved", str(r))
     time.sleep(2)

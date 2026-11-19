@@ -1041,6 +1041,7 @@ def scripted(h, L, car, tracked, cars):
         print("\n=== the recorder fills up: does a report still have what the player did just before it?", flush=True)
         import tldenv, zipfile
         h.s("set TLDRevamp.ReproPlayback.Active False")   # the harness's `repro act` keeps it on, and the recorder stays off in playback
+        h.s("set TLDRevamp.ReproRecorder.Auto True")   # off by default since 2026-11-19; it starts by itself once on
         until(lambda: h.s("bug status").get("recording"), 10)
         st = h.s("bug status"); print("     recording", st.get("recording"), "full", st.get("full"), flush=True)
         if not st.get("recording"): note(f"INVALID aud-tail: not recording: {str(st)[:200]}")
