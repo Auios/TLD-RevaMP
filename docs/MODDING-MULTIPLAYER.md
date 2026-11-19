@@ -384,6 +384,11 @@ Head Unit 0.2.1, Car Trailer 0.1.2, Trailer Hitches 0.2.0, TV Browser 0.2.0 and 
 Each is approved by its DLL's hash in the approved list on `dev`, so the browser offers them only in a RevaMP built
 with that list. Their older versions stay in the catalog, and RevaMP 0.69.1 keeps offering those.
 
+Head Unit, Car Trailer, Trailer Hitches, TV Browser and Road End moved to [TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods)
+with their source. Their releases there (`headunit-v0.2.0` and `cartrailer-v0.1.1` for the two zips that came with
+v0.69.0, the other tags unchanged) hold the same zips byte for byte, so the approved hashes did not change; the catalog
+downloads from TLD-Mods. New versions are released there.
+
 ## 9. Order (all built)
 
 1. Registration + full records for objects a mod creates (sections 3 and 4).

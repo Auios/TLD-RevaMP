@@ -10,14 +10,14 @@
       "versions": [
         {
           "version": "0.2.1",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/headunit-v0.2.1/HeadUnit-0.2.1.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/headunit-v0.2.1/HeadUnit-0.2.1.zip",
           "file": "BepInEx/plugins/HeadUnit/HeadUnit.dll",
           "sha256": "7d4fce422ee6324bdf040262ffbe97555740adcb0141c7e38a4e00f37aa03955",
           "size": 61554
         },
         {
           "version": "0.2.0",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/v0.69.0/HeadUnit-0.2.0.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/headunit-v0.2.0/HeadUnit-0.2.0.zip",
           "file": "BepInEx/plugins/HeadUnit/HeadUnit.dll",
           "sha256": "4d31e0e45eff0cfdbe2d5540bbfa253813f8f7d80a884845dda5636a01749231",
           "size": 59941,
@@ -34,14 +34,14 @@
       "versions": [
         {
           "version": "0.1.2",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/cartrailer-v0.1.2/CarTrailer-0.1.2.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/cartrailer-v0.1.2/CarTrailer-0.1.2.zip",
           "file": "BepInEx/plugins/CarTrailer/CarTrailer.dll",
           "sha256": "f36237ffef80e98fd0b277beb54d95007abadeee8773ae679167a8951eb823fa",
           "size": 19771
         },
         {
           "version": "0.1.1",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/v0.69.0/CarTrailer-0.1.1.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/cartrailer-v0.1.1/CarTrailer-0.1.1.zip",
           "file": "BepInEx/plugins/CarTrailer/CarTrailer.dll",
           "sha256": "8f0b03e2e8dec41fb665aebd4e0d6e905cb549edd5c6054fbd537a9efccada75",
           "size": 12304
@@ -180,14 +180,14 @@
       "versions": [
         {
           "version": "0.2.0",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/trailerhitches-v0.2.0/TrailerHitches-0.2.0.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/trailerhitches-v0.2.0/TrailerHitches-0.2.0.zip",
           "file": "BepInEx/plugins/TrailerHitches/TrailerHitches.dll",
           "sha256": "b01405d00d924b6125059b6b0ea5ea7845462f3134184f79abfca9d97a3ff0c1",
           "size": 16673
         },
         {
           "version": "0.1.0",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/trailerhitches-v0.1.0/TrailerHitches-0.1.0.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/trailerhitches-v0.1.0/TrailerHitches-0.1.0.zip",
           "file": "BepInEx/plugins/TrailerHitches/TrailerHitches.dll",
           "sha256": "6659dbc1a2bdc3adc525b96889da2ea75e06e1a9a15caf88a9e5b301e8fc4dbc",
           "size": 5144,
@@ -204,14 +204,14 @@
       "versions": [
         {
           "version": "0.2.0",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/tvbrowser-v0.2.0/TvBrowser-0.2.0.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/tvbrowser-v0.2.0/TvBrowser-0.2.0.zip",
           "file": "BepInEx/plugins/TvBrowser/TvBrowser.dll",
           "sha256": "8aab86fbdcbd08db3d0f35833718fd16589f59a96385db9259abf1531232fc95",
           "size": 864405
         },
         {
           "version": "0.1.0",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/tvbrowser-v0.1.0/TvBrowser-0.1.0.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/tvbrowser-v0.1.0/TvBrowser-0.1.0.zip",
           "file": "BepInEx/plugins/TvBrowser/TvBrowser.dll",
           "sha256": "25d7cdac49096ad8ee5add77a0952d42eb335ad8f313955cd2c09b8b3698b671",
           "size": 42412,
@@ -228,14 +228,14 @@
       "versions": [
         {
           "version": "0.2.0",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/roadend-v0.2.0/RoadEnd-0.2.0.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/roadend-v0.2.0/RoadEnd-0.2.0.zip",
           "file": "BepInEx/plugins/RoadEnd/RoadEnd.dll",
           "sha256": "f9fb26852651a33ddeb76b971ff52bcb7f3f9b69ae3fccd936993ac403b32dbf",
           "size": 23260
         },
         {
           "version": "0.1.0",
-          "url": "https://github.com/Normal99/TLD-RevaMP/releases/download/roadend-v0.1.0/RoadEnd-0.1.0.zip",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/roadend-v0.1.0/RoadEnd-0.1.0.zip",
           "file": "BepInEx/plugins/RoadEnd/RoadEnd.dll",
           "sha256": "49ad760a4a7219cc3b06a4d578a86c66826d6016ffe1dd400ec20a879eabf621",
           "size": 19500
