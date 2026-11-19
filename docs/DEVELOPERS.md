@@ -323,7 +323,6 @@ Other build and release steps:
 | --- | --- |
 | `tools/build.sh` | builds and copies the DLLs into the game's `BepInEx/plugins/TLDRevamp/`, turning the debug bridge on |
 | `tools/unit/run-all.sh [Name ...]` | runs every unit project (or the named ones) the way CI does; all green on any checkout, LF or CRLF |
-| `tools/package-mods.sh` | builds the example mod zips into `dist/` and prints their SHA-256 approval lines |
 | `tools/pin-installer.sh [zip]` | pins both installer scripts to a release zip and checks the BepInEx bytes |
 | `tools/devrelease.py --dry-run` | builds the checked-out commit and zips it into `dist/`, nothing uploaded |
 | `tools/devrelease.py` | the same, uploaded as a draft GitHub release |

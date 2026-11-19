@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Car Trailer example mod (src/Mods/CarTrailer) through saving and loading, single player: a car trailer spawned
+"""The Car Trailer example mod (TLD-Mods: mods/CarTrailer) through saving and loading, single player: a car trailer spawned
 (the full one, 9201), its wheels counted; saved (`mp save`, the autosave) and that save loaded twice in the same game,
 the wheels counted each time; then far away and back (the game unloads the items there and places them again). Also
 the prefab holder after each load (a new prefab per scene load is a leak). Then a save as the mod made them before the

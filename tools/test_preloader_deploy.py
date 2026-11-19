@@ -47,6 +47,7 @@ class DeployTests(unittest.TestCase):
         patchers = [
             mock.patch.object(game, 'ROOT', self.root),
             mock.patch.object(game.tldenv, 'GAME_DIR', self.game_dir),
+            mock.patch.object(game.tldenv, 'MODS_REPO', self.root / 'TLD-Mods'),
             mock.patch.object(game, 'PRELOADER_DLL', self.preloader),
             mock.patch.object(game, 'MP_API_DLL', self.mp_api),
             mock.patch.object(game, 'APPROVED_MODS', self.approved),
@@ -149,7 +150,7 @@ class DeployTests(unittest.TestCase):
 
     def test_remote_selected_mod_is_synced_and_unselected_examples_are_removed(self):
         os.environ['TLD_TEST_MODS'] = 'CarTrailer'
-        mod = self.root / 'src/Mods/CarTrailer/bin/Release/netstandard2.1/CarTrailer.dll'
+        mod = self.root / 'TLD-Mods/mods/CarTrailer/bin/Release/netstandard2.1/CarTrailer.dll'
         mod.parent.mkdir(parents=True)
         mod.write_bytes(b'car-trailer')
 

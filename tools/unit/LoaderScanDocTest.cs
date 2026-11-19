@@ -129,12 +129,9 @@ static class LoaderScanDocTest
             url.Contains("refs/heads/dev/packaging/mods.json"));
         Check("the documentation says where the catalog comes from", docs.Contains("packaging/mods.json"));
         // the catalog's ids are the BepInEx plugin GUIDs
+        // (Head Unit's source, with that GUID and its multiplayer id "headunit", is in TLD-Mods: mods/HeadUnit/Plugin.cs)
         Check("the catalog's Head Unit id is the plugin GUID",
-            Read("src/Mods/HeadUnit/Plugin.cs").Contains("\"tldrevamp.headunit\"") &&
-            Read("packaging/mods.json").Contains("tldrevamp.headunit"));
-        // Head Unit's multiplayer registration id is a separate identifier
-        Check("Head Unit's multiplayer id is 'headunit', not the GUID",
-            Read("src/Mods/HeadUnit/Plugin.cs").Contains("RegisterMod(\"headunit\""));
+            Read("packaging/mods.json").Contains("\"id\": \"tldrevamp.headunit\"") && docs.Contains("`tldrevamp.headunit`"));
         // the four states the browser shows
         string activation = Read("src/TLDRevamp/Net/ModActivation.cs");
         foreach (string state in new[] { "Enabled", "Disabled (takes effect at next start)", "Disabled", "Enabled at next start" })

@@ -94,11 +94,9 @@ def tracked():
 # EXIF or other metadata chunks that could carry a name or a path).
 IMAGES = {"src/TLDRevamp/Assets/WipFont.png"}   # tools/wipfont.py
 
-# Programs the TV Browser mod carries in its DLL (src/Mods/TvBrowser/Host/build.sh, build-windows.sh), by exact path:
-# each must be an ELF or PE file, and its readable strings pass the same checks as text (no home folders, names or
-# addresses).
-PROGRAMS = {f"src/Mods/TvBrowser/Host/linux-x64/{n}" for n in ("tvbrowser-host", "libatk-bridge-2.0.so.0", "libatspi.so.0")} | \
-           {"src/Mods/TvBrowser/Host/windows-x64/tvbrowser-host.dll"}
+# Programs, by exact path: each must be an ELF or PE file, and its readable strings pass the same checks as text (no
+# home folders, names or addresses). None at the moment: the TV Browser mod and its browser host moved to TLD-Mods.
+PROGRAMS = set()
 
 
 # Unity asset bundles the mod embeds, by exact path: each must be a UnityFS bundle whose blocks unpack (LZ4 or none),

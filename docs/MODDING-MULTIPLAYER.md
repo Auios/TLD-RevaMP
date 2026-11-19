@@ -3,7 +3,7 @@
 > **Status:** every step of section 9 is built. `TLDRevamp.Multiplayer.dll` (API 4) has registration, records,
 > edits, ownership hooks, events, a shared clock, pose sync, state records sent by distance, the far store,
 > session-wide settings and replay channels; the session side is `src/TLDRevamp/Net/ModObjects.cs`. Mods must match at join (section 3a)
-> and a joiner can get an approved mod from the host. The Head Unit and Car Trailer example mods run in two-machine
+> and a joiner can get an approved mod from the host. The Head Unit and Car Trailer example mods ([TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods)) run in two-machine
 > tests, and `tools/modapi2.py` (with the test mod `src/Mods/ApiProbe`) tests API 2. The Loader-mod scanner
 > (section 7) writes a report and a code skeleton.
 
@@ -101,7 +101,7 @@ once when playback starts. `Shown` gets the copy (a GameObject the replay draws)
 world, and `CopyOf(renderer)`, the copy's renderer for one of the live object's: set a material of the mod's own on
 it (the copies share the game's materials). Nothing is sent to other players; replays are local. Keep
 `RegisterReplayChannel` in a method of its own, so the mod still loads with an older RevaMP (`MissingMethodException`
-there means no channels). Example: `src/Mods/TvBrowser/ReplayTv.cs`.
+there means no channels). Example: [`mods/TvBrowser/ReplayTv.cs`](https://github.com/TLD-RevaMP/TLD-Mods/blob/main/mods/TvBrowser/ReplayTv.cs) in TLD-Mods.
 
 ## 1. Why this is needed
 

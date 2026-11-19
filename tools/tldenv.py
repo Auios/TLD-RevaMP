@@ -7,7 +7,7 @@ import os, pathlib, socket, sys
 
 TOOLS = pathlib.Path(__file__).resolve().parent
 _LOCAL_PATHS = {"TLD_STEAM", "TLD_DIR", "TLD_PREFIX", "TLD_BACKUPS", "TLD_CACHE", "TLD_ILSPY", "TLD_SSH_KEY", "TLD_PLUGIN_DLL",
-                "TLD_TEST_COMPAT", "TLD_PROTON", "TLD_SLR"}
+                "TLD_TEST_COMPAT", "TLD_PROTON", "TLD_SLR", "TLD_MODS_DIR"}
 
 
 def _load(path):
@@ -46,6 +46,8 @@ PLAYER_LOG = PREFIX / "drive_c/users/steamuser/AppData/LocalLow/Genesz/TheLongDr
 LOG = GAME_DIR / "BepInEx/LogOutput.log"
 # test results and screenshots (gitignored in the public repo)
 BENCH = TOOLS.parent / "bench"
+# a checkout of TLD-Mods (github.com/TLD-RevaMP/TLD-Mods): the example mods the tests deploy (TLD_TEST_MODS) are built from it
+MODS_REPO = _path("TLD_MODS_DIR", TOOLS.parent.parent / "TLD-Mods")
 BENCH.mkdir(exist_ok=True)
 # save backups of test runs, and local caches (decompiles, game diffs): never inside the repo or the game
 BACKUPS = _path("TLD_BACKUPS", "~/tld-revamp-backups")

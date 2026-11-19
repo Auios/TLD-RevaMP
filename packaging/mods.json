@@ -6,7 +6,7 @@
       "name": "Head Unit",
       "author": "Normal99",
       "description": "Car head units: radio and media player in the dash.",
-      "source": "https://github.com/Normal99/TLD-RevaMP",
+      "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/HeadUnit",
       "versions": [
         {
           "version": "0.2.1",
@@ -30,7 +30,7 @@
       "name": "Car Trailer",
       "author": "Normal99",
       "description": "A car trailer for hauling vehicles.",
-      "source": "https://github.com/Normal99/TLD-RevaMP",
+      "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/CarTrailer",
       "versions": [
         {
           "version": "0.1.2",
@@ -176,7 +176,7 @@
       "name": "Trailer Hitches",
       "author": "Normal99",
       "description": "Adds receiver hitches to cars that cannot use the stock trailer drawbar.",
-      "source": "https://github.com/Normal99/TLD-RevaMP",
+      "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/TrailerHitches",
       "versions": [
         {
           "version": "0.2.0",
@@ -200,7 +200,7 @@
       "name": "TV Browser",
       "author": "Normal99",
       "description": "A web browser on the in-game TV, used with the keyboard and mouse; everyone in a session sees the same page.",
-      "source": "https://github.com/Normal99/TLD-RevaMP",
+      "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/TvBrowser",
       "versions": [
         {
           "version": "0.2.0",
@@ -224,7 +224,7 @@
       "name": "Road End",
       "author": "Normal99",
       "description": "Picked on the new-game screen: the main road ends after 5000 km of it, at the game's roadside grave, with a note. The land and side roads go on.",
-      "source": "https://github.com/Normal99/TLD-RevaMP",
+      "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/RoadEnd",
       "versions": [
         {
           "version": "0.2.0",

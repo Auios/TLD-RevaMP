@@ -373,15 +373,27 @@ MP_API_DLL = ROOT / "src/TLDRevamp.Multiplayer/bin/Release/netstandard2.1/TLDRev
 # BepInEx runs this patcher before loading the game; deploy the exact preloader that was built.
 PRELOADER_DLL = ROOT / "src/TLDRevamp.Preloader/bin/Release/netstandard2.1/TLDRevamp.Preloader.dll"
 APPROVED_MODS = ROOT / "packaging/approved-mods.txt"   # ships next to TLDRevamp.dll (mods joiners may download)
-# the example mods (src/Mods): deployed only when a test names them (TLD_TEST_MODS=CarTrailer,HeadUnit,TrailerHitches), and removed
-# from the game otherwise, so no other test runs with them
-EXAMPLE_MODS = ("CarTrailer", "HeadUnit", "ApiProbe", "TrailerHitches", "TvBrowser", "RoadEnd")   # ApiProbe: the mod API test mod (tools/modapi2.py), never shipped
+# the example mods: deployed only when a test names them (TLD_TEST_MODS=CarTrailer,HeadUnit,TrailerHitches), and removed
+# from the game otherwise, so no other test runs with them. They live in TLD-Mods (tldenv.MODS_REPO, mods/<Mod>); ApiProbe,
+# the mod API test mod (tools/modapi2.py, never shipped), is in this repository (src/Mods/ApiProbe).
+EXAMPLE_MODS = ("CarTrailer", "HeadUnit", "ApiProbe", "TrailerHitches", "TvBrowser", "RoadEnd")
 def test_mods():
     return [m for m in os.environ.get("TLD_TEST_MODS", "").split(",") if m in EXAMPLE_MODS]
 
+def mod_project(m):
+    return ROOT / "src/Mods/ApiProbe/ApiProbe.csproj" if m == "ApiProbe" else tldenv.MODS_REPO / f"mods/{m}/{m}.csproj"
+
 def build_test_mods():
-    for m in test_mods():
-        r = subprocess.run(["dotnet", "build", str(ROOT / f"src/Mods/{m}/{m}.csproj"), "-c", "Release", "-nologo", "-v", "q"], capture_output=True, text=True)
+    mods = test_mods()
+    if not mods: return
+    # the TLD-Mods projects build against this tree's multiplayer API (-p:MpApi) and the game's assemblies (-p:GameDir)
+    run = lambda project, *extra: subprocess.run(["dotnet", "build", str(project), "-c", "Release", "-nologo", "-v", "q", *extra],
+                                                 capture_output=True, text=True)
+    r = run(ROOT / "src/TLDRevamp.Multiplayer/TLDRevamp.Multiplayer.csproj")
+    if r.returncode != 0 or "0 Error(s)" not in r.stdout: print(r.stdout[-1500:]); sys.exit("building TLDRevamp.Multiplayer failed")
+    for m in mods:
+        if not mod_project(m).is_file(): sys.exit(f"{mod_project(m)} not found: set TLD_MODS_DIR to a TLD-Mods checkout (tools/local.env.example)")
+        r = run(mod_project(m), f"-p:MpApi={MP_API_DLL}", f"-p:GameDir={tldenv.GAME_DIR}")
         if r.returncode != 0 or "0 Error(s)" not in r.stdout: print(r.stdout[-1500:]); sys.exit(f"building {m} failed")
 
 def local_mods(g=None):
@@ -392,7 +404,7 @@ def local_mods(g=None):
         if m in test_mods(): md.mkdir(parents=True, exist_ok=True); shutil.copy2(mod_dll(m), md / f"{m}.dll")
         elif md.exists(): shutil.rmtree(md)
 
-def mod_dll(m): return ROOT / f"src/Mods/{m}/bin/Release/netstandard2.1/{m}.dll"
+def mod_dll(m): return mod_project(m).parent / f"bin/Release/netstandard2.1/{m}.dll"
 
 
 def build():

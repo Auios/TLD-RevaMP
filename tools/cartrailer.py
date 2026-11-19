@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Car Trailer example mod (src/Mods/CarTrailer) in a session, two machines over the relay: a Car01 tows the car
+"""The Car Trailer example mod (TLD-Mods: mods/CarTrailer) in a session, two machines over the relay: a Car01 tows the car
 trailer with another Car01 on its deck. As transporter.py, with the trailer as the carrier.
   A. the deck holds the car;  B. the laptop sees it there;  C. the host tows (laptop rides along): the cargo stays on the
   deck and the trailer behind the car, on both machines;  D. the same with the laptop driving (host rides along)

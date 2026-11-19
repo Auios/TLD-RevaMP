@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Road End mod (src/Mods/RoadEnd) in single player: does the main road stop at its end, with the grave and the
+"""The Road End mod (TLD-Mods: mods/RoadEnd) in single player: does the main road stop at its end, with the grave and the
 note there, while the land and the side roads go on?
 
   TLD_TEST_MODS=RoadEnd tools/roadend.py [--no-build] [--seed N] [--explore] [--out DIR]

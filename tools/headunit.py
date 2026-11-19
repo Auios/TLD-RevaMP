@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Head Unit example mod (src/Mods/HeadUnit) in single player, on this machine: a Car01 and a head unit spawned,
+"""The Head Unit example mod (TLD-Mods: mods/HeadUnit) in single player, on this machine: a Car01 and a head unit spawned,
 the unit put into the car's radio slot as a player would, its screen's place and buttons, presses on them along a
 ray as the crosshair does, and pictures of the screen (TheLongDrive_Data/headunit_*.png).
   TLD_TEST_MODS=CarTrailer,HeadUnit tools/headunit.py [--no-build] [--cache]

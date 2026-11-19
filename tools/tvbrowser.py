@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The TV Browser example mod (src/Mods/TvBrowser) in a session, two players (the host and the second machine or the
+"""The TV Browser example mod (TLD-Mods: mods/TvBrowser) in a session, two players (the host and the second machine or the
 second Steam user): a TV spawned between them, switched on, and its page used from the keyboard.
   A. both machines have the TV, and see it switched on
   B. both browsers run (downloaded once per game copy, with the consent the TV asks for)

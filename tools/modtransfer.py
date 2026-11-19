@@ -72,7 +72,7 @@ def wait_end(L, t=60):
     return ended(L)
 
 zips = sorted(glob.glob(str(ROOT / "dist/HeadUnit-*.zip")))
-if not zips: sys.exit("no dist/HeadUnit-*.zip: run tools/package-mods.sh")
+if not zips: sys.exit("no dist/HeadUnit-*.zip: put the Head Unit release zip there (TLD-Mods: tools/package.py HeadUnit)")
 with zipfile.ZipFile(zips[-1]) as z: HU = z.read("BepInEx/plugins/HeadUnit/HeadUnit.dll")
 HU_SHA = hashlib.sha256(HU).hexdigest()
 approved = (ROOT / "packaging/approved-mods.txt").read_text()

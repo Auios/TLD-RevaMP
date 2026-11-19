@@ -62,7 +62,7 @@ copy_tree() {
     cp "$ROOT/README.md" "$WORK/"
     cp "$ROOT/packaging/mods.json" "$ROOT/packaging/approved-mods.txt" "$ROOT/packaging/INSTALL.txt" "$WORK/packaging/" 2>/dev/null || {
         mkdir -p "$WORK/packaging"; cp "$ROOT/packaging/mods.json" "$ROOT/packaging/approved-mods.txt" "$ROOT/packaging/INSTALL.txt" "$WORK/packaging/"; }
-    mkdir -p "$WORK/installer" "$WORK/tools" "$WORK/.github/workflows" "$WORK/tools/modscan" "$WORK/src/Mods/HeadUnit" "$WORK/src/TLDRevamp.Preloader"
+    mkdir -p "$WORK/installer" "$WORK/tools" "$WORK/.github/workflows" "$WORK/tools/modscan" "$WORK/src/TLDRevamp.Preloader"
     # LoaderScanDocTest reads the preloader project file at this exact path.
     cp "$ROOT/src/TLDRevamp.Preloader/TLDRevamp.Preloader.csproj" "$WORK/src/TLDRevamp.Preloader/" 2>/dev/null || true
     # ReleaseDocTest reads the package audit script at this exact path.
@@ -70,7 +70,6 @@ copy_tree() {
     # ReleaseDocTest reads the CI workflow, so the scratch tree must carry it at its real path
     cp "$ROOT/.github/workflows/checks.yml" "$WORK/.github/workflows/" 2>/dev/null || true
     # and the files the other baseline projects read
-    cp "$ROOT/src/Mods/HeadUnit/Plugin.cs" "$WORK/src/Mods/HeadUnit/" 2>/dev/null || true
     cp "$ROOT/tools/modscan/Program.cs" "$WORK/tools/modscan/" 2>/dev/null || true
     cp "$ROOT/tools/installer-test.sh" "$WORK/tools/" 2>/dev/null || true
     cp "$ROOT/tools/loaderdoc_mutation.sh" "$WORK/tools/" 2>/dev/null || true
@@ -90,7 +89,7 @@ require_scratch_files() {
              src/TLDRevamp/Net/Voice.cs src/TLDRevamp/Net/ModCatalog.cs src/TLDRevamp/Net/ModActivation.cs \
              src/TLDRevamp/Net/JoinLoading.cs src/TLDRevamp/Net/JoinLoadingView.cs src/TLDRevamp/Net/JoinLoadingState.cs src/TLDRevamp/Net/JoinChecks.cs src/TLDRevamp/Net/MpScreen.cs \
              src/TLDLoaderShim/TLDLoader.cs docs/MODDING-MULTIPLAYER.md docs/NEXUS.md docs/CONTRIBUTING.md \
-             .github/workflows/checks.yml src/Mods/HeadUnit/Plugin.cs tools/modscan/Program.cs \
+             .github/workflows/checks.yml tools/modscan/Program.cs \
              tools/installer-test.sh tools/libs.sh tools/package.sh tools/pin-installer.sh tools/package_audit.py \
              src/TLDRevamp.Preloader/TLDRevamp.Preloader.csproj \
              installer/install.sh installer/install.ps1; do
@@ -516,8 +515,7 @@ mutate_noop() {
     cp "$ROOT/src/TLDRevamp/Net/Voice.cs" "$ROOT/src/TLDRevamp/Net/ModCatalog.cs" "$ROOT/src/TLDRevamp/Net/ModActivation.cs" \
        "$ROOT/src/TLDRevamp/Net/JoinLoading.cs" "$ROOT/src/TLDRevamp/Net/JoinLoadingView.cs" "$ROOT/src/TLDRevamp/Net/JoinLoadingState.cs" "$ROOT/src/TLDRevamp/Net/JoinChecks.cs" "$ROOT/src/TLDRevamp/Net/MpScreen.cs" \
        "$WORK/src/TLDRevamp/Net/"
-    mkdir -p "$WORK/src/Mods/HeadUnit" "$WORK/packaging" "$WORK/tools/modscan" "$WORK/src/TLDRevamp.Preloader"
-    cp "$ROOT/src/Mods/HeadUnit/Plugin.cs" "$WORK/src/Mods/HeadUnit/" 2>/dev/null || true
+    mkdir -p "$WORK/packaging" "$WORK/tools/modscan" "$WORK/src/TLDRevamp.Preloader"
     cp "$ROOT/packaging/mods.json" "$WORK/packaging/" 2>/dev/null || true
     cp "$ROOT/src/TLDRevamp.Preloader/TLDRevamp.Preloader.csproj" "$WORK/src/TLDRevamp.Preloader/" 2>/dev/null || true
     cp "$ROOT/tools/modscan/Program.cs" "$WORK/tools/modscan/" 2>/dev/null || true
@@ -551,8 +549,7 @@ mutate_other() {
     cp "$ROOT/src/TLDRevamp/Net/Voice.cs" "$ROOT/src/TLDRevamp/Net/ModCatalog.cs" "$ROOT/src/TLDRevamp/Net/ModActivation.cs" \
        "$ROOT/src/TLDRevamp/Net/JoinLoading.cs" "$ROOT/src/TLDRevamp/Net/JoinLoadingView.cs" "$ROOT/src/TLDRevamp/Net/JoinLoadingState.cs" "$ROOT/src/TLDRevamp/Net/JoinChecks.cs" "$ROOT/src/TLDRevamp/Net/MpScreen.cs" \
        "$WORK/src/TLDRevamp/Net/"
-    mkdir -p "$WORK/src/Mods/HeadUnit" "$WORK/packaging"
-    cp "$ROOT/src/Mods/HeadUnit/Plugin.cs" "$WORK/src/Mods/HeadUnit/" 2>/dev/null || true
+    mkdir -p "$WORK/packaging"
     cp "$ROOT/packaging/mods.json" "$WORK/packaging/" 2>/dev/null || true
     mkdir -p "$WORK/src/TLDRevamp.Preloader"
     cp "$ROOT/src/TLDRevamp.Preloader/TLDRevamp.Preloader.csproj" "$WORK/src/TLDRevamp.Preloader/" 2>/dev/null || true

@@ -1,40 +1,26 @@
-# Example mods
+# Test mods
 
-Mods that show how other BepInEx mods work with TLD RevaMP's multiplayer. They are separate mods, not part of
-RevaMP: each builds to its own DLL, and the playable ones ship as their own zips.
-
-| Mod | What it shows | Uses the API |
+| Mod | What it is for | Uses the API |
 | --- | --- | --- |
-| [HeadUnit](HeadUnit/README.md) | A digital head unit for the radio slot with a YouTube queue everyone in the car shares | yes |
-| [TvBrowser](TvBrowser/README.md) | A web browser on the game's TV, used with the keyboard and mouse; everyone sees the same page, and replays show it | yes |
-| [CarTrailer](CarTrailer/README.md) | A car trailer that RevaMP shares like the game's own trailer, with no multiplayer code | no |
-| [TrailerHitches](TrailerHitches/README.md) | Adds receiver hitches so cars such as car06p can accept the game's trailer drawbar | yes |
-| [RoadEnd](RoadEnd/README.md) | Picked on the new-game screen: the main road ends after 5000 km of road at the game's roadside grave with a note; the land and side roads go on | yes |
-| [ApiProbe](ApiProbe/README.md) | A small test mod for state records, the far store and session settings (not shipped) | yes |
+| [ApiProbe](ApiProbe/README.md) | A small test mod for state records, the far store and session settings (`tools/modapi2.py`; not shipped) | yes |
 
-How the multiplayer mod API works, its limits, and what a mod gets without it: [docs/MODDING-MULTIPLAYER.md](../../docs/MODDING-MULTIPLAYER.md).
+## The example mods
 
-## Building
+The example mods that show how other BepInEx mods work with TLD RevaMP's multiplayer (Head Unit, TV Browser, Car
+Trailer, Trailer Hitches and Road End) are in [TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods), each in its own
+folder under `mods/`, built and released there. How the multiplayer mod API works, its limits, and what a mod gets
+without it: [docs/MODDING-MULTIPLAYER.md](../../docs/MODDING-MULTIPLAYER.md).
+
+The test tools build and deploy them when a test names them: `TLD_TEST_MODS=CarTrailer,HeadUnit,TrailerHitches,TvBrowser,RoadEnd`
+builds them from a TLD-Mods checkout (`TLD_MODS_DIR`, by default `TLD-Mods` next to this repository) against this
+tree's `TLDRevamp.Multiplayer` (see [tools/README.md](../../tools/README.md)). The matching scripts under `tools/`
+exercise the mods in the game.
+
+## Building ApiProbe
 
 Same requirements as RevaMP itself (.NET SDK 8+, the game with BepInEx 5.4.23, `tools/libs.sh` run once so `lib/`
 has the reference assemblies). Then, from the repository root:
 
 ```sh
-dotnet build src/Mods/HeadUnit/HeadUnit.csproj -c Release      # -> src/Mods/HeadUnit/bin/Release/netstandard2.1/HeadUnit.dll
-dotnet build src/Mods/TrailerHitches/TrailerHitches.csproj -c Release
-dotnet build src/Mods/TvBrowser/TvBrowser.csproj -c Release
-dotnet build src/Mods/RoadEnd/RoadEnd.csproj -c Release
-tools/package-mods.sh                                          # example mod zips in dist/
+dotnet build src/Mods/ApiProbe/ApiProbe.csproj -c Release
 ```
-
-Put the DLL in `BepInEx/plugins/<Mod>/`. The mods that use the API reference `TLDRevamp.Multiplayer` as a project,
-so building one builds that too; at run time they load without RevaMP as well (single player only).
-
-The test tools deploy the example mods when a test names them: `TLD_TEST_MODS=CarTrailer,HeadUnit,TrailerHitches,TvBrowser,RoadEnd`
-(see [tools/README.md](../../tools/README.md)). The matching scripts under `tools/` exercise the mods in the game.
-
-## Using them as a starting point
-
-Copy a mod's folder, rename the project, the plugin GUID and the namespace, and change the mod id passed to
-`MpApi.RegisterMod`. A mod that uses RevaMP's code, such as the multiplayer API, is released under GPL-3.0 or a
-GPL-3.0-compatible licence, as these examples are.

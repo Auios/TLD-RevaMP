@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The TV Browser's sound (src/Mods/TvBrowser/Sound.cs), one game: a TV spawned next to the player, switched on, its
+"""The TV Browser's sound (TLD-Mods: mods/TvBrowser/Sound.cs), one game: a TV spawned next to the player, switched on, its
 keyboard taken, then
   A. a page's tone (WebAudio, 440 Hz, started by a click as a player would): it reaches the TV's buffer at the page's
      rate, and the TV's source plays it
@@ -9,7 +9,7 @@ keyboard taken, then
   E. switched off: the TV's sound source goes
 Test games are muted (tools/testdisplay.py), and Unity then gives the TV's filter a carrier of 0 and skips some of its
 blocks (a source at volume 0): the loudness checks (A's gaps and output, B) only run in a game with sound, and say so
-otherwise. Sound.Fill itself is unit tested (tools/unit/TvBrowserCoreTest).
+otherwise. Sound.Fill itself is unit tested (TLD-Mods: tests/TvBrowserCoreTest).
   TLD_TEST_MODS=TvBrowser tools/tvsound.py [--no-build] [--youtube]"""
 import os
 os.environ.setdefault("TLD_TEST_MODS", "TvBrowser")

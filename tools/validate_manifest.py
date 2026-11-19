@@ -533,7 +533,7 @@ def check_approved_against_catalog(data: dict, entries: Sequence[ApprovedEntry],
                 findings.append(finding(SEVERITY_ERROR, "approved.missing", "%s.sha256" % spot,
                                         "the file of %s %s is not on the approved list" % (mod_id, number),
                                         "a joiner never downloads a file that is not approved; add the line to "
-                                        "packaging/approved-mods.txt (tools/package-mods.sh prints it)"))
+                                        "packaging/approved-mods.txt (TLD-Mods' tools/package.py prints it)"))
                 continue
             if entry.mod_id != mod_id or entry.version != number:
                 findings.append(finding(SEVERITY_ERROR, "approved.mismatch", "%s.sha256" % spot,
