@@ -409,7 +409,7 @@ namespace TLDRevamp.Fixes
                 if (initialized && (display || input)) Lifecycle.ReportExternallyStarted();
                 else if (!initialized && !Lifecycle.Starting) Lifecycle.ReportExternallyStopped();
             }
-            catch { }
+            catch { /* best effort: optional XR manager can disappear while stopping */ }
         }
 
         /// The XR manager, when the game has one.
@@ -518,11 +518,11 @@ namespace TLDRevamp.Fixes
                         .Append(",\"right\":").Append((d.characteristics & InputDeviceCharacteristics.Right) != 0 ? "true" : "false").Append('}');
                 }
             }
-            catch { }
+            catch { /* best effort: optional XR device diagnostics may be unavailable */ }
             controllers.Append(']');
             if (Lifecycle.Running)
             {
-                try { Runtime = OpenXRRuntime.name; ApiVersion = OpenXRRuntime.apiVersion; } catch { }
+                try { Runtime = OpenXRRuntime.name; ApiVersion = OpenXRRuntime.apiVersion; } catch { /* best effort: optional runtime metadata may be unavailable */ }
             }
             var manager = _manager ?? Manager();
             bool managerActive = manager != null && manager.activeLoader != null;

@@ -151,7 +151,7 @@ namespace TLDRevamp
         /// Opens the reports folder in the system's file browser.
         public static void OpenFolder()
         {
-            try { Directory.CreateDirectory(Root); Application.OpenURL("file:///" + Root.Replace('\\', '/')); } catch { }
+            try { Directory.CreateDirectory(Root); Application.OpenURL("file:///" + Root.Replace('\\', '/')); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("FeedbackReporter.OpenFolder", quietError); }
         }
 
         private static string SystemJson() =>

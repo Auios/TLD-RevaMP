@@ -77,7 +77,7 @@ namespace TLDRevamp.Net
                     stamp.Append(Path.GetFileName(f)).Append('|').Append(fi.Length).Append('|').Append(fi.LastWriteTimeUtc.Ticks).Append('\n');
                 }
                 string cache = null;
-                try { cache = Path.Combine(BepInEx.Paths.CachePath, "tldrevamp-gamedata.txt"); } catch { }
+                try { cache = Path.Combine(BepInEx.Paths.CachePath, "tldrevamp-gamedata.txt"); } catch { /* best effort: hashing works without a writable cache path */ }
                 if (cache != null && File.Exists(cache))
                 {
                     var lines = File.ReadAllText(cache);
@@ -103,7 +103,7 @@ namespace TLDRevamp.Net
                     hash = BitConverter.ToString(sha.Hash).Replace("-", "").Substring(0, 12).ToLowerInvariant();
                 }
                 Plugin.Log.LogInfo($"world check: game data {hash} ({files.Count} files, {t0.ElapsedMilliseconds} ms)");
-                if (cache != null) try { Directory.CreateDirectory(Path.GetDirectoryName(cache)); File.WriteAllText(cache, stamp + "hash " + hash); } catch { }
+                if (cache != null) try { Directory.CreateDirectory(Path.GetDirectoryName(cache)); File.WriteAllText(cache, stamp + "hash " + hash); } catch { /* best effort: caching is optional; the computed hash is still returned */ }
                 return hash;
             }
             catch (Exception e) { Plugin.Log.LogWarning("world check: game data not hashed: " + e.Message); return "unknown"; }

@@ -251,7 +251,7 @@ namespace TLDRevamp.VR.Native
                     break;
                 }
             }
-            catch { }
+            catch { /* best effort: optional XR performance APIs may be unsupported */ }
             if (Frames.Count > 0) b.Append(",\"fps\":").Append(VrNative.F(Frames.Count / Mathf.Max(_framesSum, 1e-3f)));
             b.Append(",\"targetFps\":").Append(Application.targetFrameRate).Append(",\"vSync\":").Append(QualitySettings.vSyncCount);
             b.Append('}');

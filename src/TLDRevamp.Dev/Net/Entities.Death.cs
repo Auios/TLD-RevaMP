@@ -37,7 +37,7 @@ namespace TLDRevamp.Net
             {
                 if (kaposztaleves.s != null) { kaposztaleves.s.settings.god = false; kaposztaleves.s.settings.fly = false; }
             }
-            catch { }
+            catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("DeathTools.DisableImmortality", quietError); }
             pl.godModeTillGrounded = false;
             var v = new Vector3(vx, vy, vz);
             if (!EntityNumbers.Finite(v)) return "{\"error\":\"non-finite velocity\"}";
@@ -89,7 +89,7 @@ namespace TLDRevamp.Net
                 if (!pk.canInventory) return;   // it cannot be carried: it stays where it is (and the test says so)
                 pl.inventory[i] = pk;
                 pk.transform.parent = pl.transform;
-                try { pk.SyncInventory(); } catch { }
+                try { pk.SyncInventory(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("DeathTools.SyncInventory", quietError); }
                 return;
             }
         }

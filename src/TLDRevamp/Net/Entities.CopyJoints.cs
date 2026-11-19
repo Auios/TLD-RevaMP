@@ -71,7 +71,7 @@ namespace TLDRevamp.Net
         internal static void AddJointed(Entities.Ent entity) => _jointed.Add(entity);
         internal static void ResetFreedJoints()
         {
-            foreach (var kv in _freedJoints) if (kv.Key != null) { try { SetJointFree(kv.Key, kv.Value, false); } catch { } }
+            foreach (var kv in _freedJoints) if (kv.Key != null) { try { SetJointFree(kv.Key, kv.Value, false); } catch { /* best effort: Unity joints may already be destroyed during teardown */ } }
             _freedJoints.Clear();
         }
     }

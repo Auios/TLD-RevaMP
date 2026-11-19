@@ -284,7 +284,7 @@ namespace TLDRevamp.Net
                 var ns = UnityEngine.Object.FindObjectOfType<GeneszSteamP2PBase.networkingScript>(true);
                 if (ns != null && ns.voiceSourcePrefab != null) _sourceTemplate = ns.voiceSourcePrefab.gameObject;
             }
-            catch { }
+            catch { /* best effort: the optional game voice template has a default source fallback */ }
             return _sourceTemplate;
         }
 
@@ -369,7 +369,7 @@ namespace TLDRevamp.Net
         public static void Reset()
         {
             foreach (var id in new List<int>(_speakers.Keys)) Drop(id);
-            if (_recording) { try { SteamUser.StopVoiceRecording(); } catch { } _recording = false; }
+            if (_recording) { try { SteamUser.StopVoiceRecording(); } catch { /* best effort: Steam capture may already be stopped during teardown */ } _recording = false; }
             DevHooks.VoiceToneStopped?.Invoke(); _toEveryone = _sentToEveryone = false;
         }
 
@@ -389,7 +389,7 @@ namespace TLDRevamp.Net
             }
             DevHooks.VoiceProbeStatus?.Invoke(_recording);
             uint avail = 0; EVoiceResult now = EVoiceResult.k_EVoiceResultNotRecording;
-            try { now = SteamUser.GetAvailableVoice(out avail); } catch { }
+            try { now = SteamUser.GetAvailableVoice(out avail); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("Voice.StatusAvailability", quietError); }
             bool sessionAll = Mp.Server != null ? Mp.Server.SessionSettings.VoiceEveryone : DeveloperAccess.ClientSettings?.VoiceEveryone ?? false;
             return "{\"mode\":" + Json.Str(Setting.ToString()) + ",\"everyoneKey\":" + Json.Str(EveryoneKeyName) + ",\"toEveryone\":" + (SendingToEveryone ? "true" : "false") +
                    ",\"sessionEveryone\":" + (sessionAll ? "true" : "false") + ",\"recording\":" + (_recording ? "true" : "false") + ",\"sending\":" + (Sending ? "true" : "false") +
@@ -454,7 +454,7 @@ namespace TLDRevamp.Net
                 var inp = settingsscript.s.S.inputs[(int)which];
                 foreach (var k in inp.keys) if (k != null && !k.IsNone()) return true;
             }
-            catch { }
+            catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("Keys.Bound", quietError); }
             return false;
         }
 

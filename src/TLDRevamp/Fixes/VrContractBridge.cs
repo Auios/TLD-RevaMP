@@ -62,7 +62,7 @@ namespace TLDRevamp.Fixes
                     if (right) _rightPresent = true;
                 }
             }
-            catch { }
+            catch { /* best effort: optional XR controller enumeration may be unsupported */ }
             // the head is tracked while the display subsystem runs: without a headset there is no head
             _headPresent = OpenXrBridge.DisplayRunning;
         }
@@ -100,7 +100,7 @@ namespace TLDRevamp.Fixes
                     input.run = false;
                 }
             }
-            catch { }
+            catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("VrContractBridge.ApplyLocomotion", quietError); }
         }
 
         /// The seat and the driving state, from the player.

@@ -12,7 +12,7 @@ namespace TLDRevamp.Diagnostics
         private static void Prefix()
         {
             string died = "?";
-            try { died = mainscript.s != null ? mainscript.s.died.ToString() : "no mainscript"; } catch { }
+            try { died = mainscript.s != null ? mainscript.s.died.ToString() : "no mainscript"; } catch { /* best effort: scene objects may already be destroyed; the warning still runs */ }
             Plugin.Log.LogWarning("Scene load requested. player died=" + died +
                                   " god=" + SafeGod() + "\n" + Environment.StackTrace);
         }

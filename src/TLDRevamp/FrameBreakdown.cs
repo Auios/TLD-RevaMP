@@ -73,12 +73,12 @@ namespace TLDRevamp
             for (int i = 0; i < Markers.Length; i++)
             {
                 try { _rec[i] = ProfilerRecorder.StartNew(Markers[i].cat, Markers[i].name, 1); }
-                catch { }
+                catch { /* best effort: optional profiler markers may be unsupported */ }
             }
             for (int i = 0; i < CounterDefs.Length; i++)
             {
                 try { _counters[i] = ProfilerRecorder.StartNew(CounterDefs[i].cat, CounterDefs[i].name, 1); }
-                catch { }
+                catch { /* best effort: optional profiler counters may be unsupported */ }
             }
             _lastGc = GC.CollectionCount(0);
         }
@@ -94,7 +94,7 @@ namespace TLDRevamp
                 bool want = i < 3 ? FrameTiming : Render;
                 if (want == (i < 3 ? _timingOn : _renderOn)) continue;
                 if (!want) { _counters[i].Dispose(); _counters[i] = default; }
-                else try { _counters[i] = ProfilerRecorder.StartNew(CounterDefs[i].cat, CounterDefs[i].name, 1); } catch { }
+                else try { _counters[i] = ProfilerRecorder.StartNew(CounterDefs[i].cat, CounterDefs[i].name, 1); } catch { /* best effort: optional profiler counters may be unsupported */ }
             }
             _timingOn = FrameTiming; _renderOn = Render;
         }

@@ -257,7 +257,7 @@ namespace TLDRevamp.Net
         private static void Out(string s)
         {
             Plugin.Log.LogInfo("admin console: " + s.Replace("\n", " | "));
-            try { File.AppendAllText(OutFile, DateTime.Now.ToString("HH:mm:ss ") + s.Replace("\n", "\n         ") + "\n"); } catch { }
+            try { File.AppendAllText(OutFile, DateTime.Now.ToString("HH:mm:ss ") + s.Replace("\n", "\n         ") + "\n"); } catch { /* best effort: the same console line is already written to the game log */ }
         }
 
         public static void Reset() { _offset = -1; }

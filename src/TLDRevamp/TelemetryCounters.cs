@@ -25,7 +25,7 @@ namespace TLDRevamp
         {
             var values = new long[_fields.Length];
             for (int i = 0; i < values.Length; i++)
-                try { values[i] = Convert.ToInt64(_fields[i].GetValue(null)); } catch { }
+                try { values[i] = Convert.ToInt64(_fields[i].GetValue(null)); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("TelemetryCounters.Read", quietError); }
             return () =>
             {
                 var b = new StringBuilder("{");

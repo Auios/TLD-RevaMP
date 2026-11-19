@@ -107,7 +107,7 @@ namespace TLDRevamp.Net
                 _audioStripped = true;
             }
             if (Time.realtimeSinceStartup - _worldAt < 5f) return;   // let the world settle, like the client's Ready does
-            try { kaposztaleves.s.settings.god = true; } catch { }   // the phantom must never die
+            try { kaposztaleves.s.settings.god = true; } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("DedicatedServer.SetImmortal", quietError); }   // the phantom must never die
             // the port still held (the last run of this server not quite gone, another program): wait for it, retrying
             if (Time.realtimeSinceStartup < _hostRetryAt) return;
             try { Mp.Host((ushort)Port); }

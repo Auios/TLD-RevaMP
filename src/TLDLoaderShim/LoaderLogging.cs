@@ -23,7 +23,7 @@ namespace TLDLoader
             _dir = ModLoader.GetModLogFolder(mod);
             Directory.CreateDirectory(_dir);
             foreach (var old in Directory.GetFiles(_dir, "*.log").OrderByDescending(File.GetLastWriteTimeUtc).Skip(KeepFiles))
-                try { File.Delete(old); } catch { }
+                try { File.Delete(old); } catch { /* best effort: old log files may be in use */ }
             Write(mod.Name + " v" + mod.Version + " started at " + DateTime.Now.ToString("s") + ".");
         }
 
@@ -33,7 +33,7 @@ namespace TLDLoader
             if (day != _day) { _day = day; _file = Path.Combine(_dir, _id + "_" + day + ".log"); }
             lock (FileLock)
             {
-                try { File.AppendAllText(_file, line + "\r\n"); } catch { }
+                try { File.AppendAllText(_file, line + "\r\n"); } catch { /* best effort: a logger failure must not break the mod */ }
             }
         }
 

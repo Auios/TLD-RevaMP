@@ -342,7 +342,7 @@ namespace TLDRevamp.Net
             string available = offered?.Version;
             bool approved = offered != null && ModCatalog.Reason(m, offered) == null;
             string installed = null; bool manual = false; string status = "";
-            try { installed = Installed(m, out manual); status = ModBrowser.State(m.Id) ?? ""; } catch (Exception) { }
+            try { installed = Installed(m, out manual); status = ModBrowser.State(m.Id) ?? ""; } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("ModsScreen.TileState", quietError); }
             bool update = installed != null && available != null && Newer(available, installed);
             bool pending = status.EndsWith("at next start") || status.Contains("takes effect at next start");
             version = installed == null ? (available != null ? "v" + available : "") : "v" + installed;

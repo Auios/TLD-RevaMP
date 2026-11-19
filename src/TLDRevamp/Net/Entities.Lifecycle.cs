@@ -41,7 +41,7 @@ namespace TLDRevamp.Net
 
         internal static void RemoveRecord(uint id)
         {
-            try { savedatascript.s.items.Remove(id); } catch { }
+            try { savedatascript.s.items.Remove(id); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("EntityLifetime.RemoveRecord", quietError); }
             var data = savedatascript.s != null ? savedatascript.s.data : null;
             if (data != null && data.itemData != null && savedatascript.IndexOfID(data.itemData.items, id, out int k))
                 data.itemData.items.RemoveAt(k);

@@ -43,7 +43,7 @@ namespace TLDRevamp
                     return sb.Append(']').ToString();
                 case "start":
                     foreach (var (h, d) in Available(filter))
-                        try { Started.Add((d.Name, d.Category.Name, ProfilerRecorder.StartNew(d.Category, d.Name, 1))); } catch { }
+                        try { Started.Add((d.Name, d.Category.Name, ProfilerRecorder.StartNew(d.Category, d.Name, 1))); } catch { /* best effort: optional profiler counters may be unsupported */ }
                     return "{\"started\":" + Started.Count + "}";
                 case "read":
                     sb.Append('[');

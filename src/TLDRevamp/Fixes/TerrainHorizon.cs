@@ -499,7 +499,7 @@ namespace TLDRevamp.Fixes
                             return TerrainHorizonGeometry.NearCutFromDrawDistance(reach, NearCutM);
                     }
             }
-            catch { }
+            catch { /* best effort: scene terrain may be gone; use the default cut radius */ }
             return NearCutM;
         }
 
@@ -595,7 +595,7 @@ namespace TLDRevamp.Fixes
                     foreach (var gen in map.terrainGen)
                         if (gen != null && gen.isDistantTerrain) return gen.layer;
             }
-            catch { }
+            catch { /* best effort: scene terrain may be gone; use the default layer */ }
             return 0;
         }
 

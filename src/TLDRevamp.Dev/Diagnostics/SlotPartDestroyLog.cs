@@ -23,7 +23,7 @@ namespace TLDRevamp.Diagnostics
             Count++;
             if (Count > Max) return;
             bool stored = false;
-            try { var d = savedatascript.s.data.itemData; stored = d != null && savedatascript.IndexOfID(d.items, __instance.idInSave, out _); } catch { }
+            try { var d = savedatascript.s.data.itemData; stored = d != null && savedatascript.IndexOfID(d.items, __instance.idInSave, out _); } catch { /* best effort: save data may be gone during object destruction */ }
             var line = $"slotted part destroyed #{Count}: {__instance.name} ({__instance.idInSave}) in {at.slot.name} on {at.slot.transform.root.name}" +
                        $" (slot owner {(at.slot.tosaveitem != null ? at.slot.tosaveitem.name + " " + at.slot.tosaveitem.idInSave : "-")}), far-store record {stored}," +
                        $" frame {UnityEngine.Time.frameCount}, entity {e.NetId} proxy {e.Proxy} owner {e.OwnerId}, group root alive {(e.Root != null)}," +

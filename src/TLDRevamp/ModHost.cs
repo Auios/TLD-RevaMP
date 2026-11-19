@@ -191,7 +191,7 @@ namespace TLDRevamp
         {
             if (Loader == null) return;
             if (_hostScene == null) _hostScene = Loader.GetMethod("HostScene", BindingFlags.NonPublic | BindingFlags.Static);
-            try { _hostScene?.Invoke(null, new object[] { inWorld }); } catch { }
+            try { _hostScene?.Invoke(null, new object[] { inWorld }); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("ModHost.Scene", quietError); }
         }
 
         private static MethodInfo Overridden(Type t, Type modBase, string name)
@@ -352,7 +352,7 @@ namespace TLDRevamp
                     }
                 }
             }
-            catch { }
+            catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("ModHost.ConfigScreen", quietError); }
             ConfigScreenOpen = open;
         }
 

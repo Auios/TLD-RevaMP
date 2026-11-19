@@ -192,7 +192,7 @@ namespace TLDRevamp
                     // keep this one and the one before it
                     var old = new DirectoryInfo(root).GetDirectories();
                     Array.Sort(old, (a, b) => b.CreationTimeUtc.CompareTo(a.CreationTimeUtc));
-                    for (int i = 2; i < old.Length; i++) try { old[i].Delete(true); } catch { }
+                    for (int i = 2; i < old.Length; i++) try { old[i].Delete(true); } catch { /* best effort: old snapshot files may be in use */ }
                 }
                 catch (Exception e) { SessionLog.Fail("bug world copy", e); StartWorldDir = null; }
             });

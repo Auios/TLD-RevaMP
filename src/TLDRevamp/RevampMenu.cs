@@ -285,7 +285,7 @@ namespace TLDRevamp
 
         private static void Refresh(Ui ui)
         {
-            foreach (var r in ui.Refreshers) { try { r(); } catch { } }
+            foreach (var r in ui.Refreshers) { try { r(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("RevampMenu.Refresh", quietError); } }
             Layout(ui);
         }
 

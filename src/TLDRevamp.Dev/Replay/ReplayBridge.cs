@@ -74,7 +74,7 @@ namespace TLDRevamp.Replay
             foreach (var f in ReplayFiles.List(ReplayRecorder.Folder))
             {
                 long size = 0;
-                try { size = new FileInfo(f).Length; } catch { }
+                try { size = new FileInfo(f).Length; } catch { /* best effort: a listed replay may have disappeared before stat */ }
                 if (!first) sb.Append(',');
                 first = false;
                 sb.Append("{\"name\":").Append(Json.Str(Path.GetFileName(f))).Append(",\"bytes\":").Append(size).Append('}');

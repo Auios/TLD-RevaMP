@@ -436,7 +436,7 @@ namespace TLDRevamp.Cinematic
                     mouseY = Input.GetAxis("Mouse Y");
                 }
             }
-            catch { }
+            catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("CinematicCamera.ReadLook", quietError); }
             look.Yaw = mouseX * CinematicLimits.LookSpeed * dt;
             look.Pitch = -mouseY * CinematicLimits.LookSpeed * dt;
             // The arrow keys turn the camera, so the camera is usable without a mouse.

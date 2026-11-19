@@ -183,7 +183,7 @@ namespace TLDRevamp.Net
             Entities.Reset(wasHost);
             // The session is over: the game gets its own far-mesh heights back (the horizon correction edited
             // the game's mesh, and the correction must not outlive the session that made it).
-            try { Fixes.TerrainHorizon.RestoreFarMeshes(); } catch { }
+            try { Fixes.TerrainHorizon.RestoreFarMeshes(); } catch { /* best effort: terrain meshes may already be destroyed during teardown */ }
             ModObjects.Reset(wasHost);
             WorldCheck.SessionEnds();
             Reports.Reset();
@@ -287,12 +287,12 @@ namespace TLDRevamp.Net
             {
                 Plugin.Log.LogWarning("Scene-load session stop failed, forcing: " + e);
                 bool wasHost = Server != null;   // asked after Server = null it was always false: a host got the client's reset
-                try { Client?.Dispose(); } catch { }
-                try { Server?.Dispose(); } catch { }
+                try { Client?.Dispose(); } catch { /* best effort: forced teardown follows an already logged stop failure */ }
+                try { Server?.Dispose(); } catch { /* best effort: forced teardown follows an already logged stop failure */ }
                 Client = null; Server = null;
-                try { RemotePlayers.Clear(); } catch { }
-                try { Entities.Reset(wasHost); } catch { }
-                try { ModObjects.Reset(wasHost); } catch { }
+                try { RemotePlayers.Clear(); } catch { /* best effort: forced teardown follows an already logged stop failure */ }
+                try { Entities.Reset(wasHost); } catch { /* best effort: forced teardown follows an already logged stop failure */ }
+                try { ModObjects.Reset(wasHost); } catch { /* best effort: forced teardown follows an already logged stop failure */ }
             }
         }
 
@@ -344,7 +344,7 @@ namespace TLDRevamp.Net
                     Plugin.Log.LogError($"Mp.Tick {name}: failing every frame for {StopAfterFaultsS:F0} s — the session stops");
                     _faultSince[part] = 0f;
                     Stop();
-                    try { Session.Show(1, "", "Multiplayer stopped: an error kept repeating (see the log)"); } catch { }
+                    try { Session.Show(1, "", "Multiplayer stopped: an error kept repeating (see the log)"); } catch { /* best effort: the tick failure and stop reason are already logged */ }
                 }
             }
         }
@@ -1396,7 +1396,7 @@ namespace TLDRevamp.Net
                 if (_worldSeenAt < 0) _worldSeenAt = Time.realtimeSinceStartup;
                 if (Time.realtimeSinceStartup - _worldSeenAt < 3f) return;
                 TestSafety.InHostWorld = true;
-                if (ServerWorldTime >= 0f) { try { EntityWorldClock.ApplyWorldTime(ServerWorldTime, true); } catch { } ServerWorldTime = -1f; }   // relative shift (SetStartTime is for before the clock starts); the Ready reply corrects the load time
+                if (ServerWorldTime >= 0f) { try { EntityWorldClock.ApplyWorldTime(ServerWorldTime, true); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("Mp.ApplyJoinWorldTime", quietError); } ServerWorldTime = -1f; }   // relative shift (SetStartTime is for before the clock starts); the Ready reply corrects the load time
                 if (StormLast >= 0f && StormNext >= 0f && mainscript.s.sandStormSpawn != null)
                 {
                     try
@@ -1404,7 +1404,7 @@ namespace TLDRevamp.Net
                         mainscript.s.sandStormSpawn.lastTime = Time.time + StormLast;   // the same conversion the world load uses
                         mainscript.s.sandStormSpawn.nextTime = StormNext;
                     }
-                    catch { }
+                    catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("Mp.ApplyJoinStorm", quietError); }
                     StormLast = StormNext = -1f;
                 }
                 // where to stand: asked of the host, placed on the ground there (held until it is generated), then Ready —
@@ -1879,8 +1879,8 @@ namespace TLDRevamp.Net
                 bool farGone = rp.SeatNet != 0 && seat == null && FarCarGone(rp);
                 if (farGone != rp.FarHidden) { rp.FarHidden = farGone; rp.Go.SetActive(!farGone); FarHiddenChanges++; }
                 if (rp.FarHidden) continue;
-                if (rp.Mp != null) { try { PaceTick(rp); } catch { } }
-                if (rp.Mp != null) { try { rp.Mp.Upd(); Voice.Lips(rp.Id, rp.Mp); } catch { } }
+                if (rp.Mp != null) { try { PaceTick(rp); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("RemotePlayers.PaceTick", quietError); } }
+                if (rp.Mp != null) { try { rp.Mp.Upd(); Voice.Lips(rp.Id, rp.Mp); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("RemotePlayers.UpdateAndLips", quietError); } }
                 if (seat == null && Time.unscaledDeltaTime > 0f)
                 {
                     var g = mainscript.GlobalFromUnityPos(t.position);

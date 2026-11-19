@@ -198,7 +198,7 @@ namespace TLDRevamp
         private static Telemetry T => !ReferenceEquals(Plugin.Instance, null) ? Plugin.Instance.Telemetry : null;
         private static string NetLine(int i)
         {
-            string net = null; try { net = Net.Mp.NetStatsLine(); } catch { }
+            string net = null; try { net = Net.Mp.NetStatsLine(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("DebugV2.NetLine", quietError); }
             if (net == null) return "";
             var parts = net.Replace("<b>", "").Replace("</b>", "").Replace("  down", "\nDown").Split('\n');
             return i < parts.Length ? parts[i] : "";
@@ -250,7 +250,7 @@ namespace TLDRevamp
                 {
                     c.Next = now + .25f;
                     var lines = new List<string>();
-                    foreach (var f in Fields) if (p.fields.Contains(f.Key)) { string t = ""; try { t = f.Text(); } catch { } if (!string.IsNullOrEmpty(t)) lines.Add(t); }
+                    foreach (var f in Fields) if (p.fields.Contains(f.Key)) { string t = ""; try { t = f.Text(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("DebugV2.ReadField", quietError); } if (!string.IsNullOrEmpty(t)) lines.Add(t); }
                     if (lines.Count == 0) lines.Add("Right Shift: pick fields for this panel");
                     c.Text.text = OverlayStyle.Truncate(string.Join("\n", lines), w - 2 * OverlayStyle.Padding);
                     c.Height = OverlayStyle.Height(c.Text, w - 2 * OverlayStyle.Padding);

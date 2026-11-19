@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><DefineConstants>$(DefineConstants);HITCH_RUNTIME</DefineConstants><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><NoWarn>CS0649;CS8981</NoWarn><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/TLDRevamp/Diagnostics/QuietErrors.cs" />
+    <Compile Include="QuietErrorsLogStub.cs" />
     <Compile Include="HitchTest.cs" />
     <Compile Include="EntityHitchChecks.cs" />
     <Compile Include="EntityHitchStubs.cs" />

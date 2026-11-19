@@ -14,7 +14,7 @@ namespace TLDRevamp.Diagnostics
         private static void Prefix(fpscontroller __instance)
         {
             if (__instance == null || __instance.died || __instance.godModeTillGrounded) return;   // the game ignores it then
-            try { if (kaposztaleves.s.settings.god || kaposztaleves.s.settings.fly) return; } catch { }
+            try { if (kaposztaleves.s.settings.god || kaposztaleves.s.settings.fly) return; } catch { /* best effort: settings may be gone; death logging still proceeds */ }
             Deaths++;
             string where = "?";
             try
@@ -23,7 +23,7 @@ namespace TLDRevamp.Diagnostics
                 var rb = __instance.RB;
                 where = $"global {g.x:F0},{g.y:F0},{g.z:F0} vel {(rb != null ? rb.velocity.magnitude : 0f):F1} m/s godTillGrounded {__instance.godModeTillGrounded}";
             }
-            catch { }
+            catch { /* best effort: destroyed player objects leave the existing unknown-location fallback */ }
             Plugin.Log.LogWarning("player death #" + Deaths + " at " + where + "\n" + Environment.StackTrace);
         }
     }

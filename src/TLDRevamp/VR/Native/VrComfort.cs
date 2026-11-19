@@ -130,7 +130,7 @@ namespace TLDRevamp.VR.Native
                 foreach (var s in settings)
                     if (s != null && s.GetType().Name == "MotionBlur") return s;
             }
-            catch { }
+            catch { /* best effort: optional postprocessing profile members vary by game version */ }
             return null;
         }
 
@@ -143,7 +143,7 @@ namespace TLDRevamp.VR.Native
                 var f = GameLookups.NamedField(typeof(UnityEngine.Component), "UnityEngine.Rendering.PostProcessing.BoolParameter:value", p?.GetType());
                 if (f != null && !Equals(f.GetValue(p), on)) f.SetValue(p, on);
             }
-            catch { }
+            catch { /* best effort: optional postprocessing effect members vary by game version */ }
         }
     }
 }

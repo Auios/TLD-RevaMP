@@ -373,7 +373,7 @@ namespace TLDRevamp.Net
         /// Quitting: friends must not see a game that is gone (Application.quitting).
         internal static void ClearPresence()
         {
-            try { if (SteamTransport.SteamReady) SteamFriends.ClearRichPresence(); } catch { }
+            try { if (SteamTransport.SteamReady) SteamFriends.ClearRichPresence(); } catch { /* best effort: Steam may already be shutting down */ }
             _presence = null;
         }
 

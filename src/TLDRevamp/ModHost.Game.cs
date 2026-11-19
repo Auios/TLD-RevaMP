@@ -108,7 +108,7 @@ namespace TLDRevamp
             try { foreach (var t in classes) h.CreateClassProcessor(t).Patch(); }
             catch (Exception e)
             {
-                try { h.UnpatchSelf(); } catch { }
+                try { h.UnpatchSelf(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("ModHost.RollbackPatches", quietError); }
                 Refuse(l, "patching threw, all undone: " + (e.InnerException ?? e).Message);
                 return;
             }
@@ -202,7 +202,7 @@ namespace TLDRevamp
                             : __instance.LSaveReferences[GameLookups.FieldValue<int>(typeof(newSaveScreenScript), "CurrentSelected", __instance)];
                         if (which != null) Raise(_delete, which.name);
                     }
-                    catch { }
+                    catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("ModHost.DeleteSave", quietError); }
                 }
             }
 

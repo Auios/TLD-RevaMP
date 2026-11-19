@@ -79,7 +79,7 @@ namespace TLDRevamp.Net
                 string k = m.sType.ToString();
                 if (kinds.ContainsKey(k)) continue;
                 bool holds = false;
-                try { holds = m.CanStore(); } catch { }
+                try { holds = m.CanStore(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("PhysLockTools.CanStore", quietError); }
                 kinds[k] = holds ? "true" : "false";
             }
             var rows = new List<string>();

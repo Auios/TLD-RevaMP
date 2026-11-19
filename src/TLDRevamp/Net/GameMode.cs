@@ -93,7 +93,7 @@ namespace TLDRevamp.Net
                 var opts = g != null && g.dropdrops != null && g.dropdrops.Count > 1 && g.dropdrops[1] != null ? g.dropdrops[1].dropdown.options : null;
                 if (opts != null && m.Biome >= 0 && m.Biome < opts.Count && !string.IsNullOrEmpty(opts[m.Biome].text)) biome = "biome " + opts[m.Biome].text;
             }
-            catch { }
+            catch { /* best effort: menu objects may be gone; the numeric biome label remains */ }
             return "Survival " + (m.Survival == 2 ? "on" : "off") + ", enemies " + (m.Peaceful == 2 ? "peaceful" : "hostile") + ", " + biome +
                    (m.Homesick == 2 ? ", homesick" : "");
         }

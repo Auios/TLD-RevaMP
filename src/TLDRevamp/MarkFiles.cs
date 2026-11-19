@@ -69,7 +69,7 @@ namespace TLDRevamp
             _root = root; Entries.Clear(); Renames.Clear(); Comparisons.Clear();
             string marks = Path.Combine(root, "marks");
             if (Directory.Exists(marks)) foreach (string path in Directory.GetFiles(marks, "mark-*.json", SearchOption.AllDirectories))
-                try { Entries.Add(Read(root, path)); } catch { }
+                try { Entries.Add(Read(root, path)); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("MarkFiles.Load", quietError); }
             Publish();
         }
         internal static void Initialize(string root) => Queue(() => { Load(root); Refresh(Array.Empty<string>()); });

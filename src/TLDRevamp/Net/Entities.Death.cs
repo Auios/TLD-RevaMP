@@ -111,7 +111,7 @@ namespace TLDRevamp.Net
                 }
             }
             // the local body: the game's own object, destroyed so it stops lying there and stops being counted.
-            try { UnityEngine.Object.Destroy(go); } catch { }
+            try { UnityEngine.Object.Destroy(go); } catch { /* best effort: the corpse may already be destroyed */ }
             DeathCorpsesReleased++;
         }
 

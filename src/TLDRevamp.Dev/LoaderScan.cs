@@ -80,7 +80,7 @@ namespace TLDRevamp
             try { asm = Assembly.LoadFrom(dll); }
             catch (Exception e) { rep.Error = "could not load: " + e.Message; return rep; }
             rep.Asm = asm;
-            try { rep.UsesApi = asm.GetReferencedAssemblies().Any(n => n.Name == "TLDRevamp.Multiplayer"); } catch { }
+            try { rep.UsesApi = asm.GetReferencedAssemblies().Any(n => n.Name == "TLDRevamp.Multiplayer"); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("LoaderScan.ReadReferences", quietError); }
             try
             {
                 foreach (var name in asm.GetReferencedAssemblies().OrderBy(n => n.Name))
@@ -113,7 +113,7 @@ namespace TLDRevamp
                         var method = mod.GetMethod(lifecycle, lifecycleFlags, null, Type.EmptyTypes, null);
                         if (method != null && method.DeclaringType != mod.BaseType) rep.Lifecycle.Add(lifecycle);
                     }
-                    catch { }
+                    catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("LoaderScan.ReadLifecycle", quietError); }
                 }
             }
             if (mod == null)   // a BepInEx plugin: its [BepInPlugin(guid, name, version)], read without running anything
@@ -125,7 +125,7 @@ namespace TLDRevamp
                             if (ca.AttributeType.Name == "BepInPlugin" && ca.ConstructorArguments.Count >= 3)
                             { rep.Id = ca.ConstructorArguments[0].Value as string ?? ""; rep.Name = ca.ConstructorArguments[1].Value as string ?? ""; rep.Version = ca.ConstructorArguments[2].Value as string ?? ""; }
                     }
-                    catch { }
+                    catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("LoaderScan.ReadMetadata", quietError); }
                     if (rep.Name != "") break;
                 }
             if (rep.Id == "") rep.Id = Path.GetFileNameWithoutExtension(dll);
@@ -171,7 +171,7 @@ namespace TLDRevamp
                 var il = g?.GetMethodBody()?.GetILAsByteArray();
                 if (il != null && il.Length >= 5 && il[0] == 0x72) return g.Module.ResolveString(BitConverter.ToInt32(il, 1));
             }
-            catch { }
+            catch { /* best effort: unknown getters need not expose readable constant IL */ }
             return null;
         }
 
@@ -179,7 +179,7 @@ namespace TLDRevamp
         {
             var mod = m.Module;
             Type[] targs = null, margs = null;
-            try { targs = m.DeclaringType != null && m.DeclaringType.IsGenericType ? m.DeclaringType.GetGenericArguments() : null; margs = m.IsGenericMethod ? m.GetGenericArguments() : null; } catch { }
+            try { targs = m.DeclaringType != null && m.DeclaringType.IsGenericType ? m.DeclaringType.GetGenericArguments() : null; margs = m.IsGenericMethod ? m.GetGenericArguments() : null; } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("LoaderScan.ReadGenericContext", quietError); }
             int i = 0;
             while (i < il.Length)
             {

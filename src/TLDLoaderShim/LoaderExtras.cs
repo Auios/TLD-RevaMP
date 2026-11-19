@@ -112,10 +112,10 @@ namespace TLDLoader.Extensions
             foreach (var p in props)
             {
                 if (props.Any(q => q.Name == "shared" + char.ToUpperInvariant(p.Name[0]) + p.Name.Substring(1))) continue;
-                try { p.SetValue(comp, p.GetValue(other, null), null); } catch { }
+                try { p.SetValue(comp, p.GetValue(other, null), null); } catch { /* best effort: unknown component properties may reject copying */ }
             }
             foreach (var f in chain.SelectMany(t => t.GetFields(all)))
-                try { f.SetValue(comp, f.GetValue(other)); } catch { }
+                try { f.SetValue(comp, f.GetValue(other)); } catch { /* best effort: unknown component fields may reject copying */ }
             return comp as T;
         }
     }

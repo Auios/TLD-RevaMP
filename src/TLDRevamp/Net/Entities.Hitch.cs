@@ -214,7 +214,7 @@ namespace TLDRevamp.Net
                     {
                         _hitchApplying = true; Entities.HitchApplyingDetach = true;
                         try { if (at.attached) Entities.UnmountHitch(at, true); }
-                        catch (System.Exception) { }
+                        catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("EntityHitch.RollbackDetach", quietError); }
                         finally { _hitchApplying = false; Entities.HitchApplyingDetach = false; }
                         if (at.slot != null) at.slot.parts.Remove(at);
                         at.slot = null; at.attached = false;

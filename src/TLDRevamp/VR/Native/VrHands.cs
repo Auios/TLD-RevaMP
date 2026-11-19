@@ -396,7 +396,7 @@ namespace TLDRevamp.VR.Native
                 var d = InputDevices.GetDeviceAtXRNode(h == Left ? XRNode.LeftHand : XRNode.RightHand);
                 if (d.isValid) d.SendHapticImpulse(0, amplitude, seconds);
             }
-            catch { }
+            catch { /* best effort: controllers need not support haptic impulses */ }
         }
 
         // ---- the game's own grab of doors and levers (vrInteractHandScript) keeps out of a hand that holds an item

@@ -233,7 +233,7 @@ namespace TLDRevamp.Net
             // a session that ends is a reconnect's other half: the VR state of the old player must not survive it
             // (the held grab, the open UI press, the latched stick, the seat). A read-only call: it changes no state
             // on the wire and touches no protocol field.
-            try { Fixes.VrContractBridge.SanitizeReconnect(); } catch { }
+            try { Fixes.VrContractBridge.SanitizeReconnect(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("Entities.SanitizeReconnect", quietError); }
             // the death's corpse and item ids belong to the session that made them
             EntityRagdolls.DeathReset();
             Tpa.ResetTelemetry();

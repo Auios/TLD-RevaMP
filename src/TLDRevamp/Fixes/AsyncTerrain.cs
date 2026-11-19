@@ -148,7 +148,7 @@ namespace TLDRevamp.Fixes
                     Interlocked.Add(ref WorkerTicks, Stopwatch.GetTimestamp() - t0);
                     st.Done.Enqueue(job);
                 }
-                catch { }
+                catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("AsyncTerrain.CompleteWorker", quietError); }
             });
             __result = true; // like the original: one new tile per DoPlace call
             return false;

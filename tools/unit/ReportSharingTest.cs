@@ -389,6 +389,7 @@ namespace TLDRevamp
     {
         internal readonly List<string> Lines = new List<string>();
         internal void LogInfo(string line) => Lines.Add(line);
+        internal void LogWarning(string line) => Lines.Add(line);
     }
     static class Json { internal static string Str(string s) => System.Text.Json.JsonSerializer.Serialize(s); }
 }

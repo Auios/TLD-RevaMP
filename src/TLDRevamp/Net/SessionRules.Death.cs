@@ -84,7 +84,7 @@ namespace TLDRevamp.Net
                 // anchor and must not send a second death record.
                 if (__instance.died || (mainscript.s != null && mainscript.s.died)) { Death.Reject(DeathReject.AlreadyDead); return; }
                 if (__instance.godModeTillGrounded) { Death.Reject(DeathReject.Immortal); return; }
-                try { if (kaposztaleves.s != null && (kaposztaleves.s.settings.god || kaposztaleves.s.settings.fly)) { Death.Reject(DeathReject.Immortal); return; } } catch { }
+                try { if (kaposztaleves.s != null && (kaposztaleves.s.settings.god || kaposztaleves.s.settings.fly)) { Death.Reject(DeathReject.Immortal); return; } } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("SessionRules.DeathImmortality", quietError); }
                 // A seated death is a death like any other (counted as SeatedDeaths) and keeps its anchor; the game
                 // leaves the seat itself. The anchor is the GROUND under the vehicle, not the seat's position: the
                 // seat is several metres above the ground and moves with the car, so a seat anchor would drop the
@@ -375,7 +375,7 @@ namespace TLDRevamp.Net
                 var hit = GroundPlacement.GroundHit(p.x, p.z);
                 if (hit != null) return hit.Value.point.y;
             }
-            catch { }
+            catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("SessionRules.GroundHeight", quietError); }
             return p.y;
         }
 

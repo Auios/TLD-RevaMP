@@ -65,7 +65,7 @@ namespace TLDRevamp
                 if (Line("perf", "times")) lines.Add($"p50  {p50:F1} ms     p99  {_t.Percentile(.99f):F1} ms");
                 if (Line("perf", "stats")) lines.Add($"Hitches  {_t.Hitches}     GC  {_t.GcCollections}     Heap  {_t.ManagedMB} MB");
                 if (Line("perf", "keys")) lines.Add($"{Plugin.KeyName(Plugin.KeyOverlay)} hide · {Plugin.KeyName(Plugin.KeyReport)} report");
-                string net = null; try { net = Net.Mp.NetStatsLine(); } catch { }
+                string net = null; try { net = Net.Mp.NetStatsLine(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("Overlay.NetStats", quietError); }
                 if (net != null)
                 {
                     var parts = net.Replace("<b>", "").Replace("</b>", "").Replace("  down", "\nDown").Split('\n');

@@ -23,7 +23,7 @@ namespace TLDRevamp.Net
             return "{\"optimalRate\":" + rate + ",\"first\":" + Json.Str(first.ToString()) + ",\"avail\":" + a0 + "}";
         }
         internal static void StopTone() => _toneUntil = 0f;
-        internal static void ProbeStatus(bool recording) { if (_probeUntil > 0f && Time.unscaledTime > _probeUntil && !recording) { try { SteamUser.StopVoiceRecording(); } catch { } _probeUntil = 0f; } }
+        internal static void ProbeStatus(bool recording) { if (_probeUntil > 0f && Time.unscaledTime > _probeUntil && !recording) { try { SteamUser.StopVoiceRecording(); } catch { /* best effort: capture may already be stopped during probe cleanup */ } _probeUntil = 0f; } }
 
         // ---- test: a 440 Hz tone sent as voice (PCM16, no Steam codec), and a capture probe
         internal static float _toneUntil, _toneNext;         internal static float ObservedToneNext { get => _toneNext; set => _toneNext = value; }

@@ -274,7 +274,7 @@ namespace TLDRevamp.Net
                 if (s != null && s.tabMisc != null && s.tabMisc.toggles != null && s.tabMisc.toggles.Length > 18 && s.tabMisc.toggles[18] != null)
                     s.tabMisc.toggles[18].ChangeWithoutNotify(s.S != null && s.S.BDevMode);
             }
-            catch { }
+            catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("DeveloperAccess.SyncConfigToggle", quietError); }
         }
 
         internal static bool IsRuntimeOverrideActive => _runtimeForcedOff;

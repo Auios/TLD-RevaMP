@@ -42,7 +42,7 @@ namespace TLDRevamp.Net
             {
                 if (s == null || s.T == null) continue;
                 bool can = false;
-                try { can = s.CanCraft(at); } catch (System.Exception) { }
+                try { can = s.CanCraft(at); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("MountLab.PlayerMountCompatibility", quietError); }
                 float d = Vector3.Distance(s.T.position, at.transform.position);
                 if (can && d < bd) { bd = d; best = s; }
             }
@@ -482,7 +482,7 @@ namespace TLDRevamp.Net
                 foreach (var s in car.GetComponentsInChildren<partslotscript>(true))
                 {
                     bool can = false;
-                    try { can = s.T != null && (s.CanCraft(at) || s.hasPart() && s.part() == at); } catch (System.Exception) { }
+                    try { can = s.T != null && (s.CanCraft(at) || s.hasPart() && s.part() == at); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("MountLab.GapCompatibility", quietError); }
                     if (can) { ball = s; break; }
                 }
                 if (ball == null) return "{\"error\":\"no tow ball takes the drawbar\"}";
@@ -513,7 +513,7 @@ namespace TLDRevamp.Net
                 foreach (var s in car.GetComponentsInChildren<partslotscript>(true))
                 {
                     bool can = false;
-                    try { can = s.tipus != null && s.CanCraft(grip); } catch (System.Exception) { }
+                    try { can = s.tipus != null && s.CanCraft(grip); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("MountLab.HitchCompatibility", quietError); }
                     if (can && s.T != null)
                     {
                         // the grip is its own object (attachgripscript instantiates it) with no save record: its part script's

@@ -173,7 +173,7 @@ namespace TLDRevamp
         {
             __state = _save = new SaveRun { Start = Stopwatch.GetTimestamp(), St = SessionLog.St, T = SessionLog.FileTime,
                 Auto = _auto || Net.Mp.AutoSaving, PlayLog = SessionLog.CurrentPath };
-            try { __state.Path = pathscript.UnDuckStringBecauseItIsDuckedByDefault(pathscript.SaveDataName(_text)); } catch { }
+            try { __state.Path = pathscript.UnDuckStringBecauseItIsDuckedByDefault(pathscript.SaveDataName(_text)); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("TelemetryHooks.SavePath", quietError); }
             Interlocked.Increment(ref _saves); History[Slot()].Flags |= 4;
         }
         [HarmonyPatch(typeof(newSaveScreenScript), nameof(newSaveScreenScript.Save)), HarmonyFinalizer]
@@ -187,7 +187,7 @@ namespace TLDRevamp
         {
             double ms = (Stopwatch.GetTimestamp() - save.Start) * 1000.0 / Stopwatch.Frequency;
             long bytes = -1;
-            try { if (save.Path != null) bytes = new FileInfo(save.Path).Length; } catch { }
+            try { if (save.Path != null) bytes = new FileInfo(save.Path).Length; } catch { /* best effort: optional size metadata may be unavailable; bytes stays unknown */ }
             Saves.Enqueue(new SaveResult { Ms = ms, St = save.St + ms / 1000, T = save.T + ms / 1000, Auto = save.Auto, Bytes = bytes, PlayLog = save.PlayLog });
             Interlocked.Decrement(ref _saves);
         }
@@ -209,7 +209,7 @@ namespace TLDRevamp
                 // Mono shares reference-type generic code. Ignore the properties-only call and unrelated saves.
                 if (_save == null || !(__1 is savedata)) return;
                 _save.Task = __result;
-                try { _save.Path = pathscript.UnDuckStringBecauseItIsDuckedByDefault(__0); } catch { }
+                try { _save.Path = pathscript.UnDuckStringBecauseItIsDuckedByDefault(__0); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("TelemetryHooks.AsyncSavePath", quietError); }
             }
         }
         [HarmonyPatch(typeof(menuhandler), nameof(menuhandler.PressedStart)), HarmonyPrefix]

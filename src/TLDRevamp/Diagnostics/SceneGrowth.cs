@@ -17,7 +17,7 @@ namespace TLDRevamp.Diagnostics
                 if (map != null && map.poiGens != null)
                     foreach (var g in map.poiGens) if (g != null && g.chunks != null) foreach (var c in g.chunks.Values) { poiChunks++; if (c?.pois != null) pois += c.pois.Count; }
             }
-            catch { }
+            catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("SceneGrowth.CountPois", quietError); }
             return ",\"meshes\":" + meshes + ",\"transforms\":" + transforms + ",\"pois\":" + pois + ",\"poiChunks\":" + poiChunks +
                    ",\"heapMB\":" + (System.GC.GetTotalMemory(false) / 1048576.0).ToString("F0", System.Globalization.CultureInfo.InvariantCulture) +
                    ",\"shared\":" + Net.Entities.SharedCount;

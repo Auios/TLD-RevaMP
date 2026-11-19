@@ -53,7 +53,7 @@ namespace TLDRevamp
         {
             if (!_running) return;
             _running = false;
-            try { _listener?.Stop(); } catch { }
+            try { _listener?.Stop(); } catch { /* best effort: listener may already be disposed during teardown */ }
             // Unblock any client thread waiting on the main thread so nothing is left hanging at quit
             while (_jobs.TryDequeue(out var job)) { job.Result = "{\"error\":\"shutting down\"}"; job.Done.Set(); }
         }
@@ -75,7 +75,7 @@ namespace TLDRevamp
 
         private static void SafeLog(string msg)
         {
-            try { Plugin.Log.LogWarning(msg); } catch { }
+            try { Plugin.Log.LogWarning(msg); } catch { /* best effort: fallback logging must not throw */ }
         }
 
         private void Serve(TcpClient client)

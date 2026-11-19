@@ -103,7 +103,7 @@ namespace TLDRevamp.Net
             SessionLog.Event("tpa-applied", from: Entities.MyId);
             var car = SeatCar(pl);
             if (car != null && Entities.RootNetOf(car, out _)) { CarTo(pl, car, gx, gy, gz); return; }
-            if (pl.Bsitting) { try { pl.GetOut(pl.transform.position, true); } catch { } }   // someone else's car: on foot
+            if (pl.Bsitting) { try { pl.GetOut(pl.transform.position, true); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("Tpa.ExitSeat", quietError); } }   // someone else's car: on foot
             // on the floor they stand on (gy: their body's position, at or over their feet), not the lowest surface with
             // room at the spot: in the spawn house that was its roof (tpatest: asker 3.6 m over the host), under a raised
             // floor the ground beneath it

@@ -80,7 +80,7 @@ namespace TLDRevamp.VR.Native
         private void Update()
         {
             _sw.Restart();
-            try { DevHooks.VrSimulationTick?.Invoke(); } catch { }
+            try { DevHooks.VrSimulationTick?.Invoke(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("VrNative.SimulationTick", quietError); }
             try { VrPerf.Tick(); } catch (Exception e) { VrHands.Fault("perf", e); }
             Lap(0);
         }
