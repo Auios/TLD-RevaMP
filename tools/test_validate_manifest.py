@@ -12,6 +12,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import validate_manifest as vm
@@ -435,8 +436,21 @@ class ValidatorTests(unittest.TestCase):
 
     # ------------------------------------------------------------------ cross-checks with the sources
 
-    def test_the_catalog_id_is_the_plugin_guid_of_this_repository(self):
-        guids = vm.plugin_guids()
+    def plugin_sources(self):
+        """Stand-in plugin sources (the example mods are in TLD-Mods), in both forms the validator reads."""
+        mods = self.dir / "mods"
+        for folder, attribute in (("HeadUnit", '[BepInPlugin(Guid, "Head Unit", Version)]\n'
+                                               '    public const string Guid = "tldrevamp.headunit";'),
+                                  ("CarTrailer", '[BepInPlugin("tldrevamp.cartrailer", "Car Trailer", Version)]'),
+                                  ("TrailerHitches", '[BepInPlugin(Guid, "Trailer Hitches", Version)]\n'
+                                                     '    public const string Guid = "tldrevamp.trailerhitches";')):
+            (mods / folder).mkdir(parents=True)
+            (mods / folder / "Plugin.cs").write_text("namespace X {\n    " + attribute + "\n}\n", encoding="utf-8")
+        return mock.patch.object(vm, "MODS_DIRS", [mods])
+
+    def test_the_catalog_id_is_the_plugin_guid_of_the_source(self):
+        with self.plugin_sources():
+            guids = vm.plugin_guids()
         self.assertIn("tldrevamp.headunit", guids)
         self.assertEqual(guids["tldrevamp.headunit"], "Head Unit")
         self.assertEqual(guids["tldrevamp.cartrailer"], "Car Trailer")
@@ -447,7 +461,8 @@ class ValidatorTests(unittest.TestCase):
         data["mods"][0]["id"] = "tldrevamp.cartrailer"
         data["mods"][0]["name"] = "Trailer"
         self.write(data, "%s tldrevamp.cartrailer 1.0.0" % HASH)
-        report = self.run_validator()
+        with self.plugin_sources():
+            report = self.run_validator()
         self.assertHas(report, "mod.name.guid")
         self.assertEqual(report.errors, [])
 

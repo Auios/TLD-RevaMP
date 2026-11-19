@@ -58,7 +58,10 @@ RELEASE_URL_RE = re.compile(
 SEMVER_RE = re.compile(r"\A(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?\Z")
 BASE_VERSION_RE = re.compile(r'BaseVersion\s*=\s*"([^"]+)"')
 
-MODS_DIR = ROOT / "src" / "Mods"
+import os
+# the mods whose plugin source is at hand: this repository's test mods, and the example mods in a TLD-Mods checkout
+# (TLD_MODS_DIR, default: TLD-Mods next to this repository) when there is one
+MODS_DIRS = [ROOT / "src" / "Mods", pathlib.Path(os.environ.get("TLD_MODS_DIR") or ROOT.parent / "TLD-Mods") / "mods"]
 GUID_RE = re.compile(r'BepInPlugin\(\s*"(?P<guid>[A-Za-z0-9_.-]{1,64})"')
 GUID_CONST_RE = re.compile(r'BepInPlugin\(\s*(?P<name_const>Guid)\s*,')
 GUID_VALUE_RE = re.compile(r'const\s+string\s+(?P<name>Guid)\s*=\s*"(?P<guid>[A-Za-z0-9_.-]{1,64})"')
@@ -746,11 +749,10 @@ def check_links(data: dict, timeout: float, findings: List[Dict[str, str]]) -> N
 
 
 def plugin_guids() -> Dict[str, str]:
-    """The plugin GUIDs of this repository's own example mods: GUID -> the name in the plugin attribute."""
+    """The plugin GUIDs of the mods whose source is at hand (MODS_DIRS): GUID -> the name in the plugin attribute."""
     found: Dict[str, str] = {}
-    if not MODS_DIR.is_dir():
-        return found
-    for plugin in sorted(MODS_DIR.glob("*/Plugin.cs")):
+    plugins = [p for d in MODS_DIRS if d.is_dir() for p in sorted(d.glob("*/Plugin.cs"))]
+    for plugin in plugins:
         try:
             source = plugin.read_text(encoding="utf-8")
         except OSError:
@@ -771,7 +773,7 @@ def plugin_guids() -> Dict[str, str]:
 
 
 def check_against_sources(data: dict, guids: Dict[str, str], findings: List[Dict[str, str]]) -> None:
-    """For the mods built in this repository, the catalog id is the plugin GUID and the name must match."""
+    """For the mods whose source is at hand, the catalog id is the plugin GUID and the name must match."""
     if not guids:
         return
     for index, mod in enumerate(data.get("mods") or []):
