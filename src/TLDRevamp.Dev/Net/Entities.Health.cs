@@ -70,7 +70,7 @@ namespace TLDRevamp.Net
             // a ragdoll (a corpse, a dead rabbit): the game unparents its bones' colliders, the root keeps none switched on
             bool ragdoll = Ragdoll(e.Root);
             // a fitted part whose slot switches its colliders off on purpose (partslotscript.disableCollidersOnCraft)
-            bool offByDesign = e.Root.attachable != null && e.Root.attachable.attached && !CollidersExpected(e.Root.attachable);
+            bool offByDesign = e.Root.attachable != null && e.Root.attachable.attached && !EntityDiag.CollidersExpected(e.Root.attachable);
             bool worn = e.WornBy >= 0 || e.SentWornSlot >= 0 || EntityHands.LocalWornSlot(e.Root) >= 0;   // the game takes a worn item's body away
             bool keptFrozen = e.Root.buried || Fixes.UnfreezeOnGround.Holding(e.Root);       // kinematic on purpose until it has ground under it
             string body = rb == null ? "no rigidbody" : (rb.isKinematic ? "kinematic" : "dynamic") + (rb.detectCollisions ? "" : ", collisions off");

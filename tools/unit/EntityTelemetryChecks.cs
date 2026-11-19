@@ -91,7 +91,7 @@ static partial class EntitySplitTest
         var w = new NetWriter(); w.U8(65); w.U32(7); w.U32(3); w.U32(1234); w.U8(2); w.VarU32(300);
         Entities.ApplyCensusAsk(Reader(w.Buf.Take(w.Len).ToArray())); Packet("census-owner-reply");
         sent = Entities.Packets.Count;
-        w.Reset(); w.U8(65); w.U32(7); w.U32(3); w.U32((uint)Invoke(typeof(Entities), "CensusHash", Entities.CensusTestRows)); w.U8(2); w.VarU32(300);
+        w.Reset(); w.U8(65); w.U32(7); w.U32(3); w.U32((uint)Invoke(typeof(EntityDiag), "CensusHash", Entities.CensusTestRows)); w.U8(2); w.VarU32(300);
         Entities.ApplyCensusAsk(Reader(w.Buf.Take(w.Len).ToArray()));
         Check(Entities.Packets.Count == sent, "matching census hash stays silent");
         w.Reset(); w.U8(66); w.U32(7); w.VarU32(300); w.U8(2); w.Str("wheel\ncar");
@@ -140,9 +140,9 @@ static partial class EntitySplitTest
             Check(!source.Contains("using static") && Regex.Matches(source, @"Entities\.(\w+)").Cast<Match>().All(m => allowed.Contains(m.Groups[1].Value)), part + " uses only narrow kernel calls");
         }
         string marks = File.ReadAllText("src/TLDRevamp/Net/TelemetryMarks.cs");
-        string feature = marks.Substring(marks.IndexOf("    internal static class EntityTelemetry"));
+        string feature = marks.Substring(marks.IndexOf("    internal static partial class EntityTelemetry"));
         feature = feature.Substring(0, feature.IndexOf("    public static partial class Entities"));
-        string[] markAllowed = { "LocalSeat", "VehicleSeats", "MarkIsLocal", "MarkItemNet", "RefreshMarkFocus" };
+        string[] markAllowed = { "LocalSeat", "VehicleSeats", "MarkIsLocal", "MarkItemNet", "RefreshMarkFocus", "Ent" };
         Check(!feature.Contains("using static") && Regex.Matches(feature, @"Entities\.(\w+)").Cast<Match>().All(m => markAllowed.Contains(m.Groups[1].Value)), "mark focus has no map writer or broad observation boundary");
         string doors = File.ReadAllText("src/TLDRevamp/Net/Entities.CarDoors.cs");
         Check(doors.IndexOf("RestoreStoredDoorAttaches();") < doors.IndexOf("Entities.TelemetryRender();") && doors.IndexOf("Entities.TelemetryRender();") < doors.IndexOf("DevHooks.EntityLateSample?.Invoke();"), "late sample keeps restore render Dev order");

@@ -18,7 +18,7 @@ namespace UnityEngine
     }
     public partial struct Bounds { public void Encapsulate(Bounds b) { } }
     public class PhysicMaterial : Object { public float dynamicFriction; }
-    public struct LayerMask { public static string LayerToName(int layer) => "layer" + layer; }
+    public partial struct LayerMask { public static string LayerToName(int layer) => "layer" + layer; }
 }
 public partial class fpscontroller { public Component mainCam; }
 public partial class carscript
@@ -62,9 +62,7 @@ namespace TLDRevamp
         internal Target? Crosshair, Car, Held, Dragging;
         internal int Seat = -1, ClosestPlayer = -1; internal double PlayerDistance;
     }
-    internal class TelemetryState { public int PlayerCount; public StatePlayer[] Players = new StatePlayer[8]; public double X, Y, Z; }
-    internal struct StatePlayer { public int Id; public bool HasPos; public double X, Y, Z; }
-    internal static class TelemetryPrivacy { internal static string ObjectName(string name) => name; }
+    internal static partial class TelemetryPrivacy { internal static string ObjectName(string name) => name; }
     internal static class MotionTrace { internal const int FocusLimit = 16; }
 }
 namespace TLDRevamp.Net
@@ -76,7 +74,6 @@ namespace TLDRevamp.Net
         internal static long RepairsAsked, RepairsHealed, RepairsFailed, RepairsRun;
         internal static List<string> CensusTestRows = new List<string> { "(car) = car", "slot = wheel" };
         internal static List<string> RepairRows(Ent e) => CensusTestRows;
-        internal static List<string> CensusRows(Ent e) => CensusTestRows;
         internal static void CheckCopyPlace(Ent e, int asker, ushort x, ushort y, ushort z) { }
         internal static int FocusRefreshes; internal static bool LastFocusForced;
         private static void TelemetryFocusTick(double now, bool force = false) { FocusRefreshes++; LastFocusForced = force; }
@@ -127,9 +124,9 @@ namespace TLDRevamp
     internal static partial class SessionLog
     {
         internal static void Fail(string s, Exception e) { throw e; }
-        internal static class History
+        internal static partial class History
         {
-            internal static class Trace { internal static uint[] Nets = new uint[MotionTrace.FocusLimit]; internal static uint Focus(int i) => Nets[i]; }
+            internal static partial class Trace { internal static uint[] Nets = new uint[MotionTrace.FocusLimit]; internal static uint Focus(int i) => Nets[i]; }
         }
     }
     internal static partial class GameLookups { internal static T FieldValue<T>(Type t, string name, object o) => default; }

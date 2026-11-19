@@ -127,7 +127,7 @@ public class kaposztaleves { public static kaposztaleves s; public Settings sett
 namespace TLDRevamp
 {
     internal static partial class GameLookups { internal static Type RuntimeFoundType(string name, Type found) => found; }
-    internal static class Json { internal static string Str(string value) => System.Text.Json.JsonSerializer.Serialize(value); }
+    internal static partial class Json { internal static string Str(string value) => System.Text.Json.JsonSerializer.Serialize(value); }
 }
 
 namespace TLDRevamp.Fixes

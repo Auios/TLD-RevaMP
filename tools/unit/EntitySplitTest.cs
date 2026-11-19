@@ -152,6 +152,7 @@ static partial class EntitySplitTest
         Check(EntityWeather.ObservedStormById.Count == 0 && EntityWeather.ObservedStormIds.Count == 0 && !copy.gameObject.Destroyed && (uint)Field(typeof(EntityWeather), "_stormNext") == next && EntityWeather.StormsMade == 1, "storm reset keeps local objects next id and counters");
         ResyncEditsChecks();
         RepairChecks();
+        DiagChecks();
         Console.WriteLine("ALL PASS (" + checks + " entity split checks)");
     }
 }

@@ -178,6 +178,11 @@ static class MessageTableTest
         Check("PoiCensus: repair owner decodes and validates reports", Method("EntityRepair", "ServerPoiCensus").Contains("X = r.F64()") && Method("EntityRepair", "ServerPoiCensus").Contains("if (r.Bad || !Entities.IsFinite("));
         Check("CensusRepair: handlers retain kernel authority and copy lookup", server.Contains("case CensusRepair: ServerCensusRepair(from, r);") && client.Contains("case CensusRepair: ApplyCensusRepair(r);") && Method("Entities", "ServerCensusRepair").Contains("Server.TryGetValue(net") && Method("Entities", "ApplyCensusRepair").Contains("ByNet.TryGetValue(net"));
 
+        Check("CensusAsk: owner reply and server relay retain their kernel writers", Method("Entities", "ApplyCensusAsk").Contains("ToServer(W, true)") && Method("Entities", "ServerCensusAsk").Contains("ServerSendTo(se.OwnerId, WS, true)"));
+        Check("CensusReply: kernel keeps reply counting and repair scheduling", Method("Entities", "ApplyCensusReply").Contains("CensusRepliesIn++") && Method("Entities", "ApplyCensusReply").Contains("_censusDue[net] = new CensusDue"));
+        string diagnosticRows = src[Path.Combine(sourceRoot, "Net", "Entities.Anomaly.cs")].Split("public static partial class Entities")[0];
+        Check("Census: detached rows and hash have one diagnostic owner", diagnosticRows.Contains("internal static partial class EntityDiag") && diagnosticRows.Contains("rows.Sort(System.StringComparer.Ordinal)") && diagnosticRows.Contains("h *= 16777619"));
+
         Console.WriteLine(failures == 0 ? $"ALL PASS ({rows.Count} messages, {KnownGaps.Length} known gaps)" : failures + " failures");
         return failures == 0 ? 0 : 1;
     }

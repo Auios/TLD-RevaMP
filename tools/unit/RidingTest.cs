@@ -158,11 +158,14 @@ namespace TLDRevamp.Net
         }
         public class TestRoot { public Rigidbody RB = new Rigidbody(); }
         internal static readonly Dictionary<uint, Ent> ByNet = new Dictionary<uint, Ent> { [1] = new Ent() };
-        static void TelemetryPose(Ent e, int kind, double clock, Vector3d p, Quaternion q, Vector3 v, int player, int seat, int mode) { }
         public static uint Net = 1; public static int Seat;
         public struct Footing { public uint Net; }
         public static void LocalFooting(out Footing f) { f = new Footing { Net = Net }; }
         public static Transform FootRootOf(uint net) => new Transform();
+    }
+    internal static class EntityTelemetry
+    {
+        internal static void TelemetryPose(Entities.Ent e, int kind, double clock, Vector3d p, Quaternion q, Vector3 v, int player, int seat, int mode) { }
     }
     internal static partial class EntitySeats
     {

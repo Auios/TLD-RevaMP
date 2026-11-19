@@ -355,7 +355,7 @@ namespace TLDRevamp
                 case "markrename": return TLDRevamp.MarkPanelTools.Bridge(arg, true);
                 case "bug": return TLDRevamp.BugReportTools.Bridge(arg);
                 case "blackbox": return SessionLog.Blackbox();
-                case "trace": return TLDRevamp.Net.Entities.TelemetryTrace();
+                case "trace": return TLDRevamp.Net.EntityTelemetry.TelemetryTrace();
                 case "netcat": return Net.NetMeter.CategoryJson();
                 case "rebaseprof": return arg == "stop" ? RebaseLab.Stop() : RebaseLab.Start();
                 case "pourtest": return TLDRevamp.RebaseLabTools.PourTest(arg);

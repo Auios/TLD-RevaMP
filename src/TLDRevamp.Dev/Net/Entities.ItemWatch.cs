@@ -56,7 +56,7 @@ namespace TLDRevamp.Net
         {
             _nearItems.Clear();
             if (!ItemWatch) return;
-            var at = pl.transform.position; float r2 = PartWatchNearbyM * PartWatchNearbyM;
+            var at = pl.transform.position; float r2 = EntityDiag.PartWatchNearbyM * EntityDiag.PartWatchNearbyM;
             foreach (var e in ObservedEntities.Values)
                 if (e.Root != null && (e.Root.transform.position - at).sqrMagnitude <= r2 && Loose(e, pl)) _nearItems.Add(e);
             List<uint> dead = null;
@@ -89,7 +89,7 @@ namespace TLDRevamp.Net
             string why = null, blocker = null;
             // a ragdoll's root has no colliders of its own (its bones are unparented, each a pickupable): 0/0 is no problem
             if (!r.Targetable) { if (r.Visible && r.Cols > 0 && !Ragdoll(best.Root)) why = HealthWatchRules.ItemWhy(r.Live, r.Held); }
-            else if (Physics.Raycast(ray, out var hit, reach, pl.pickupLayer) && hit.distance < bestD - 0.05f && !hit.collider.transform.IsChildOf(best.Root.transform) && !Shows(hit.collider.transform.root))
+            else if (Physics.Raycast(ray, out var hit, reach, pl.pickupLayer) && hit.distance < bestD - 0.05f && !hit.collider.transform.IsChildOf(best.Root.transform) && !EntityDiag.Shows(hit.collider.transform.root))
             { why = PartWatchRules.Blocked; blocker = hit.collider.transform.root.name; }
             if (why == null) { bw.LookAt = -1f; return; }
             if (bw.LookAt < 0f) bw.LookAt = now;

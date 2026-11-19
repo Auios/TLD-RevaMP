@@ -103,7 +103,7 @@ namespace TLDRevamp
             catch (Exception e) { SessionLog.Fail("bug report lock", e); }
             facts.LockFile = lockJson != null;
             string partsJson = null;
-            try { partsJson = Net.Entities.PartsDiagnostics(); }
+            try { partsJson = Net.EntityDiag.PartsDiagnostics(); }
             catch (Exception e) { SessionLog.Fail("bug report parts", e); }
             facts.PartsFile = partsJson != null;
             string startDir = ReproRecorder.StartWorldDir, startFile = ReproRecorder.StartWorldFile;

@@ -474,7 +474,7 @@ namespace TLDRevamp.Net
         {
             if (!ObservedEntities.TryGetValue(net, out var e)) return "{\"error\":\"no such car here\"}";
             if (!Resolve(e) || e.Root == null) return "{\"dormant\":true,\"parts\":[]}";
-            var rows = CensusRows(e).ConvertAll(Json.Str);
+            var rows = EntityDiag.CensusRows(e).ConvertAll(Json.Str);
             // wheels where they are shown: each item in a wheel slot, in the car body's frame (cm)
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             var wheels = new List<string>();
@@ -1947,7 +1947,7 @@ namespace TLDRevamp.Net
                 stateSum += rec.Length; if (rec.Length > stateMax) stateMax = rec.Length; n++;
                 all.Write(rec, 0, rec.Length);
             }
-            var rows = CensusRows(new Ent { Root = root, Items = items });
+            var rows = EntityDiag.CensusRows(new Ent { Root = root, Items = items });
             var census = System.Text.Encoding.UTF8.GetBytes(string.Join("\n", rows));
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             return "{\"car\":" + Json.Str(root.name) + ",\"members\":" + items.Count + ",\"shareBytes\":" + full.Length + ",\"shareDeflated\":" + Deflated(full) +

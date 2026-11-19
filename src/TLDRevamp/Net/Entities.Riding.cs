@@ -29,8 +29,8 @@ namespace TLDRevamp.Net
         internal static void TelemetryRider(uint net, int player, int seat, double clock, Vector3 root, Vector3 pelvis)
         {
             if (!ByNet.TryGetValue(net, out var e)) return;
-            TelemetryPose(e, 7, clock, mainscript.GlobalFromUnityPos(root), Quaternion.identity, default, player, seat, 4);
-            TelemetryPose(e, 8, clock, mainscript.GlobalFromUnityPos(pelvis), Quaternion.identity, default, player, seat, 4);
+            EntityTelemetry.TelemetryPose(e, 7, clock, mainscript.GlobalFromUnityPos(root), Quaternion.identity, default, player, seat, 4);
+            EntityTelemetry.TelemetryPose(e, 8, clock, mainscript.GlobalFromUnityPos(pelvis), Quaternion.identity, default, player, seat, 4);
         }
     }
 }

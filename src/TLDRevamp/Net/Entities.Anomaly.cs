@@ -3,6 +3,39 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
+    internal static partial class EntityDiag
+    {
+        /// What is bolted into the object, by model and slot (object names differ between an owner's spawn and a copy's):
+        /// `mp carparts` and the census.
+        internal static List<string> CensusRows(Entities.Ent e)
+        {
+            var rows = new List<string>();
+            foreach (var it in e.Root.transform.root.GetComponentsInChildren<tosaveitemscript>(true))
+            {
+                if (it == null || it == e.Root || it.attachable == null || !it.attachable.attached || it.attachable.slot == null) continue;
+                var sl = it.attachable.slot;
+                var so = sl.tosaveitem;
+                string owner = so != null ? EntityLifetimeStreaming.PrefabName(so.id) + "#" + so.partslotscripts.IndexOf(sl) : "?" + sl.name;
+                // its variant (whitewall or plain tyre, …): each random type selector's choice
+                string tip = "";
+                if (it.randoms != null) foreach (var rs in it.randoms) tip += rs != null ? "/" + rs.rtipus : "/-";
+                rows.Add(owner + " = " + EntityLifetimeStreaming.PrefabName(it.id) + tip);
+            }
+            string rtip = "";
+            if (e.Root.randoms != null) foreach (var rs in e.Root.randoms) rtip += rs != null ? "/" + rs.rtipus : "/-";
+            rows.Add("(car) = " + EntityLifetimeStreaming.PrefabName(e.Root.id) + rtip);
+            rows.Sort(System.StringComparer.Ordinal);
+            return rows;
+        }
+
+        internal static uint CensusHash(List<string> rows)
+        {
+            uint h = 2166136261;
+            foreach (var row in rows) { foreach (char c in row) { h ^= c; h *= 16777619; } h ^= '\n'; h *= 16777619; }
+            return h;
+        }
+    }
+
     /// Always on: the faults the scripted playtests caught once and never again (playround.py, 2026-10-09: the
     /// other player's car placed and gone again 35 m away; a door mirror on one machine's copy only) — written as
     /// "[anomaly]" lines (capped) for the next real playtest's logs. The census is the one part that changes the game: a
@@ -94,35 +127,6 @@ namespace TLDRevamp.Net
             if (e.Root.car != null) _censusDue[e.NetId] = new CensusDue { At = now + CensusDelayS, Attempt = 1 };
         }
 
-        /// What is bolted into the object, by model and slot (object names differ between an owner's spawn and a copy's):
-        /// `mp carparts` and the census.
-        internal static List<string> CensusRows(Ent e)
-        {
-            var rows = new List<string>();
-            foreach (var it in e.Root.transform.root.GetComponentsInChildren<tosaveitemscript>(true))
-            {
-                if (it == null || it == e.Root || it.attachable == null || !it.attachable.attached || it.attachable.slot == null) continue;
-                var sl = it.attachable.slot;
-                var so = sl.tosaveitem;
-                string owner = so != null ? EntityLifetimeStreaming.PrefabName(so.id) + "#" + so.partslotscripts.IndexOf(sl) : "?" + sl.name;
-                // its variant (whitewall or plain tyre, …): each random type selector's choice
-                string tip = "";
-                if (it.randoms != null) foreach (var rs in it.randoms) tip += rs != null ? "/" + rs.rtipus : "/-";
-                rows.Add(owner + " = " + EntityLifetimeStreaming.PrefabName(it.id) + tip);
-            }
-            string rtip = "";
-            if (e.Root.randoms != null) foreach (var rs in e.Root.randoms) rtip += rs != null ? "/" + rs.rtipus : "/-";
-            rows.Add("(car) = " + EntityLifetimeStreaming.PrefabName(e.Root.id) + rtip);
-            rows.Sort(System.StringComparer.Ordinal);
-            return rows;
-        }
-
-        private static uint CensusHash(List<string> rows)
-        {
-            uint h = 2166136261;
-            foreach (var row in rows) { foreach (char c in row) { h ^= c; h *= 16777619; } h ^= '\n'; h *= 16777619; }
-            return h;
-        }
 
         private static float _censusTick;
         private static readonly List<uint> _censusNow = new List<uint>();
@@ -151,7 +155,7 @@ namespace TLDRevamp.Net
                 _censusDue.Remove(net);
                 if (!ByNet.TryGetValue(net, out var e) || !e.Proxy || e.Root == null) continue;
                 if (EditHeld(e, now)) { _censusDue[net] = new CensusDue { At = now + CensusHoldS, Attempt = attempt }; continue; }   // differs for now: our edit
-                W.Reset(); W.U8(CensusAsk); W.U32(net); W.U32(e.Epoch); W.U32(CensusHash(RepairRows(e))); W.U8(attempt); WriteCopyPlace(e, attempt);
+                W.Reset(); W.U8(CensusAsk); W.U32(net); W.U32(e.Epoch); W.U32(EntityDiag.CensusHash(RepairRows(e))); W.U8(attempt); WriteCopyPlace(e, attempt);
                 ToServer(W, true);
                 CensusAsks++;
             }
@@ -177,7 +181,7 @@ namespace TLDRevamp.Net
             CensusAsked++;
             if (place) CheckCopyPlace(e, asker, px, py, pz);
             var rows = RepairRows(e);
-            if (CensusHash(rows) == hash) return;
+            if (EntityDiag.CensusHash(rows) == hash) return;
             W.Reset(); W.U8(CensusReply); W.U32(net); W.VarU32((uint)asker); W.U8(attempt); W.Str(string.Join("\n", rows));
             ToServer(W, true);
         }

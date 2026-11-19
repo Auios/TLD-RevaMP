@@ -35,7 +35,7 @@ namespace TLDRevamp.Net
             void Check(attachablescript part)
             {
                 if (part == null || part.tosave == null || part.tosave.P == null || pl.pickedUp == part.tosave.P) return;
-                var r = Reach(part, pl);
+                var r = EntityDiag.Reach(part, pl);
                 if (!PartWatchRules.Broken(r.Visible, r.Targetable, r.Expected, r.Held)) return;
                 broken++; if (first == null) first = EntityLifetimeStreaming.PrefabName(part.tosave.id);
             }
@@ -71,19 +71,19 @@ namespace TLDRevamp.Net
                 if (mode == "fix") part.tosave.P.resetLayer();
                 return "{\"broken\":" + Json.Str(part.name) + ",\"mode\":" + Json.Str(mode) + "}";
             }
-            if (a.Length >= 2 && a[1] == "report") return PartsDiagnostics() ?? "{\"error\":\"no player\"}";
+            if (a.Length >= 2 && a[1] == "report") return EntityDiag.PartsDiagnostics() ?? "{\"error\":\"no player\"}";
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var rows = new List<string>();
             if (pl != null)
                 foreach (var part in EntityPartWatch.ObservedNearParts)
                 {
                     if (part == null || !EntityPartWatch.ObservedWatched.TryGetValue(part, out var w)) continue;
-                    var r = Reach(part, pl);
+                    var r = EntityDiag.Reach(part, pl);
                     rows.Add("{\"part\":" + Json.Str(part.name) + ",\"visible\":" + (r.Visible ? "true" : "false") + ",\"targetable\":" + (r.Targetable ? "true" : "false")
                              + ",\"expected\":" + (r.Expected ? "true" : "false") + ",\"reported\":" + (w.Done ? "true" : "false") + "}");
                 }
-            return "{\"enabled\":" + (PartWatch ? "true" : "false") + ",\"flags\":" + PartWatchFlags + ",\"marks\":" + PartWatchMarksSaved + ",\"near\":" + EntityPartWatch.ObservedNearParts.Count
- + ",\"last\":" + Json.Str(PartWatchLast) + ",\"parts\":[" + string.Join(",", rows) + "]}";
+            return "{\"enabled\":" + (PartWatch ? "true" : "false") + ",\"flags\":" + EntityDiag.PartWatchFlags + ",\"marks\":" + PartWatchMarksSaved + ",\"near\":" + EntityPartWatch.ObservedNearParts.Count
+ + ",\"last\":" + Json.Str(EntityDiag.PartWatchLast) + ",\"parts\":[" + string.Join(",", rows) + "]}";
         }
     }
 }

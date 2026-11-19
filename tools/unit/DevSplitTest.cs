@@ -64,7 +64,7 @@ static class DevSplitTest
             foreach (string name in new[] { "HealthWatch", "HealthWatchTick", "HealthWatchCycle", "HealthWatchOne", "HealthWatchFound", "AutoMark", "AutoMarkWaitingTick", "ResetAutoMarks", "HealthWatchLine", "RepairFailedNote", "CheckSanity", "OwnerGone", "GroundOver", "FloorBelow", "PartWatchTick", "PartWatchScan", "PartWatchLook", "PartWatchFound", "_testHeld", "TestHeld", "LastDevCmd", "LastDevAt" })
                 Check(!entityMembers.Contains(name), "core entities contain no developer behavior: " + name);
             foreach (string name in new[] { "GroundLayers", "PartsDiagnostics", "SharedCount", "PartWatchNearbyM", "PartWatchFlags", "PartWatchLast", "DeleteShared" })
-                Check(CoreMembers("TLDRevamp.Net." + (name == "GroundLayers" ? "EntityGround" : "Entities")).Contains(name), "shared player entity API stays in core: " + name);
+                Check(CoreMembers("TLDRevamp.Net." + (name == "GroundLayers" ? "EntityGround" : name.StartsWith("PartWatch") || name == "PartsDiagnostics" ? "EntityDiag" : "Entities")).Contains(name), "shared player entity API stays in core: " + name);
             var perfMembers = CoreMembers("TLDRevamp.VR.Native.VrPerf");
             foreach (string name in new[] { "PostEffects", "PostList", "CullList", "Visible", "Hide", "Cull", "CullRestore", "PostEffect", "PostLayer" })
                 Check(!perfMembers.Contains(name), "core VR contains no rendering experiment: " + name);

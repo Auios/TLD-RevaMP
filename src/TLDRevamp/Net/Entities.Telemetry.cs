@@ -7,6 +7,27 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
+    internal static partial class EntityTelemetry
+    {
+        internal static void TelemetryPose(Entities.Ent e, int kind, double clock, Vector3d p, Quaternion q, Vector3 velocity, int item = -1, int slot = -1, int mode = 0, float correction = 0)
+        {
+            if (!SessionLog.History.Trace.Contains(e.NetId)) return;
+            double now = Time.realtimeSinceStartupAsDouble;
+            SessionLog.History.Trace.Add(new MotionRow { Local = now, St = SessionLog.St, Net = e.NetId, Epoch = e.Epoch, Owner = e.OwnerId,
+                Kind = kind, Clock = clock, X = p.x, Y = p.y, Z = p.z, Yaw = q.eulerAngles.y, Speed = velocity.magnitude,
+                Interval = e.TelemetryInterval, Age = e.TelemetryReceived > 0 ? (float)(now - e.TelemetryReceived) : float.NaN,
+                Mode = mode, Correction = correction, Item = item, Slot = slot });
+        }
+
+        internal static int TelemetryRootCategory(tosaveitemscript r) => r == null ? 7 : r.GetComponentInChildren<utanfutoscript>(true) != null ? 1 : r.car != null ? 0 : r.nyul != null ? 3 : r.npc != null ? 4 : r.ragdollPos != null ? 5 : r.P != null ? 2 : 7;
+
+        public static string TelemetryTrace()
+        {
+            using (var w = new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture))
+            { SessionLog.History.Trace.Write(w, Time.realtimeSinceStartupAsDouble, false); return w.ToString(); }
+        }
+    }
+
     public static partial class Entities
     {
         public static bool TelemetryAllOwnedPhysics;
@@ -86,7 +107,7 @@ namespace TLDRevamp.Net
                 var ip = e.Ip;
                 double clock = RidingClock(net, out _, out double shownClock) ? shownClock : double.NaN;
                 var velocity = !e.Proxy && e.Root.RB != null ? e.Root.RB.velocity : e.LastVel;
-                TelemetryPose(e, 2, clock, p, e.Root.transform.rotation, velocity,
+                EntityTelemetry.TelemetryPose(e, 2, clock, p, e.Root.transform.rotation, velocity,
                     mode: e.TelemetrySnapFrame == Time.frameCount ? 3 : !e.Proxy || RidesParent(e) || e.CarriedBy != 0 || e.Physical ? 4 : ip != null ? ip.TelemetryMode : 2,
                     correction: e.TelemetrySnapFrame == Time.frameCount ? e.TelemetrySnapDistance : Mathf.Max(e.TelemetryServoCorrection, ip != null ? ip.CorrCm / 100f : 0));
                 if (footing == net && pl != null && pl.anim != null && pl.anim.Pelvis != null)
@@ -94,19 +115,10 @@ namespace TLDRevamp.Net
                 RemotePlayers.TelemetryRiders(net);
             }
         }
-        private static void TelemetryPose(Ent e, int kind, double clock, Vector3d p, Quaternion q, Vector3 velocity, int item = -1, int slot = -1, int mode = 0, float correction = 0)
-        {
-            if (!SessionLog.History.Trace.Contains(e.NetId)) return;
-            double now = Time.realtimeSinceStartupAsDouble;
-            SessionLog.History.Trace.Add(new MotionRow { Local = now, St = SessionLog.St, Net = e.NetId, Epoch = e.Epoch, Owner = e.OwnerId,
-                Kind = kind, Clock = clock, X = p.x, Y = p.y, Z = p.z, Yaw = q.eulerAngles.y, Speed = velocity.magnitude,
-                Interval = e.TelemetryInterval, Age = e.TelemetryReceived > 0 ? (float)(now - e.TelemetryReceived) : float.NaN,
-                Mode = mode, Correction = correction, Item = item, Slot = slot });
-        }
         internal static void TelemetryUsable(uint net, int item, int usable, bool sent)
         {
             if (!ByNet.TryGetValue(net, out var e)) return;
-            TelemetryPose(e, sent ? 3 : 4, double.NaN, default, Quaternion.identity, default, item, usable);
+            EntityTelemetry.TelemetryPose(e, sent ? 3 : 4, double.NaN, default, Quaternion.identity, default, item, usable);
         }
         private static void TelemetryReceived(Ent e, double clock, Vector3d p, Quaternion q, Vector3 velocity)
         {
@@ -115,7 +127,7 @@ namespace TLDRevamp.Net
             var ip = e.Ip;
             if (ip != null && ip.TelemetryAccepted) e.TelemetryReceived = now;
             float correction = ip != null ? ip.TelemetryCorrection : 0;
-            TelemetryPose(e, 1, clock, p, q, velocity, mode: ip != null && ip.TelemetrySnap ? 3 : 0, correction: correction);
+            EntityTelemetry.TelemetryPose(e, 1, clock, p, q, velocity, mode: ip != null && ip.TelemetrySnap ? 3 : 0, correction: correction);
             if (correction > 2) SessionLog.Event(ip.TelemetrySnap ? "proxy-snap" : "proxy-correction", e.NetId, epoch: e.Epoch, value: correction, sample: true);
         }
         private static void TelemetryPhysicsTick()
@@ -173,16 +185,15 @@ namespace TLDRevamp.Net
             if (!ReferenceEquals(r, e.TelemetryRoot))
             {
                 e.TelemetryRoot = r;
-                e.TelemetryCategory = TelemetryRootCategory(r);
+                e.TelemetryCategory = EntityTelemetry.TelemetryRootCategory(r);
             }
             if (r.car == null && r.ragdollPos != null && EntityRagdolls.Limbs(e) != null && EntityRagdolls.Limp(e) || r.npc != null && r.npc.died || r.nyul != null && r.nyul.AI != null && !r.nyul.AI.alive || e.Rag != null && e.Rag.Act != null && e.Rag.Act.ragdoll) return e.TelemetryCategory = 5;
             return e.TelemetryCategory == 5 && r.nyul != null ? 3 : e.TelemetryCategory == 5 && r.npc != null ? 4 : e.TelemetryCategory;
         }
-        private static int TelemetryRootCategory(tosaveitemscript r) => r == null ? 7 : r.GetComponentInChildren<utanfutoscript>(true) != null ? 1 : r.car != null ? 0 : r.nyul != null ? 3 : r.npc != null ? 4 : r.ragdollPos != null ? 5 : r.P != null ? 2 : 7;
         private static int TelemetryPrefabCategory(int prefab)
         {
             var go = itemdatabase.s != null ? itemdatabase.s.Item(prefab) : null;
-            return go != null ? TelemetryRootCategory(go.GetComponent<tosaveitemscript>()) : 7;
+            return go != null ? EntityTelemetry.TelemetryRootCategory(go.GetComponent<tosaveitemscript>()) : 7;
         }
         internal static int TelemetryPacketCategory(byte type, byte[] bytes, int at, int length, out uint net)
         {
@@ -239,11 +250,6 @@ namespace TLDRevamp.Net
                     if (InterestRules.Within(true, host.x - se.Where.x, host.z - se.Where.z, EntityAuthorityInterest.StateInterestM)) c.Receivers++;
                 }
             }
-        }
-        public static string TelemetryTrace()
-        {
-            using (var w = new System.IO.StringWriter(System.Globalization.CultureInfo.InvariantCulture))
-            { SessionLog.History.Trace.Write(w, Time.realtimeSinceStartupAsDouble, false); return w.ToString(); }
         }
 
         [HarmonyPatch(typeof(fpscontroller), nameof(fpscontroller.RayStuff))]

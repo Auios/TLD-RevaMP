@@ -95,12 +95,12 @@ namespace TLDRevamp.Net
                             if (ps == null || !ps.hasPart()) continue;
                             var part = ps.part(); if (part == null || part.tosave == null || part.tosave.P == null) continue;
                             fitted++;
-                            var r = Reach(part, pl);
+                            var r = EntityDiag.Reach(part, pl);
                             if (PartWatchRules.Broken(r.Visible, r.Targetable, r.Expected, r.Held)) broken.Add(EntityLifetimeStreaming.PrefabName(part.tosave.id) + " (" + PartWatchRules.Why(r.Live, r.Held) + ", colliders " + r.Live + "/" + r.Cols + ")");
                         }
             if (e.Root.attachable != null && e.Root.attachable.attached && e.Root.attachable.slot != null && pl != null)
             {
-                var r = Reach(e.Root.attachable, pl);
+                var r = EntityDiag.Reach(e.Root.attachable, pl);
                 if (PartWatchRules.Broken(r.Visible, r.Targetable, r.Expected, r.Held)) broken.Add("this part itself (" + PartWatchRules.Why(r.Live, r.Held) + ")");
             }
             if (broken.Count > 0) Add(2, "Parts you can't reach", string.Join("; ", broken) + ". You see them but get no prompt: the crosshair's use ray can't hit them.", HowOf(local, "part-", "attach-", "detach-", "owner-", "handover-"));

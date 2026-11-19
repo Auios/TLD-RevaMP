@@ -4,6 +4,21 @@ namespace TLDRevamp.Net
 {
     public static partial class Entities
     {
+        // Diagnostic walks read records in the same ByNet.Values order, without a snapshot.
+        internal static void VisitEnts(System.Action<Ent> see)
+        {
+            foreach (var e in ByNet.Values) see(e);
+        }
+        internal static Ent PartWatchGroup(tosaveitemscript item) => EditEntityOf(item);
+        internal static uint NetOfRoot(Transform root)
+        {
+            foreach (var e in ByNet.Values) if (e.Root != null && e.Root.transform == root) return e.NetId;
+            return 0;
+        }
+        internal static bool StatusHeld(tosaveitemscript root) => IsHeld(root);
+        internal static bool StatusStored(tosaveitemscript root) => IsStored(root);
+        // End diagnostic boundary.
+
         // Repair helpers and the POI census use facts and messages without sharing entity tables.
         public const byte PoiCensus = 84;   // c→s: f64 gx, f64 gz, f32 drawLerp, u8 distant terrain, f32 shown within, f32 removed beyond, u16 n × (f64 x, f64 z, i32 type, u8 shown)
         internal static Transform RepairAttachFrame(attachablescript at) => EntityAttachments.AttachFrame(at);

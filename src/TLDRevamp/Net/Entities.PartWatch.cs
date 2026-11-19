@@ -4,15 +4,13 @@ using UnityEngine;
 namespace TLDRevamp.Net
 {
     /// Fitted-part observations shared by player reports and developer tools.
-    public static partial class Entities
+    internal static partial class EntityDiag
     {
         public static float PartWatchNearbyM = 12f;   // report and watch radius
         public static long PartWatchFlags;
         public static string PartWatchLast = "";
 
         private static readonly List<Collider> _pwCols = new List<Collider>();
-
-        internal struct PartReach { public bool Visible, Targetable, Expected; public int Cols, Live, UseLayer, Held; }
 
         /// The game's own rule (partslotscript.Craft): crafted into a slot that switches colliders off, or onto an item that
         /// is (its holder's slot), the part's colliders are off on purpose — and so are those of what is fitted onto it.
@@ -29,9 +27,9 @@ namespace TLDRevamp.Net
         }
 
         /// The part as the game's use ray finds it: its own colliders on useLayer, or its slot's (the dismount hits either).
-        internal static PartReach Reach(attachablescript part, fpscontroller pl)
+        internal static Entities.PartReach Reach(attachablescript part, fpscontroller pl)
         {
-            var r = new PartReach();
+            var r = new Entities.PartReach();
             _pwCols.Clear(); part.GetComponentsInChildren(true, _pwCols);
             int mask = pl.useLayer.value;
             foreach (var c in _pwCols)
@@ -60,9 +58,9 @@ namespace TLDRevamp.Net
             into.Clear();
             var at = pl.transform.position;
             float groupR = PartWatchNearbyM + 10f;
-            foreach (var e in ByNet.Values)
+            Entities.VisitEnts(e =>
             {
-                if (e.Root == null || e.Items == null || (e.Root.transform.position - at).sqrMagnitude > groupR * groupR) continue;
+                if (e.Root == null || e.Items == null || (e.Root.transform.position - at).sqrMagnitude > groupR * groupR) return;
                 foreach (var it in e.Items)
                 {
                     if (it == null || it.partslotscripts == null) continue;
@@ -75,7 +73,7 @@ namespace TLDRevamp.Net
                         into.Add(part);
                     }
                 }
-            }
+            });
         }
 
         internal static bool Shows(Transform root)
@@ -83,8 +81,6 @@ namespace TLDRevamp.Net
             foreach (var rd in root.GetComponentsInChildren<Renderer>()) if (rd.enabled && rd.gameObject.activeInHierarchy) return true;
             return false;
         }
-
-        internal static int SharedCount => ByNet.Count;   // Debugging V2's "shared objects here" field
 
         /// The bug report's parts.json: every fitted part within PartWatchNearbyM as the player can reach it — shown,
         /// reachable by the use ray, whether the game keeps its colliders on, the dismount conditions, its colliders and
@@ -111,7 +107,7 @@ namespace TLDRevamp.Net
                     var c = hits[i].collider; var root = c.transform.root;
                     if (i > 0) b.Append(',');
                     b.Append("{\"name\":").Append(Json.Str(c.name)).Append(",\"layer\":").Append(Json.Str(LayerMask.LayerToName(c.gameObject.layer)))
-                     .Append(",\"root\":").Append(Json.Str(root.name)).Append(",\"net\":").Append(NetOfRoot(root)).Append(",\"m\":").Append(Json.Num(hits[i].distance))
+                     .Append(",\"root\":").Append(Json.Str(root.name)).Append(",\"net\":").Append(Entities.NetOfRoot(root)).Append(",\"m\":").Append(Json.Num(hits[i].distance))
                      .Append(",\"shows\":").Append(Shows(root) ? "true" : "false").Append(",\"trigger\":").Append(c.isTrigger ? "true" : "false").Append('}');
                 }
                 b.Append(']');
@@ -122,7 +118,7 @@ namespace TLDRevamp.Net
                 var part = parts[i]; var ps = part.slot; var P = part.tosave.P;
                 var r = Reach(part, pl);
                 var so = ps != null ? ps.tosaveitem : null;
-                var group = EditEntityOf(part.tosave);
+                var group = Entities.PartWatchGroup(part.tosave);
                 if (i > 0) b.Append(',');
                 b.Append("{\"holder\":").Append(Json.Str(so != null ? EntityLifetimeStreaming.PrefabName(so.id) : "?")).Append(",\"entity\":").Append(group != null ? group.NetId : 0)
                  .Append(",\"copy\":").Append(group != null && group.Proxy ? "true" : "false")
@@ -144,11 +140,11 @@ namespace TLDRevamp.Net
             }
             return b.Append("]}").ToString();
         }
+    }
 
-        private static uint NetOfRoot(Transform root)
-        {
-            foreach (var e in ByNet.Values) if (e.Root != null && e.Root.transform == root) return e.NetId;
-            return 0;
-        }
+    public static partial class Entities
+    {
+        internal struct PartReach { public bool Visible, Targetable, Expected; public int Cols, Live, UseLayer, Held; }
+        internal static int SharedCount => ByNet.Count;   // Debugging V2's "shared objects here" field
     }
 }

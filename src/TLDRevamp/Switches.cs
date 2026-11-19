@@ -343,7 +343,7 @@ namespace TLDRevamp
             ("TLDRevamp.Net.EntityPartWatch.PartWatchLookEveryS", Kind.OptIn, "Other values tune EntityPartWatch.PartWatchLookEveryS (marks: AutoMarkEveryS)."),
             ("TLDRevamp.Net.EntityPartWatch.PartWatchMarks", Kind.Other, "false: the event only, no automatic mark."),
             ("TLDRevamp.Net.EntityPartWatch.PartWatchNearbyEveryS", Kind.OptIn, "Other values tune EntityPartWatch.PartWatchNearbyEveryS (marks: AutoMarkEveryS)."),
-            ("TLDRevamp.Net.Entities.PartWatchNearbyM", Kind.OptIn, "Other values tune Entities.PartWatchNearbyM (marks: AutoMarkEveryS)."),
+            ("TLDRevamp.Net.EntityDiag.PartWatchNearbyM", Kind.OptIn, "Other values tune EntityDiag.PartWatchNearbyM (marks: AutoMarkEveryS)."),
             ("TLDRevamp.Net.EntityLocks.PhysLockResendS", Kind.OptIn, "Other values tune phys lock resend s for Entities."),
             ("TLDRevamp.Net.EntityEditCheck.PoiBurst", Kind.OptIn, "Other values tune EntityEditCheck.PoiBurst (Live building controls send up to 60/s each; allow linked gates and reliable settling records)."),
             ("TLDRevamp.Net.EntityRepair.PoiCensusEveryS", Kind.OptIn, "Other values tune poi census every s for Entities."),

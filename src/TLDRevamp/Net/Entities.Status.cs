@@ -3,21 +3,57 @@ using UnityEngine;
 
 namespace TLDRevamp.Net
 {
+    internal static partial class EntityDiag
+    {
+        /// What this machine thinks the entity's velocity is: its own body (simulated here), the owner's last (a copy).
+        private static string Vel(Entities.Ent e)
+        {
+            var ic = System.Globalization.CultureInfo.InvariantCulture;
+            var rb = e.Root.GetComponent<Rigidbody>();
+            var v = e.Proxy ? e.LastVel : rb != null ? rb.velocity : Vector3.zero;
+            return "[" + v.x.ToString("F2", ic) + "," + v.y.ToString("F2", ic) + "," + v.z.ToString("F2", ic) + "]";
+        }
+
+        internal static string StatusRow(Entities.Ent e)
+        {
+            var g = e.Root != null ? mainscript.GlobalFromUnityPos(e.Root.transform.position) : Entities.StoredPos(e.RootId);
+            var q = e.Root != null ? e.Root.transform.rotation : Quaternion.identity;
+            var ic = System.Globalization.CultureInfo.InvariantCulture;
+            int attached = 0;
+            foreach (var it in e.Items) if (it != null && it.attachable != null && it.attachable.attached) attached++;
+            return "{\"net\":" + e.NetId + ",\"saveId\":" + e.RootId + ",\"car\":" + (e.Root != null && e.Root.car != null ? "true" : "false") + ",\"owner\":" + e.OwnerId + ",\"name\":" + Json.Str(e.Root != null ? e.Root.name : "") + ",\"parent\":" + e.ParentNet + ",\"part\":" + e.PartIndex + ",\"attached\":" + attached + ",\"owner\":" + e.OwnerId + ",\"epoch\":" + e.Epoch + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"upy\":" + (e.Root != null ? e.Root.transform.up.y.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) : "1") +
+                     ",\"items\":" + e.Items.Count + ",\"driven\":" + (e.Driven ? "true" : "false") + ",\"held\":" + (e.Proxy ? (e.Held ? "true" : "false") : (e.Root != null && Entities.StatusHeld(e.Root) ? "true" : "false")) +
+                     ",\"dormant\":" + (e.Root == null ? "true" : "false") + ",\"stored\":" + (e.Proxy ? (e.Stored ? "true" : "false") : (Entities.StatusStored(e.Root) ? "true" : "false")) +
+                     ",\"shown\":" + (e.Root != null && e.Root.P != null && e.Root.P.disableThisWhenStored != null ? (e.Root.P.disableThisWhenStored.gameObject.activeSelf ? "true" : "false") : "null") + ",\"pos\":[" + g.x.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + g.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + g.z.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "]" +
+                     ",\"ghost\":" + (e.CargoGhost ? "true" : "false") +
+                     ",\"rot\":[" + q.x.ToString("F6", ic) + "," + q.y.ToString("F6", ic) + "," + q.z.ToString("F6", ic) + "," + q.w.ToString("F6", ic) + "]" +
+                     (e.Ip != null ? ",\"delayMs\":" + e.Ip.DelayMs.ToString("F0") + ",\"jitterMs\":" + e.Ip.JitterMs.ToString("F0") + ",\"extrapolating\":" + (e.Ip.Extrapolating ? "true" : "false") : "") +
+                     // desync in the owner's clock (twocars): an owner's row says when (its state stamps' clock), a copy's row
+                     // which moment of the owner's clock it shows — the bridge call's own timing drops out
+                     (!e.Proxy ? ",\"clk\":" + (Time.unscaledTimeAsDouble - (Time.timeAsDouble - Time.fixedTimeAsDouble)).ToString("F4", System.Globalization.CultureInfo.InvariantCulture)
+                               : e.Ip != null && e.Ip.Ready ? ",\"rt\":" + e.Ip.RenderTime.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) : "") +
+                     (e.Root != null ? ",\"yaw\":" + e.Root.transform.eulerAngles.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + ",\"vel\":" + Vel(e) : "") +
+                     (e.Root != null && e.Root.car != null && e.Root.car.Engine != null
+                         ? ",\"engRunning\":" + (e.Root.car.Engine.running ? "true" : "false") + ",\"engStart\":" + (e.Root.car.Engine.start ? "true" : "false") + ",\"starterSounds\":" + EntityProxyPresentation.ProxyStarterSounds + ",\"stopSounds\":" + EntityProxyPresentation.ProxyStopSounds + ",\"engRpm\":" + e.Root.car.Engine.rpm.ToString("F0") +
+                           ",\"engTemp\":" + e.Root.car.Engine.temp.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
+                           ",\"boil\":" + (e.Root.car.CoolantBoil != null && e.Root.car.CoolantBoil.isPlaying ? "true" : "false") +
+                           ",\"steam\":" + (e.Root.car.CoolantSteam != null && e.Root.car.CoolantSteamEmission.enabled ? e.Root.car.CoolantSteamEmission.rateOverTime.constant : 0f).ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
+                           ",\"coolant\":" + (e.Root.car.coolant != null && e.Root.car.coolant.coolant != null && e.Root.car.coolant.coolant.F != null ? e.Root.car.coolant.coolant.F.GetAmount() : -1f).ToString("F3", System.Globalization.CultureInfo.InvariantCulture) +
+                           ",\"fuel\":" + (e.Root.car.Tank != null && e.Root.car.Tank.F != null ? e.Root.car.Tank.F.GetAmount().ToString("F4", System.Globalization.CultureInfo.InvariantCulture) : "-1")
+                         : "") +
+                     ",\"frames\":" + e.Frames + ",\"extrapFrames\":" + e.ExtrapFrames + ",\"jumps\":" + e.Jumps + ",\"maxDevCm\":" + e.MaxDevCm.ToString("F1") +
+                     ",\"physical\":" + (e.Physical ? "true" : "false") + ",\"partsColOff\":" + (e.PartsColOff ? "true" : "false") + ",\"byBody\":" + (e.MovedByBody ? "true" : "false") +
+                     ",\"seqOut\":" + e.SeqOut + ",\"recv\":" + e.Recv + ",\"why\":[" + e.WhyAwake + "," + e.WhyPos + "," + e.WhyRot + "," + e.WhyStored + "]" + ",\"sentRest\":" + (e.SentAtRest ? "true" : "false") +
+                     ",\"lastSent\":" + Entities.V3(e.LastSentPos) + ",\"lastIn\":" + (e.Ip != null && e.Ip.Ready ? Entities.V3(e.Ip.LastPos) : "null") + "}";
+        }
+    }
+
     public static partial class Entities
     {
         internal static Vector3d StoredPos(uint id)
         {
             var data = savedatascript.s != null ? savedatascript.s.data : null;
             return data != null && data.itemData != null && id != 0 && savedatascript.IndexOfID(data.itemData.items, id, out int k) ? data.itemData.items[k].transform.pos : new Vector3d(0, 0, 0);
-        }
-
-        /// What this machine thinks the entity's velocity is: its own body (simulated here), the owner's last (a copy).
-        private static string Vel(Ent e)
-        {
-            var ic = System.Globalization.CultureInfo.InvariantCulture;
-            var rb = e.Root.GetComponent<Rigidbody>();
-            var v = e.Proxy ? e.LastVel : rb != null ? rb.velocity : Vector3.zero;
-            return "[" + v.x.ToString("F2", ic) + "," + v.y.ToString("F2", ic) + "," + v.z.ToString("F2", ic) + "]";
         }
 
         internal static string V3(Vector3d v)
@@ -44,35 +80,7 @@ namespace TLDRevamp.Net
             }
             foreach (var e in listed)
             {
-                var g = e.Root != null ? mainscript.GlobalFromUnityPos(e.Root.transform.position) : StoredPos(e.RootId);
-                var q = e.Root != null ? e.Root.transform.rotation : Quaternion.identity;
-                var ic = System.Globalization.CultureInfo.InvariantCulture;
-                int attached = 0;
-                foreach (var it in e.Items) if (it != null && it.attachable != null && it.attachable.attached) attached++;
-                rows.Add("{\"net\":" + e.NetId + ",\"saveId\":" + e.RootId + ",\"car\":" + (e.Root != null && e.Root.car != null ? "true" : "false") + ",\"owner\":" + e.OwnerId + ",\"name\":" + Json.Str(e.Root != null ? e.Root.name : "") + ",\"parent\":" + e.ParentNet + ",\"part\":" + e.PartIndex + ",\"attached\":" + attached + ",\"owner\":" + e.OwnerId + ",\"epoch\":" + e.Epoch + ",\"proxy\":" + (e.Proxy ? "true" : "false") + ",\"upy\":" + (e.Root != null ? e.Root.transform.up.y.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) : "1") +
-                         ",\"items\":" + e.Items.Count + ",\"driven\":" + (e.Driven ? "true" : "false") + ",\"held\":" + (e.Proxy ? (e.Held ? "true" : "false") : (e.Root != null && IsHeld(e.Root) ? "true" : "false")) +
-                         ",\"dormant\":" + (e.Root == null ? "true" : "false") + ",\"stored\":" + (e.Proxy ? (e.Stored ? "true" : "false") : (IsStored(e.Root) ? "true" : "false")) +
-                         ",\"shown\":" + (e.Root != null && e.Root.P != null && e.Root.P.disableThisWhenStored != null ? (e.Root.P.disableThisWhenStored.gameObject.activeSelf ? "true" : "false") : "null") + ",\"pos\":[" + g.x.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + g.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + g.z.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "]" +
-                         ",\"ghost\":" + (e.CargoGhost ? "true" : "false") +
-                         ",\"rot\":[" + q.x.ToString("F6", ic) + "," + q.y.ToString("F6", ic) + "," + q.z.ToString("F6", ic) + "," + q.w.ToString("F6", ic) + "]" +
-                         (e.Ip != null ? ",\"delayMs\":" + e.Ip.DelayMs.ToString("F0") + ",\"jitterMs\":" + e.Ip.JitterMs.ToString("F0") + ",\"extrapolating\":" + (e.Ip.Extrapolating ? "true" : "false") : "") +
-                         // desync in the owner's clock (twocars): an owner's row says when (its state stamps' clock), a copy's row
-                         // which moment of the owner's clock it shows — the bridge call's own timing drops out
-                         (!e.Proxy ? ",\"clk\":" + (Time.unscaledTimeAsDouble - (Time.timeAsDouble - Time.fixedTimeAsDouble)).ToString("F4", System.Globalization.CultureInfo.InvariantCulture)
-                                   : e.Ip != null && e.Ip.Ready ? ",\"rt\":" + e.Ip.RenderTime.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) : "") +
-                         (e.Root != null ? ",\"yaw\":" + e.Root.transform.eulerAngles.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + ",\"vel\":" + Vel(e) : "") +
-                         (e.Root != null && e.Root.car != null && e.Root.car.Engine != null
-                             ? ",\"engRunning\":" + (e.Root.car.Engine.running ? "true" : "false") + ",\"engStart\":" + (e.Root.car.Engine.start ? "true" : "false") + ",\"starterSounds\":" + EntityProxyPresentation.ProxyStarterSounds + ",\"stopSounds\":" + EntityProxyPresentation.ProxyStopSounds + ",\"engRpm\":" + e.Root.car.Engine.rpm.ToString("F0") +
-                               ",\"engTemp\":" + e.Root.car.Engine.temp.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
-                               ",\"boil\":" + (e.Root.car.CoolantBoil != null && e.Root.car.CoolantBoil.isPlaying ? "true" : "false") +
-                               ",\"steam\":" + (e.Root.car.CoolantSteam != null && e.Root.car.CoolantSteamEmission.enabled ? e.Root.car.CoolantSteamEmission.rateOverTime.constant : 0f).ToString("F2", System.Globalization.CultureInfo.InvariantCulture) +
-                               ",\"coolant\":" + (e.Root.car.coolant != null && e.Root.car.coolant.coolant != null && e.Root.car.coolant.coolant.F != null ? e.Root.car.coolant.coolant.F.GetAmount() : -1f).ToString("F3", System.Globalization.CultureInfo.InvariantCulture) +
-                               ",\"fuel\":" + (e.Root.car.Tank != null && e.Root.car.Tank.F != null ? e.Root.car.Tank.F.GetAmount().ToString("F4", System.Globalization.CultureInfo.InvariantCulture) : "-1")
-                             : "") +
-                         ",\"frames\":" + e.Frames + ",\"extrapFrames\":" + e.ExtrapFrames + ",\"jumps\":" + e.Jumps + ",\"maxDevCm\":" + e.MaxDevCm.ToString("F1") +
-                         ",\"physical\":" + (e.Physical ? "true" : "false") + ",\"partsColOff\":" + (e.PartsColOff ? "true" : "false") + ",\"byBody\":" + (e.MovedByBody ? "true" : "false") +
-                         ",\"seqOut\":" + e.SeqOut + ",\"recv\":" + e.Recv + ",\"why\":[" + e.WhyAwake + "," + e.WhyPos + "," + e.WhyRot + "," + e.WhyStored + "]" + ",\"sentRest\":" + (e.SentAtRest ? "true" : "false") +
-                         ",\"lastSent\":" + V3(e.LastSentPos) + ",\"lastIn\":" + (e.Ip != null && e.Ip.Ready ? V3(e.Ip.LastPos) : "null") + "}");
+                rows.Add(EntityDiag.StatusRow(e));
             }
             return "{\"me\":" + MyId + ",\"resync\":{\"sent\":" + ResyncsSent + ",\"applied\":" + ResyncsApplied + ",\"itemsLoaded\":" + ResyncItemsLoaded + ",\"unchanged\":" + ResyncSkipped + ",\"partStates\":" + PartStatesChanged + ",\"bytes\":" + ResyncBytes + ",\"itemsSent\":" + ResyncItemsSent + ",\"captureMsMax\":" + ResyncCaptureMsMax.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + ",\"captureMsTotal\":" + ResyncCaptureMsTotal.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ",\"held\":" + ResyncHeld + ",\"budgetFrames\":" + ResyncBudgetFrames + ",\"listsApplied\":" + StateListsApplied + ",\"listsSame\":" + StateListsSame + ",\"attachReapplied\":" + AttachReapplied + ",\"splitSkipped\":" + ResyncSplitSkipped + ",\"foreignAttachDropped\":" + EntityResync.ResyncForeignAttachDropped + ",\"handoversSent\":" + HandoversSent + ",\"handoversApplied\":" + HandoversApplied + ",\"handoversLate\":" + HandoversLate + ",\"handoversCrashSkipped\":" + HandoversCrashSkipped + ",\"attachesKept\":" + AttachesKept + ",\"ragdollLimbsRestored\":" + RagdollLimbsRestored + ",\"attachesReplayed\":" + AttachesReplayed + ",\"handoverLateWhy\":" + Json.Str(HandoverLateWhy) + ",\"handoverDamageSuppressed\":" + EntityProxyPresentation.HandoverDamageSuppressed + "},\"edits\":{\"marked\":" + EditsMarked + ",\"sent\":" + EditsSent + ",\"applied\":" + EditsApplied + ",\"rejected\":" + EditsRejected + ",\"marks\":" + Json.Str(EditMarks) + "},\"rebound\":" + Rebound + ",\"membersRebound\":" + MembersRebound + ",\"farRecordUpdates\":" + FarRecordUpdates + ",\"farAdds\":" + FarAdds + ",\"farResyncs\":" + FarResyncs + ",\"farResyncItems\":" + EntityLifetimeStreaming.FarResyncItems + ",\"farRechunked\":" + FarRechunked + ",\"farAttachedMoved\":" + FarAttachedMoved + ",\"reshared\":" + Reshared + ",\"orphansCleared\":" + OrphansCleared + ",\"leaseKeys\":" + Json.Str(EntityWorldLeases.AskedKeys) + ",\"leasesDone\":" + EntityWorldLeases.LeasesDone + ",\"leasesFreed\":" + EntityWorldLeases.LeasesFreed + ",\"leaseRefusedWhy\":" + EntityWorldLeases.LeaseRefusalsJson() + ",\"builtInReEnabled\":" + EntityWorldLeases.BuiltInReEnabled + ",\"spawnShared\":" + SpawnShared + ",\"contactSent\":" + EntityPhysics.ContactSent + ",\"contactRelayed\":" + EntityPhysics.ContactRelayed + ",\"contactApplied\":" + EntityPhysics.ContactApplied + ",\"count\":" + ByNet.Count + ",\"pendingShare\":" + PendingShare.Count + ",\"serverEnts\":" + Server.Count + ",\"claimsSent\":" + ClaimsSent + ",\"claimsRefused\":" + ClaimsRefused + ",\"refusedWhy\":{\"crash\":" + RefusedCrash + ",\"held\":" + RefusedHeld + ",\"stored\":" + RefusedStored + ",\"driven\":" + RefusedDriven + "}" + ",\"partsReported\":" + PartsReported + ",\"partsApplied\":" + PartsApplied + ",\"partsAppliedStored\":" + PartsAppliedStored + ",\"partRejects\":" + Json.Str(PartRejects) + ",\"suppressedDamage\":" + EntityProxyPresentation.SuppressedDamage + ",\"suppressedFallOff\":" + SuppressedFallOff + ",\"attach\":{\"sent\":" + AttachesSent + ",\"applied\":" + AttachesApplied + ",\"same\":" + AttachesSame + ",\"failed\":" + AttachesFailed + ",\"fails\":" + Json.Str(AttachFails.Length > 300 ? AttachFails.Substring(AttachFails.Length - 300) : AttachFails) + ",\"detachSyncsSent\":" + DetachSyncsSent + ",\"detachSyncsApplied\":" + DetachSyncsApplied + ",\"detachReqsSent\":" + DetachReqsSent + ",\"detachReqsApplied\":" + DetachReqsApplied + ",\"autoDetachesIgnored\":" + AutoDetachesIgnored + ",\"cargoClaimed\":" + EntityCargoInteraction.CargoClaimed + ",\"cargoNear\":" + CargoClaimedNear + ",\"cargoGhostsMade\":" + CargoGhostsMade + ",\"ghostNets\":[" + string.Join(",", CargoGhostNets) + "]" + ",\"itemNear\":" + ItemClaimedNear + ",\"itemOnContact\":" + ItemClaimedOnContact + ",\"gameFrozenReleased\":" + GameFrozenReleased + ",\"cargoOnContact\":" + CargoClaimedOnContact + ",\"heldShown\":" + HeldShown + ",\"contents\":{\"claimed\":" + ContentsClaimed + ",\"onOwner\":" + ContentsOnOwner + ",\"onPlace\":" + ContentsOnPlace + ",\"stored\":" + ContentsStored + "}}" + ",\"statesSent\":" + StatesSent + ",\"statesIn\":" + StatesIn + ",\"stale\":" + StatesStale + ",\"spawned\":" + Spawned +
                    ",\"addRejects\":" + AddRejects + ",\"addRejectLast\":" + Json.Str(AddRejectLast) + ",\"ownerChanges\":" + OwnerChanges + ",\"silentTakeovers\":" + SilentTakeovers + ",\"pushes\":[" + EntityCargoInteraction.PushesSent + "," + EntityCargoInteraction.PushesApplied + "," + EntityCargoInteraction.PushFrames + "]" + ",\"entities\":[" + string.Join(",", rows) + "]}";

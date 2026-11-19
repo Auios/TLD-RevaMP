@@ -69,7 +69,7 @@ namespace TLDRevamp.Net
             SessionLog.Mark(Note(note), self == 1 ? "me" : origin == 0 ? "host" : "player", st, origin, nets);
         }
     }
-    internal static class EntityTelemetry
+    internal static partial class EntityTelemetry
     {
         internal static MarkFocus CaptureMarkFocus(TelemetryState state)
         {
@@ -119,6 +119,28 @@ namespace TLDRevamp.Net
             add(f.Crosshair?.Net ?? 0); add(f.Held?.Net ?? 0); add(f.Dragging?.Net ?? 0); add(f.Car?.Net ?? 0);
             for (int i = 0; i < MotionTrace.FocusLimit; i++) add(SessionLog.History.Trace.Focus(i));
             return nets.ToArray();
+        }
+        // Detached mark rows; identity lookup stays at the kernel call site.
+        internal static StateUsable CaptureUsable(usablescript u) => new StateUsable { Name = u.name, XRot = u.xRot, YRot = u.yRot, Slide = u.slideValue, Turn = u.currentTurnState, Tuned = u.tunedFloat };
+
+        internal static void CaptureStations(TelemetryState s, System.Collections.Generic.List<mainscript.radioCH> list, bool am)
+        {
+            if (list == null) return;
+            for (int i = 0; i < list.Count; i++) if (list[i] != null && !list[i].custom)
+                s.Add(new StateStation { Am = am, Index = i, Clip = list[i].GetCurrentIndex(), Time = list[i].cTime });
+        }
+
+        internal static void CaptureSlot(TelemetryState s, Entities.Ent car, int item, int index, partslotscript slot, attachablescript at, tosaveitemscript it, Entities.Ent group)
+        {
+            var mount = at != null ? at.T : null;
+            var lp = mount != null ? mount.localPosition : Vector3.zero;
+            var lr = mount != null ? mount.localEulerAngles : Vector3.zero;
+            s.Add(new StateSlot { HasMount = mount != null, MountX = lp.x, MountY = lp.y, MountZ = lp.z, MountRx = lr.x, MountRy = lr.y, MountRz = lr.z,
+                Crafted = it != null && it.P != null && it.P.crafted, Net = car.NetId, Item = item, Index = index, Name = slot.name,
+                Type = slot.tipus != null && slot.tipus.Length > 0 ? slot.tipus[0] : "", ContentNet = group != null ? group.NetId : 0,
+                ContentItem = it != null && group != null ? group.Items.IndexOf(it) : -1, LocalItem = it != null ? it.idInSave : 0, Prefab = it != null ? it.id : -1,
+                Content = it != null ? TelemetryContent.ItemName(it.id, it.name) : "", Attached = at != null && at.attached, Condition = at != null && at.condition != null ? at.condition.state : -1,
+                Condition2 = at != null && at.condition != null ? at.condition.state2 : -1, Condition3 = at != null && at.condition != null ? at.condition.state3 : -1 });
         }
     }
     public static partial class Entities
@@ -173,7 +195,7 @@ namespace TLDRevamp.Net
                     s.Add(new StateStorm { X = g.x, Z = g.z, Prefab = storm.prefabid, Size = storm.size, Speed = storm.speed, Life = storm.life, Yaw = storm.transform.eulerAngles.y });
                 }
             }
-            if (mainscript.s != null) { CaptureStations(s, mainscript.s.radioChs, false); CaptureStations(s, mainscript.s.radioChsAM, true); }
+            if (mainscript.s != null) { EntityTelemetry.CaptureStations(s, mainscript.s.radioChs, false); EntityTelemetry.CaptureStations(s, mainscript.s.radioChsAM, true); }
             TelemetryFocusTick(Time.realtimeSinceStartupAsDouble, true);
             TelemetryCandidates.Clear();
             foreach (var e in ByNet.Values)
@@ -264,7 +286,6 @@ namespace TLDRevamp.Net
             var e = it != null ? SharedGroupOf(it) : null;
             s.Add(new StateCarry { Player = player, Net = e != null ? e.NetId : 0, Item = e != null ? e.Items.IndexOf(it) : -1, Prefab = it != null ? it.id : -1, Name = TelemetryContent.ItemName(it != null ? it.id : -1, pickup.name), Kind = kind, Slot = slot });
         }
-        private static StateUsable CaptureUsable(usablescript u) => new StateUsable { Name = u.name, XRot = u.xRot, YRot = u.yRot, Slide = u.slideValue, Turn = u.currentTurnState, Tuned = u.tunedFloat };
         private static void CaptureUsables(TelemetryState s)
         {
             for (int i = 0; i < s.EntityCount; i++)
@@ -276,7 +297,7 @@ namespace TLDRevamp.Net
                     var it = e.Items[j]; if (it == null || e.Split != null && e.Split.Contains(j)) continue;
                     var list = EntityUsables.ItemUsables(it);
                     for (int k = 0; k < list.Length; k++) if (list[k] != null)
-                    { var u = CaptureUsable(list[k]); u.Net = e.NetId; u.Item = j; u.Index = k; s.Add(u); }
+                    { var u = EntityTelemetry.CaptureUsable(list[k]); u.Net = e.NetId; u.Item = j; u.Index = k; s.Add(u); }
                     var bus = it.busdoorscript;
                     if (bus != null && bus.doors != null) for (int k = 0; k < bus.doors.Length; k++)
                     {
@@ -303,7 +324,7 @@ namespace TLDRevamp.Net
                         if (dx * dx + dy * dy + dz * dz > 90000) continue;
                         for (int i = 0; i < p.usables.Count; i++) if (p.usables[i] != null)
                         {
-                            var u = CaptureUsable(p.usables[i]); u.Building = true; u.Gen = p.poigenid; u.X = p.posID.x; u.Y = p.posID.y; u.Z = p.posID.z; u.Index = i; s.Add(u);
+                            var u = EntityTelemetry.CaptureUsable(p.usables[i]); u.Building = true; u.Gen = p.poigenid; u.X = p.posID.x; u.Y = p.posID.y; u.Z = p.posID.z; u.Index = i; s.Add(u);
                         }
                     }
         }
@@ -358,21 +379,7 @@ namespace TLDRevamp.Net
         {
             var it = at != null ? at.tosave : null;
             var group = it != null ? OwnEntity(it) ?? SharedGroupOf(it) : null;
-            var mount = at != null ? at.T : null;
-            var lp = mount != null ? mount.localPosition : Vector3.zero;
-            var lr = mount != null ? mount.localEulerAngles : Vector3.zero;
-            s.Add(new StateSlot { HasMount = mount != null, MountX = lp.x, MountY = lp.y, MountZ = lp.z, MountRx = lr.x, MountRy = lr.y, MountRz = lr.z,
-                Crafted = it != null && it.P != null && it.P.crafted, Net = car.NetId, Item = item, Index = index, Name = slot.name,
-                Type = slot.tipus != null && slot.tipus.Length > 0 ? slot.tipus[0] : "", ContentNet = group != null ? group.NetId : 0,
-                ContentItem = it != null && group != null ? group.Items.IndexOf(it) : -1, LocalItem = it != null ? it.idInSave : 0, Prefab = it != null ? it.id : -1,
-                Content = it != null ? TelemetryContent.ItemName(it.id, it.name) : "", Attached = at != null && at.attached, Condition = at != null && at.condition != null ? at.condition.state : -1,
-                Condition2 = at != null && at.condition != null ? at.condition.state2 : -1, Condition3 = at != null && at.condition != null ? at.condition.state3 : -1 });
-        }
-        private static void CaptureStations(TelemetryState s, System.Collections.Generic.List<mainscript.radioCH> list, bool am)
-        {
-            if (list == null) return;
-            for (int i = 0; i < list.Count; i++) if (list[i] != null && !list[i].custom)
-                s.Add(new StateStation { Am = am, Index = i, Clip = list[i].GetCurrentIndex(), Time = list[i].cTime });
+            EntityTelemetry.CaptureSlot(s, car, item, index, slot, at, it, group);
         }
     }
     public sealed partial class MpServer

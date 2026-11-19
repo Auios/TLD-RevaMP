@@ -648,7 +648,7 @@ namespace TLDRevamp.Net
             {
                 TelemetrySentTeleport(e, g, v);
                 ToServer(WS, final || restWake || lockChange || wStored || wHeld || ragKey);   // a ragdoll Key: the Deltas after it need it
-                TelemetryPose(e, 0, stamp, g, q, v);
+                EntityTelemetry.TelemetryPose(e, 0, stamp, g, q, v);
                 StatesSent++;
             }
             EntityRagdolls.RagdollSent(e, poseSent);
