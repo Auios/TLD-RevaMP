@@ -14,15 +14,13 @@ namespace TLDRevamp.Fixes
     /// Same result, no garbage: at those two call sites the caller's existing list is passed in, cleared and refilled
     /// with the game's exact loop, then stable-sorted by the same key (LINQ OrderBy is stable; insertion sort with a
     /// strict comparison keeps ties in order). The caller then assigns the same list object to its field.
-    /// Verify: also runs the game's GetChunksNeeded and compares element by element (Equals).
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.ChunksNeededInPlace.Enabled / .Verify
+    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.ChunksNeededInPlace.Enabled
     [HarmonyPatch]
     public static class ChunksNeededInPlace
     {
         /// On by default since v0.20.1: exact (21,175 verified calls, 0 mismatches), driving A/B collections −27%, max −23%.
         public static bool Enabled = true;
-        public static bool Verify = false;
         public static long Calls, VerifyChecks, VerifyMismatches;
         public static string LastMismatch = "";
         public static int Patched;
@@ -99,15 +97,6 @@ namespace TLDRevamp.Fixes
                     keys[j + 1] = key;
                     list[j + 1] = v;
                 }
-            }
-            if (Verify)
-            {
-                VerifyChecks++;
-                var reference = ms.GetChunksNeeded(_chunkSize, _edge);
-                var seen = new HashSet<Vector3d>(); reference = reference.FindAll(x => seen.Add(x));
-                string diff = reference.Count != list.Count ? "count " + list.Count + " vs " + reference.Count : null;
-                for (int i = 0; diff == null && i < list.Count; i++) if (!list[i].Equals(reference[i])) diff = "element " + i;
-                if (diff != null) { VerifyMismatches++; LastMismatch = diff; }
             }
             return list;
         }

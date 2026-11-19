@@ -14,7 +14,7 @@ namespace TLDRevamp.Fixes
     /// Verify mode measures exactly that lag (max position mm / rotation degrees).
     ///
     /// Runtime switches (bridge `set`): TLDRevamp.Fixes.SleepingWheelSkip.Enabled / .Verify / .RestSpeed / .RestSpin /
-    /// .RefreshFrames / .ExperimentSkipAll (experiment only: freeze all wheels)
+    /// .RefreshFrames
     [HarmonyPatch(typeof(wheelgraphicsscript), nameof(wheelgraphicsscript.Graphics))]
     public static class SleepingWheelSkip
     {
@@ -22,7 +22,6 @@ namespace TLDRevamp.Fixes
         /// live around parked cars, steering, driving off): "seems the same, feels normal".
         public static bool Enabled = true;
         public static bool Verify = false;
-        public static bool ExperimentSkipAll = false;
         public static float RestSpeed = 0.005f;   // m/s
         public static float RestSpin = 0.005f;    // rad/s
         public static int RefreshFrames = 30;
@@ -37,7 +36,6 @@ namespace TLDRevamp.Fixes
         private static bool Prefix(wheelgraphicsscript __instance)
         {
             Calls++;
-            if (ExperimentSkipAll) { Skipped++; return false; }
             if (!Enabled) return true;
             var w = __instance;
             // Mirror the original's early exit so we only reason about frames where it does work

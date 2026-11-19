@@ -10,12 +10,6 @@ namespace TLDRevamp.Net
     {
         public static long StandInterpFrames;
         private static bool _standInterp;
-        /// The other way to draw both at one pose: the copy we stand on drawn at its physics
-        /// pose, like our player (AboardDrawnAtPhysics does it for a seat). Off: the world outside then moves in physics
-        /// steps (frame-to-frame speed p90 ~50% off its median, against 6-28% interpolated) and the camera still jumped
-        /// now and then (up to 410 mm along, 228 mm up; stand3.py).
-        internal static bool StandCopyAtPhysics;
-
         /// Runner.FixedUpdate (FixedTick), after the copies moved: the footing is LocalFooting's, from the last pose sent.
         internal static void StandInterpTick()
         {
@@ -38,13 +32,6 @@ namespace TLDRevamp.Net
         {
             _standInterp = false;
             if (rb != null) rb.interpolation = mainscript.RBI();
-        }
-
-        internal static bool StandsOnAtPhysics(Entities.Ent e)
-        {
-            if (!StandCopyAtPhysics || Entities.PhysicsFootingNet != e.NetId) return false;
-            var pl = mainscript.s != null ? mainscript.s.player : null;
-            return pl != null && !pl.Bsitting;
         }
 
         // Session cleanup.

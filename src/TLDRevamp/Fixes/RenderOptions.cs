@@ -98,17 +98,11 @@ namespace TLDRevamp.Fixes
             }
         }
 
-        /// Measurement only: every enabled reflection probe off (undone when switched back).
-        public static bool ExperimentNoProbes = false;
-        private static readonly List<ReflectionProbe> _probesOff = new List<ReflectionProbe>();
-
         public static void Tick()
         {
             TickCascades();
             TickSmallShadows();
             TickProbes();
-            if (ExperimentNoProbes) { foreach (var p in Object.FindObjectsOfType<ReflectionProbe>()) if (p.enabled) { p.enabled = false; _probesOff.Add(p); } }
-            else if (_probesOff.Count > 0) { foreach (var p in _probesOff) if (p != null) p.enabled = true; _probesOff.Clear(); }
         }
 
         private static void TickCascades()

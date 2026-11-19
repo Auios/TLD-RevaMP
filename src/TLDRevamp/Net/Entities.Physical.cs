@@ -478,7 +478,7 @@ namespace TLDRevamp.Net
                     TelemetryProxySnap(e, up, rb.position);
                     rb.position = up; rb.rotation = rot;   // start where it is shown: no sweep from an old pose
                 }
-                var wantI = !(EntityPhysics.AboardDrawnAtPhysics && EntityPhysics.LocalAboard(e)) && !EntityPhysics.StandsOnAtPhysics(e) ? RigidbodyInterpolation.Interpolate : RigidbodyInterpolation.None;
+                var wantI = !(EntityPhysics.AboardDrawnAtPhysics && EntityPhysics.LocalAboard(e)) ? RigidbodyInterpolation.Interpolate : RigidbodyInterpolation.None;
                 if (rb.interpolation != wantI) rb.interpolation = wantI;
                 // a teleport (the curve restarted) or anything a kinematic body cannot cover in a step without sweeping
                 // through the world (> 50 m = 2,500 m/s): put it there, don't drive it there

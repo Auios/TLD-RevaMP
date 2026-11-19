@@ -17,17 +17,13 @@ namespace TLDRevamp.Fixes
     /// distance in place (OrderBy is stable too: equal distances keep the query's order). attachHits is private and read
     /// only in the lines right after, within the same call. Exact.
     ///
-    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.LookRayNoAlloc.Verify
-    /// (also runs the original two lines and compares hit by hit).
     [HarmonyPatch(typeof(fpscontroller), nameof(fpscontroller.RayStuff))]
     public static class LookRayNoAlloc
     {
-        public static bool Verify = false;
         public static long Calls, VerifyChecks, VerifyMismatches, Patched;
 
         private static readonly RaycastHit[] Buffer = new RaycastHit[256];
         private static readonly Dictionary<int, RaycastHit[]> ByLength = new Dictionary<int, RaycastHit[]>();
-        private static Vector3 _o, _d; private static float _range; private static int _mask;
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)
         {
@@ -50,7 +46,6 @@ namespace TLDRevamp.Fixes
         private static RaycastHit[] Cast(Vector3 origin, Vector3 direction, float maxDistance, int layerMask)
         {
             Calls++;
-            _o = origin; _d = direction; _range = maxDistance; _mask = layerMask;
             int n = Physics.RaycastNonAlloc(origin, direction, Buffer, maxDistance, layerMask);
             if (n == Buffer.Length) return Physics.RaycastAll(origin, direction, maxDistance, layerMask);   // full: as the game
             if (!ByLength.TryGetValue(n, out var arr)) ByLength[n] = arr = new RaycastHit[n];
@@ -67,21 +62,10 @@ namespace TLDRevamp.Fixes
                 while (j >= 0 && a[j].distance > d) { a[j + 1] = a[j]; j--; }
                 a[j + 1] = h;
             }
-            if (Verify) Check(a);
             return a;
         }
 
         private static RaycastHit[] AsArray(IEnumerable<RaycastHit> source) => source as RaycastHit[] ?? source.ToArray();
-
-        private static void Check(RaycastHit[] mine)
-        {
-            var orig = Physics.RaycastAll(_o, _d, _range, _mask).OrderBy(x => x.distance).ToArray();
-            VerifyChecks++;
-            bool same = orig.Length == mine.Length;
-            for (int i = 0; same && i < orig.Length; i++) same = orig[i].collider == mine[i].collider && orig[i].distance == mine[i].distance;
-            if (same) return;
-            if (++VerifyMismatches <= 5) Plugin.Log.LogWarning($"LookRayNoAlloc: {mine.Length} hits vs original {orig.Length}");
-        }
 
         public static string Stats =>
             "{\"patched\":" + Patched + ",\"calls\":" + Calls + ",\"lengths\":" + ByLength.Count +

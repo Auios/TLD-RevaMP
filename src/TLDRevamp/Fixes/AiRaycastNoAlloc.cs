@@ -17,17 +17,15 @@ namespace TLDRevamp.Fixes
     /// count (per call site and length, so a caller's loop never sees its array change under it — Attack runs inside
     /// AvoidWalls' loop), then a stable insertion sort by distance (LINQ OrderBy is stable). The OrderBy/ToArray calls
     /// become pass-throughs. Buffer full (≥ 128 hits) → the original RaycastAll path. Only difference possible: hits at
-    /// exactly equal distance could come back in another order if RaycastNonAlloc lists them differently than RaycastAll;
-    /// Verify compares every call with the original.
+    /// exactly equal distance could come back in another order if RaycastNonAlloc lists them differently than RaycastAll.
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.AiRaycastNoAlloc.Enabled / .Verify
+    /// Runtime switch (bridge `set`): TLDRevamp.Fixes.AiRaycastNoAlloc.Enabled
     [HarmonyPatch]
     public static class AiRaycastNoAlloc
     {
         /// On by default since v0.28.0: crowdedtest (mansion, 4 AIs): garbage 23.8 → 10.8 KB/frame, GC 1.5 → 0 per 10 s;
         /// verify 24,839 calls, 0 mismatches.
         public static bool Enabled = true;
-        public static bool Verify = false;
         public static long Calls, Fallbacks, VerifyChecks, VerifyMismatches;
         public static int Patched;
 
@@ -89,7 +87,6 @@ namespace TLDRevamp.Fixes
                 while (j >= 0 && arr[j].distance > key) { arr[j + 1] = arr[j]; j--; }
                 arr[j + 1] = h;
             }
-            if (Verify) Check(arr, o, d, range, mask);
             _lastSorted = true;
             return arr;
         }
@@ -101,15 +98,6 @@ namespace TLDRevamp.Fixes
         {
             if (_lastSorted) { _lastSorted = false; return (RaycastHit[])src; }
             return src.ToArray();
-        }
-
-        private static void Check(RaycastHit[] ours, Vector3 o, Vector3 d, float range, int mask)
-        {
-            VerifyChecks++;
-            var orig = Physics.RaycastAll(o, d, range, mask).OrderBy(h => h.distance).ToArray();
-            bool same = orig.Length == ours.Length;
-            for (int i = 0; same && i < orig.Length; i++) same = orig[i].collider == ours[i].collider && orig[i].distance == ours[i].distance && orig[i].point == ours[i].point;
-            if (!same) VerifyMismatches++;
         }
 
         public static string Stats =>

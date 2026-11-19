@@ -11,15 +11,13 @@ namespace TLDRevamp.Fixes
     ///  - DoPlace (every 2nd frame): walks every player's coordinates, for each asks every road generator
     ///    RoadsDoneAtPlace (4 chunk lookups) and only then Tile(), whose first action is "already exists → false".
     ///    Nearly all coordinates already have a tile, and coordinates shared by nearby players are visited again.
-    /// Exact: CheckRemove with a hash set (same membership as the dictionary of tiles uses; Verify compares with the
-    /// original), same result order. DoPlace checks "tile exists" first — RoadsDoneAtPlace has no side effects and
+    /// Exact: CheckRemove with a hash set (same membership as the dictionary of tiles uses), same result order.
+    /// DoPlace checks "tile exists" first — RoadsDoneAtPlace has no side effects and
     /// Tile() returns false for an existing tile, so skipping both changes nothing — and skips a repeated coordinate
     /// (it gives the same answer as its first visit, which didn't stop the loop).
-    /// Runtime switches: TLDRevamp.Fixes.TerrainPlaceFast.Verify
     [HarmonyPatch]
     public static class TerrainPlaceFast
     {
-        public static bool Verify = false;
         public static long VerifyChecks, VerifyMismatches, Removes, Places;
 
         private static readonly AccessTools.FieldRef<terrainGenScript, List<Vector3d>> CoordsNeeded = GameLookups.FieldRefAccess<terrainGenScript, List<Vector3d>>(typeof(terrainGenScript), "coordsNeeded");
@@ -43,15 +41,6 @@ namespace TLDRevamp.Fixes
             foreach (var kv in __instance.terrains)
                 if (!Needed.Contains(kv.Key)) remove.Add(kv.Key);
             Removes++;
-            if (Verify)
-            {
-                VerifyChecks++;
-                int k = 0;
-                bool bad = false;
-                foreach (var kv in __instance.terrains)
-                    if (!needed.Contains(kv.Key) && (k >= remove.Count || !remove[k++].Equals(kv.Key))) { bad = true; break; }
-                if (bad || k != remove.Count) VerifyMismatches++;
-            }
             return false;
         }
 

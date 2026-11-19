@@ -66,7 +66,6 @@ namespace TLDRevamp.Net
         private static bool NearOtherPlayersCar(Ent e) => ByNet.Values.Any(o => o.Proxy && o.Root != null && o.PartIndex < 0 && o.Root.car != null && (o.Root.transform.position - e.Root.transform.position).sqrMagnitude < EntityProxyPresentation.TorqueRadiusM * EntityProxyPresentation.TorqueRadiusM);
         private static IEnumerable<carscript> CopyCars()
         {
-            if (EntityProxyPresentation.CopyLodAllCars) { foreach (var car in UnityEngine.Object.FindObjectsOfType<carscript>()) yield return car; yield break; }
             foreach (var e in ByNet.Values) if (e.Proxy && e.Root != null && e.Root.car != null) yield return e.Root.car;
         }
     }

@@ -25,7 +25,6 @@ namespace TLDRevamp.Fixes
         public static int MaxEntries = 20000;
 
         public static long Hits, Misses, VerifyChecks, VerifyMismatches, Clears;
-        public static bool ReuseVerify = false;
         public static long Reused, ReuseChecks, ReuseMismatches;
         public static string LastReuseMismatch = "";
         private static readonly ConditionalWeakTable<roadGenScript, Dictionary<Vector3d, roadGenScript.dotChunkClass>> Pool =
@@ -74,7 +73,6 @@ namespace TLDRevamp.Fixes
                     gen.chunks.Add(_cPos, old);
                     Dcc0(gen) = old;
                     Reused++;
-                    if (ReuseVerify) CompareWithFresh(old, e, _cPos);
                     return false;
                 }
                 var dcc = new roadGenScript.dotChunkClass();
@@ -205,32 +203,6 @@ namespace TLDRevamp.Fixes
             dcc.innerChunks.Clear();
             RoadPlaceCache.ChunkReset(dcc);
             dcc.mainRoad.Clear();
-        }
-
-        private static void CompareWithFresh(roadGenScript.dotChunkClass d, Entry e, Vector3d pos)
-        {
-            ReuseChecks++;
-            var f = Snapshot(d);
-            string diff = null;
-            if (f.Seed != e.Seed || f.DotCount != e.DotCount || f.Inext != e.Inext || f.Inextp != e.Inextp) diff = "seed/rnd";
-            else if (f.Dots.Length != e.Dots.Length) diff = "dot count";
-            for (int i = 0; diff == null && i < e.SeedArray.Length; i++) if (f.SeedArray[i] != e.SeedArray[i]) diff = "seed array";
-            for (int i = 0; diff == null && i < e.Dots.Length; i++)
-                if (!f.Dots[i].Equals(e.Dots[i]) || d.dots[i].connectedDotIDsInSameChunk.Count != 0) diff = "dot " + i;
-            if (diff == null && (d.roads.Count != 0 || d.mainRoad.Count != 0 || d.innerChunks.Count != 0 || d.insideConnected ||
-                                 d.outsideUConnected || d.outsideRConnected || d.innerChunkGenerated)) diff = "collections/flags";
-            // the Random must continue exactly like a fresh one
-            if (diff == null)
-            {
-                var fresh = new System.Random(e.Seed);
-                InextRef(fresh) = e.Inext; InextpRef(fresh) = e.Inextp;
-                Array.Copy(e.SeedArray, SeedArrayRef(fresh), e.SeedArray.Length);
-                var probeA = (int[])SeedArrayRef(d.rnd).Clone(); int ia = InextRef(d.rnd), ipa = InextpRef(d.rnd);
-                for (int i = 0; i < 5 && diff == null; i++) if (fresh.Next() != d.rnd.Next()) diff = "rnd stream";
-                // put the reused Random back where it was (the probe consumed numbers)
-                Array.Copy(probeA, SeedArrayRef(d.rnd), probeA.Length); InextRef(d.rnd) = ia; InextpRef(d.rnd) = ipa;
-            }
-            if (diff != null) { ReuseMismatches++; LastReuseMismatch = pos + ": " + diff; }
         }
 
         private static Entry Snapshot(roadGenScript.dotChunkClass dcc)

@@ -16,15 +16,13 @@ namespace TLDRevamp.Fixes
     /// hasSideRoad, emptySideRoadChance). Its only effect: ConnectWithRoad(c1, i1, c2, i2, roadSelf, type) calls in order, each
     /// followed by mainRoad.Add for main roads. We record those calls once per input fingerprint and replay them
     /// through the game's own ConnectWithRoad (so the road objects are created exactly as the game creates them).
-    /// Verify: on a memo hit the original runs instead and its calls are compared with the memo.
     ///
-    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.RoadConnectMemo.Enabled / .Verify / .MaxEntries
+    /// Runtime switches (bridge `set`): TLDRevamp.Fixes.RoadConnectMemo.Enabled / .MaxEntries
     [HarmonyPatch]
     public static class RoadConnectMemo
     {
         /// On by default since v0.20.0: exact (43,436 verified replays, 0 mismatches), driving A/B FPS +4.0%.
         public static bool Enabled = true;
-        public static bool Verify = false;
         public static int MaxEntries = 4096;
         public static long Hits, Misses, Replayed, VerifyChecks, VerifyMismatches, Cleared;
         public static string LastMismatch = "";
@@ -36,7 +34,7 @@ namespace TLDRevamp.Fixes
 
         private static List<Call> _recording;
 
-        private sealed class State { public roadGenScript Gen; public (Vector3d, Vector3d, Vector3d) Key; public ulong Fp; public Entry Expected; }
+        private sealed class State { public roadGenScript Gen; public (Vector3d, Vector3d, Vector3d) Key; public ulong Fp; }
 
         [HarmonyPatch(typeof(roadGenScript), nameof(roadGenScript.ConnectDots))]
         [HarmonyPrefix]
@@ -52,12 +50,8 @@ namespace TLDRevamp.Fixes
             if (table.Map.TryGetValue(key, out var e) && e.Fingerprint == fp)
             {
                 Hits++;
-                if (!Verify)
-                {
-                    Replay(gen, _c1, _c2, _roadSelfChunk, e.Calls);
-                    return false;
-                }
-                __state = new State { Gen = gen, Key = key, Fp = fp, Expected = e };
+                Replay(gen, _c1, _c2, _roadSelfChunk, e.Calls);
+                return false;
             }
             else
             {
@@ -76,13 +70,6 @@ namespace TLDRevamp.Fixes
             var rec = _recording;
             _recording = null;
             if (__exception != null || rec == null) return __exception;
-            if (__state.Expected != null)
-            {
-                VerifyChecks++;
-                string diff = Compare(__state.Expected.Calls, rec);
-                if (diff != null) { VerifyMismatches++; LastMismatch = __state.Key + ": " + diff; }
-                return null;
-            }
             var table = Tables.GetValue(__state.Gen, _ => new Table());
             if (table.Map.Count >= MaxEntries) { table.Map.Clear(); Cleared++; }
             table.Map[__state.Key] = new Entry { Fingerprint = __state.Fp, Calls = rec.ToArray() };
@@ -101,7 +88,6 @@ namespace TLDRevamp.Fixes
 
         private static readonly AccessTools.FieldRef<roadGenScript, roadGenScript.dotChunkClass> Dccc = GameLookups.FieldRefAccess<roadGenScript, roadGenScript.dotChunkClass>(typeof(roadGenScript), "dccc");
         private static readonly AccessTools.FieldRef<roadGenScript, int> ConnectIndex = GameLookups.FieldRefAccess<roadGenScript, int>(typeof(roadGenScript), "connectIndex");
-        public static bool ReplicaVerify = false;
         public static long RoadsReused, RoadsNew, ReplicaChecks, ReplicaMismatches;
 
         /// What the original's cross branch does per accepted pair: ConnectWithRoad (exact copy; c1 ≠ c2 here, so the
@@ -143,31 +129,9 @@ namespace TLDRevamp.Fixes
                 }
                 dcc.roads.Add(r);
                 if (c.Type == roadGenScript.roadTypeEmu.mainRoad && c1.z > c2.z) r.Swap();
-                if (ReplicaVerify) CheckReplica(r, c1, c.I1, c2, c.I2, p1, p2, gen, roadSelf, idx, c.Type);
                 if (c.Type == roadGenScript.roadTypeEmu.mainRoad) dcc.mainRoad.Add(dcc.roads.Count - 1);
                 Replayed++;
             }
-        }
-
-        private static void CheckReplica(roadGenScript.roadClass r, Vector3d c1, int i1, Vector3d c2, int i2, Vector3d p1, Vector3d p2,
-                                         roadGenScript gen, Vector3d roadSelf, int idx, roadGenScript.roadTypeEmu type)
-        {
-            ReplicaChecks++;
-            var f = new roadGenScript.roadClass(c1, i1, c2, i2, p1, p2, gen.terrainAlignMinDist, gen.terrainAlignMaxDist, roadSelf, idx, type);
-            if (type == roadGenScript.roadTypeEmu.mainRoad && c1.z > c2.z) f.Swap();
-            bool same = Eq(f.chunk1, r.chunk1) && f.id1 == r.id1 && Eq(f.chunk2, r.chunk2) && f.id2 == r.id2 && Eq(f.start, r.start) && Eq(f.end, r.end)
-                        && f.terrainAlignMinDist == r.terrainAlignMinDist && f.terrainAlignMaxDist == r.terrainAlignMaxDist && Eq(f.selfChunk, r.selfChunk)
-                        && f.selfID == r.selfID && f.roadType == r.roadType && f.generated == r.generated && r.roadElements.Count == 0;
-            if (!same) { ReplicaMismatches++; LastMismatch = "replica " + roadSelf + " #" + idx; }
-        }
-
-        private static string Compare(Call[] expected, List<Call> actual)
-        {
-            if (expected.Length != actual.Count) return "count " + expected.Length + " vs " + actual.Count;
-            for (int i = 0; i < expected.Length; i++)
-                if (expected[i].I1 != actual[i].I1 || expected[i].I2 != actual[i].I2 || expected[i].Type != actual[i].Type)
-                    return "call " + i;
-            return null;
         }
 
         /// Everything the cross branch of ConnectDots reads, hashed (64-bit FNV-1a over exact bit patterns).
@@ -220,7 +184,7 @@ namespace TLDRevamp.Fixes
         }
 
         public static string Stats =>
-            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"verify\":" + (Verify ? "true" : "false") +
+            "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"verify\":false" +
             ",\"hits\":" + Hits + ",\"misses\":" + Misses + ",\"replayed\":" + Replayed + ",\"cleared\":" + Cleared +
             ",\"roadsReused\":" + RoadsReused + ",\"roadsNew\":" + RoadsNew + ",\"replicaChecks\":" + ReplicaChecks + ",\"replicaMismatches\":" + ReplicaMismatches +
             ",\"verifyChecks\":" + VerifyChecks + ",\"verifyMismatches\":" + VerifyMismatches + ",\"lastMismatch\":" + Json.Str(LastMismatch) + "}";
