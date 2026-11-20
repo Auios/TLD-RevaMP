@@ -30,7 +30,7 @@ namespace TLDRevamp.Net
             }
             foreach (var problem in list.Problems) rows.Add("{\"text\":" + Json.Str(ModsNeeded.Problem(problem).Text) + ",\"action\":\"None\"}");
             return "{\"open\":true,\"host\":" + Json.Str(list.Host) + ",\"busy\":" + (ModCatalog.Busy ? "true" : "false") +
-                ",\"message\":" + Json.Str(ModCatalog.Progress) + ",\"rows\":[" + string.Join(",", rows) + "],\"copy\":" + Json.Str(ModsNeeded.Copy(list, ModCatalog.Current)) + "}";
+                ",\"message\":" + Json.Str(ModsScreen.NeededStatus()) + ",\"rows\":["+ string.Join(",", rows) + "],\"copy\":" + Json.Str(ModsNeeded.Copy(list, ModCatalog.Current)) + "}";
         }
 
         internal static string Bridge(string arg)

@@ -104,11 +104,17 @@ namespace TLDRevamp.Net
                 var row = NeededRows[_selected];
                 Lines[0].text = row.Text; Lines[1].text = row.Source ?? "";
             }
+            _message.text = NeededStatus(); _message.gameObject.SetActive(true);
+            NextNeededInstall();
+        }
+
+        /// The status line under the required-mods list (also what the debug bridge reports).
+        internal static string NeededStatus()
+        {
             string status = _checking ? "Checking the mod list..." : JoinCatalog == null ?
                 "The mod list could not be reached. " + ModCatalog.Message : ModCatalog.Progress;
             if (ModInstall.Installed > _installedAtOpen || ModCatalog.RestartRequired) status += "\nRestart the game, then join again.";
-            _message.text = status; _message.gameObject.SetActive(true);
-            NextNeededInstall();
+            return status;
         }
 
         internal static void NeededAction(int index)
