@@ -21,9 +21,14 @@ namespace TLDRevamp
         internal static bool KeyDown(BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> k)
         {
             if (k == null || PlayerEdition.Blocked.Contains(k) || Net.Chat.Typing || MarkPanel.Opened || KeyBindings.Swallowed || k.Value.MainKey == KeyCode.None || !Input.GetKeyDown(k.Value.MainKey)) return false;
+            // A key that types (a letter, a digit, space, punctuation) belongs to the text field being typed in: the Mods
+            // search, the Multiplayer screen's passwords and the game's own fields (its check, RevaMP's fields added),
+            // so a key bound to O does not toggle the overlay in the middle of a search.
+            if (Typable(k.Value.MainKey) && mainscript.s != null && mainscript.s.SomeInputSelected()) return false;
             // Only on the frame the key went down: either Ctrl/Shift/Alt counts, and Ctrl+Insert does not also fire plain Insert.
             return BugReportLogic.ChordDown((int)k.Value.MainKey, Modifiers(k.Value), c => Input.GetKeyDown((KeyCode)c), c => Input.GetKey((KeyCode)c), OthersOnKey(k));
         }
+        private static bool Typable(KeyCode c) { int v = (int)c; return v >= 32 && v <= 126 || v >= 256 && v <= 270 || v == 272; }   // ASCII keys, the keypad's digits and signs
         private static int[] Modifiers(BepInEx.Configuration.KeyboardShortcut s) => System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(s.Modifiers, m => (int)m));
         private static System.Collections.Generic.IEnumerable<int[]> OthersOnKey(BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> k)
         {
@@ -131,7 +136,9 @@ namespace TLDRevamp
             // steals a key the game or the player uses; set it in BepInEx/config/tldrevamp.core.cfg.
             KeyCinematic = Config.Bind("Keys", "CinematicCamera", new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
                 "Opens or closes the cinematic camera (a separate camera for filming; the gameplay camera stays as it is). Unbound by default.");
-            Cinematic.CinematicCamera.ExitKeyHint = KeyName(KeyCinematic) + " (Settings → Revamp → Keys, or BepInEx/config/tldrevamp.core.cfg)";
+            // the hint follows the key: bound or changed under Settings → Revamp → Keys, it still said "no key"
+            void CinemaHint() => Cinematic.CinematicCamera.ExitKeyHint = KeyName(KeyCinematic) + " (Settings → Revamp → Keys, or BepInEx/config/tldrevamp.core.cfg)";
+            CinemaHint(); KeyCinematic.SettingChanged += (_, __) => CinemaHint();
             // The replay (issue #36): record gameplay, then play it back with the cinematic camera.
             KeyReplayRecord = Config.Bind("Keys", "ReplayRecord", new BepInEx.Configuration.KeyboardShortcut(KeyCode.F9, KeyCode.LeftControl),
                 "Starts or stops recording a replay (everything near you, every player; saved to BepInEx/tldrevamp-replays).");
@@ -140,6 +147,8 @@ namespace TLDRevamp
             Feedback = new FeedbackReporter(Telemetry);
             Net.ModCatalog.Url = Config.Bind("Mods", "CatalogUrl", Net.ModCatalog.DefaultUrl,
                 "Catalog URL (HTTPS, or file URI for local testing), fetched when opening Mods or pressing Refresh, and at start for the update check (Settings → Revamp → Mods section). Downloads must match the catalog DLL hash. The host never sends mod files.");
+            // an older RevaMP's default (the address before the move to the TLD-RevaMP organisation) becomes today's, in the cfg too
+            if (Net.ModCatalog.CatalogAddress(Net.ModCatalog.Url.Value) != Net.ModCatalog.Url.Value) Net.ModCatalog.Url.Value = Net.ModCatalog.DefaultUrl;
             Net.DedicatedServer.Awake(Config);
             Net.ModObjects.Install();   // the multiplayer API other mods reference (TLDRevamp.Multiplayer.dll)
             Replay.ReplayMods.Install();   // and its replay channels (API 4)

@@ -39,17 +39,18 @@ namespace TLDRevamp.Net
         /// Why the host refuses a joiner's Hello, or null. The mod version first (what a player can fix: update), then the
         /// protocol (two builds of the same version: dev builds share a version number), then a message the host couldn't
         /// read. Before, all three said "The host plays TLD Revamp 0.69.1, you 0.69.1. Both need the same version."
-        /// With the source identity (the host's own check, which lets a dev build's "-dev" label differ) another protocol
-        /// from another version says so too: a 0.69.1 joiner at a 0.69.2 host was told "different builds of the same version".
+        /// With the source identity (the host's own check, which lets a dev build's "-dev" label differ) the release is
+        /// compared instead of the label: a 0.69.1 joiner at a 0.69.2 host was told "different builds of the same version",
+        /// and two releases with the same protocol got the commit check's refusal instead of "Both need the same version".
+        /// Two releases never pass the build check (one commit, or one identical DLL, has one label), so nothing that
+        /// could join is refused here.
         public static string HelloRefusal(bool bad, ushort protocol, string mod, ushort hostProtocol, string hostVersion, bool sourceIdentity = false)
         {
-            if (!sourceIdentity && mod != null && mod != hostVersion)
+            if (mod != null && (sourceIdentity ? BaseVersionOf(mod) != BaseVersionOf(hostVersion) : mod != hostVersion))
                 return "The host plays TLD Revamp " + hostVersion + ", you " + mod + ". Both need the same version.";
             if (mod != null && protocol != hostProtocol)
-                return BaseVersionOf(mod) != BaseVersionOf(hostVersion)
-                    ? "The host plays TLD Revamp " + hostVersion + ", you " + mod + ". Both need the same version."
-                    : "The host plays TLD Revamp " + hostVersion + " (network protocol " + hostProtocol + "), you " + mod + " (protocol " + protocol +
-                      "): different builds of the same version. Both need the same build.";
+                return "The host plays TLD Revamp " + hostVersion + " (network protocol " + hostProtocol + "), you " + mod + " (protocol " + protocol +
+                       "): different builds of the same version. Both need the same build.";
             if (bad || mod == null)
                 return "The host couldn't read your join request. It plays TLD Revamp " + hostVersion + " (network protocol " + hostProtocol + "); both need the same build.";
             return null;

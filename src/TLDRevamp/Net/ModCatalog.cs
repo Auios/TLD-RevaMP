@@ -15,9 +15,19 @@ namespace TLDRevamp.Net
     {
         // The browser and its catalog are on dev; main does not have the catalog yet.
         public const string DefaultUrl = "https://raw.githubusercontent.com/TLD-RevaMP/TLD-RevaMP/refs/heads/dev/packaging/mods.json";
-        /// The default before the repository moved to the TLD-RevaMP organisation. BepInEx saved it into every cfg, and
-        /// it answers only through GitHub's redirect, so a cfg that still has it reads the catalog at its own address.
-        internal const string OldDefaultUrl = "https://raw.githubusercontent.com/Normal99/TLD-RevaMP/refs/heads/dev/packaging/mods.json";
+        /// The defaults before the repository moved to the TLD-RevaMP organisation: main at first, dev as 0.69.1 shipped
+        /// it, then refs/heads/dev. BepInEx saved the default into every cfg, and these answer only through GitHub's
+        /// redirect, so a cfg that still has one reads the catalog at today's address (CatalogAddress, Plugin.Awake).
+        internal static readonly string[] OldDefaultUrls =
+        {
+            "https://raw.githubusercontent.com/Normal99/TLD-RevaMP/main/packaging/mods.json",
+            "https://raw.githubusercontent.com/Normal99/TLD-RevaMP/dev/packaging/mods.json",
+            "https://raw.githubusercontent.com/Normal99/TLD-RevaMP/refs/heads/dev/packaging/mods.json",
+        };
+
+        /// The address to read for a saved one: an older default becomes today's; anything else (a test catalog, a file
+        /// URI, someone's own catalog) stays as it is.
+        internal static string CatalogAddress(string saved) => saved != null && Array.IndexOf(OldDefaultUrls, saved) >= 0 ? DefaultUrl : saved;
         public const int MaxCatalogBytes = 1 << 20;
         [DataContract] public sealed class Catalog
         {

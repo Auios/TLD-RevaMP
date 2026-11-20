@@ -70,10 +70,20 @@ namespace TLDRevamp.Net
         private static float _friendsAt = -10f;
 
         // ---- opening: the game's Multiplayer button (and its T key), F11 (Plugin.KeyMpScreen)
-        // Not over the Mods screens: a stray T there closed them and cancelled the download running (F11 still switches).
+        // Not over the Mods screens: a stray T there closed them and cancelled the download running (F11 still switches);
+        // and not over this screen itself, which it would set back to its start (the selection, a typed password).
         [HarmonyPatch(typeof(SteamP2PMenuHandlerScript), nameof(SteamP2PMenuHandlerScript.APressedMulti))]
         [HarmonyPrefix]
-        private static bool InsteadOfGameLobby() { if (!ModsScreen.IsOpen) Open(); return false; }
+        private static bool InsteadOfGameLobby() { if (!ModsScreen.IsOpen && !IsOpen) Open(); return false; }
+
+        /// Typing in this screen's own fields (the join password, the host's session password): the game takes no
+        /// input, as for the chat. They are copies of the save screen's name field, which the game's check doesn't
+        /// know, so its T (the Multiplayer screen) reset this screen at the first t of a password and the voice key talked.
+        [HarmonyPatch(typeof(mainscript), nameof(mainscript.SomeInputSelected)), HarmonyPostfix]
+        private static void Typing(ref bool __result)
+        {
+            if (IsOpen && (_input != null && _input.isFocused || _settingsPassword != null && _settingsPassword.isFocused)) __result = true;
+        }
 
         public static void Toggle()
         {

@@ -21,6 +21,9 @@ static class P {
     Check("source identity, older release: names both versions", old != null && old.Contains("0.69.1") && old.Contains("0.69.2") && old.Contains("need the same version") && !old.Contains("same build"));
     Check("source identity, dev label of another release", JoinChecks.HelloRefusal(false, 61, "0.69.1-dev.abcdef0", 62, "0.69.2", true).Contains("need the same version"));
     Check("source identity, dev label of the same release: same build", JoinChecks.HelloRefusal(false, 61, "0.69.2-dev.abcdef0", 62, "0.69.2", true).Contains("same build"));
+    string hotfix = JoinChecks.HelloRefusal(false, 62, "0.69.2", 62, "0.69.3", true);
+    Check("source identity, two releases with one protocol: names both versions", hotfix != null && hotfix.Contains("0.69.2") && hotfix.Contains("0.69.3") && hotfix.Contains("need the same version"));
+    Check("source identity, a dev build of the same release with the same protocol: left to the build check", JoinChecks.HelloRefusal(false, 62, "0.69.2-dev.abcdef0", 62, "0.69.2", true) == null);
     foreach (ushort previous in new ushort[] { 40, 41, 42, 43, 44, 45 })
       Check("protocol 46 refuses previous wire " + previous, JoinChecks.HelloRefusal(false, previous, "same", 46, "same", true).Contains("protocol 46"));
     Check("protocol 46 admits matching peer", JoinChecks.HelloRefusal(false, 46, "same", 46, "same", true) == null);

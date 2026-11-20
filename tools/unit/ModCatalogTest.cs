@@ -127,6 +127,13 @@ static class ModCatalogTest
             Check("remove refuses backups", !ModFiles.Managed(dir, next + ".removed"));
         }
         finally { Directory.Delete(root, true); }
+        // every default an older RevaMP saved into the cfg reads today's address; other addresses stay
+        foreach (var old in ModCatalog.OldDefaultUrls)
+            Check("old default " + old + " reads today's address", ModCatalog.CatalogAddress(old) == ModCatalog.DefaultUrl);
+        Check("0.69.1's own default is among them", Array.IndexOf(ModCatalog.OldDefaultUrls, "https://raw.githubusercontent.com/Normal99/TLD-RevaMP/dev/packaging/mods.json") >= 0);
+        Check("today's default stays", ModCatalog.CatalogAddress(ModCatalog.DefaultUrl) == ModCatalog.DefaultUrl);
+        Check("a test catalog stays", ModCatalog.CatalogAddress("file:///C:/catalog/mods.json") == "file:///C:/catalog/mods.json");
+        Check("no address stays none", ModCatalog.CatalogAddress(null) == null);
         Console.WriteLine(fails == 0 ? "ALL PASS" : fails + " FAILED");
         return fails == 0 ? 0 : 1;
     }
