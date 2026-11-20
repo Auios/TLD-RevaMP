@@ -9,24 +9,23 @@ using UnityEngine.UI;
 
 namespace TLDRevamp.Net
 {
-    /// Like MpScreen, reuse the game's tapes, paper card, buttons and sounds from Save/Load.
+    /// The Mods screens: the list for browsing (ModsScreen.List.cs), and the required-mods screen (ModsScreen.Needed.cs)
+    /// on the game's Save/Load tapes, paper card, buttons and sounds, reused like MpScreen does.
     [HarmonyPatch]
     public static partial class ModsScreen
     {
-        private static GameObject _root, _settings, _confirm;
+        private static GameObject _root, _settings;
         private static menuhandler _builtFor;
-        private static TextMeshProUGUI _title, _count, _name, _version, _message, _question;
+        private static TextMeshProUGUI _title, _count, _name, _version, _message;
         private static readonly List<TextMeshProUGUI> Lines = new List<TextMeshProUGUI>();
-        /// A tape: the mod's name (bold) and version in its strip, the picture, and in the picture's bottom-right corner a
-        /// small dark label with the state (on, off, not installed, update) in the state's colour. Asked for 2026-11-11:
-        /// the name was small and nothing said the version or whether a mod was installed or on.
-        private sealed class Tile { internal GameObject Go; internal TextMeshProUGUI Name, Version, Info; internal Image Body; internal Button Action, Enable; internal GameObject Required; internal TextMeshProUGUI RequiredText; }
+        /// A tape on the required-mods screen: the mod's name (bold) and version in its strip, the host's requirement over
+        /// the picture, and Install / Enable buttons.
+        private sealed class Tile { internal GameObject Go; internal TextMeshProUGUI Name, Version; internal Button Action, Enable; internal GameObject Required; internal TextMeshProUGUI RequiredText; }
         private static readonly List<Tile> Tiles = new List<Tile>();
-        private static Button _install, _remove, _source, _refresh, _up, _down, _toggle;
-        private static List<ModCatalog.Mod> _items = new List<ModCatalog.Mod>();
+        private static Button _source, _refresh, _up, _down;
         private static int _page, _selected;
         private static float _refreshAt;
-        private static Action _yes, _no;            // what the question's Yes and No do (remove the selected mod; update or not)
+        private static Action _yes, _no;            // what the list's question's Yes and No do (remove a mod; update or not)
         private static bool _checked, _offer;       // the start-up update check: started, and its answer still to show
         public static bool IsOpen => _root != null && _root.activeSelf || ListOpen;
         internal static bool IsVisible => _root != null && _root.activeInHierarchy || _list != null && _list.activeInHierarchy;
@@ -45,8 +44,10 @@ namespace TLDRevamp.Net
             catch (Exception e) { Plugin.Log.LogError("ModsScreen: " + e); Close(); }
         }
 
-        /// The tapes: the required-mods screen (OpenNeeded).
-        private static void OpenTapes(GameObject settings, bool fetch)
+        /// The tapes: the required-mods screen (OpenNeeded sets _needed and refreshes). The tapes once browsed the mods
+        /// too; the list does that now, and their browse code went (it ran once here before OpenNeeded set _needed: a
+        /// wasted pass over every mod's files, and an error in it fell back to the bare refusal).
+        private static void OpenTapes()
         {
             try
             {
@@ -54,11 +55,9 @@ namespace TLDRevamp.Net
                 MpScreen.Close();
                 if (_list != null) _list.SetActive(false);
                 if (_root == null || _builtFor != menuhandler.s) Build(menuhandler.s);
-                _settings = settings; if (_settings != null) _settings.SetActive(false);
+                _settings = null;
                 _root.transform.SetAsLastSibling(); _root.SetActive(true);
-                _page = 0; _selected = 0; _confirm.SetActive(false);
-                if (fetch) { ModCatalog.Refresh(); _offer = false; }   // opened by hand: the start-up question is not needed any more
-                Refresh();
+                _page = 0; _selected = 0;
             }
             catch (Exception e) { Plugin.Log.LogError("ModsScreen: " + e); Close(); }
         }
@@ -101,11 +100,10 @@ namespace TLDRevamp.Net
         internal static void Answer(bool yes)
         {
             if (Question == null) return;
-            if (ListOpen) _dialog.SetActive(false); else _confirm.SetActive(false);
+            _dialog.SetActive(false);
             (yes ? _yes : _no)?.Invoke();
         }
-        internal static string Question => ListOpen ? (_dialog != null && _dialog.activeSelf ? _dialogText.text : null)
-            : _confirm != null && _confirm.activeInHierarchy ? _question.text : null;
+        internal static string Question => ListOpen && _dialog != null && _dialog.activeSelf ? _dialogText.text : null;
 
         /// Every catalog mod with a newer catalog version than the installed one; byHand gets the ones installed by hand.
         internal static List<KeyValuePair<ModCatalog.Mod, ModCatalog.Release>> Updates(List<string> byHand)
@@ -128,10 +126,10 @@ namespace TLDRevamp.Net
             return list;
         }
 
+        /// A question on the list (StartupCheck opens it first; nothing is asked if it could not open).
         private static void Ask(string question, Action yes, Action no = null)
         {
-            if (ListOpen) { AskList(question, yes, no); return; }
-            _question.text = Esc(question); _yes = yes; _no = no ?? Refresh; _confirm.SetActive(true); Refresh();
+            if (ListOpen) AskList(question, yes, no);
         }
 
         public static void Close()
@@ -183,7 +181,7 @@ namespace TLDRevamp.Net
             foreach (var b in _root.GetComponentsInChildren<Button>(true)) b.onClick = new Button.ButtonClickedEvent();
             var t = _root.transform;
             foreach (var n in new[] { "TextLoad", "TextSaved", "TextSaveOverwrite", "TextLoadLast", "TextLoad (1)", "TMP_IF_ScreenShotPath",
-                "TMP_IF_SaveName", "ButtonFastUp", "ButtonFastDown", "ButtonJumpUp", "ButtonJumpDown", "ButtonSetActive" })
+                "TMP_IF_SaveName", "ButtonFastUp", "ButtonFastDown", "ButtonJumpUp", "ButtonJumpDown", "ButtonSetActive", "ButtonSave", "ButtonDelete", "TextDelete" })
             { var o = t.Find(n); if (o != null) o.gameObject.SetActive(false); }
             _title = Text(t, "PageText"); _count = Text(t, "SaveCountText");
             var card = t.Find("InfoBackGround");
@@ -203,26 +201,12 @@ namespace TLDRevamp.Net
             var mr = (RectTransform)_message.transform; mr.anchoredPosition = new Vector2(439, 603); mr.sizeDelta = new Vector2(501, 140);   // up to the card: room for an update summary
             _message.enableAutoSizing = true; _message.fontSizeMax = 32; _message.fontSizeMin = 16;
             _message.alignment = TextAlignmentOptions.Center; _message.richText = false; _message.enableWordWrapping = true;
-            _install = Button(t, "ButtonSave", Install);
-            _remove = Button(t, "ButtonDelete", AskRemove, true); Label(_remove, "Remove");
-            _source = Button(t, "ButtonLoad", Source); Label(_source, "Source");
-            _refresh = Button(t, "ButtonLoadLast", () => { if (_needed != null) { InstallNeededAll(); return; } _confirm.SetActive(false); ModCatalog.Refresh(); Refresh(); }); Label(_refresh, "Refresh");
-            _toggle = Button(t, "ButtonSetActive", Toggle); Label(_toggle, "Disable");
+            var action = Button(t, "ButtonSave", () => { });   // hidden: only the template of the tapes' Install / Enable buttons
+            _source = Button(t, "ButtonLoad", CopyNeeded);            // "Copy list" (RefreshNeeded labels it)
+            _refresh = Button(t, "ButtonLoadLast", InstallNeededAll); // "Install all"
             Label(Button(t, "ButtonBack", Close), "Close");
             _up = Button(t, "ButtonUp", () => { _page--; Refresh(); }, true);
             _down = Button(t, "ButtonDown", () => { _page++; Refresh(); }, true);
-            _confirm = t.Find("TextDelete").gameObject; _question = _confirm.GetComponent<TextMeshProUGUI>();
-            _question.enableAutoSizing = true; _question.fontSizeMax = _question.fontSize; _question.fontSizeMin = 16; _question.enableWordWrapping = true;
-            // room for the update question (StartupCheck): the box grows left and up over the free space above Yes/No,
-            // which stay where they are; the text sits on the buttons
-            var qr = (RectTransform)_question.transform; float grow = Math.Max(0f, 500f - qr.sizeDelta.x);
-            var kids = new List<KeyValuePair<Transform, Vector3>>();
-            foreach (Transform c in qr) kids.Add(new KeyValuePair<Transform, Vector3>(c, c.localPosition));
-            qr.anchoredPosition -= new Vector2(grow, 0f); qr.sizeDelta = new Vector2(qr.sizeDelta.x + grow, Math.Max(qr.sizeDelta.y, 150f));
-            foreach (var k in kids) k.Key.localPosition = k.Value + new Vector3(grow, 0f, 0f);
-            _question.alignment = TextAlignmentOptions.BottomRight;
-            Button(_confirm.transform, "ButtonDeleteYes", () => { _confirm.SetActive(false); _yes?.Invoke(); });
-            Button(_confirm.transform, "ButtonDeleteNo", () => { _confirm.SetActive(false); _no?.Invoke(); });
             var tapes = new List<Transform>();
             for (int i = 0; i < t.childCount; i++) if (t.GetChild(i).name.StartsWith("ButtonFile")) tapes.Add(t.GetChild(i));
             tapes.Sort((a, b) =>
@@ -243,21 +227,8 @@ namespace TLDRevamp.Net
                 tile.Version.alignment = TextAlignmentOptions.Right; tile.Version.overflowMode = TextOverflowModes.Overflow;
                 tile.Version.margin = new Vector4(tile.Version.margin.x, tile.Version.margin.y, tile.Version.margin.z + 10f, tile.Version.margin.w);
                 tile.Name.margin = new Vector4(tile.Name.margin.x, tile.Name.margin.y, 120f, tile.Name.margin.w);
-                // the state: a small dark label in the picture's bottom-right corner (the visible window, Mask2: the picture
-                // is bigger), as wide as its text
-                var band = new GameObject("RevampModState", typeof(RectTransform)); band.transform.SetParent(tp.Find("Mask2"), false);
-                var brt = (RectTransform)band.transform; brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 0f);
-                brt.anchoredPosition = new Vector2(-8f, 8f);
-                tile.Body = band.AddComponent<Image>(); tile.Body.raycastTarget = false; tile.Body.color = new Color(0.06f, 0.05f, 0.04f, 0.85f);
-                var layout = band.AddComponent<HorizontalLayoutGroup>(); layout.padding = new RectOffset(10, 10, 3, 3);
-                layout.childControlWidth = layout.childControlHeight = true; layout.childForceExpandWidth = layout.childForceExpandHeight = false;
-                var fit = band.AddComponent<ContentSizeFitter>(); fit.horizontalFit = fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-                var go = new GameObject("RevampModStateText", typeof(RectTransform)); go.transform.SetParent(band.transform, false);
-                tile.Info = go.AddComponent<TextMeshProUGUI>(); tile.Info.font = tile.Name.font; tile.Info.raycastTarget = false;
-                tile.Info.alignment = TextAlignmentOptions.Right; tile.Info.enableWordWrapping = false; tile.Info.richText = true;
-                tile.Info.enableAutoSizing = false; tile.Info.fontSize = 24f; tile.Info.color = Color.white;
-                tp.GetComponent<Button>().onClick.AddListener(() => { _selected = _page * Tiles.Count + i; _confirm.SetActive(false); Refresh(); });
-                tile.Action = UnityEngine.Object.Instantiate(_install, tp);
+                tp.GetComponent<Button>().onClick.AddListener(() => { _selected = _page * Tiles.Count + i; Refresh(); });
+                tile.Action = UnityEngine.Object.Instantiate(action, tp);
                 tile.Action.name = "NeededModAction";
                 var actionText = tile.Action.GetComponentInChildren<TextMeshProUGUI>(true);
                 actionText.enableAutoSizing = true; actionText.fontSizeMax = 24; actionText.fontSizeMin = 14;
@@ -293,8 +264,6 @@ namespace TLDRevamp.Net
             }
         }
 
-        private static ModCatalog.Mod Selected() => _selected >= 0 && _selected < _items.Count ? _items[_selected] : null;
-
         internal static string Installed(ModCatalog.Mod m, out bool manual)
         {
             manual = false; string newest = null;
@@ -328,71 +297,15 @@ namespace TLDRevamp.Net
         private static void Refresh()
         {
             if (ListOpen) { RefreshList(); return; }
-            if (_needed != null) { RefreshNeeded(); return; }
-            foreach (var tile in Tiles) { tile.Action.gameObject.SetActive(false); tile.Enable.gameObject.SetActive(false); tile.Required.SetActive(false); }
-            Label(_source, "Source"); Label(_refresh, "Refresh");
-            _refresh.gameObject.SetActive(true);
-            _refreshAt = Time.unscaledTime + 0.25f;
-            _items = ModBrowser.Items();
-            var mods = _items;
-            int count = mods?.Count ?? 0, pages = Math.Max(1, (count + Tiles.Count - 1) / Math.Max(1, Tiles.Count));
-            _page = Math.Max(0, Math.Min(_page, pages - 1));
-            _title.text = "Mods  " + (_page + 1) + "/" + pages; _count.text = count + " mods";
-            for (int i = 0; i < Tiles.Count; i++)
-            {
-                int index = _page * Tiles.Count + i; var tile = Tiles[i]; tile.Go.SetActive(index < count);
-                if (index >= count) continue;
-                var item = mods[index];
-                TileState(item, out string state, out string version, out Color colour);
-                bool selected = index == _selected;
-                tile.Name.text = Esc(item.Name ?? item.Id);
-                tile.Name.color = selected ? new Color32(0xC8, 0xFF, 0xC8, 0xFF) : Color.white;
-                tile.Version.text = Esc(version); tile.Version.color = tile.Name.color;
-                tile.Info.text = "<b><color=#" + ColorUtility.ToHtmlStringRGB(colour) + ">" + Esc(state) + "</color></b>";
-            }
-            _up.gameObject.SetActive(_page > 0); _down.gameObject.SetActive(_page < pages - 1);
-            var m = Selected();
-            _install.gameObject.SetActive(m != null || ModCatalog.Busy); _remove.gameObject.SetActive(false); _source.gameObject.SetActive(m != null && ModCatalog.SourceUrl(m.Source));
-            _toggle.gameObject.SetActive(false);
-            _refresh.interactable = !ModCatalog.Busy;
-            Label(_install, ModCatalog.Busy ? "Cancel" : "Install"); _install.interactable = ModCatalog.Busy;
-            _name.text = m != null ? Esc(m.Name ?? m.Id) : "Mod catalog"; _version.text = "";
-            foreach (var line in Lines) line.text = "";
-            if (m != null)
-            {
-                var v = ModCatalog.Offered(m); string reason = ModCatalog.Reason(m, v);
-                string installed = Installed(m, out bool manual);
-                bool update = installed != null && Newer(v.Version, installed);
-                _version.text = Esc(v.Version);
-                Lines[0].text = "By " + (m.Author ?? "unknown") + "  |  " + ModInstall.Size(v.Size);
-                Lines[1].text = m.Description ?? "Single-file mod.";
-                Lines[2].text = m.Source ?? "No source link provided.";
-                Lines[3].text = "Installed version: " + (installed ?? "none");
-                bool core = ModActivation.Core(m.Id);
-                string state = core ? "Protected core" : ModBrowser.State(m.Id);
-                Lines[4].text = core ? state : manual ? "Enabled (installed by hand; manage files manually)." : state + (update ? "; update available." : "");
-                if (!ModCatalog.Busy)
-                {
-                    Label(_install, update ? "Update" : "Install");
-                    _install.interactable = !core && !manual && reason == null && (installed == null || update);
-                }
-                _remove.gameObject.SetActive(!core && !manual && !_confirm.activeSelf && ModInstall.ManagedFiles(m.Id).Count > 0);
-                _remove.interactable = !ModCatalog.Busy;
-                _toggle.gameObject.SetActive(!core && !manual && !_confirm.activeSelf && installed != null);
-                _toggle.interactable = !ModCatalog.Busy;
-                if (!core) Label(_toggle, ModActivation.Desired(ModInstall.InstallDir, m.Id) == "disabled" ? "Enable" : "Disable");
-                if (reason != null && !manual) Lines[1].text += " " + reason;
-            }
-            _message.text = ModCatalog.Progress + "\nEnable, disable and remove take effect at next start. Updates keep disabled mods disabled.";
-            _message.gameObject.SetActive(_message.text.Length > 0);
+            if (_needed != null) RefreshNeeded();
         }
 
-        // the state's text colour on the tape's dark band
+        // the state colours (TileState), drawn darker on the list's paper (OnPaper)
         static readonly Color On = new Color32(0x7C, 0xFF, 0x7C, 0xFF), Off = new Color32(0xFF, 0xB3, 0x47, 0xFF),
             Update = new Color32(0xFF, 0xE1, 0x4D, 0xFF), Absent = new Color32(0xE6, 0xE6, 0xE6, 0xFF), Unavailable = new Color32(0x9A, 0x9A, 0x9A, 0xFF),
             Removing = new Color32(0xFF, 0x70, 0x70, 0xFF);
 
-        /// One tape's state line, version line and colour.
+        /// One mod's state line, version line and colour (the list's rows).
         private static void TileState(ModCatalog.Mod m, out string state, out string version, out Color colour)
         {
             var offered = ModCatalog.Offered(m);
@@ -413,53 +326,6 @@ namespace TLDRevamp.Net
             bool off = status.StartsWith("Disabled");
             state = (off ? "Off" : "On") + (pending ? " at next start" : "") + (update ? " · update to v" + available : "");
             colour = update ? Update : off ? Off : On;
-        }
-
-        private static void Install()
-        {
-            if (_needed != null) { NeededAction(_selected); return; }
-            if (ModCatalog.Busy) ModCatalog.Cancel();
-            else
-            {
-                var m = Selected();
-                if (m != null)
-                {
-                    string installed = Installed(m, out bool manual);
-                    var v = ModCatalog.Offered(m);
-                    if (ModActivation.Core(m.Id) || manual || installed != null && !Newer(v.Version, installed)) return;
-                    ModCatalog.Download(m, v);
-                }
-            }
-            _confirm.SetActive(false); Refresh();
-        }
-        private static void Source() { if (_needed != null) { CopyNeeded(); return; } var m = Selected(); if (m != null && ModCatalog.SourceUrl(m.Source)) Application.OpenURL(m.Source); }
-        private static void Toggle()
-        {
-            var m = Selected(); if (ModCatalog.Busy || m == null) return;
-            try
-            {
-                ModBrowser.Action(m.Id, ModActivation.Desired(ModInstall.InstallDir, m.Id) == "disabled" ? "enabled" : "disabled");
-                ModCatalog.Message = ModBrowser.State(m.Id) + ".";
-            }
-            catch (Exception e) { ModCatalog.Message = "Could not change mod: " + e.Message; }
-            Refresh();
-        }
-        private static void AskRemove()
-        {
-            if (ModCatalog.Busy || Selected() == null) return;
-            Ask("Remove " + Selected().Name + " at the next start?", Remove);
-        }
-        private static void Remove()
-        {
-            var m = Selected(); if (ModCatalog.Busy || m == null) return;
-            Installed(m, out bool manual); if (manual) return;
-            try
-            {
-                ModBrowser.Action(m.Id, "removed");
-                ModCatalog.Message = "Remove " + m.Name + " at next start.";
-            }
-            catch (Exception e) { ModCatalog.Message = "Could not remove: " + e.Message; }
-            Refresh();
         }
     }
 }

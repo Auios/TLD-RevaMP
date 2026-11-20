@@ -1279,7 +1279,6 @@ namespace TLDRevamp.Net
         private void MessageReject(NetReader r)
         {
             RejectReason = r.Str(); RejectCode = r.Remaining > 0 ? r.U8() : Protocol.RejectOther;
-            if (ModBrowser.HasDisabled()) RejectReason += " You have disabled mods installed: enable the required mods in the mod browser and restart before joining again.";
         }
 
         private void MessageChat(NetReader r)

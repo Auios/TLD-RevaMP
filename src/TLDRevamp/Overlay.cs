@@ -64,7 +64,9 @@ namespace TLDRevamp
                 if (Line("perf", "fps")) lines.Add($"{Plugin.Version} ({Plugin.CommitLabel})  {_t.Fps:F0} fps - {_t.AvgFps:F0} avg - {low1:F0} 1% low - {low01:F0} 0.1% low");
                 if (Line("perf", "times")) lines.Add($"p50  {p50:F1} ms     p99  {_t.Percentile(.99f):F1} ms");
                 if (Line("perf", "stats")) lines.Add($"Hitches  {_t.Hitches}     GC  {_t.GcCollections}     Heap  {_t.ManagedMB} MB");
-                if (Line("perf", "keys")) lines.Add($"{Plugin.KeyName(Plugin.KeyOverlay)} hide · {Plugin.KeyName(Plugin.KeyReport)} report");
+                if (Line("perf", "keys")) lines.Add(PlayerEdition.Blocked.Contains(Plugin.KeyReport)   // a player release: the bug report, not the developer's debug report
+                    ? $"{Plugin.KeyName(Plugin.KeyOverlay)} hide · {Plugin.KeyName(Plugin.KeyRepro)} bug report"
+                    : $"{Plugin.KeyName(Plugin.KeyOverlay)} hide · {Plugin.KeyName(Plugin.KeyReport)} report");
                 string net = null; try { net = Net.Mp.NetStatsLine(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("Overlay.NetStats", quietError); }
                 if (net != null)
                 {

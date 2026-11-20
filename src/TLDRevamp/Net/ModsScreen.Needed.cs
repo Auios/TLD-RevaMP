@@ -20,13 +20,17 @@ namespace TLDRevamp.Net
         {
             if (DataFromMenuScript.s != null && !DataFromMenuScript.s.mainmenu && mainscript.s != null && !mainscript.s.pauseMenuOpen)
                 mainscript.s.OpenMenuWithEscape();
-            OpenTapes(null, false);
+            OpenTapes();
             if (!IsOpen) return false;
-            _needed = list; _installQueue.Clear(); _installedAtOpen = ModInstall.Installed;
-            // Refresh even a cached list: a host may already use a release just added to the live catalog.
-            ModCatalog.Refresh(); _checking = ModCatalog.Busy;
-            Refresh();
-            return true;
+            try
+            {
+                _needed = list; _installQueue.Clear(); _installedAtOpen = ModInstall.Installed;
+                // Refresh even a cached list: a host may already use a release just added to the live catalog.
+                ModCatalog.Refresh(); _checking = ModCatalog.Busy;
+                Refresh();
+                return true;
+            }
+            catch (Exception e) { Plugin.Log.LogError("ModsScreen: " + e); Close(); return false; }   // the join screen shows the refusal instead
         }
 
         internal static ModsNeeded.Row NeededRow(ModsNeeded.Entry need)
@@ -84,7 +88,7 @@ namespace TLDRevamp.Net
                 tile.Name.color = Color.white;
                 tile.Required.SetActive(true); tile.RequiredText.text = row.Text; tile.RequiredText.color = Color.white;
                 tile.Name.enableAutoSizing = true; tile.Name.fontSizeMin = 16;
-                tile.Version.text = at < _needed.Mods.Count ? Esc(_needed.Mods[at].Version) : ""; tile.Info.text = "";
+                tile.Version.text = at < _needed.Mods.Count ? Esc(_needed.Mods[at].Version) : "";
                 tile.Action.gameObject.SetActive(row.Do != ModsNeeded.Action.None);
                 Label(tile.Action, row.Do == ModsNeeded.Action.Enable ? "Enable" : "Install");
                 tile.Action.interactable = !ModCatalog.Busy && _installQueue.Count == 0;
@@ -92,11 +96,9 @@ namespace TLDRevamp.Net
                 tile.Enable.interactable = tile.Action.interactable;
             }
             _up.gameObject.SetActive(_page > 0); _down.gameObject.SetActive(_page < pages - 1);
-            _remove.gameObject.SetActive(false); _toggle.gameObject.SetActive(false); _confirm.SetActive(false);
             _source.gameObject.SetActive(true); Label(_source, "Copy list"); _source.interactable = true;
             _refresh.gameObject.SetActive(true); Label(_refresh, "Install all");
             _refresh.interactable = !ModCatalog.Busy && NeededRows.Exists(r => r.Do == ModsNeeded.Action.Install);
-            _install.gameObject.SetActive(false);
             _name.text = "Required mods"; _version.text = "";
             foreach (var line in Lines) line.text = "";
             if (_selected >= 0 && _selected < count)

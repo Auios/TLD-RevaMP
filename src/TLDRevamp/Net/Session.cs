@@ -313,7 +313,12 @@ namespace TLDRevamp.Net
             var needed = c.NeededMods;
             Mp.Stop();
             if (inHostWorld) TestSafety.LeavingHostWorld = true;   // still the host's world until the menu is in
-            if (needed == null || !ModsScreen.OpenNeeded(needed)) Show(1, "", EndReason);
+            // the disabled-mods hint only for a refusal about mods whose screen could not open (it was on every refusal:
+            // a wrong password read "... You have disabled mods installed")
+            if (needed == null || !ModsScreen.OpenNeeded(needed))
+                Show(1, "", needed != null && ModBrowser.HasDisabled()
+                    ? EndReason + " You have disabled mods installed: enable the required mods in the mod list and restart before joining again."
+                    : EndReason);
             // the world here is the host's (never saved): back to the menu, as when leaving
             if (inHostWorld) { ShowInMenu = true; ShowInMenuNotOn = menuhandler.s; LeaveToMenu(); }
         }

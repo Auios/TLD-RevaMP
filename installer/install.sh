@@ -266,12 +266,14 @@ if [ "$ACTION" = repair ]; then
   # BepInEx rebuilds its cache at the next start; a stale one can keep it from loading plugins.
   if [ -d "$GAME/BepInEx/cache" ]; then rm -rf "${GAME:?}/BepInEx/cache"; say "  cleared   BepInEx/cache"; else say "  no BepInEx/cache to clear"; fi
   # A second TLDRevamp.dll anywhere else under plugins (an older version unzipped into the wrong folder) makes BepInEx
-  # load two copies. Those are moved into the backup folder, not deleted.
+  # load two copies. Those are moved into the backup folder, not deleted. Only RevaMP's own file names: mods from the
+  # mod list (BepInEx/plugins/TLDRevampMods/tldrevamp.headunit-0.2.1.dll) start the same way.
   found=0
   while IFS= read -r f; do
     found=1; mkdir -p "$(dirname "$GAME/$STATE/backup/$f")"; mv "$GAME/$f" "$GAME/$STATE/backup/$f"
     say "  moved     $f   (a second copy of RevaMP; now in $STATE/backup)"
-  done < <(cd "$GAME" && find BepInEx/plugins -iname 'TLDRevamp*.dll' -not -path 'BepInEx/plugins/TLDRevamp/*' 2>/dev/null)
+  done < <(cd "$GAME" && find BepInEx/plugins \( -iname 'TLDRevamp.dll' -o -iname 'TLDRevamp.Multiplayer.dll' -o -iname 'TLDRevamp.Dev.dll' \) \
+             -not -path 'BepInEx/plugins/TLDRevamp/*' 2>/dev/null)
   [ "$found" = 1 ] || say "  no stray copies of RevaMP in BepInEx/plugins"
 fi
 
@@ -283,7 +285,7 @@ if [ -f "$REG" ]; then
   fi
   set_override
   say "Set $OVERRIDE_LINE in $REG"
-  say "No launch option is needed. (If the game ever starts without the RevaMP overlay, add the launch option below.)"
+  say "No launch option is needed. (If the game ever starts without the Mods button on its main menu, add the launch option below.)"
 else
   say "The game's Proton prefix doesn't exist yet (the game has never been started). Either start the game once, close"
   say "it, and run  bash install.sh --repair  to set the override there, or add this launch option yourself:"
@@ -292,5 +294,5 @@ say "  Steam > The Long Drive > Properties > General > Launch options:   WINEDLL
 
 if [ "$ACTION" = repair ]; then step "Done: TLD RevaMP $REVAMP_VERSION is repaired"; else step "Done: TLD RevaMP $REVAMP_VERSION is installed"; fi
 say "You need the game's beta branch: Steam > The Long Drive > Properties > Betas > beta."
-say "Start the game: the top-left overlay shows \"TLD Revamp $REVAMP_VERSION\"."
+say "Start the game: its main menu has a Mods button between Settings and Exit. Page Up shows the overlay with the version ($REVAMP_VERSION)."
 say "If something is off, run  bash install.sh  again and choose Repair. Uninstall is in the same menu."

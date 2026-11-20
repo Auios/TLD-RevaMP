@@ -207,7 +207,8 @@
           "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/tvbrowser-v0.2.0/TvBrowser-0.2.0.zip",
           "file": "BepInEx/plugins/TvBrowser/TvBrowser.dll",
           "sha256": "8aab86fbdcbd08db3d0f35833718fd16589f59a96385db9259abf1531232fc95",
-          "size": 864405
+          "size": 864405,
+          "revamp": "0.69.2"
         },
         {
           "version": "0.1.0",
@@ -215,7 +216,7 @@
           "file": "BepInEx/plugins/TvBrowser/TvBrowser.dll",
           "sha256": "25d7cdac49096ad8ee5add77a0952d42eb335ad8f313955cd2c09b8b3698b671",
           "size": 42412,
-          "revamp": "0.69.1"
+          "revamp": "0.69.2"
         }
       ]
     },

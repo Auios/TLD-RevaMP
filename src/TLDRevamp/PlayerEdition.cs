@@ -14,7 +14,7 @@ namespace TLDRevamp
     ///    multiplayer screen, performance overlay (an FPS counter players use), cinematic camera and replays stay;
     ///  - every debug overlay off (the performance overlay until its key is pressed);
     ///  - no debug bridge, and no background health, item and part watches with their automatic recordings (a bug
-    ///    report by hand works as before).
+    ///    report by hand works as before, and stays on the player's computer: no sharing of marks and reports).
     /// A dev or test build (no RevampEdition) is unchanged.
     public static class PlayerEdition
     {
@@ -34,11 +34,14 @@ namespace TLDRevamp
         /// The developer keys' entries: Plugin.KeyDown never fires them (filled by Apply).
         internal static readonly HashSet<ConfigEntry<KeyboardShortcut>> Blocked = new HashSet<ConfigEntry<KeyboardShortcut>>();
 
-        /// Debugging settings switched off (Settings keys; Choice settings take their first option, "Off").
+        /// Debugging settings switched off (Settings keys; Choice settings take their first option, "Off"). Sharing marks
+        /// and reports with the other players, and asking them for theirs, are off too: their switches are in the hidden
+        /// Debugging section, so a player could not see or change them, and a "shareReports=1" saved by 0.69.1 (then
+        /// "Send my reports to the host", host only) must not carry over into sharing with every player.
         internal static readonly string[] DebugSettingsOff =
         {
             "debugV2", "debugView", "overlay", "netPackets", "itemTraffic", "ownershipOverlay", "ownerGhost", "ownerGhostAll",
-            "linkView", "objectComparison", "objectEvents",
+            "linkView", "objectComparison", "objectEvents", "shareReports", "askReports",
         };
 
         /// Plugin.Awake, after the settings and keys are loaded.

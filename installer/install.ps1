@@ -242,10 +242,12 @@ try {
         $cache = In-Game "BepInEx/cache"
         if (Test-Path -LiteralPath $cache) { Remove-Item -LiteralPath $cache -Recurse -Force; Say "  cleared   BepInEx\cache" } else { Say "  no BepInEx\cache to clear" }
         # A second TLDRevamp.dll anywhere else under plugins (an older version unzipped into the wrong folder) makes
-        # BepInEx load two copies. Those are moved into the backup folder, not deleted.
+        # BepInEx load two copies. Those are moved into the backup folder, not deleted. Only RevaMP's own file names:
+        # mods from the mod list (BepInEx/plugins/TLDRevampMods/tldrevamp.headunit-0.2.1.dll) start the same way.
         $ours = In-Game "BepInEx/plugins/TLDRevamp"
+        $names = @("TLDRevamp.dll", "TLDRevamp.Multiplayer.dll", "TLDRevamp.Dev.dll")
         $strays = @(Get-ChildItem -LiteralPath (In-Game "BepInEx/plugins") -Recurse -File -Filter "TLDRevamp*.dll" -ErrorAction SilentlyContinue |
-                    Where-Object { -not $_.FullName.StartsWith($ours + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) })
+                    Where-Object { $names -contains $_.Name -and -not $_.FullName.StartsWith($ours + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) })
         foreach ($s in $strays) {
             $rel = $s.FullName.Substring($GameDir.Length + 1) -replace '\\', '/'
             Ensure-Parent (In-Backup $rel); Move-Item -LiteralPath $s.FullName -Destination (In-Backup $rel) -Force
@@ -259,6 +261,6 @@ try {
 
 if ($Repair) { Step "Done: TLD RevaMP $REVAMP_VERSION is repaired" } else { Step "Done: TLD RevaMP $REVAMP_VERSION is installed" }
 Say "You need the game's beta branch: Steam > The Long Drive > Properties > Betas > beta."
-Say "Start the game: the top-left overlay shows `"TLD Revamp $REVAMP_VERSION`"."
+Say "Start the game: its main menu has a Mods button between Settings and Exit. Page Up shows the overlay with the version ($REVAMP_VERSION)."
 Say "If something is off, run install.ps1 again and choose Repair. Uninstall is in the same menu."
 Done

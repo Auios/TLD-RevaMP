@@ -36,10 +36,13 @@ namespace TLDRevamp.Net
             Directory.CreateDirectory(dir);
             if ((File.GetAttributes(dir) & FileAttributes.ReparsePoint) != 0) throw new IOException("Managed mod folder is a link.");
             string target = Target(dir, id, version), tmp = target + ".part";
-            // CreateNew refuses stale files and links. No unverified bytes ever reach this method.
-            using (var s = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write)) s.Write(bytes, 0, bytes.Length);
+            // A .part left by a write that failed or was cut off (disk full, the game killed) refused every later install
+            // of this version: a plain file there is only ever ours, so it goes. CreateNew still refuses a link, and the
+            // write is inside the try, so a failed write leaves nothing behind. No unverified bytes ever reach this method.
+            if (File.Exists(tmp) && (File.GetAttributes(tmp) & FileAttributes.ReparsePoint) == 0) File.Delete(tmp);
             try
             {
+                using (var s = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write)) s.Write(bytes, 0, bytes.Length);
                 if (File.Exists(target)) SetAside(target, ".replaced");
                 File.Move(tmp, target);
             }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using HarmonyLib;
 using TLDRevamp.Multiplayer;
 using TMPro;
 using UnityEngine;
@@ -33,6 +34,12 @@ namespace TLDRevamp.Net
         private static TextMeshProUGUI _paperStyle, _whiteStyle, _orangeStyle;
 
         internal static bool ListOpen => _list != null && _list.activeSelf;
+
+        /// Typing in the search box: the game takes no input (its own check for its text fields, as for the chat). The
+        /// copied Save-screen field is not one the game knows, so its T (the Multiplayer screen) closed the list and
+        /// cancelled a download in the middle of typing "mount", and the voice key talked.
+        [HarmonyPatch(typeof(mainscript), nameof(mainscript.SomeInputSelected)), HarmonyPostfix]
+        private static void SearchTyping(ref bool __result) { if (_search != null && ListOpen && _search.isFocused) __result = true; }
 
         static readonly Color Paper = new Color32(0xFF, 0xF3, 0xD0, 0xFF), Ink = new Color32(0x28, 0x28, 0x28, 0xFF),
             Faded = new Color32(0x6E, 0x66, 0x50, 0xFF), Body = new Color32(0x3C, 0x3C, 0x3C, 0xFF),
@@ -425,16 +432,33 @@ namespace TLDRevamp.Net
             catch (Exception e) { Diagnostics.QuietErrors.Once("ModsScreen.IsInstalled", e); return false; }
         }
 
+        private static string _quick;          // what the rows depend on besides the disk (RefreshList)
+        private static object _quickCatalog;
+        private static float _diskAt;
+
         private static void RefreshList()
         {
             _refreshAt = Time.unscaledTime + 0.25f;
             if (_list == null) return;
             ModStatsFetch.Begin(false); ModStatsFetch.Poll();
-            var all = ModBrowser.Items();
             var sort = _sort != null ? (ModList.Sort)Mathf.Clamp(_sort.value, 0, 2) : ModList.Sort.Downloads;
+            // Each row reads its mod's files (installed, enabled, pending): some twenty directory listings a mod, which
+            // four times a second could stutter the pause menu in a session (review, 2026-11-20). The rows are read
+            // again only when something changed - a button (it clears _shown), the search, tab or sort, a download
+            // starting or ending, the catalog or the download numbers arriving - or every 2 s for changes made outside
+            // the list. The message under the list (the download's progress) stays live.
+            string quick = new StringBuilder().Append(_installedTab).Append('|').Append(_search?.text).Append('|').Append(sort).Append('|')
+                .Append(ModStatsFetch.Version).Append('|').Append(ModCatalog.Busy).Append('|').Append(ModCatalog.DownloadingId).Append('|')
+                .Append(ModCatalog.CatalogUnavailable).ToString();
+            if (_shown != null && quick == _quick && ReferenceEquals(_quickCatalog, ModCatalog.Current) && Time.unscaledTime < _diskAt)
+            { ListMessage(); return; }
+            _quick = quick; _quickCatalog = ModCatalog.Current; _diskAt = Time.unscaledTime + 2f;
+            var all = ModBrowser.Items();
+            var known = new Dictionary<ModCatalog.Mod, bool>();   // each mod's files read once per refresh, not per use
+            bool Has(ModCatalog.Mod m) { if (!known.TryGetValue(m, out bool on)) known[m] = on = IsInstalled(m); return on; }
             int installedCount = 0;
-            foreach (var m in all) if (IsInstalled(m)) installedCount++;
-            var shown = ModList.View(all, _search != null ? _search.text : "", _installedTab, IsInstalled, sort, ModStatsFetch.Stats);
+            foreach (var m in all) if (Has(m)) installedCount++;
+            var shown = ModList.View(all, _search != null ? _search.text : "", _installedTab, Has, sort, ModStatsFetch.Stats);
 
             var states = new List<KeyValuePair<ModCatalog.Mod, RowState>>();
             var key = new StringBuilder().Append(_installedTab).Append('|').Append(_search?.text).Append('|').Append(sort).Append('|').Append(ModStatsFetch.Version).Append('|').Append(ModCatalog.Busy);
@@ -461,6 +485,11 @@ namespace TLDRevamp.Net
             _listCount.text = shown.Count + " of " + all.Count + " mods";
             Tab(_tabAll, "All mods", !_installedTab);
             Tab(_tabInstalled, "Installed (" + installedCount + ")", _installedTab);
+            ListMessage();
+        }
+
+        private static void ListMessage()
+        {
             _listRefresh.interactable = !ModCatalog.Busy;
             string catalog = ModCatalog.CatalogUnavailable ? "The mod list could not be reached. " : "";
             // the reminder only when the message doesn't already say it ("Disabled (takes effect at next start)")

@@ -94,6 +94,10 @@ static class ModActivationTest
                 Check("core or unsafe id refused: " + core, Refuses(() => ModActivation.Queue(dir, core, "disabled")) && Refuses(() => ModFiles.Install(dir, core, "1.0", Bytes, Array.Empty<string>())));
             string coreFile = Path.Combine(dir, "TLDRevamp.dll"); File.WriteAllBytes(coreFile, Bytes);
             Check("update cannot set aside a core DLL passed as an old copy", Refuses(() => ModFiles.Install(dir, "other.mod", "1.0", Bytes, new[] { coreFile })) && File.ReadAllBytes(coreFile).SequenceEqual(Bytes));
+            // a .part left by a failed or cut-off write (disk full, the game killed) no longer blocks that version's install
+            string stale = ModFiles.Target(dir, "stale.mod", "1.0") + ".part"; File.WriteAllBytes(stale, new byte[] { 1, 2 });
+            Check("a stale .part does not block the install", ModFiles.Install(dir, "stale.mod", "1.0", Bytes, Array.Empty<string>()) == null &&
+                File.ReadAllBytes(ModFiles.Target(dir, "stale.mod", "1.0")).SequenceEqual(Bytes) && !File.Exists(stale));
             // A conflicting destination must preserve both copies and its journal for manual recovery.
             string other = "conflict.mod"; string active = ModFiles.Target(dir, other, "1.0"); File.WriteAllBytes(active, Bytes);
             ModActivation.Queue(dir, other, "disabled"); string conflict = Path.Combine(ModActivation.Folder(dir, other), Path.GetFileName(active)); File.WriteAllBytes(conflict, new byte[] { 9 });

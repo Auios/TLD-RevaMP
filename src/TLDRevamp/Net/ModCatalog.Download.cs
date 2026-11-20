@@ -42,6 +42,7 @@ namespace TLDRevamp.Net
             // clearing it first showed only the installed mods ("Mods 1/1") for the second the download took.
             // A failed fetch keeps it too; the screen says the catalog couldn't be reached.
             string url = Url?.Value ?? DefaultUrl;
+            if (url == OldDefaultUrl) url = DefaultUrl;
             if (!SourceUrl(url) && !(Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsFile))
             { Current = null; CatalogUnavailable = true; Message = "Catalog URL must use HTTPS (or a file URI for local testing)."; return; }
             Start(url, MaxCatalogBytes, null, null);

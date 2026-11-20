@@ -69,10 +69,11 @@ namespace TLDRevamp.Net
         private static string _message = "";
         private static float _friendsAt = -10f;
 
-        // ---- opening: the game's Multiplayer button, F11 (Plugin.KeyMpScreen)
+        // ---- opening: the game's Multiplayer button (and its T key), F11 (Plugin.KeyMpScreen)
+        // Not over the Mods screens: a stray T there closed them and cancelled the download running (F11 still switches).
         [HarmonyPatch(typeof(SteamP2PMenuHandlerScript), nameof(SteamP2PMenuHandlerScript.APressedMulti))]
         [HarmonyPrefix]
-        private static bool InsteadOfGameLobby() { Open(); return false; }
+        private static bool InsteadOfGameLobby() { if (!ModsScreen.IsOpen) Open(); return false; }
 
         public static void Toggle()
         {

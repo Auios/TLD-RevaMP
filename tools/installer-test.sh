@@ -22,9 +22,13 @@ done
 grep -qx "someone else's" "$G/RevaMP-installer/backup/winhttp.dll" || { echo "FAIL: the replaced winhttp.dll wasn't backed up"; exit 1; }
 good=$(sha256sum "$G/BepInEx/core/BepInEx.dll" | cut -d' ' -f1)
 echo broken > "$G/BepInEx/core/BepInEx.dll"; rm "$G/BepInEx/plugins/TLDRevamp/TLDRevamp.dll"
+# a mod from the mod list starts with the same letters as RevaMP's own DLLs: repair must leave it alone
+mkdir -p "$G/BepInEx/plugins/TLDRevampMods"; echo mod > "$G/BepInEx/plugins/TLDRevampMods/tldrevamp.headunit-0.2.1.dll"
 run repair "$@" > "$T/out"
 [ "$(sha256sum "$G/BepInEx/core/BepInEx.dll" | cut -d' ' -f1)" = "$good" ] && [ -f "$G/BepInEx/plugins/TLDRevamp/TLDRevamp.dll" ] ||
   { cat "$T/out"; echo "FAIL: repair didn't put the files back"; exit 1; }
+[ -f "$G/BepInEx/plugins/TLDRevampMods/tldrevamp.headunit-0.2.1.dll" ] || { cat "$T/out"; echo "FAIL: repair moved a mod from the mod list"; exit 1; }
+rm -r "$G/BepInEx/plugins/TLDRevampMods"
 run uninstall > "$T/out"
 snapshot > "$T/after"
 diff "$T/before" "$T/after" || { cat "$T/out"; echo "FAIL: the folder isn't back to how it was"; exit 1; }

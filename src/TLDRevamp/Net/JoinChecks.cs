@@ -39,16 +39,28 @@ namespace TLDRevamp.Net
         /// Why the host refuses a joiner's Hello, or null. The mod version first (what a player can fix: update), then the
         /// protocol (two builds of the same version: dev builds share a version number), then a message the host couldn't
         /// read. Before, all three said "The host plays TLD Revamp 0.69.1, you 0.69.1. Both need the same version."
+        /// With the source identity (the host's own check, which lets a dev build's "-dev" label differ) another protocol
+        /// from another version says so too: a 0.69.1 joiner at a 0.69.2 host was told "different builds of the same version".
         public static string HelloRefusal(bool bad, ushort protocol, string mod, ushort hostProtocol, string hostVersion, bool sourceIdentity = false)
         {
             if (!sourceIdentity && mod != null && mod != hostVersion)
                 return "The host plays TLD Revamp " + hostVersion + ", you " + mod + ". Both need the same version.";
             if (mod != null && protocol != hostProtocol)
-                return "The host plays TLD Revamp " + hostVersion + " (network protocol " + hostProtocol + "), you " + mod + " (protocol " + protocol +
-                       "): different builds of the same version. Both need the same build.";
+                return BaseVersionOf(mod) != BaseVersionOf(hostVersion)
+                    ? "The host plays TLD Revamp " + hostVersion + ", you " + mod + ". Both need the same version."
+                    : "The host plays TLD Revamp " + hostVersion + " (network protocol " + hostProtocol + "), you " + mod + " (protocol " + protocol +
+                      "): different builds of the same version. Both need the same build.";
             if (bad || mod == null)
                 return "The host couldn't read your join request. It plays TLD Revamp " + hostVersion + " (network protocol " + hostProtocol + "); both need the same build.";
             return null;
+        }
+
+        /// The release a version label belongs to: "0.69.2-dev.abcdef0" and "0.69.2" are both 0.69.2.
+        internal static string BaseVersionOf(string version)
+        {
+            if (version == null) return "";
+            int cut = version.IndexOfAny(new[] { '-', '+' });
+            return cut < 0 ? version : version.Substring(0, cut);
         }
 
         /// What a joiner reads when Steam drops the connection. Never reached: the host's game never heard of this join

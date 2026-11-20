@@ -16,6 +16,11 @@ static class P {
     Check("unreadable Hello: says so", b != null && b.Contains("couldn't read"));
     Check("unreadable, no version at all", JoinChecks.HelloRefusal(true, 0, null, 31, "0.69.1").Contains("couldn't read"));
     Check("version wins over protocol", JoinChecks.HelloRefusal(false, 20, "0.60.0", 31, "0.69.1").Contains("same version"));
+    // the host's check (source identity): a 0.69.1 joiner (protocol 28) at a 0.69.2 host (62) is told to update, not "same version"
+    string old = JoinChecks.HelloRefusal(false, 28, "0.69.1", 62, "0.69.2", true);
+    Check("source identity, older release: names both versions", old != null && old.Contains("0.69.1") && old.Contains("0.69.2") && old.Contains("need the same version") && !old.Contains("same build"));
+    Check("source identity, dev label of another release", JoinChecks.HelloRefusal(false, 61, "0.69.1-dev.abcdef0", 62, "0.69.2", true).Contains("need the same version"));
+    Check("source identity, dev label of the same release: same build", JoinChecks.HelloRefusal(false, 61, "0.69.2-dev.abcdef0", 62, "0.69.2", true).Contains("same build"));
     foreach (ushort previous in new ushort[] { 40, 41, 42, 43, 44, 45 })
       Check("protocol 46 refuses previous wire " + previous, JoinChecks.HelloRefusal(false, previous, "same", 46, "same", true).Contains("protocol 46"));
     Check("protocol 46 admits matching peer", JoinChecks.HelloRefusal(false, 46, "same", 46, "same", true) == null);

@@ -30,7 +30,7 @@ namespace TLDRevamp
             foreach (var other in KeyBindings.Entries())   // every key in Settings > Revamp > Keys
                 if (other != null && other != k && !PlayerEdition.Blocked.Contains(other) && other.Value.MainKey == k.Value.MainKey) yield return Modifiers(other.Value);
         }
-        public const string BaseVersion = "0.69.1";
+        public const string BaseVersion = "0.69.2";
         public static readonly string Version = Metadata("RevampVersion", BaseVersion);
         /// Built with -p:RevampEdition=player (a release for players): PlayerEdition.
         public static readonly bool IsPlayerEdition = Metadata("RevampEdition", "") == "player";
@@ -131,7 +131,7 @@ namespace TLDRevamp
             // steals a key the game or the player uses; set it in BepInEx/config/tldrevamp.core.cfg.
             KeyCinematic = Config.Bind("Keys", "CinematicCamera", new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
                 "Opens or closes the cinematic camera (a separate camera for filming; the gameplay camera stays as it is). Unbound by default.");
-            Cinematic.CinematicCamera.ExitKeyHint = KeyName(KeyCinematic) + " (Settings → Revamp → Filmmaking, or BepInEx/config/tldrevamp.core.cfg)";
+            Cinematic.CinematicCamera.ExitKeyHint = KeyName(KeyCinematic) + " (Settings → Revamp → Keys, or BepInEx/config/tldrevamp.core.cfg)";
             // The replay (issue #36): record gameplay, then play it back with the cinematic camera.
             KeyReplayRecord = Config.Bind("Keys", "ReplayRecord", new BepInEx.Configuration.KeyboardShortcut(KeyCode.F9, KeyCode.LeftControl),
                 "Starts or stops recording a replay (everything near you, every player; saved to BepInEx/tldrevamp-replays).");
@@ -160,7 +160,7 @@ namespace TLDRevamp
             KeyOverlay = Config.Bind("Keys", "PerformanceOverlay", new BepInEx.Configuration.KeyboardShortcut(KeyCode.PageUp),
                 "Shows or hides the performance overlay (also Settings → Revamp).");
             KeyReport = Config.Bind("Keys", "DebugReport", new BepInEx.Configuration.KeyboardShortcut(KeyCode.PageDown),
-                "Saves a debug report (BepInEx/tldrevamp-feedback); with Settings → Revamp → \"Send my reports to the host\" on, the host gets a copy.");
+                "Saves a debug report (BepInEx/tldrevamp-feedback); with Settings → Revamp → Debugging → \"Share my marks and reports\" on, the sharing players get a copy. Dev builds only: a player release ignores this key (its bug report is Ctrl+Insert).");
             KeyMark = Config.Bind("Keys", "Mark", new BepInEx.Configuration.KeyboardShortcut(KeyCode.ScrollLock),
                 "Opens session marks: Enter saves a note, Escape cancels. Notes can be renamed from the list.");
             KeyRepro = Config.Bind("Keys", "ReproRecorder", new BepInEx.Configuration.KeyboardShortcut(KeyCode.Insert, KeyCode.LeftControl),

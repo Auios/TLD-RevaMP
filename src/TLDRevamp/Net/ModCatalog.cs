@@ -14,7 +14,10 @@ namespace TLDRevamp.Net
     public static partial class ModCatalog
     {
         // The browser and its catalog are on dev; main does not have the catalog yet.
-        public const string DefaultUrl = "https://raw.githubusercontent.com/Normal99/TLD-RevaMP/refs/heads/dev/packaging/mods.json";
+        public const string DefaultUrl = "https://raw.githubusercontent.com/TLD-RevaMP/TLD-RevaMP/refs/heads/dev/packaging/mods.json";
+        /// The default before the repository moved to the TLD-RevaMP organisation. BepInEx saved it into every cfg, and
+        /// it answers only through GitHub's redirect, so a cfg that still has it reads the catalog at its own address.
+        internal const string OldDefaultUrl = "https://raw.githubusercontent.com/Normal99/TLD-RevaMP/refs/heads/dev/packaging/mods.json";
         public const int MaxCatalogBytes = 1 << 20;
         [DataContract] public sealed class Catalog
         {

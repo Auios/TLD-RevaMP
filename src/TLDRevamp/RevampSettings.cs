@@ -150,7 +150,7 @@ namespace TLDRevamp
                     if (!TerrainHorizon.CorrectFar) TerrainHorizon.RestoreFarMeshes();
                 });
             Toggle("distantRoads", "Draw roads into the distance", 1,
-                "Draws lightweight road ribbons beyond the detailed 500 m area. This removes floating roads at crossroads without " +
+                "Draws lightweight road ribbons beyond the detailed terrain area. This removes floating roads at crossroads without " +
                 "loading full road pieces, poles, props or physics far away.",
                 () => TerrainHorizon.DistantRoads ? 1 : 0, v => TerrainHorizon.DistantRoads = v == 1);
             Toggle("parallelRoads", "Parallel road building", 1,
@@ -319,7 +319,7 @@ namespace TLDRevamp
             Header("Filmmaking",
                 "A separate camera for filming. It does not touch the game's own camera, and it never moves your " +
                 "character: what the other players see stays exactly the same. The camera key is unbound by default; " +
-                "set it under Settings → Controls, or in BepInEx/config/tldrevamp.core.cfg (Keys → CinematicCamera).");
+                "set it under Settings → Revamp → Keys, or in BepInEx/config/tldrevamp.core.cfg (Keys → CinematicCamera).");
             Choice("cinemaMode", "Camera when it opens", new[] { "Free (fly)", "Orbit (around a point)" }, 0,
                 "Free: the camera flies where you take it (W A S D, Q and E for height, the mouse to look).\n\n" +
                 "Orbit: the camera circles a point you place in front of it and stays at a fixed distance; the mouse " +
@@ -349,7 +349,7 @@ namespace TLDRevamp
                     "Works in single player and multiplayer, and nothing is sent to the other players.\n\n" +
                     "Also Ctrl+F9 (Keys → ReplayRecord in tldrevamp.core.cfg). Stop to save: recordings go to " +
                     "BepInEx/tldrevamp-replays and hold numbers only, no names. A recording stops by itself after an hour.\n\n" +
-                    "Lights are recorded. Not recorded yet: sounds, smoke and dust, animals, and dents.",
+                    "Lights are recorded, and animals and bodies within about 120 m. Not recorded yet: sounds, smoke and dust, and dents.",
                 Get = () => Replay.ReplayRecorder.Recording ? 1 : 0,
                 Set = v => { if (v == 1) Replay.ReplayRecorder.Start(); else Replay.ReplayRecorder.Stop(); } });
             Entries.Add(new Entry { Key = "replayPlaying", Label = "Watch the latest replay", Kind = Kind.Toggle, RuntimeOnly = true,
@@ -365,7 +365,7 @@ namespace TLDRevamp
                 () => Replay.ReplayRecorder.ShowBanner ? 1 : 0,
                 v => Replay.ReplayRecorder.ShowBanner = v == 1);
             Header("Mods",
-                "The Mods button at the top of this page opens RevaMP's mod browser.");
+                "The Mods button on the main menu and in the pause menu opens RevaMP's mod list.");
             Toggle("modUpdateCheck", "Check for mod updates at start", 1,
                 "When the main menu first shows, fetch the mod catalog from GitHub. If a mod you installed from the mod browser has a " +
                 "newer version in the mod catalog, the Mods screen opens and asks whether to update; the updates load at " +

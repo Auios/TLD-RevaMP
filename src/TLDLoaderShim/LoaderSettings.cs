@@ -35,6 +35,8 @@ namespace TLDLoader
 
         private void Load()
         {
+            // a file written but not yet moved into place (the game closed in between) is the newest there is
+            if (!File.Exists(_path) && File.Exists(_path + ".tmp")) { try { File.Move(_path + ".tmp", _path); } catch (Exception e) { LastError = "recovering " + _path + ": " + e.Message; } }
             if (!File.Exists(_path)) return;
             try
             {
@@ -57,8 +59,9 @@ namespace TLDLoader
                 var sb = new StringBuilder();
                 foreach (var kv in _values) sb.Append(kv.Key).Append('\t').Append(Kind(kv.Value)).Append('\t').Append(Escape(Text(kv.Value))).Append('\n');
                 File.WriteAllText(_path + ".tmp", sb.ToString(), Encoding.UTF8);
-                if (File.Exists(_path)) File.Delete(_path);
-                File.Move(_path + ".tmp", _path);
+                // replaced in one step: deleting first and moving after lost the mod's settings to a crash in between
+                if (File.Exists(_path)) File.Replace(_path + ".tmp", _path, null);
+                else File.Move(_path + ".tmp", _path);
             }
             catch (Exception e) { LastError = "writing " + _path + ": " + e.Message; }
         }
