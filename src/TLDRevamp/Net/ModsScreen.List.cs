@@ -278,7 +278,7 @@ namespace TLDRevamp.Net
         {
             internal string Head, Meta, Primary, Note; internal Color PrimaryColour; internal bool PrimaryOn;
             internal Action PrimaryDo; internal string Small; internal Color SmallColour; internal Action SmallDo;
-            internal bool Remove, Source;
+            internal bool Remove;
         }
 
         /// Everything one row says and offers, from the same checks as the tapes had.
@@ -309,7 +309,6 @@ namespace TLDRevamp.Net
             if (!string.IsNullOrEmpty(version)) meta.Add(Esc(version));
             r.Meta = string.Join("     ·     ", meta);
 
-            r.Source = ModCatalog.SourceUrl(m.Source);
             if (mine) { r.Primary = "Cancel"; r.PrimaryColour = ButtonRed; r.PrimaryOn = true; r.PrimaryDo = ModCatalog.Cancel; return r; }
             if (core) { r.Primary = "Built in"; r.PrimaryColour = ButtonGrey; return r; }
             if (manual) { r.Primary = "By hand"; r.PrimaryColour = ButtonGrey; r.Note = "Installed by hand: manage its files yourself."; return r; }
@@ -375,7 +374,7 @@ namespace TLDRevamp.Net
             var primary = NewButton(rt, s.Primary, s.PrimaryColour, 44f, () => { if (s.PrimaryDo != null) { s.PrimaryDo(); _shown = null; RefreshList(); } });
             TopRight((RectTransform)primary.transform, 24f, 18f, 310f, 84f);
             SetButton(primary, s.Primary, s.PrimaryColour, s.PrimaryOn);
-            // the small buttons under it, right to left: Source, Remove, Enable/Disable
+            // the small buttons under it, right to left: Remove, Enable/Disable (no Source: asked 2026-11-20)
             float right = 24f;
             void Small(string label, Color colour, bool on, Action act)
             {
@@ -383,7 +382,6 @@ namespace TLDRevamp.Net
                 TopRight((RectTransform)b.transform, right, 110f, 150f, 56f); SetButton(b, label, colour, on);
                 right += 158f;
             }
-            if (s.Source) Small("Source", ButtonGrey, true, () => Application.OpenURL(m.Source));
             if (s.Remove) Small("Remove", ButtonRed, !ModCatalog.Busy, () => AskList("Remove " + (m.Name ?? m.Id) + " at the next start?", () => RemoveMod(m), null));
             if (s.Small != null) Small(s.Small, s.SmallColour, !ModCatalog.Busy, s.SmallDo);
         }
