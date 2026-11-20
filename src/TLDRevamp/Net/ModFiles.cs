@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace TLDRevamp.Net
 {
-    /// File operations shared by the host transfer and browser; callers verify bytes before Install.
+    /// File operations for catalog installs; callers verify bytes before Install.
     internal static class ModFiles
     {
         internal static bool SafeVersion(string v) => v != null && Regex.IsMatch(v, @"\A[A-Za-z0-9_.-]{1,64}\z");
@@ -20,19 +20,6 @@ namespace TLDRevamp.Net
         internal static bool Managed(string dir, string file, string id) => Managed(dir, file) &&
             Path.GetFileNameWithoutExtension(file).StartsWith(id + "-", StringComparison.Ordinal) &&
             SafeVersion(Path.GetFileNameWithoutExtension(file).Substring(id.Length + 1));
-
-        internal static List<string> KnownFiles(string dir, string id, IDictionary<string, string> approved)
-        {
-            var files = new List<string>();
-            foreach (var line in approved.Values)
-            {
-                var p = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                if (p.Length != 2 || p[0] != id || !SafeVersion(p[1])) continue;
-                var file = Target(dir, id, p[1]);
-                if (Managed(dir, file) && !files.Contains(file)) files.Add(file);
-            }
-            return files;
-        }
 
         internal static string Install(string dir, string id, string version, byte[] bytes, IEnumerable<string> oldFiles)
         {

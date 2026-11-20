@@ -24,7 +24,7 @@ mkdir -p "$OUT/BepInEx/plugins/TLDRevamp" "$OUT/BepInEx/config"
 mkdir -p "$OUT/BepInEx/patchers/TLDRevamp"
 cp "$ROOT/src/TLDRevamp.Preloader/bin/Release/netstandard2.1/TLDRevamp.Preloader.dll" "$OUT/BepInEx/patchers/TLDRevamp/"
 cp "$DLL" "$ROOT/src/TLDRevamp.Multiplayer/bin/Release/netstandard2.1/TLDRevamp.Multiplayer.dll" \
-   "$ROOT/src/TLDLoaderShim/bin/Release/netstandard2.1/TLDLoader.dll" "$ROOT/packaging/approved-mods.txt" "$OUT/BepInEx/plugins/TLDRevamp/"
+   "$ROOT/src/TLDLoaderShim/bin/Release/netstandard2.1/TLDLoader.dll" "$OUT/BepInEx/plugins/TLDRevamp/"
 echo 1017180 > "$OUT/steam_appid.txt"
 CFG="$OUT/BepInEx/config/tldrevamp.core.cfg"
 [ -f "$CFG" ] || cat > "$CFG" <<'EOF'

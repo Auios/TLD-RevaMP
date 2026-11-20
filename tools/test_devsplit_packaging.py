@@ -32,7 +32,7 @@ class DevSplitPackaging(unittest.TestCase):
             for name in ("TLDRevamp", "TLDRevamp.Dev", "TLDRevamp.Multiplayer", "TLDRevamp.Preloader"):
                 put(root / "src" / name / devrelease.OUT / (name + ".dll"), "0.69.1-test")
             put(root / "src/TLDLoaderShim" / devrelease.OUT / "TLDLoader.dll")
-            for name in ("approved-mods.txt", "INSTALL.txt"):
+            for name in ("INSTALL.txt",):
                 put(root / "packaging" / name)
             put(root / "COPYING")
             put(root / "packaging/licenses/example.txt")

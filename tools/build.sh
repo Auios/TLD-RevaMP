@@ -11,7 +11,7 @@ cp "$ROOT/src/TLDRevamp.Preloader/bin/Release/netstandard2.1/TLDRevamp.Preloader
 cp "$ROOT/src/TLDRevamp/bin/Release/netstandard2.1/TLDRevamp.dll" "$GAME/BepInEx/plugins/TLDRevamp/"
 cp "$ROOT/src/TLDRevamp.Dev/bin/Release/netstandard2.1/TLDRevamp.Dev.dll" "$GAME/BepInEx/plugins/TLDRevamp/"
 # the multiplayer API other mods reference (built with TLDRevamp, which depends on it)
-cp "$ROOT/src/TLDRevamp.Multiplayer/bin/Release/netstandard2.1/TLDRevamp.Multiplayer.dll" "$ROOT/packaging/approved-mods.txt" "$GAME/BepInEx/plugins/TLDRevamp/"
+cp "$ROOT/src/TLDRevamp.Multiplayer/bin/Release/netstandard2.1/TLDRevamp.Multiplayer.dll" "$GAME/BepInEx/plugins/TLDRevamp/"
 # TLDLoader mods under BepInEx: the API stub next to our plugin, the mods (third-party, not in git) in BepInEx/TLDLoaderMods
 cp "$ROOT/src/TLDLoaderShim/bin/Release/netstandard2.1/TLDLoader.dll" "$GAME/BepInEx/plugins/TLDRevamp/"
 if compgen -G "$ROOT/thirdparty/TLDLoaderMods/*.dll" > /dev/null; then mkdir -p "$GAME/BepInEx/TLDLoaderMods"; cp "$ROOT"/thirdparty/TLDLoaderMods/*.dll "$GAME/BepInEx/TLDLoaderMods/"; fi

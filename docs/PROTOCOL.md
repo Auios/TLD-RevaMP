@@ -16,6 +16,10 @@ The public release v0.69.1 carries 28. The numbers above that were raised on dev
 
 ## History
 
+## 62
+
+- ModsNeeded (81) lists required API mods and problems before Reject. Host file transfers (81–83) are retired; joiners install matching hashes from the live catalog.
+
 ## 61
 
 - Hello ends with the joiner's TLD Loader mods (id, name, version, DLL sha256 each); the host refuses other ones (`Net/LoaderModCheck`, config Mods.LoaderModsMustMatch)

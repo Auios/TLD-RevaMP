@@ -314,7 +314,7 @@ namespace TLDRevamp.Net
             Guard(3, "bots", () => { DevHooks.BotsTick?.Invoke(); });
             Guard(4, "players", RemotePlayers.Tick);
             Guard(5, "entities", Entities.Tick);
-            Guard(7, "mods", () => { Server?.UploadTick(); ModObjects.Tick(); });
+            Guard(7, "mods", () => { ModObjects.Tick(); });
             Guard(6, "flush", () => Server?.FlushBatches());   // everything relayed this frame (players' states, the host's own) in one message per peer
         }
 
@@ -452,7 +452,6 @@ namespace TLDRevamp.Net
                 case Entities.RemoveItem: case Entities.SleepSync: case Entities.ContactImpulse: case Entities.DetachReq: case Entities.AttachSync: case Entities.HitchRequest: case Entities.HitchCommand: case Entities.HitchFreeze: case Entities.HitchFrozen: case Entities.HitchResult: case Entities.AttachReq: case Entities.CensusRepair: case Entities.CensusAsk: case Entities.CensusReply: case Entities.DetachSync: case PlayerCombat.PlayerDamage: case Entities.ShotFx: case Entities.ExplodeReq: case Entities.ExplosionFx: case Entities.PlayerSound: case Entities.BreakHit: case Entities.BreakFx: case Entities.CarTune: case Entities.WorldBreak: case Entities.AiState: case Entities.AiSound: case Entities.PoiUsable:
                 case Protocol.LiveUsable: case Entities.RabbitState: case Entities.RabbitFx: case Entities.IgnitionKey:
                 case Entities.CrashClaim: case Entities.CrashRelease: case Entities.Refetch: case Entities.HandoverState: case Entities.PoiCensus: case Entities.Worn: case Entities.MemberGone: MessageEntities(p, type, r); return;
-                case ModTransfer.ModFetch: MessageModTransferModFetch(p, r); return;
                 case ModObjects.ModShare: case ModObjects.ModRecord: case ModObjects.ModEdit: case ModObjects.ModRemove: case ModObjects.ModPose:
                 case ModObjects.ModEvent: case ModObjects.ModClaim: case ModObjects.ModClock: case ModObjects.ModState: MessageModObjects(p, type, r); return;
                 case Entities.LeaseReq: case Entities.LeaseDone: MessageLeases(p, type, r); return;
@@ -490,15 +489,18 @@ namespace TLDRevamp.Net
             if (!Admit(c, p, steamId, pw)) return;
             // mods using the multiplayer API must match. Unlike the game's build (announced, not refused): a mod
             // object a player can't build, or reads with another record layout, is a broken world for them. What
-            // the host can send, it offers (ModTransfer: the joiner checks each file against its approved list).
-            if (mods.Problems.Count > 0)
+            // the host lists the differences; the joiner gets files only from the catalog.
+            if (!mods.Same)
             {
                 Plugin.Log.LogWarning($"[anomaly] mods differ: {Session.CleanName(name)} refused: {mods.Describe()}");
+                _w.Reset(); _w.U8(Protocol.ModsNeeded);
+                ModsNeeded.Write(_w, Session.MyName(), mods.Needed, mods.Problems);
+                T.Send(c, _w, SteamTransport.SendReliable);
                 Reject(c, mods.Describe(), Protocol.RejectOther);
                 return;
             }
             // same version and protocol, other code: the records it decodes can differ (BuildCheck). No mod
-            // download fixes that, so before OfferMods.
+            // download fixes that, so it is checked before entering the world.
             var bc = BuildCheck.Compare(build, Plugin.BuildIdentity);
             if (bc == BuildCheck.Result.Differs)
             {
@@ -530,7 +532,7 @@ namespace TLDRevamp.Net
                 Plugin.Log.LogWarning($"[anomaly] TLD Loader mods differ: {Session.CleanName(name)} admitted (Mods.LoaderModsMustMatch off): {loader}");
             }
             // every machine generates the world itself: another game, or other mods patching the generators, give
-            // another world. The patches only once the API mods match: a missing mod the host offers comes first.
+            // another world. The patches only once the API mods match: a missing mod is listed first.
             string world = WorldCheck.Check(gameBuild, gameData, genPatches, comparePatches: mods.Same);
             if (world != null)
             {
@@ -542,11 +544,6 @@ namespace TLDRevamp.Net
             if (SteamTransport.SteamReady && steamId != 0) Session.Persona(new Steamworks.CSteamID(steamId));
             p.SteamId = steamId; p.Saved = saved; p.Name = Session.CleanName(name); p.Ready = false; p.GameBuild = gameBuild; p.BuildHash = build;
             p.ReportAccount = SteamCompat.RemoteSteamId(c, out _);
-            if (!mods.Same)
-            {
-                OfferMods(p, mods.Send);
-                return;
-            }
             // the client now loads the host's world (seed + start car + map) and sends Ready when it stands in it
             if (!DedicatedServer.Enabled) Joined(c, 0, Mp.MySteamId(), Session.MyName());
             _w.Reset(); _w.U8(Protocol.Welcome); _w.VarU32((uint)p.Id); _w.I32(Mp.Seed()); _w.U16(Protocol.StateHz);
@@ -671,11 +668,6 @@ namespace TLDRevamp.Net
             if (p != null && p.Ready) { r.Pos = 0; r.U8(); Entities.ServerReceive(p.Id, type, r); }
         }
 
-        private void MessageModTransferModFetch(Peer p, NetReader r)
-        {
-            if (p != null && !p.Ready) ModFetchFrom(p, r);   // a joiner getting a mod, before its world
-        }
-
         private void MessageModObjects(Peer p, byte type, NetReader r)
         {
             if (p != null && (p.Ready || type == ModObjects.ModClock && p.Id > 0)) ModObjects.ServerReceive(p.Id, type, r);
@@ -778,7 +770,6 @@ namespace TLDRevamp.Net
             Entities.ServerOnLeave(p.Id);
             Plausibility.Forget(p.Id);
             ModObjects.ServerOnLeave(p.Id);
-            ModsForgetPeer(p.Id);
             Reports.ServerLeft(p.Id);
             _w.Reset(); _w.U8(Protocol.PlayerLeft); _w.VarU32((uint)p.Id);
             foreach (var o in _peers.Values) if (o.Ready) T.Send(o.Conn, _w, SteamTransport.SendReliable);
@@ -1184,8 +1175,7 @@ namespace TLDRevamp.Net
                 case Entities.WorldClock: case Entities.RadioSync: case Entities.PhysLockSync: case Entities.StormSync: case Entities.Assigned: case Entities.Add: case Entities.RemoveItem: case Entities.SleepSync: case Entities.ContactImpulse: case Entities.DetachReq: case Entities.State: case Entities.CompactState: case Entities.Owner: case Entities.PartDetached: case Entities.LeaseGrant: case Entities.LeaseTaken: case Entities.LeaseFreed: case Entities.Resync: case Entities.Edit: case Entities.ShotgunIn: case Entities.PushIn: case Entities.AttachSync: case Entities.HitchRequest: case Entities.HitchCommand: case Entities.HitchFreeze: case Entities.HitchFrozen: case Entities.HitchResult: case Entities.AttachReq: case Entities.CensusRepair: case Entities.CensusAsk: case Entities.CensusReply: case Entities.DetachSync: case PlayerCombat.PlayerDamage: case Entities.ShotFx: case Entities.ExplodeReq: case Entities.ExplosionFx: case Entities.PlayerSound: case Entities.BreakHit: case Entities.BreakFx: case Entities.CarTune: case Entities.WorldBreak: case Entities.AiState: case Entities.AiSound: case Entities.PoiUsable:
                 case Protocol.LiveUsable: case Entities.RabbitState: case Entities.RabbitFx: case Entities.Worn: case Entities.MemberGone: case Entities.IgnitionKey: MessageEntities(type, r); return;
                 case Protocol.OtherOutfit: MessageOtherOutfit(r); return;
-                case ModTransfer.ModOffer: ModOfferIn(r); break;
-                case ModTransfer.ModChunk: ModChunkIn(r); break;
+                case Protocol.ModsNeeded: if (MyId <= 0 && NeededMods == null) NeededMods = ModsNeeded.Read(r); break;
                 case ModObjects.ModAssigned: case ModObjects.ModAdd: case ModObjects.ModRecord: case ModObjects.ModEdit: case ModObjects.ModOwner:
                 case ModObjects.ModRemove: case ModObjects.ModPose: case ModObjects.ModEvent: case ModObjects.ModClock:
                 case ModObjects.ModState: case ModObjects.ModStore: case ModObjects.ModSetting: MessageModObjects(type, r); return;
@@ -1283,6 +1273,8 @@ namespace TLDRevamp.Net
             JoinSpotLast = gx.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "," + gz.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
             _spotState = 2; _spotAt = Time.realtimeSinceStartup;
         }
+
+        internal ModsNeeded.List NeededMods;
 
         private void MessageReject(NetReader r)
         {

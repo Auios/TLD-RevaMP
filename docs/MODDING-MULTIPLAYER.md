@@ -3,7 +3,7 @@
 > **Status:** every step of section 9 is built. `TLDRevamp.Multiplayer.dll` (API 4) has registration, records,
 > edits, ownership hooks, events, a shared clock, pose sync, state records sent by distance, the far store,
 > session-wide settings and replay channels; the session side is `src/TLDRevamp/Net/ModObjects.cs`. Mods must match at join (section 3a)
-> and a joiner can get an approved mod from the host. The Head Unit and Car Trailer example mods ([TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods)) run in two-machine
+> and a joiner installs missing mods from the catalog; the host never sends files. The Head Unit and Car Trailer example mods ([TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods)) run in two-machine
 > tests, and `tools/modapi2.py` (with the test mod `src/Mods/ApiProbe`) tests API 2. The Loader-mod scanner
 > (section 7) writes a report and a code skeleton.
 
@@ -156,24 +156,23 @@ Disabling a managed mod in the browser takes effect at the next start. Until the
 Hello registration remain active. After restart the DLL is outside `BepInEx/plugins`, never loads or registers,
 and is absent from Hello. The ordinary missing-mod check still applies. If a required mod is installed but
 disabled, the join screen tells the player to enable it in the mod browser and restart before joining again.
-Host offers recognize the multiplayer registration id even when it differs from the browser's plugin GUID;
+The join screen recognizes the multiplayer registration id even when it differs from the browser's plugin GUID;
 the browser records that association when queuing a change. No wire fields were added (protocol 45).
 
-- **The host has a mod the joiner lacks, or another version or file of it:** the host offers it
-  (`Net/ModTransfer.cs`). The joiner checks each offered hash against `approved-mods.txt`, which ships next to
-  `TLDRevamp.dll` and lists the approved mod files (SHA-256, id, version). An unlisted file is never downloaded:
-  the join ends with its name. Otherwise the player is asked (names, versions, sizes); the bytes that arrive are
-  hashed again and must be the approved file that was offered. The mod is saved to
-  `BepInEx/plugins/TLDRevampMods/`, an older copy is set aside (`.replaced`), and the join ends with "restart the
-  game, then join again" (BepInEx loads plugins once). Single-file mods only. `ModTransfer.HostSends = false`
-  turns sending off: such joiners are refused with what to install.
-- **The joiner has a mod the host doesn't, or a type version differs:** refused, with what to remove or update, and
-  an `[anomaly] mods differ` line in the host's log.
+- **The host has a mod the joiner lacks, or another version or file of it:** the host sends `ModsNeeded`
+  (`Net/ModsNeeded.cs`), then refuses the join with a readable reason. The mods screen fetches the same live catalog
+  as the browser and offers only a release whose DLL SHA-256 equals the host's hash. The host never sends files.
+  Install downloads from the catalog, verifies the bytes, saves them under `BepInEx/plugins/TLDRevampMods/` and sets
+  an older managed copy aside (`.replaced`). Install all handles every installable row in turn. Restart the game,
+  then join again: BepInEx loads plugins once. Disabled required mods offer Enable. Hand-installed copies must be
+  replaced by hand. Mods absent from the catalog name their author as the download route. Copy list copies each
+  name and version with its catalog source link, followed by problem lines.
+- **The joiner has a mod the host doesn't, or a type version differs:** the screen includes the remove or update
+  line, and the host logs `[anomaly] mods differ`.
 
-This differs on purpose from the game's own build, which is only announced: a player who can't build a mod's
-objects, or reads their records with another layout, has a broken world. The hash proves a file is the approved
-one, so a host can't slip in its own code; it can't prove an approved mod is harmless, which is what approving it
-means. A modified game can also lie about its own hashes: this is a consistency check, not anti-cheat.
+The catalog is the list of installable releases. The DLL hash proves that the downloaded file matches that list
+and the host's file. Hand-installed mods still load normally. A modified game can lie about its own hashes: this
+is a consistency check, not anti-cheat.
 
 Open questions:
 - Whether a type can declare that it rides a parent (a part bolted to a car, cargo in a container), so it moves
@@ -262,7 +261,7 @@ categories). DbLoad runs
 for every mod with LoadInDB once per item database, in the order of the mods' IDs, so every machine changes and adds
 items the same way. That holds only when every player has the same TLD Loader mods: a host refuses a joiner whose mods differ by
 ID, version or DLL (SHA-256), and says what to install or remove (`Net/LoaderModCheck.cs`, config
-Mods.LoaderModsMustMatch; nothing is downloaded, these mods are not approved files). Most of those mods were written for single player. A converter would help them into multiplayer
+Mods.LoaderModsMustMatch; nothing is downloaded; install these mods by hand). Most of those mods were written for single player. A converter would help them into multiplayer
 without rewriting them:
 
 1. **Scan** a Loader mod's assembly and report what it does that matters in a session: objects it creates,
@@ -358,35 +357,35 @@ The external `modtogglecheck.py --selftest` is offline; its live mode owns only 
 and verifies loading, disabling, enabling and removal while disabled across restarts. It must be run separately.
 
 Head Unit 0.2.0 first shipped with RevaMP 0.68.0; the catalog's `revamp: "0.68.0"` records that compatibility
-baseline. The field is an explanatory hint when a file is unapproved, not a runtime version check. The local
-approved list and the downloaded DLL's SHA-256 decide whether installation is allowed.
+baseline. The field is an explanatory hint, not a runtime version check. The live catalog and the downloaded
+DLL's SHA-256 decide whether installation is allowed.
 
-Car Trailer 0.1.1 is approved by the hash of its existing release DLL. Its catalog ZIP size and both example mods'
+Car Trailer 0.1.1 is listed with the hash of its existing release DLL. Its catalog ZIP size and both example mods'
 DLL hashes were checked against the v0.69.0 assets. The original assets are reused without rebuilding them.
 Car Trailer can be installed from the browser and loads after restarting the game; every player still needs it, since it
-does not register for the host's missing-mod check or transfer.
+does not register for the host's missing-mod check listing.
 
 BusGut 0.2.0, MountAnything 0.2.1 and TerrainChoice 0.4.1 (by YujiroX2, `anonymoustld.*` GUIDs) are hosted in
-their own repositories and approved by the hashes of their release DLLs. All three register with the multiplayer API
+their own repositories and listed with the hashes of their release DLLs. All three register with the multiplayer API
 (`busgut`, `mountanything`, `terrainchoice`), so a join with a different set is refused. Their catalog baseline is
 RevaMP 0.69.1, the version their self-tests passed on.
 
-TV Browser 0.1.0 (`tldrevamp.tvbrowser`) is a mod-only release (tag `tvbrowser-v0.1.0`), approved by its DLL's hash.
+TV Browser 0.1.0 (`tldrevamp.tvbrowser`) is a mod-only release (tag `tvbrowser-v0.1.0`), listed with its DLL's hash.
 It registers with the multiplayer API (`tvbrowser`), so every player in a session needs it. Its baseline is RevaMP
 0.69.1; the TVs show up in replays only with a RevaMP that has replay channels (API 4).
 
-Road End 0.1.0 (`tldrevamp.roadend`) is a mod-only release (tag `roadend-v0.1.0`), approved by its DLL's hash. It
+Road End 0.1.0 (`tldrevamp.roadend`) is a mod-only release (tag `roadend-v0.1.0`), listed with its DLL's hash. It
 registers with the multiplayer API (`roadend`) and shares one session setting (`world`: the host's world has an end or
 not). It works without RevaMP too.
 
 Head Unit 0.2.1, Car Trailer 0.1.2, Trailer Hitches 0.2.0, TV Browser 0.2.0 and Road End 0.2.0 are mod-only releases
 (tags `<mod>-v<version>`, for example `tvbrowser-v0.2.0`), and World Map 0.2.1 is a release of its own repository.
-Each is approved by its DLL's hash in the approved list on `dev`, so the browser offers them only in a RevaMP built
-with that list. Their older versions stay in the catalog, and RevaMP 0.69.1 keeps offering those.
+Each is listed with its DLL hash in the live catalog on `dev`. New entries become installable without a RevaMP
+release. Older versions stay in the catalog so joiners can install the identical release the host uses.
 
 Head Unit, Car Trailer, Trailer Hitches, TV Browser and Road End moved to [TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods)
 with their source. Their releases there (`headunit-v0.2.0` and `cartrailer-v0.1.1` for the two zips that came with
-v0.69.0, the other tags unchanged) hold the same zips byte for byte, so the approved hashes did not change; the catalog
+v0.69.0, the other tags unchanged) hold the same zips byte for byte, so the catalog hashes did not change; the catalog
 downloads from TLD-Mods. New versions are released there.
 
 ## 9. Order (all built)

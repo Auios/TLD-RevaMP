@@ -682,7 +682,7 @@ namespace TLDModEvidence
             bool worldWidePerPlayer = !worldWideScan.Contains("WorldWide");
             H.Check("the same rule would not call a world-wide mod per-player", !worldWidePerPlayer);
             H.Check("the decision is deterministic",
-                Policy.ReleaseRefusals(release, new Dictionary<string, string> { [Policy.GoodHash] = "fixture.mod 1.0.0" },
+                Policy.ReleaseRefusals(release,
                     1 << 20, id => id == "fixture.mod").Count == 0);
             return;
         }

@@ -127,11 +127,11 @@ def running_build(remote=None):
 
 # ---- skip the build when nothing it reads changed, and the deploy when the games already have these files
 STAMP = ROOT / "src/TLDRevamp/bin/.tld-build-stamp.json"
-BUILD_INPUTS = ("src", "packaging/approved-mods.txt", "tools/build.sh", "thirdparty/TLDLoaderMods")
+BUILD_INPUTS = ("src", "tools/build.sh", "thirdparty/TLDLoaderMods")
 
 
 def source_fingerprint():
-    """sha1 over every file the build reads (src/ without bin/ and obj/, the approved-mods list, build.sh, the
+    """sha1 over every file the build reads (src/ without bin/ and obj/, build.sh, the
     third-party Loader mods) and the example mods a test asks for."""
     h = hashlib.sha1(("mods:" + ",".join(game.test_mods())).encode())
     for top in BUILD_INPUTS:
@@ -165,7 +165,7 @@ def build_now():
 def _deploy_files():
     """(built file, its name in BepInEx/plugins/TLDRevamp) for everything deploy copies there"""
     stub = ROOT / "src/TLDLoaderShim/bin/Release/netstandard2.1/TLDLoader.dll"
-    return [(f, f.name) for f in (game.plugin_dll(), game.MP_API_DLL, game.APPROVED_MODS, stub) if f.exists()]
+    return [(f, f.name) for f in (game.plugin_dll(), game.MP_API_DLL, stub) if f.exists()]
 
 
 def _want_deployed():

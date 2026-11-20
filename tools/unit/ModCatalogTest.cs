@@ -22,7 +22,6 @@ static class ModCatalogTest
         Version = "1.0.0", Url = "https://github.com/owner/repo/releases/download/v1/mod.dll", File = file,
         Size = data.Length, Hash = ModCatalog.Sha256(Dll)
     };
-    static Dictionary<string, string> Approved() => new Dictionary<string, string> { [ModCatalog.Sha256(Dll)] = "test.mod 1.0.0" };
     static byte[] Zip(params (string name, byte[] bytes)[] entries)
     {
         using var stream = new MemoryStream();
@@ -31,7 +30,7 @@ static class ModCatalogTest
         return stream.ToArray();
     }
     static byte[] Verify(byte[] data, string file = null, int limit = 1024 * 1024) =>
-        ModCatalog.Verify(Mod(), Release(data, file), data, Approved(), limit, ValidId);
+        ModCatalog.Verify(Mod(), Release(data, file), data, limit, ValidId);
 
     static int Main()
     {
@@ -39,21 +38,23 @@ static class ModCatalogTest
         Check("real catalog includes World Map, Trailer Hitches, TV Browser and Road End (Rossa88 withdrawn)", catalog.Mods.Count == 9 &&
             catalog.Mods[0].Versions[0].Version == "0.2.1" && catalog.Mods[1].Versions[0].Version == "0.1.2" &&
             catalog.Mods[2].Id == "anonymoustld.busgut" && catalog.Mods[3].Id == "anonymoustld.mountanything" && catalog.Mods[4].Id == "anonymoustld.terrainchoice" && catalog.Mods[5].Id == "tldrevamp.worldmap" && catalog.Mods[6].Id == "tldrevamp.trailerhitches" && catalog.Mods[7].Id == "tldrevamp.tvbrowser" && catalog.Mods[8].Id == "tldrevamp.roadend" && !catalog.Mods.Exists(m => m.Id == "anonymoustld.rossa88"));
-        var approved = new Dictionary<string, string>();
-        foreach (string raw in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "approved-mods.txt")))
-        {
-            string line = raw.Trim(); if (line.Length == 0 || line[0] == '#') continue;
-            var p = line.Split(new[] { ' ', '\t' }, 2, StringSplitOptions.RemoveEmptyEntries); approved[p[0]] = p[1];
-        }
-        Check("HeadUnit approved locally", ModCatalog.ApprovalReason(catalog.Mods[0], catalog.Mods[0].Versions[0], approved, 16 << 20, _ => true) == null);
-        Check("CarTrailer released DLL approved locally", ModCatalog.ApprovalReason(catalog.Mods[1], catalog.Mods[1].Versions[0], approved, 16 << 20, _ => true) == null);
+        Check("HeadUnit valid in catalog", ModCatalog.ApprovalReason(catalog.Mods[0], catalog.Mods[0].Versions[0], 16 << 20, _ => true) == null);
+        Check("CarTrailer released DLL valid in catalog", ModCatalog.ApprovalReason(catalog.Mods[1], catalog.Mods[1].Versions[0], 16 << 20, _ => true) == null);
         for (int i = 2; i < catalog.Mods.Count; i++)
-            Check(catalog.Mods[i].Id + " released DLL approved locally", ModCatalog.ApprovalReason(catalog.Mods[i], catalog.Mods[i].Versions[0], approved, 16 << 20, _ => true) == null);
-        Check("real catalog offers Head Unit 0.2.0 an update to 0.2.1", ModCatalog.UpdateTo(catalog.Mods[0], "0.2.0", approved, 16 << 20, _ => true)?.Version == "0.2.1");
-        // older versions stay listed: a RevaMP whose approved list predates the newest one still offers them
+            Check(catalog.Mods[i].Id + " released DLL valid in catalog", ModCatalog.ApprovalReason(catalog.Mods[i], catalog.Mods[i].Versions[0], 16 << 20, _ => true) == null);
+        Check("real catalog offers Head Unit 0.2.0 an update to 0.2.1", ModCatalog.UpdateTo(catalog.Mods[0], "0.2.0", 16 << 20, _ => true)?.Version == "0.2.1");
+        // Older versions remain installable for hosts still using them.
         foreach (var m in catalog.Mods)
             foreach (var v in m.Versions)
-                Check(m.Id + " " + v.Version + " approved locally", ModCatalog.ApprovalReason(m, v, approved, 16 << 20, _ => true) == null);
+                Check(m.Id + " " + v.Version + " valid in catalog", ModCatalog.ApprovalReason(m, v, 16 << 20, _ => true) == null);
+        // a release whose "revamp" is newer than this RevaMP needs that RevaMP's API: held back, and never hides an older one
+        var needsNewer = new ModCatalog.Mod { Id = "test.api", Versions = new List<ModCatalog.Release> {
+            new ModCatalog.Release { Version = "2.0.0", Url = "https://github.com/o/r/releases/download/v2/m.zip", Size = 10, Hash = new string('a', 64), Revamp = "0.70.0" },
+            new ModCatalog.Release { Version = "1.0.0", Url = "https://github.com/o/r/releases/download/v1/m.zip", Size = 10, Hash = new string('b', 64), Revamp = "0.69.1" } } };
+        Check("a release needing a newer RevaMP is held back", ModCatalog.ApprovalReason(needsNewer, needsNewer.Versions[0], 16 << 20, _ => true, "0.69.1") == "Needs RevaMP 0.70.0.");
+        Check("the same release is fine on that RevaMP", ModCatalog.ApprovalReason(needsNewer, needsNewer.Versions[0], 16 << 20, _ => true, "0.70.0") == null);
+        Check("the older release that works is offered instead", ModCatalog.Offered(needsNewer, 16 << 20, _ => true, "0.69.1").Version == "1.0.0");
+        Check("no update to a release this RevaMP can't use", ModCatalog.UpdateTo(needsNewer, "1.0.0", 16 << 20, _ => true, "0.69.1") == null);
         string json = "{\"format\":1,\"future\":{\"a\":[1,true]},\"mods\":[{\"id\":\"test.mod\",\"future\":42,\"versions\":[{\"version\":\"1\",\"url\":\"https://github.com/o/r/releases/download/v/m.dll\",\"future\":\"ok\"},{\"url\":\"https://example.com/evil.dll\"}]}]}";
         var parsed = ModCatalog.Parse(Encoding.UTF8.GetBytes(json));
         Check("unknown fields ignored, bad URL removed", parsed.Mods.Count == 1 && parsed.Mods[0].Versions.Count == 1);
@@ -65,27 +66,24 @@ static class ModCatalogTest
         Check("bare DLL verified", Verify(Dll).SequenceEqual(Dll));
         var choices = Mod(); var newer = Release(Dll); newer.Version = "2.0.0"; var older = Release(Dll);
         choices.Versions.Add(newer); choices.Versions.Add(older);
-        Check("offer newest approved version, skipping unapproved newer version", ModCatalog.Offered(choices, Approved(), 1024, ValidId) == older);
-        Check("retain latest unapproved entry for grey state", ModCatalog.Offered(choices, new Dictionary<string, string>(), 1024, ValidId) == newer);
-        // the start-up update check: only an approved version newer than the installed one
-        Check("update offered to an older install", ModCatalog.UpdateTo(choices, "0.9.0", Approved(), 1024, ValidId) == older);
-        Check("no update when the approved version is installed", ModCatalog.UpdateTo(choices, "1.0.0", Approved(), 1024, ValidId) == null);
-        Check("no update to an older approved version", ModCatalog.UpdateTo(choices, "1.2.0", Approved(), 1024, ValidId) == null);
-        Check("no update when not installed", ModCatalog.UpdateTo(choices, null, Approved(), 1024, ValidId) == null);
-        Check("no update when nothing is approved", ModCatalog.UpdateTo(choices, "0.9.0", new Dictionary<string, string>(), 1024, ValidId) == null);
+        Check("new catalog version is available without a RevaMP release", ModCatalog.Offered(choices, 1024, ValidId) == newer);
+        newer.Hash = "invalid";
+        Check("invalid newest entry does not hide a valid older release", ModCatalog.Offered(choices, 1024, ValidId) == older);
+        newer.Hash = ModCatalog.Sha256(Dll);
+        // the start-up update check: only a catalog version newer than the installed one
+        Check("update offered to an older install", ModCatalog.UpdateTo(choices, "0.9.0", 1024, ValidId) == newer);
+        Check("no update when the catalog version is installed", ModCatalog.UpdateTo(choices, "2.0.0", 1024, ValidId) == null);
+        Check("no update to an older catalog version", ModCatalog.UpdateTo(choices, "2.2.0", 1024, ValidId) == null);
+        Check("no update when not installed", ModCatalog.UpdateTo(choices, null, 1024, ValidId) == null);
         Check("versions compare as numbers", ModCatalog.Newer("0.10.0", "0.9.0") && !ModCatalog.Newer("0.9.0", "0.10.0"));
         var tampered = (byte[])Dll.Clone(); tampered[0] ^= 1;
         Refused("tampered DLL refused", () => Verify(tampered));
-        Refused("hash not approved refused", () => ModCatalog.Verify(Mod(), Release(Dll), Dll, new Dictionary<string, string>(), 1024, ValidId));
-        foreach (string line in new[] { "other.mod 1.0.0", "test.mod 2.0.0", "test.mod", "test.mod 1.0.0 extra" })
-        {
-            var a = Approved(); a[ModCatalog.Sha256(Dll)] = line;
-            Refused("approved id/version must match: " + line, () => ModCatalog.Verify(Mod(), Release(Dll), Dll, a, 1024, ValidId));
-        }
-        Refused("invalid id validator refuses", () => ModCatalog.Verify(Mod(), Release(Dll), Dll, Approved(), 1024, _ => false));
+        var badHash = Release(Dll); badHash.Hash = "bad";
+        Refused("invalid catalog hash refused", () => ModCatalog.Verify(Mod(), badHash, Dll, 1024, ValidId));
+        Refused("invalid id validator refuses", () => ModCatalog.Verify(Mod(), Release(Dll), Dll, 1024, _ => false));
         Refused("advertised oversize refused", () => Verify(Dll, limit: Dll.Length - 1));
         var wrongSize = Release(Dll); wrongSize.Size--;
-        Refused("actual size must match catalog", () => ModCatalog.Verify(Mod(), wrongSize, Dll, Approved(), 1024, ValidId));
+        Refused("actual size must match catalog", () => ModCatalog.Verify(Mod(), wrongSize, Dll, 1024, ValidId));
         byte[] zip = Zip(("BepInEx/plugins/Test.dll", Dll), ("README.txt", new byte[1]));
         Check("exact ZIP entry verified", Verify(zip, "BepInEx/plugins/Test.dll").SequenceEqual(Dll));
         Refused("tampered zipped DLL refused", () => Verify(Zip(("Test.dll", tampered)), "Test.dll"));
@@ -113,7 +111,7 @@ static class ModCatalogTest
         {
             string old = ModFiles.Target(dir, "test.mod", "1.0.0"), next = ModFiles.Target(dir, "test.mod", "2.0.0");
             File.WriteAllBytes(old, Dll);
-            Check("pending installed file discovered without loaded plugin", ModFiles.KnownFiles(dir, "test.mod", Approved()).Single() == old);
+            Check("pending installed file discovered without loaded plugin", ModActivation.Files(dir, "test.mod").Single() == old);
             Check("update succeeds", ModFiles.Install(dir, "test.mod", "2.0.0", Dll, new[] { old }) == null);
             Check("update sets old aside", !File.Exists(old) && File.ReadAllBytes(old + ".replaced").SequenceEqual(Dll) && File.ReadAllBytes(next).SequenceEqual(Dll));
             Check("reinstall same target succeeds", ModFiles.Install(dir, "test.mod", "2.0.0", Dll, new[] { next }) == null && !File.Exists(next + ".part"));

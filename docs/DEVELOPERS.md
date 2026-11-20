@@ -219,7 +219,7 @@ protocol, the interest rules and the byte projections are in [MULTIPLAYER-ARCHIT
   that voice to every player, played without distance like a radio. Session settings → *Voice chat: Everyone hears
   everyone* does the same for every voice in the session.
 
-## The approved-mod browser
+## The mod catalog browser
 
 **Settings → Revamp → Mods** opens the browser (`src/TLDRevamp/Net/ModsScreen.cs`, built from
 `src/TLDRevamp/RevampMenu.cs`). Selecting a mod shows its author, description, source, download size, installed
@@ -229,9 +229,9 @@ download. **Disable / Enable** keeps a managed mod installed and changes whether
 disabled mods disabled and preserve the old file as `.replaced`.
 
 **Updates at start** (like MSCLoader): when the main menu first shows, RevaMP fetches the catalog once in the
-background. If a mod installed from the browser has a newer version that this RevaMP approves, the Mods screen opens and
+background. If a mod installed from the browser has a newer version in the catalog, the Mods screen opens and
 asks *Update now?*; Yes downloads every listed update one after another, with the same checks as **Update**, and they load
-at the next start. Mods installed by hand that have a newer approved version are named, to update by hand. No goes back to
+at the next start. Mods installed by hand that have a newer catalog version are named, to update by hand. No goes back to
 the main menu; the question comes again at the next start. Offline, nothing shows. Turn it off with *Check for mod updates at
 start* (Settings → Revamp, Mods section). Test machines (bridge on) never check by themselves; `tools/modupdatecheck.py`
 runs the check with the bridge command `mods check`.
@@ -241,13 +241,13 @@ catalog is unavailable and installed mods keep working. The default catalog is t
 on the `dev` branch (`ModCatalog.DefaultUrl`); override it with `[Mods] CatalogUrl` in
 `BepInEx/config/tldrevamp.core.cfg`.
 
-**The catalog cannot approve code.** A downloaded DLL must match both its catalog SHA-256 and the **local**
-`packaging/approved-mods.txt` shipped with RevaMP, including the mod's id and version. Only GitHub release assets are
-accepted (`ModCatalog.ReleaseUrl`), with bounded downloads and single-DLL ZIP validation. The newest locally approved
-version is offered. A grey entry explains why it cannot be installed with this RevaMP release. Head Unit 0.2.0 and
-Car Trailer 0.1.1 are approved by their original release DLL hashes.
+**The catalog is the mod list.** A downloaded DLL must match its catalog SHA-256. Only GitHub release assets are
+accepted (`ModCatalog.ReleaseUrl`), with bounded downloads and single-DLL ZIP validation. The newest valid catalog
+version is offered. New releases become available when the catalog changes, without a RevaMP release.
+When API mods differ at join, `ModsNeeded` lists the host's required files and every problem before Reject. The
+join screen installs identical hashes from the catalog; the host never sends mod files.
 
-Only single-file mods are supported. Browser installs use `BepInEx/plugins/TLDRevampMods`, like host transfers. Mods
+Only single-file mods are supported. Browser installs use `BepInEx/plugins/TLDRevampMods`, for both the browser and join screen. Mods
 installed by hand are marked **not managed** and must be updated or removed by hand; they must also be enabled or
 disabled by hand. RevaMP's own DLLs and BepInEx core are protected.
 

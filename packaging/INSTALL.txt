@@ -85,3 +85,9 @@ CREDITS
     Fira Sans Bold (https://github.com/mozilla/Fira, the letters of the corner mark) - SIL OFL 1.1
     AMD FidelityFX FSR 3.1 (https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK, FSR 3.1 native AA) - MIT
     FSR3Unity by Nico de Poel (https://github.com/ndepoel/FSR3Unity, FSR 3.1 for Unity) - MIT
+
+MOD CATALOG AND JOINING
+The live mod catalog is the list of installable releases. Downloads must match its DLL SHA-256.
+When joining with missing mods, Install or Install all downloads matching files from the catalog.
+The host never sends files. Restart the game, then join again. Hand-installed mods load as usual;
+replace those copies by hand. Copy list includes names, versions, source links and mods to remove.

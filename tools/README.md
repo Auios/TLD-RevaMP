@@ -552,7 +552,7 @@ synthetic headers; tests also create report zips and corrupt inputs in temporary
   TV's source, quieter farther away and gone beyond 20 m, a media file, YouTube, and no sound once the TV is off.
 - `tools/modupdatecheck.py [--no-build]`: the start-up mod update check in one game, against the real catalog on GitHub.
   It plants Road End's previous release as a browser install, runs the check (`mods check`), answers Yes (`mods yes`)
-  and checks the downloaded file against the approved hash. Yes updates every managed mod with an update, so the copy's
+  and checks the downloaded file against the catalog hash. Yes updates every managed mod with an update, so the copy's
   `TLDRevampMods` and `disabled-mods` folders are saved first and put back afterwards.
 
 ## Headless mode is retired

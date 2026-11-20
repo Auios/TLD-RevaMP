@@ -7,7 +7,7 @@ namespace TLDRevamp.Net
     /// ordinary game items, which works only when every player has the same mods: a joiner without one, or with another
     /// version, gets other items (or none) for what the host spawns, and mods that change the game's behaviour act on one
     /// side only. Compared by mod ID, version and the SHA-256 of the mod's DLL. Nothing is downloaded: a TLD Loader mod is
-    /// not an approved file, so the joiner is told what to install or remove. No game or Unity types, so
+    /// installed by hand, so the joiner is told what to install or remove. No game or Unity types, so
     /// tools/unit/LoaderModCheckTest.cs runs it offline.
     public static class LoaderModCheck
     {

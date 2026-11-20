@@ -288,7 +288,7 @@ static class ModActivationTest
     {
         string dir = Path.Combine(root, "BepInEx", "plugins", "TLDRevampMods");
         Directory.CreateDirectory(dir); Directory.CreateDirectory(ModActivation.Store(dir));
-        ModTransfer.InstallDir = dir;
+        ModInstall.InstallDir = dir;
         string odd = Path.Combine(dir, "Better Lights-1.0.dll"); File.WriteAllBytes(odd, Bytes);
         File.WriteAllBytes(ModFiles.Target(dir, "good.mod", "1.0"), Bytes);
         string broken = Path.Combine(ModActivation.Store(dir), "broken.mod.state"); File.WriteAllText(broken, "unreadable state");
@@ -341,5 +341,5 @@ namespace TLDRevamp.Net
         internal static void CheckNow() { } internal static void Answer(bool yes) { }
         internal static System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<ModCatalog.Mod, ModCatalog.Release>> Updates(System.Collections.Generic.List<string> byHand) => new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<ModCatalog.Mod, ModCatalog.Release>>();
     }
-    static class ModTransfer { internal static string InstallDir; internal static string Sha256(byte[] bytes) => ModCatalog.Sha256(bytes); }
+    static class ModInstall { internal static string InstallDir; internal static string Sha256(byte[] bytes) => ModCatalog.Sha256(bytes); }
 }

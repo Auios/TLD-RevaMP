@@ -480,7 +480,7 @@ namespace TLDRevamp
                         case "mods": return TLDRevamp.Net.ModObjects.StatusJson();
                         case "plausibility": return TLDRevamp.Net.Plausibility.Stats();
                         case "ask": return Net.MpScreen.AskProbe(ma.Length > 1 ? ma[1] : "");
-                        case "modtransfer": return TLDRevamp.Net.ModTransfer.Stats();
+                        case "modinstall": return TLDRevamp.Net.ModInstall.Stats();
                         case "sprayhold": return TLDRevamp.Net.EntitySprayTools.SprayHold(float.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture));
                         case "sprayfx": return TLDRevamp.Net.EntityEffects.SprayFxState(uint.Parse(ma[1]));
                         case "lookat": return TLDRevamp.Net.EntitySprayTools.LookAt(uint.Parse(ma[1]));

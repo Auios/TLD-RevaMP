@@ -40,7 +40,7 @@ namespace TLDRevamp.Net
         public const byte ModEvent = 78;      // c→s: str key, u8 target, u32 about, bytes.  s→c: str key, varint from, u32 about, bytes
         public const byte ModClaim = 79;      // c→s: u32 id
         public const byte ModClock = 80;      // c→s: f64 clientT.  s→c: f64 clientT, f64 hostT
-        // API 2 (81–83 are ModTransfer's)
+        // API 2 (81 is ModsNeeded; 82–83 are retired)
         public const byte ModState = 87;      // c→s / s→c: u32 id, u32 epoch, bytes state
         public const byte ModStore = 88;      // s→c: u32 id (the copy here goes into the far store)
         public const byte ModSetting = 89;    // s→c: varint n, n × (str key, str value)
@@ -946,16 +946,16 @@ namespace TLDRevamp.Net
         /// What differs between a joiner's mods and the host's.
         public sealed class ModCheck
         {
-            /// Host mods the joiner lacks or has in another version/file: the host can send these (ModTransfer).
-            public readonly List<ModInfo> Send = new List<ModInfo>();
+            /// Host mods the joiner lacks or has in another version/file: listed for installation from the catalog.
+            public readonly List<ModsNeeded.Entry> Needed = new List<ModsNeeded.Entry>();
             /// Differences no download fixes (a mod the host doesn't have, a type version, an unreadable list).
             public readonly List<string> Problems = new List<string>();
-            public bool Same => Send.Count == 0 && Problems.Count == 0;
+            public bool Same => Needed.Count == 0 && Problems.Count == 0;
 
             public string Describe()
             {
                 var diff = new List<string>(Problems);
-                foreach (var m in Send) diff.Add($"install {m.Name} {m.Version}");
+                foreach (var m in Needed) diff.Add($"install {m.Name} {m.Version}");
                 var sb = new StringBuilder("Your mods differ from the host's: ");
                 sb.Append(string.Join("; ", diff.Count > 6 ? diff.GetRange(0, 6) : diff));
                 if (diff.Count > 6) sb.Append($"; and {diff.Count - 6} more");
@@ -974,9 +974,21 @@ namespace TLDRevamp.Net
             if (r.Remaining > 0)
             {
                 uint n = r.VarU32();
-                for (uint i = 0; i < n && i < 256 && !r.Bad; i++) { string id = r.Str(), ver = r.Str(), hash = r.Str(); theirs[id] = (ver, hash); }
+                if (n > 256) r.Bad = true;
+                for (uint i = 0; i < n && !r.Bad; i++)
+                {
+                    string id = r.Str(), ver = r.Str(), hash = r.Str();
+                    if (r.Bad || id == null || ver == null || hash == null) { r.Bad = true; break; }
+                    theirs[id] = (ver, hash);
+                }
                 uint nt = r.VarU32();
-                for (uint i = 0; i < nt && i < 4096 && !r.Bad; i++) { string key = r.Str(); theirTypes[key] = r.U8(); }
+                if (nt > 4096) r.Bad = true;
+                for (uint i = 0; i < nt && !r.Bad; i++)
+                {
+                    string key = r.Str(); byte version = r.U8();
+                    if (r.Bad || key == null) { r.Bad = true; break; }
+                    theirTypes[key] = version;
+                }
                 if (r.Bad) { res.Problems.Add("your mod list could not be read"); return res; }
             }
             foreach (var m in MpApi.Mods)
@@ -984,10 +996,7 @@ namespace TLDRevamp.Net
                 bool have = theirs.TryGetValue(m.Id, out var t);
                 theirs.Remove(m.Id);
                 if (have && t.ver == m.Version && t.hash == m.Hash) continue;
-                if (ModTransfer.CanSend(m)) res.Send.Add(m);
-                else if (!have) res.Problems.Add($"install {m.Name} {m.Version}");
-                else if (t.ver != m.Version) res.Problems.Add($"{m.Name}: the host has {m.Version}, you {t.ver}");
-                else res.Problems.Add($"{m.Name} {m.Version}: your file differs from the host's (sha256 {MpApi.Short(t.hash)}, host {MpApi.Short(m.Hash)})");
+                res.Needed.Add(new ModsNeeded.Entry { Id = m.Id, Name = m.Name, Version = m.Version, Hash = m.Hash });
             }
             foreach (var kv in theirs) res.Problems.Add($"remove {kv.Key} {kv.Value.ver} (the host doesn't have it)");
             if (res.Same)

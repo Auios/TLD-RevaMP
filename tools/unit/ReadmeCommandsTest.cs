@@ -48,7 +48,6 @@ static class ReadmeCommandsTest
         foreach (string f in new[] { "installer/install.sh", "installer/install.ps1", "tools/pin-installer.sh" })
             Check("the README names an existing file: " + f, File.Exists(Path.Combine(root, f)));
         Check("the README names packaging/mods.json", File.Exists(Path.Combine(root, "packaging/mods.json")));
-        Check("the README names packaging/approved-mods.txt", File.Exists(Path.Combine(root, "packaging/approved-mods.txt")));
         Check("the README names the licences folder", Directory.Exists(Path.Combine(root, "packaging/licenses")));
 
         // ---- 2. the launch option the README gives must be the one the installer sets ----
@@ -99,11 +98,9 @@ static class ReadmeCommandsTest
             catalog.Contains("releases/download") &&
             (readme.Contains("Only GitHub release assets are accepted") ||
              readme.Contains("GitHub release assets") || readme.Contains("release assets")));
-        Check("the catalogue really needs the local approved list",
-            catalog.Contains("approved.TryGetValue") &&
-            (readme.Contains("approved-mods.txt") || readme.Contains("approved list")));
-        Check("the README's approved list name is the real file",
-            readme.Contains("approved-mods.txt") || readme.Contains("approved list"));
+        Check("the catalog hash is the install check",
+            catalog.Contains("Sha256(dll) != v.Hash.ToLowerInvariant()") && readme.Contains("catalog's SHA-256"));
+        Check("the host never sends files", readme.Contains("host never sends files"));
 
         // ---- 7. the licence claim ----
         Check("the README says GPL-3.0", readme.Contains("GNU General Public License, version 3"));
@@ -145,8 +142,8 @@ static class ReadmeCommandsTest
         // the catalog's grey entry
         string catalog2 = Read("src/TLDRevamp/Net/ModCatalog.cs");
         Check("the README's grey-entry claim is the code's",
-            catalog2.Contains("Not approved in this RevaMP version") &&
-            (readme.Contains("grey entry") || readme.Contains("greyed out") || readme.Contains("not approved")));
+            catalog2.Contains("Invalid catalog hash.") &&
+            readme.Contains("Invalid entries"));
 
         // ---- 10. the first-session walkthrough: every step must be a real action ----
         Check("the README walks a beginner through a first session",

@@ -76,7 +76,7 @@ static class TelemetryPrivacyTest
         string meter = File.ReadAllText(Path.Combine(net, "NetMeter.cs"));
         var scanned = System.Text.RegularExpressions.Regex.Match(meter, @"new\[\] \{ (typeof\(\w+\)(?:, )?)+ \}").Value;
         var classes = System.Text.RegularExpressions.Regex.Matches(scanned, @"typeof\((\w+)\)").Cast<System.Text.RegularExpressions.Match>().Select(m => m.Groups[1].Value).ToList();
-        Check(classes.Count >= 9, "the meter's scanned classes are read from NetMeter.cs");
+        Check(classes.Count >= 8, "the meter's scanned classes are read from NetMeter.cs");
         var names = new List<string> { "ObjectCompareAsk", "ObjectCompareQuery", "ObjectCompareAnswer", "ObjectCompareRow", "ObjectCompareRoster" };
         // Message/Record/Restore are prefixed with their class by the meter; a file can hold several classes, so any of
         // the scanned classes declared in that file may be the owner

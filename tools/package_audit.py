@@ -24,7 +24,6 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--zip", default="")
     ap.add_argument("--manifest", default=str(ROOT / "packaging" / "mods.json"))
-    ap.add_argument("--approved", default=str(ROOT / "packaging" / "approved-mods.txt"))
     ap.add_argument("--install", default=str(ROOT / "packaging" / "INSTALL.txt"))
     ap.add_argument("--repo-only", action="store_true",
                     help="check the repository's own files only, and do NOT claim the package was checked. "
@@ -48,15 +47,6 @@ def main():
 
     # ---- the manifest ------------------------------------------------------
     catalog = json.loads(pathlib.Path(args.manifest).read_text())
-    approved = {}
-    for line in pathlib.Path(args.approved).read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        parts = line.split()
-        if len(parts) == 3:
-            approved[parts[0]] = (parts[1], parts[2])
-
     seen = set()
     for mod in catalog["mods"]:
         for rel in mod["versions"]:
@@ -66,12 +56,6 @@ def main():
             need(rel["size"] > 0, f"{mod['id']} {rel['version']}: size must be positive (it is the download size)")
             need(rel["url"].startswith("https://github.com/"), f"{mod['id']} {rel['version']}: the url is not a GitHub release asset")
             need(rel["url"].endswith(".zip"), f"{mod['id']} {rel['version']}: the url is not a zip")
-            # the hash must be in the local approved list, with the same id and version
-            hit = [k for k, v in approved.items() if k == rel["sha256"]]
-            if need(bool(hit), f"{mod['id']} {rel['version']}: the sha256 is not in the local approved list"):
-                aid, aver = approved[hit[0]]
-                need(aid == mod["id"], f"{mod['id']} {rel['version']}: approved under the id '{aid}'")
-                need(aver == rel["version"], f"{mod['id']} {rel['version']}: approved as version '{aver}'")
             # the file path inside the archive
             if rel.get("file"):
                 need(rel["file"].endswith(".dll"), f"{mod['id']} {rel['version']}: 'file' must name a .dll")
@@ -81,12 +65,6 @@ def main():
             if rel.get("revamp"):
                 need(re.fullmatch(r"\d+\.\d+\.\d+", rel["revamp"]),
                      f"{mod['id']} {rel['version']}: the revamp field '{rel['revamp']}' is not a version")
-
-    # every approved entry with a version should be in the catalog too, or be a
-    # deliberate extra (the catalog may offer fewer)
-    for sha, (mid, mver) in approved.items():
-        if not any(s == sha and v == mver and i == mid for s, v, i in seen):
-            notes.append(f"approved but not in the catalog: {mid} {mver}")
 
     # ---- the licences ------------------------------------------------------
     lic_dir = ROOT / "packaging" / "licenses"
@@ -124,6 +102,8 @@ def main():
     if zip_path and os.path.exists(zip_path):
         with zipfile.ZipFile(zip_path) as z:
             names = z.namelist()
+            need(not any(pathlib.PurePosixPath(n).name == "approved-mods.txt" for n in names),
+                 "the package contains the retired approved-mods.txt")
             need(f"INSTALL.txt" in names, f"{os.path.basename(zip_path)}: INSTALL.txt is missing")
             need("BepInEx/plugins/TLDRevamp/TLDRevamp.dll" in names, f"{os.path.basename(zip_path)}: TLDRevamp.dll is missing")
             need("BepInEx/plugins/TLDRevamp/TLDLoader.dll" in names, f"{os.path.basename(zip_path)}: the TLDLoader stub is missing")

@@ -108,9 +108,7 @@ breakables, trailers or mod objects.
 | 78 | ModEvent | both | state | gap | Over budget or before Ready: lost, nothing resends. In-tree user: TV keys, typed text can differ. |
 | 79 | ModClaim | c>s | ask | - | Refused silently unless the type allows takeover; the sender changes nothing. |
 | 80 | ModClock | both | ask | - | Repeats; allowed before Ready. |
-| 81 | ModOffer | s>c | session | - | |
-| 82 | ModFetch | c>s | session | - | Only before Ready, only what was offered. |
-| 83 | ModChunk | s>c | session | - | Paced by the send queue. |
+| 81 | ModsNeeded | s>c | session | - | Required mod identities and problem lines before Reject; no files. |
 | 84 | PoiCensus | c>s | session | - | Log only: names a building that differs, repairs nothing. |
 | 85 | Worn | both | state | `SendWornTo` for later copies; `WornNotMineAnymore` takes it off a refused head | Not in the census. |
 | 86 | MemberGone | both | state | `SendGoneMembers` for later copies | Refused forward (owner has it stored far): member stays deleted on the deleter only. |

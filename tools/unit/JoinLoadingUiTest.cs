@@ -31,8 +31,9 @@ static class JoinLoadingUiTest
             Check(r.GetProperty("stage").GetInt32() == 3 && !r.GetProperty("geometry").GetBoolean(), "geometry still gates stage 3");
             Check(r.GetProperty("terrainDone").GetInt32() == 1 && r.GetProperty("terrainNeeded").GetInt32() == 3 && r.GetProperty("roadsDone").GetInt32() == 1 && r.GetProperty("roadsNeeded").GetInt32() == 2, "production scan counts missing tiles and colliders separately from roads");
             Check(r.GetProperty("bytesReceived").GetInt32() == 2500 && r.GetProperty("receiveBytesPerSecond").GetDouble() == 2500 && r.GetProperty("route").GetString() == "relay" && r.GetProperty("pingMs").GetInt32() == 34, "actual adapter samples transport and known route/ping");
-            foreach (string key in new[] { "visible", "stage", "stages", "muted", "audioVolume", "ready", "reason", "scene", "geometry", "ground", "initialSync", "hostName", "versionCheck", "worldActivity", "placementStatus", "loadingMod", "loadingModBytes", "loadingModTotal", "geometrySampled", "expectedObjects", "manifestReceived", "initialRecordsEnded", "progressPercent", "elapsedMs", "recentObjects", "receivedVehicles", "receivedItemsParts", "receivedOther", "loadingScreen", "expandedSteps", "receivedExpanded" })
+            foreach (string key in new[] { "visible", "stage", "stages", "muted", "audioVolume", "ready", "reason", "scene", "geometry", "ground", "initialSync", "hostName", "versionCheck", "worldActivity", "placementStatus", "geometrySampled", "expectedObjects", "manifestReceived", "initialRecordsEnded", "progressPercent", "elapsedMs", "recentObjects", "receivedVehicles", "receivedItemsParts", "receivedOther", "loadingScreen", "expandedSteps", "receivedExpanded" })
                 Check(r.TryGetProperty(key, out _), "full production Probe retains/adds " + key);
+            Check(!r.TryGetProperty("loadingMod", out _), "join loading has no host mod download state");
             Check(r.GetProperty("loadingScreen").GetString() == "revamp", "RevaMP always owns the loading presentation");
             Check(r.GetProperty("stages").GetArrayLength() == 7 && r.GetProperty("stages")[4].GetProperty("count").GetInt32() == 0 && r.GetProperty("muted").GetBoolean() && r.GetProperty("audioVolume").GetDouble() == 0, "legacy schema and audio semantics");
         }
@@ -357,7 +358,7 @@ namespace TLDRevamp.Net
     static class Session { public static ulong LastJoinSteamId; public static bool Left; public static string EndReason; public static string Persona(Steamworks.CSteamID id) => "Host"; public static void Leave() => Left = true; public static void Show(int n,string a,string b) { } }
     static class MpScreen { public static string PendingQuestion; public static void AskProbe(string answer) { } }
     static class Mp { public static MpClient Client; public static Vector3d LocalGlobal() => default; }
-    class MpClient { public Transport T = new Transport(); public bool ConnectedToHost, WorldLoaded, SpotPlaced, Lost; public int MyId; public string RejectReason, HostName, LoadingMod; public uint LoadingModBytes, LoadingModTotal; }
+    class MpClient { public Transport T = new Transport(); public bool ConnectedToHost, WorldLoaded, SpotPlaced, Lost; public int MyId; public string RejectReason, HostName; }
     class Transport { public List<int> Connections = new List<int> {1}; public long BytesIn; public Quality Status(int conn) => new Quality {Ping=34}; }
     struct Quality { public int Ping; }
     static class SteamCompat { public static string Route(int conn) => "{\"ok\":true,\"relayed\":true}"; }

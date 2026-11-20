@@ -58,19 +58,16 @@ class ValidatorTests(unittest.TestCase):
     def setUp(self):
         self.dir = pathlib.Path(tempfile.mkdtemp())
         self.manifest = self.dir / "mods.json"
-        self.approved = self.dir / "approved-mods.txt"
-        self.write(manifest(), "%s %s 1.0.0" % (HASH, "test.mod"))
+        self.write(manifest())
 
-    def write(self, data, approved=None):
+    def write(self, data):
         if isinstance(data, (dict, list)):
             self.manifest.write_text(json.dumps(data, indent=2), encoding="utf-8")
         else:
             self.manifest.write_text(data, encoding="utf-8")
-        if approved is not None:
-            self.approved.write_text(approved, encoding="utf-8")
 
     def run_validator(self, artifacts=(), **kwargs):
-        return vm.validate(self.manifest, self.approved, artifacts, build_version="0.69.1", **kwargs)
+        return vm.validate(self.manifest, artifacts, build_version="0.69.1", **kwargs)
 
     def codes(self, report):
         return sorted(item["code"] for item in report.findings)
@@ -90,7 +87,7 @@ class ValidatorTests(unittest.TestCase):
         self.assertEqual(report.errors, [])
 
     def test_the_real_manifest_in_this_repository_passes(self):
-        report = vm.validate(vm.DEFAULT_MANIFEST, vm.DEFAULT_APPROVED, [],
+        report = vm.validate(vm.DEFAULT_MANIFEST, [],
                              build_version=vm.read_build_version())
         self.assertClean(report)
 
@@ -191,16 +188,6 @@ class ValidatorTests(unittest.TestCase):
         report = self.run_validator()
         self.assertHas(report, "version.duplicate-url")
 
-    def test_duplicate_hash_on_the_approved_list_is_refused(self):
-        self.write(manifest(), "%s test.mod 1.0.0\n%s test.mod 1.0.0" % (HASH, HASH))
-        report = self.run_validator()
-        self.assertHas(report, "approved.duplicate-hash")
-
-    def test_one_version_approved_with_two_different_files_is_refused(self):
-        self.write(manifest(), "%s test.mod 1.0.0\n%s test.mod 1.0.0" % (HASH, OTHER_HASH))
-        report = self.run_validator()
-        self.assertHas(report, "approved.duplicate-version")
-
     # ------------------------------------------------------------------ ids, versions, urls
 
     def test_bad_mod_id_is_refused(self):
@@ -300,41 +287,6 @@ class ValidatorTests(unittest.TestCase):
         report = self.run_validator()
         self.assertHas(report, "version.sha256")
 
-    # ------------------------------------------------------------------ the approved list
-
-    def test_version_missing_from_the_approved_list_is_refused(self):
-        data = manifest()
-        data["mods"][0]["versions"][0]["sha256"] = OTHER_HASH
-        self.write(data)
-        report = self.run_validator()
-        self.assertHas(report, "approved.missing")
-
-    def test_approved_id_or_version_mismatch_is_refused(self):
-        self.write(manifest(), "%s test.mod 0.9.0" % HASH)
-        report = self.run_validator()
-        self.assertHas(report, "approved.mismatch")
-
-    def test_approved_line_with_missing_fields_is_refused(self):
-        self.write(manifest(), HASH)
-        report = self.run_validator()
-        self.assertHas(report, "approved.fields")
-
-    def test_approved_line_with_a_bad_hash_is_refused(self):
-        self.write(manifest(), "xyz test.mod 1.0.0")
-        report = self.run_validator()
-        self.assertHas(report, "approved.sha256")
-
-    def test_an_approved_file_the_catalog_does_not_list_is_a_warning(self):
-        self.write(manifest(), "%s test.mod 1.0.0\n%s test.mod 0.9.0" % (HASH, OTHER_HASH))
-        report = self.run_validator()
-        self.assertHas(report, "approved.not-in-catalog")
-        self.assertEqual(report.errors, [])
-
-    def test_comments_and_blank_lines_in_the_approved_list_are_skipped(self):
-        self.write(manifest(), "# a comment\n\n%s test.mod 1.0.0\n" % HASH)
-        report = self.run_validator()
-        self.assertClean(report)
-
     # ------------------------------------------------------------------ ordering
 
     def test_versions_out_of_order_are_refused(self):
@@ -342,7 +294,7 @@ class ValidatorTests(unittest.TestCase):
         data = manifest()
         older = version_entry("0.9.0")
         data["mods"][0]["versions"].insert(0, older)
-        self.write(data, "%s test.mod 1.0.0\n%s test.mod 0.9.0" % (HASH, older["sha256"]))
+        self.write(data)
         report = self.run_validator()
         self.assertHas(report, "version.order")
 
@@ -350,7 +302,7 @@ class ValidatorTests(unittest.TestCase):
         data = manifest()
         older = version_entry("0.9.0")
         data["mods"][0]["versions"].append(older)
-        self.write(data, "%s test.mod 1.0.0\n%s test.mod 0.9.0" % (HASH, older["sha256"]))
+        self.write(data)
         report = self.run_validator()
         self.assertClean(report)
 
@@ -460,7 +412,7 @@ class ValidatorTests(unittest.TestCase):
         data = manifest()
         data["mods"][0]["id"] = "tldrevamp.cartrailer"
         data["mods"][0]["name"] = "Trailer"
-        self.write(data, "%s tldrevamp.cartrailer 1.0.0" % HASH)
+        self.write(data)
         with self.plugin_sources():
             report = self.run_validator()
         self.assertHas(report, "mod.name.guid")
@@ -480,7 +432,7 @@ class ValidatorTests(unittest.TestCase):
         """Run the tool as the command line does, and keep its output out of the test log."""
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            code = vm.main(["--manifest", str(self.manifest), "--approved", str(self.approved),
+            code = vm.main(["--manifest", str(self.manifest),
                             "--artifacts", str(self.dir / "none")] + list(extra))
         return code, out.getvalue()
 
@@ -504,10 +456,8 @@ class ValidatorTests(unittest.TestCase):
 
     def test_the_validator_never_writes_to_the_files_it_reads(self):
         before_manifest = self.manifest.read_bytes()
-        before_approved = self.approved.read_bytes()
         self.run_validator()
         self.assertEqual(self.manifest.read_bytes(), before_manifest)
-        self.assertEqual(self.approved.read_bytes(), before_approved)
 
 
 if __name__ == "__main__":

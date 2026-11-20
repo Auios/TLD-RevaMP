@@ -29,13 +29,11 @@ class DeployTests(unittest.TestCase):
         self.plugin = self.root / 'src/TLDRevamp/bin/Release/netstandard2.1/TLDRevamp.dll'
         self.preloader = self.root / 'src/TLDRevamp.Preloader/bin/Release/netstandard2.1/TLDRevamp.Preloader.dll'
         self.mp_api = self.root / 'src/TLDRevamp.Multiplayer/bin/Release/netstandard2.1/TLDRevamp.Multiplayer.dll'
-        self.approved = self.root / 'packaging/approved-mods.txt'
         self.shim = self.root / 'src/TLDLoaderShim/bin/Release/netstandard2.1/TLDLoader.dll'
         for path, data in (
             (self.plugin, b'built-main'),
             (self.preloader, b'built-preloader'),
             (self.mp_api, b'built-mp-api'),
-            (self.approved, b'approved-mods'),
             (self.shim, b'built-shim'),
         ):
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -50,7 +48,6 @@ class DeployTests(unittest.TestCase):
             mock.patch.object(game.tldenv, 'MODS_REPO', self.root / 'TLD-Mods'),
             mock.patch.object(game, 'PRELOADER_DLL', self.preloader),
             mock.patch.object(game, 'MP_API_DLL', self.mp_api),
-            mock.patch.object(game, 'APPROVED_MODS', self.approved),
             mock.patch.object(game, 'plugin_dll', return_value=self.plugin),
             mock.patch.object(game, 'require_test_identity', self.identity),
             mock.patch.object(game, 'running', return_value=False),

@@ -368,7 +368,7 @@ namespace TLDRevamp
                 "The Mods button at the top of this page opens RevaMP's mod browser.");
             Toggle("modUpdateCheck", "Check for mod updates at start", 1,
                 "When the main menu first shows, fetch the mod catalog from GitHub. If a mod you installed from the mod browser has a " +
-                "newer version that this RevaMP approves, the Mods screen opens and asks whether to update; the updates load at " +
+                "newer version in the mod catalog, the Mods screen opens and asks whether to update; the updates load at " +
                 "the next start. Mods installed by hand are named too, for you to update.\n\nOff: the catalog is fetched only " +
                 "when you open Mods or press Refresh.",
                 () => Net.ModCatalog.CheckAtStart ? 1 : 0, v => Net.ModCatalog.CheckAtStart = v == 1);

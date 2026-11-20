@@ -15,13 +15,13 @@ namespace TLDRevamp.Net
             if (ModCatalog.Current != null) result.AddRange(ModCatalog.Current.Mods);
             try
             {
-                foreach (string id in ModActivation.Ids(ModTransfer.InstallDir))
+                foreach (string id in ModActivation.Ids(ModInstall.InstallDir))
                 {
                     if (result.Exists(m => m.Id == id)) continue;
                     try
                     {
-                        var files = ModActivation.Files(ModTransfer.InstallDir, id);
-                        if (files.Count == 0 && ModActivation.Desired(ModTransfer.InstallDir, id) != "disabled") continue;
+                        var files = ModActivation.Files(ModInstall.InstallDir, id);
+                        if (files.Count == 0 && ModActivation.Desired(ModInstall.InstallDir, id) != "disabled") continue;
                         string v = files.Count == 0 ? "unknown" : Version(files[0], id);
                         result.Add(Local(id, id, v));
                     }
@@ -35,7 +35,7 @@ namespace TLDRevamp.Net
             result.RemoveAll(m =>
             {
                 if (ModActivation.Core(m.Id)) return false;
-                try { ModActivation.Desired(ModTransfer.InstallDir, m.Id); ModActivation.Files(ModTransfer.InstallDir, m.Id); return false; }
+                try { ModActivation.Desired(ModInstall.InstallDir, m.Id); ModActivation.Files(ModInstall.InstallDir, m.Id); return false; }
                 catch (Exception e) { Unreadable(m.Id, e); return true; }
             });
             return result;
@@ -54,15 +54,15 @@ namespace TLDRevamp.Net
             foreach (var p in Chainloader.PluginInfos.Values) if (p.Metadata.GUID == id) return true;
             return false;
         }
-        internal static bool Pending(string id) => ModActivation.Pending(ModTransfer.InstallDir, id, Loaded(id));
-        internal static string State(string id) => ModActivation.Status(ModTransfer.InstallDir, id, Loaded(id));
+        internal static bool Pending(string id) => ModActivation.Pending(ModInstall.InstallDir, id, Loaded(id));
+        internal static string State(string id) => ModActivation.Status(ModInstall.InstallDir, id, Loaded(id));
         internal static bool HasDisabled()
         {
             // This is only an optional hint on an existing refusal; preserve that refusal if scanning fails.
             try
             {
-                foreach (string id in ModActivation.Ids(ModTransfer.InstallDir))
-                    try { if (ModActivation.Desired(ModTransfer.InstallDir, id) == "disabled") return true; }
+                foreach (string id in ModActivation.Ids(ModInstall.InstallDir))
+                    try { if (ModActivation.Desired(ModInstall.InstallDir, id) == "disabled") return true; }
                     catch (Exception e) { Unreadable(id, e); }
             }
             catch (Exception e) { Unreadable("local mod folder", e); }
@@ -80,13 +80,13 @@ namespace TLDRevamp.Net
         internal static bool DisabledRequired(string id, string hash)
         {
             if (!ModActivation.Allowed(id)) return false;
-            string managed = ModActivation.Resolve(ModTransfer.InstallDir, id);
-            if (ModActivation.Desired(ModTransfer.InstallDir, managed) == "disabled") return true;
-            foreach (string candidate in ModActivation.Ids(ModTransfer.InstallDir))
+            string managed = ModActivation.Resolve(ModInstall.InstallDir, id);
+            if (ModActivation.Desired(ModInstall.InstallDir, managed) == "disabled") return true;
+            foreach (string candidate in ModActivation.Ids(ModInstall.InstallDir))
             {
-                if (ModActivation.Core(candidate) || ModActivation.Desired(ModTransfer.InstallDir, candidate) != "disabled") continue;
-                foreach (string file in ModActivation.Files(ModTransfer.InstallDir, candidate))
-                    if (ModTransfer.Sha256(File.ReadAllBytes(file)) == hash) return true;
+                if (ModActivation.Core(candidate) || ModActivation.Desired(ModInstall.InstallDir, candidate) != "disabled") continue;
+                foreach (string file in ModActivation.Files(ModInstall.InstallDir, candidate))
+                    if (ModInstall.Sha256(File.ReadAllBytes(file)) == hash) return true;
             }
             return false;
         }
@@ -95,12 +95,12 @@ namespace TLDRevamp.Net
             ModActivation.Validate(id);
             // A hand-installed copy would still load even after moving a managed copy.
             foreach (var p in Chainloader.PluginInfos.Values)
-                if (p.Metadata.GUID == id && !ModFiles.Managed(ModTransfer.InstallDir, p.Location, id))
+                if (p.Metadata.GUID == id && !ModFiles.Managed(ModInstall.InstallDir, p.Location, id))
                     throw new IOException("Installed by hand: manage this mod's files outside the browser.");
-            var files = ModActivation.Files(ModTransfer.InstallDir, id);
+            var files = ModActivation.Files(ModInstall.InstallDir, id);
             foreach (var p in MpApi.Mods)
-                if (!string.IsNullOrEmpty(p.File) && files.Exists(f => ModFiles.PathEq(f, p.File))) ModActivation.Alias(ModTransfer.InstallDir, id, p.Id);
-            ModActivation.Queue(ModTransfer.InstallDir, id, action);
+                if (!string.IsNullOrEmpty(p.File) && files.Exists(f => ModFiles.PathEq(f, p.File))) ModActivation.Alias(ModInstall.InstallDir, id, p.Id);
+            ModActivation.Queue(ModInstall.InstallDir, id, action);
             ModCatalog.RestartRequired = true;
         }
     }

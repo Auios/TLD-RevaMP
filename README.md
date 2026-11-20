@@ -269,7 +269,7 @@ We would rather you have a rough but working version than a perfect one that nev
 
 ## Add-ons
 
-RevaMP comes with a few optional mods of its own, plus a browser for approved ones:
+RevaMP comes with a few optional mods of its own, plus a browser for catalog mods:
 
 | Add-on | What it does |
 | --- | --- |
@@ -283,15 +283,13 @@ RevaMP comes with a few optional mods of its own, plus a browser for approved on
 **Enable** turn a mod off and on without uninstalling it, and **Remove** takes it away again. Mods you install by
 hand are marked *not managed* — you update and remove those yourself.
 
-Mods installed through the browser must be on the approved list that ships with your RevaMP version. A mod that is not
-approved shows up greyed out, with the reason.
+The live catalog (`packaging/mods.json` on dev) is the mod list. New catalog releases become available without a
+RevaMP update. Only GitHub release assets are accepted, and each downloaded DLL must match the catalog's SHA-256.
+Invalid entries show why they cannot be installed. Mods installed by hand load as usual.
 
-Two rules, so a mod cannot be swapped under you:
-
-- Only GitHub release assets are accepted. The browser downloads a release asset and checks it against the
-  approved list; a link to anything else is refused.
-- The approved list is the local `approved-mods.txt` that ships with the mod. Nothing is approved by being on
-  GitHub.
+When joining with missing or different mods, a screen lists what you need and what to remove. Install individual
+mods or **Install all** from the catalog, then restart the game and join again. Only the identical DLL hash the
+host uses is offered. **Copy list** copies names, versions and catalog source links. The host never sends files.
 
 Listing copy for posting these on Nexus Mods, plus the upload checklist, is in [docs/NEXUS.md](docs/NEXUS.md).
 

@@ -67,6 +67,10 @@ static class MessageTableTest
         // what the dispatchers route: Mp.cs's two switches, then Entities' own
         string mp = File.ReadAllText(Path.Combine(sourceRoot, "Net", "Mp.cs")).Replace("\r\n", "\n");
         int serverAt = mp.IndexOf("switch (type)"), serverEnd = mp.IndexOf("void OnTransport", serverAt), clientAt = mp.IndexOf("switch (type)", serverEnd);
+        Check("ModsNeeded replaces every host file transfer route", mp.Contains("case Protocol.ModsNeeded:") &&
+            !mp.Contains("ModFetch") && !mp.Contains("ModChunk") && !mp.Contains("ModOffer") && !mp.Contains("UploadTick"));
+        Check("required list is sent reliably before readable refusal", mp.Contains("ModsNeeded.Write(_w, Session.MyName(), mods.Needed, mods.Problems);") &&
+            mp.Contains("T.Send(c, _w, SteamTransport.SendReliable);\n                Reject(c, mods.Describe(), Protocol.RejectOther);"));
         Check("Mp.cs has its two dispatchers", serverAt > 0 && serverEnd > serverAt && clientAt > serverEnd);
         string Method(string owner, string name)
         {

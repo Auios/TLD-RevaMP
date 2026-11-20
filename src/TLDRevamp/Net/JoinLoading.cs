@@ -21,8 +21,6 @@ namespace TLDRevamp.Net
         private static long _lastBytes;
         private static double _bytesAt, _detailsAt;
         private static string _route = "unknown", _host = "Host", _version = "Waiting for the host's result", _world = "Waiting for world settings", _placement = "waiting for join position";
-        private static string _mod;
-        private static uint _modBytes, _modTotal;
         private static int _ping = -1;
         private static Vector3d _floor;
         private static Rigidbody _held;
@@ -40,7 +38,7 @@ namespace TLDRevamp.Net
             State = new JoinLoadingState(); Expected.Clear(); _nextText = 0; _progress = 0;
             Metrics.Clear(); _lastBytes = 0; _bytesAt = Time.realtimeSinceStartupAsDouble;
             _detailsAt = 0; _outerScroll = Vector2.zero; Disclosure.Reset();
-            _route = "unknown"; _host = "Host"; _ping = -1; _mod = null; _modBytes = _modTotal = 0;
+            _route = "unknown"; _host = "Host"; _ping = -1;
             _version = "Waiting for the host's result"; _world = "Waiting for world settings"; _placement = "waiting for join position";
             _manifest = _ended = _scene = _geometry = _placed = false;
             _count = 0; _pending = -1; _sampleAt = 0; _floorSince = -1;
@@ -176,12 +174,11 @@ namespace TLDRevamp.Net
             _detailsAt = now + .25;
             Metrics.ElapsedMs = (now - State.Started) * 1000;
             long bytes = c.T.BytesIn;
-            Metrics.BytesReceived = bytes; // This transport belongs to this join; includes handshake and mod bytes.
+            Metrics.BytesReceived = bytes; // This transport belongs to this join; includes the handshake.
             Metrics.Rate = now > _bytesAt ? Math.Max(0, bytes - _lastBytes) / (now - _bytesAt) : 0;
             _lastBytes = bytes; _bytesAt = now;
             _host = c.HostName ?? (Session.LastJoinSteamId != 0 ? Session.Persona(new Steamworks.CSteamID(Session.LastJoinSteamId)) : "Host");
-            _version = c.MyId > 0 ? "RevaMP version accepted; mods matched" : c.LoadingMod != null ? "RevaMP version accepted; required mods offered" : "Waiting for the host's result";
-            _mod = c.LoadingMod; _modBytes = c.LoadingModBytes; _modTotal = c.LoadingModTotal;
+            _version = c.MyId > 0 ? "RevaMP version accepted; mods matched" : "Waiting for the host's result";
             _world = c.MyId <= 0 ? "Waiting for world settings" : _scene ? "Scene loaded" : "Loading the scene from the host's seed";
             _placement = !c.SpotPlaced ? (GroundPlacement.TpBusy ? "waiting for ground" : "waiting for join position") : _floorSince >= 0 ? (_placed ? "ground stable" : "settling") : "waiting for ground";
             if (c.ConnectedToHost && c.T.Connections.Count > 0)
@@ -251,8 +248,7 @@ namespace TLDRevamp.Net
             Metrics.AppendProbe(b);
             return b.Append(",\"hostName\":").Append(Json.Str(_host)).Append(",\"route\":").Append(Json.Str(_route)).Append(",\"pingMs\":").Append(_ping)
                 .Append(",\"versionCheck\":").Append(Json.Str(_version)).Append(",\"worldActivity\":").Append(Json.Str(_world))
-                .Append(",\"placementStatus\":").Append(Json.Str(_placement)).Append(",\"loadingMod\":").Append(Json.Str(_mod))
-                .Append(",\"loadingModBytes\":").Append(_modBytes).Append(",\"loadingModTotal\":").Append(_modTotal)
+                .Append(",\"placementStatus\":").Append(Json.Str(_placement))
                 .Append(",\"manifestReceived\":").Append(_manifest ? "true" : "false").Append(",\"initialRecordsEnded\":").Append(_ended ? "true" : "false")
                 .Append(",\"geometrySampled\":").Append(_pending >= 0 ? "true" : "false")
                 .Append(",\"expectedObjects\":").Append(Expected.Count)

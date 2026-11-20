@@ -329,7 +329,7 @@ public sealed class Builder(Store store, Action<string> log)
             Files.CopyFile(preloader, Path.Combine(patchers, "TLDRevamp.Preloader.dll"));
         }
         foreach (var f in new[] { Path.Combine(repo, "src", "TLDRevamp", bin, "TLDRevamp.dll"), Path.Combine(repo, "src", "TLDRevamp.Multiplayer", bin, "TLDRevamp.Multiplayer.dll"),
-                                  Path.Combine(repo, "packaging", "approved-mods.txt"), Path.Combine(repo, "src", "TLDLoaderShim", bin, "TLDLoader.dll") })
+                                  Path.Combine(repo, "src", "TLDLoaderShim", bin, "TLDLoader.dll") })
             if (File.Exists(f)) Files.CopyFile(f, Path.Combine(dst, Path.GetFileName(f)));
         var mods = Path.Combine(repo, "thirdparty", "TLDLoaderMods");
         if (Directory.Exists(mods))

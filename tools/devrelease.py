@@ -62,7 +62,6 @@ def package(version, commit, edition=None):
         "TLDRevamp.dll": ROOT / "src/TLDRevamp" / OUT / "TLDRevamp.dll",
         "TLDRevamp.Multiplayer.dll": ROOT / "src/TLDRevamp.Multiplayer" / OUT / "TLDRevamp.Multiplayer.dll",
         "TLDLoader.dll": ROOT / "src/TLDLoaderShim" / OUT / "TLDLoader.dll",
-        "approved-mods.txt": ROOT / "packaging/approved-mods.txt",
         "COPYING": ROOT / "COPYING",
     }
     if edition != "player":

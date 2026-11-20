@@ -1,32 +1,6 @@
 #!/usr/bin/env python3
-"""Check the release manifest before it goes out: packaging/mods.json and packaging/approved-mods.txt.
-
-The in-game mod browser (src/TLDRevamp/Net/ModCatalog.cs) reads the catalog, and a joiner
-(src/TLDRevamp/Net/ModTransfer.cs) trusts the approved list that ships with RevaMP. Both refuse
-anything they do not understand, and they refuse it in the player's face: an unapproved version is
-greyed out, a catalog entry with a bad URL disappears, a version list in the wrong order offers the
-wrong file. This tool finds those mistakes before a release, offline, without touching either file.
-
-  tools/validate_manifest.py                                  # this repository's own manifest
-  tools/validate_manifest.py --manifest a.json --approved b.txt
-  tools/validate_manifest.py --artifacts dist                 # also check local release zips
-  tools/validate_manifest.py --check-links                    # opt-in: ask the web whether the links answer
-  tools/validate_manifest.py --json                           # machine-readable output
-
-The rules mirror the game, so a manifest that passes here is one the game can actually use:
-  * catalog format 1, a "mods" list, at most 1 MiB (ModCatalog.MaxCatalogBytes)
-  * ids are A-Za-z0-9_.- up to 64 characters (MpApi.ValidId)
-  * versions are A-Za-z0-9_.- up to 64 characters (ModFiles.SafeVersion)
-  * release URLs are HTTPS GitHub release assets only (ModCatalog.ReleaseUrl)
-  * "file" is a safe relative path ending in .dll (ModCatalog.SafeEntry)
-  * "size" is the download size, at most 16 MiB (ModTransfer.MaxBytes); "sha256" is the DLL's
-  * every catalog version must be approved with the same id and version (ModCatalog.ApprovalReason)
-  * versions are newest first, so the newest approved one is what the browser offers
-
-By default it never opens a network connection and never writes to the files it reads. Local
-release zips are read only when they are already on disk and named after the asset in the URL.
---check-links is the one exception: it asks the web whether each link answers, so use it only when
-a network is wanted.
+"""Check packaging/mods.json offline: schema, ordering, URLs, sizes and DLL hashes.
+The live catalog is the installable mod list. Optional local artifact and link checks remain available.
 """
 from __future__ import annotations
 
@@ -43,13 +17,12 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_MANIFEST = ROOT / "packaging" / "mods.json"
-DEFAULT_APPROVED = ROOT / "packaging" / "approved-mods.txt"
 DEFAULT_ARTIFACTS = ROOT / "dist"
 PLUGIN_CS = ROOT / "src" / "TLDRevamp" / "Plugin.cs"
 
 CATALOG_FORMAT = 1
 MAX_CATALOG_BYTES = 1 << 20          # ModCatalog.MaxCatalogBytes
-MAX_DOWNLOAD_BYTES = 16 << 20        # ModTransfer.MaxBytes
+MAX_DOWNLOAD_BYTES = 16 << 20        # ModInstall.MaxBytes
 ID_RE = re.compile(r"\A[A-Za-z0-9_.-]{1,64}\Z")
 VERSION_RE = re.compile(r"\A[A-Za-z0-9_.-]{1,64}\Z")
 SHA256_RE = re.compile(r"\A[0-9a-f]{64}\Z")
@@ -171,57 +144,6 @@ def github_owner_repo(url: str) -> Optional[Tuple[str, str]]:
     if len(parts) < 2 or not parts[0] or not parts[1]:
         return None
     return parts[0], parts[1]
-
-
-# ----------------------------------------------------------------------------- the approved list
-
-class ApprovedEntry:
-    __slots__ = ("sha256", "mod_id", "version", "line")
-
-    def __init__(self, sha256: str, mod_id: str, version: str, line: int) -> None:
-        self.sha256, self.mod_id, self.version, self.line = sha256, mod_id, version, line
-
-    def describe(self) -> str:
-        return "%s %s %s (line %d)" % (self.mod_id, self.version, self.sha256[:12], self.line)
-
-
-def parse_approved(path: pathlib.Path) -> Tuple[List[ApprovedEntry], List[Dict[str, str]]]:
-    """Read approved-mods.txt the way ModTransfer.Approved() does, and report the lines it cannot use."""
-    entries: List[ApprovedEntry] = []
-    problems: List[Dict[str, str]] = []
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as exc:
-        problems.append(finding(SEVERITY_ERROR, "approved.unreadable", "approved-mods.txt",
-                                "the approved list could not be read: %s" % exc,
-                                "check the path and the file's permissions"))
-        return entries, problems
-    for number, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        where = "approved-mods.txt:%d" % number
-        parts = line.split()
-        if len(parts) != 3:
-            problems.append(finding(SEVERITY_ERROR, "approved.fields", where,
-                                    "expected 'sha256 mod-id version', found %d field(s)" % len(parts),
-                                    "the game reads a hash and then exactly the id and the version"))
-            continue
-        digest, mod_id, version = parts
-        if not SHA256_RE.match(digest):
-            problems.append(finding(SEVERITY_ERROR, "approved.sha256", where,
-                                    "'%s' is not 64 lower-case hex characters" % digest,
-                                    "the hash is the SHA-256 of the mod DLL"))
-        if not ID_RE.match(mod_id):
-            problems.append(finding(SEVERITY_ERROR, "approved.id", where,
-                                    "'%s' is not a valid mod id" % mod_id,
-                                    "ids use letters, digits, dot, dash and underscore"))
-        if not VERSION_RE.match(version):
-            problems.append(finding(SEVERITY_ERROR, "approved.version", where,
-                                    "'%s' is not a valid mod version" % version,
-                                    "versions use letters, digits, dot, dash and underscore"))
-        entries.append(ApprovedEntry(digest, mod_id, version, number))
-    return entries, problems
 
 
 # ----------------------------------------------------------------------------- the checks
@@ -451,7 +373,7 @@ def check_version(mod: dict, version: object, position: int, where: str,
 
 
 def check_ordering(data: dict, findings: List[Dict[str, str]]) -> None:
-    """The browser offers the first approved version in the list, so the list must be newest first."""
+    """The browser offers the first valid catalog version in the list, so the list must be newest first."""
     for index, mod in enumerate(data.get("mods") or []):
         if not isinstance(mod, dict):
             continue
@@ -473,85 +395,14 @@ def check_ordering(data: dict, findings: List[Dict[str, str]]) -> None:
                         findings.append(finding(SEVERITY_WARNING, "version.order.unknown", spot,
                                                 "'%s' and '%s' are not plain version numbers, so the order "
                                                 "cannot be checked" % (previous, number),
-                                                "the browser offers the first approved version it finds"))
+                                                "the browser offers the first valid catalog version it finds"))
                 elif order <= 0:
                     findings.append(finding(SEVERITY_ERROR, "version.order", spot,
                                             "version %s comes after %s, the list must be newest first" % (
                                                 number, previous),
-                                            "the browser offers the newest approved version, and that is the "
+                                            "the browser offers the newest valid catalog version, and that is the "
                                             "first one the player sees"))
             previous = number
-
-
-def check_approved_against_catalog(data: dict, entries: Sequence[ApprovedEntry],
-                                   findings: List[Dict[str, str]]) -> Dict[str, int]:
-    by_hash: Dict[str, ApprovedEntry] = {}
-    for entry in entries:
-        first = by_hash.get(entry.sha256)
-        if first is not None:
-            findings.append(finding(SEVERITY_ERROR, "approved.duplicate-hash", "approved-mods.txt:%d" % entry.line,
-                                    "the hash of %s is already on line %d" % (entry.mod_id, first.line),
-                                    "one hash approves one file; a second line silently replaces the first"))
-        else:
-            by_hash[entry.sha256] = entry
-    by_pair: Dict[Tuple[str, str], ApprovedEntry] = {}
-    for entry in entries:
-        pair = (entry.mod_id, entry.version)
-        first = by_pair.get(pair)
-        if first is not None and first.sha256 != entry.sha256:
-            findings.append(finding(SEVERITY_ERROR, "approved.duplicate-version", "approved-mods.txt:%d" % entry.line,
-                                    "%s %s is approved twice with different files" % pair,
-                                    "one version is one file, so one hash"))
-        else:
-            by_pair[pair] = entry
-    catalog_pairs = set()
-    for mod in data.get("mods") or []:
-        if not isinstance(mod, dict):
-            continue
-        mod_id = mod.get("id")
-        versions = mod.get("versions")
-        if not isinstance(mod_id, str) or not isinstance(versions, list):
-            continue
-        for version in versions:
-            if isinstance(version, dict) and isinstance(version.get("version"), str):
-                catalog_pairs.add((mod_id, version["version"]))
-    used = 0
-    for index, mod in enumerate(data.get("mods") or []):
-        if not isinstance(mod, dict):
-            continue
-        mod_id = mod.get("id")
-        versions = mod.get("versions")
-        if not isinstance(versions, list) or not isinstance(mod_id, str):
-            continue
-        for position, version in enumerate(versions):
-            if not isinstance(version, dict):
-                continue
-            digest = version.get("sha256")
-            number = version.get("version")
-            spot = "mods[%d].versions[%d]" % (index, position)
-            if not isinstance(digest, str) or not isinstance(number, str):
-                continue
-            entry = by_hash.get(digest)
-            if entry is None:
-                findings.append(finding(SEVERITY_ERROR, "approved.missing", "%s.sha256" % spot,
-                                        "the file of %s %s is not on the approved list" % (mod_id, number),
-                                        "a joiner never downloads a file that is not approved; add the line to "
-                                        "packaging/approved-mods.txt (TLD-Mods' tools/package.py prints it)"))
-                continue
-            if entry.mod_id != mod_id or entry.version != number:
-                findings.append(finding(SEVERITY_ERROR, "approved.mismatch", "%s.sha256" % spot,
-                                        "the approved list has %s %s for this file, the catalog says %s %s" % (
-                                            entry.mod_id, entry.version, mod_id, number),
-                                        "the game refuses a file whose id or version differs"))
-                continue
-            used += 1
-    for entry in entries:
-        if (entry.mod_id, entry.version) not in catalog_pairs:
-            findings.append(finding(SEVERITY_WARNING, "approved.not-in-catalog", "approved-mods.txt:%d" % entry.line,
-                                    "%s %s is approved but the catalog does not list it" % (entry.mod_id, entry.version),
-                                    "an approved file the catalog does not offer is never installed from the browser; "
-                                    "it stays approved for a host transfer"))
-    return {"approved": len(entries), "used": used}
 
 
 def check_artifacts(data: dict, directories: Sequence[pathlib.Path],
@@ -869,7 +720,7 @@ class Report:
         return [f for f in self.findings if f["severity"] == SEVERITY_WARNING]
 
 
-def validate(manifest_path: pathlib.Path, approved_path: pathlib.Path,
+def validate(manifest_path: pathlib.Path,
              artifact_dirs: Sequence[pathlib.Path] = (), build_version: Optional[str] = None,
              check_link: bool = False, timeout: float = 15.0) -> Report:
     report = Report()
@@ -883,8 +734,6 @@ def validate(manifest_path: pathlib.Path, approved_path: pathlib.Path,
     data = check_catalog_shape(raw, report.findings)
     if data is None:
         return report
-    entries, problems = parse_approved(approved_path)
-    report.extend(problems)
     seen_ids: Dict[str, int] = {}
     seen_urls: Dict[str, str] = {}
     for index, mod in enumerate(data.get("mods") or []):
@@ -922,10 +771,6 @@ def validate(manifest_path: pathlib.Path, approved_path: pathlib.Path,
     check_ordering(data, report.findings)
     check_dll_name(data, report.findings)
     check_against_sources(data, plugin_guids(), report.findings)
-    counts = check_approved_against_catalog(data, entries, report.findings)
-    if counts["used"] < counts["approved"]:
-        report.notes.append("%d of %d approved files are not listed in the catalog"
-                            % (counts["approved"] - counts["used"], counts["approved"]))
     if artifact_dirs:
         checked = check_artifacts(data, artifact_dirs, report.findings)
         if checked:
@@ -939,12 +784,11 @@ def validate(manifest_path: pathlib.Path, approved_path: pathlib.Path,
     return report
 
 
-def print_report(report: Report, manifest_path: pathlib.Path, approved_path: pathlib.Path,
+def print_report(report: Report, manifest_path: pathlib.Path,
                  as_json: bool, quiet: bool) -> None:
     if as_json:
         payload = {
             "manifest": str(manifest_path),
-            "approved": str(approved_path),
             "ok": not report.errors,
             "errors": len(report.errors),
             "warnings": len(report.warnings),
@@ -967,17 +811,15 @@ def print_report(report: Report, manifest_path: pathlib.Path, approved_path: pat
         print("\n%s: %d error(s), %d warning(s). The manifest is not ready for a release."
               % (manifest_path, len(report.errors), len(report.warnings)))
     else:
-        print("\n%s: no errors, %d warning(s). The manifest is consistent with %s."
-              % (manifest_path, len(report.warnings), approved_path))
+        print("\n%s: no errors, %d warning(s). The catalog is consistent."
+              % (manifest_path, len(report.warnings)))
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Check the release manifest and the approved list. Offline, and it never writes to them.")
+        description="Check the mod catalog offline without changing it.")
     parser.add_argument("--manifest", type=pathlib.Path, default=DEFAULT_MANIFEST,
                         help="the catalog to check (default: %s)" % DEFAULT_MANIFEST)
-    parser.add_argument("--approved", type=pathlib.Path, default=DEFAULT_APPROVED,
-                        help="the approved list to check (default: %s)" % DEFAULT_APPROVED)
     parser.add_argument("--artifacts", type=pathlib.Path, action="append", default=None, metavar="DIR",
                         help="a folder with local release archives; may be given more than once")
     parser.add_argument("--revamp-version", default=None,
@@ -993,8 +835,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.artifacts is None:
         args.artifacts = [DEFAULT_ARTIFACTS]
     build = args.revamp_version if args.revamp_version is not None else read_build_version()
-    report = validate(args.manifest, args.approved, args.artifacts, build, args.check_links, args.link_timeout)
-    print_report(report, args.manifest, args.approved, args.json, args.quiet)
+    report = validate(args.manifest, args.artifacts, build, args.check_links, args.link_timeout)
+    print_report(report, args.manifest, args.json, args.quiet)
     if report.errors or (args.strict and report.warnings):
         return 1
     return 0

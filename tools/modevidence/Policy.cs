@@ -127,16 +127,16 @@ namespace TLDModEvidence
 
         /// <summary>Every reason a mod release is refused, in a stable order. An empty list means it is allowed.</summary>
         /// <remarks>
-        /// The manifest and signature part of the decision is **not** re-implemented here: it is the production
+        /// The catalog metadata part of the decision is **not** re-implemented here: it is the production
         /// <c>ModCatalog.ApprovalReason</c>, called directly. This method only adds the scaling rule on top,
-        /// so the two can never disagree about the signature.
+        /// so the two can never disagree about the checks.
         /// </remarks>
-        public static List<string> ReleaseRefusals(ModRelease release, IDictionary<string, string> approved, long maxBytes, Func<string, bool> validId)
+        public static List<string> ReleaseRefusals(ModRelease release, long maxBytes, Func<string, bool> validId)
         {
             var reasons = new List<string>();
             if (release == null) { reasons.Add("There is no release."); return reasons; }
 
-            // 1. The manifest and the signature: the production decision.
+            // 1. The catalog metadata: the production decision.
             var catalogMod = new ModCatalog.Mod { Id = release.Id, Name = release.Id, Versions = new List<ModCatalog.Release>() };
             var catalogRelease = new ModCatalog.Release
             {
@@ -148,7 +148,7 @@ namespace TLDModEvidence
                 Revamp = release.Revamp,
             };
             catalogMod.Versions.Add(catalogRelease);
-            string why = ModCatalog.ApprovalReason(catalogMod, catalogRelease, approved ?? new Dictionary<string, string>(), (int)maxBytes, validId);
+            string why = ModCatalog.ApprovalReason(catalogMod, catalogRelease, (int)maxBytes, validId);
             if (why != null) reasons.Add(why);
 
             return reasons;

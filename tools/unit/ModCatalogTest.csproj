@@ -7,6 +7,5 @@
     <Compile Include="../../src/TLDRevamp/Net/ModFiles.cs" />
     <Compile Include="../../src/TLDRevamp/Net/ModActivation.cs" />
     <None Include="../../packaging/mods.json" Link="mods.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="../../packaging/approved-mods.txt" Link="approved-mods.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -53,7 +53,7 @@ namespace TLDRevamp.Net
             ClockText.text = $"{(int)elapsed / 60:00}:{(int)elapsed % 60:00}";
             var g = Metrics.Geometry;
             StageDetails[0].text = $"{_route} · " + (_ping >= 0 ? $"{_ping:N0} ms" : "ping unknown");
-            StageDetails[1].text = _version + (_mod != null ? $" · {(_viewQuestion ? "Awaiting approval" : "Downloading")} {_mod}: {_modBytes:N0} / {_modTotal:N0} B" : "");
+            StageDetails[1].text = _version;
             StageDetails[2].text = $"{_world} · {JoinPresentation.Bytes(Metrics.BytesReceived)} from host";
             StageDetails[3].text = _pending < 0 ? "Waiting for the scene and join position" : $"Terrain {g.TerrainDone:N0} / {g.TerrainNeeded:N0} tiles · Roads {g.RoadsDone:N0} / {g.RoadsNeeded:N0} chunks";
             StageDetails[4].text = !_manifest ? "Waiting for the initial object manifest" : $"Applied {State.Count:N0} / {Expected.Count:N0} · received {Metrics.Received:N0} / {Expected.Count:N0} · " + (State.Objects ? "Initial sync complete" : _ended ? "Host finished; waiting for application" : "Waiting for records and end marker");

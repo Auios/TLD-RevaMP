@@ -681,12 +681,12 @@ namespace TLDRevamp.Net
             _kick.gameObject.SetActive(false);
         }
 
-        /// A yes/no question in the screen's confirm row (opened if closed): a joiner asked to download the host's mods.
+        /// A yes/no question in the screen's confirm row (opened if closed).
         public static void Ask(string text, Action yes, Action no)
         {
             // in a world the screen lives in the pause menu, and closes with it (answering no): a join started with the
             // pause menu shut (a Steam invite, a test's `mp joinid`) got "no" before the question was ever seen
-            // (modtransfer.py A, 2026-10-15). The question opens the pause menu first.
+            // The question opens the pause menu first.
             bool inWorld = DataFromMenuScript.s != null && !DataFromMenuScript.s.mainmenu && mainscript.s != null;
             if (inWorld && !mainscript.s.pauseMenuOpen) { try { mainscript.s.OpenMenuWithEscape(); } catch (Exception e) { Plugin.Log.LogWarning("MpScreen.Ask: pause menu: " + e.Message); } }
             if (!IsOpen) Open();

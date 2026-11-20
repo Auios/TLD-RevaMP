@@ -163,7 +163,7 @@ namespace TLDRevamp.Net
             if (_names == null)
             {
                 var n = new string[256];
-                foreach (var t in new[] { typeof(Protocol), typeof(Entities), typeof(ModObjects), typeof(ModTransfer), typeof(PlayerSave), typeof(PlayerCombat), typeof(Reports), typeof(Tpa), typeof(TelemetryMarks) })
+                foreach (var t in new[] { typeof(Protocol), typeof(Entities), typeof(ModObjects), typeof(PlayerSave), typeof(PlayerCombat), typeof(Reports), typeof(Tpa), typeof(TelemetryMarks) })
                     foreach (var f in t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
                     {
                         if (!f.IsLiteral || f.FieldType != typeof(byte) || f.IsPrivate || (f.Name.StartsWith("Reject") && f.Name != "Reject")) continue;

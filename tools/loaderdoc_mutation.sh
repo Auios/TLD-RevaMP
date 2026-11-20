@@ -60,8 +60,8 @@ copy_tree() {
     cp "$ROOT/src/TLDLoaderShim/TLDLoader.cs" "$WORK/src/TLDLoaderShim/"
     cp "$ROOT/docs/MODDING-MULTIPLAYER.md" "$ROOT/docs/NEXUS.md" "$ROOT/docs/CONTRIBUTING.md" "$WORK/docs/"
     cp "$ROOT/README.md" "$WORK/"
-    cp "$ROOT/packaging/mods.json" "$ROOT/packaging/approved-mods.txt" "$ROOT/packaging/INSTALL.txt" "$WORK/packaging/" 2>/dev/null || {
-        mkdir -p "$WORK/packaging"; cp "$ROOT/packaging/mods.json" "$ROOT/packaging/approved-mods.txt" "$ROOT/packaging/INSTALL.txt" "$WORK/packaging/"; }
+    cp "$ROOT/packaging/mods.json" "$ROOT/packaging/INSTALL.txt" "$WORK/packaging/" 2>/dev/null || {
+        mkdir -p "$WORK/packaging"; cp "$ROOT/packaging/mods.json" "$ROOT/packaging/INSTALL.txt" "$WORK/packaging/"; }
     mkdir -p "$WORK/installer" "$WORK/tools" "$WORK/.github/workflows" "$WORK/tools/modscan" "$WORK/src/TLDRevamp.Preloader"
     # LoaderScanDocTest reads the preloader project file at this exact path.
     cp "$ROOT/src/TLDRevamp.Preloader/TLDRevamp.Preloader.csproj" "$WORK/src/TLDRevamp.Preloader/" 2>/dev/null || true
@@ -83,7 +83,7 @@ copy_tree() {
 # The scratch tree must be complete before a mutation is scored: a missing file makes the test
 # CRASH, and a crash is not a catch. This check turns that into a clear harness error.
 require_scratch_files() {
-    for f in README.md packaging/INSTALL.txt packaging/mods.json packaging/approved-mods.txt \
+    for f in README.md packaging/INSTALL.txt packaging/mods.json \
              src/TLDRevamp/Overlay.cs src/TLDRevamp.Dev/LoaderScan.cs src/TLDRevamp/FeedbackReporter.cs \
              src/TLDRevamp/Plugin.cs src/TLDRevamp/ModHost.cs \
              src/TLDRevamp/Net/Voice.cs src/TLDRevamp/Net/ModCatalog.cs src/TLDRevamp/Net/ModActivation.cs \

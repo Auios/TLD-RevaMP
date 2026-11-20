@@ -67,7 +67,7 @@ public sealed class SourceTests : IDisposable
             if (failClone) { Write(Path.Combine(repo, ".git", "partial")); return new(128, "", "fatal: early EOF"); }
             Directory.CreateDirectory(Path.Combine(repo, ".git"));
             Write(Path.Combine(repo, "src", "TLDRevamp", "Plugin.cs"), "public const string BaseVersion = \"0.69.1\";");
-            Write(Path.Combine(repo, "packaging", "approved-mods.txt")); Write(Path.Combine(repo, "COPYING"));
+            Write(Path.Combine(repo, "packaging")); Write(Path.Combine(repo, "COPYING"));
         }
         if (args[0] == "checkout" && (checkoutFailures-- > 0 || failFresh && cwd != Repo)) return new(1, "", "unable to create file: File exists");
         if (args[0] == "reset" && failReset) return new(1, "", "reset failed");
@@ -115,7 +115,7 @@ public sealed class SourceTests : IDisposable
         Assert.Equal(head, c.Commit!.Sha); Assert.Equal("Fix the bus", c.Commit.Title); Assert.False(c.Commit.Dirty);
         Assert.Equal(SourceBuild.DefaultRef, c.SourceRef); Assert.False(c.Bridge);
         var plugin = Path.Combine(c.GameDir, "BepInEx", "plugins", "TLDRevamp");
-        Assert.Equal(5, Directory.GetFiles(plugin).Length);
+        Assert.Equal(4, Directory.GetFiles(plugin).Length);
         Assert.True(File.Exists(Path.Combine(c.GameDir, "BepInEx", "patchers", "TLDRevamp", "TLDRevamp.Preloader.dll")));
         Assert.Contains("Bridge = false", File.ReadAllText(Path.Combine(c.GameDir, "BepInEx", "config", "tldrevamp.core.cfg")));
         Assert.Equal(c.Commit, CopyInfo.Load(c.Dir)!.Commit);
@@ -300,7 +300,7 @@ public sealed class SourceTests : IDisposable
         var c = Copy(); var b = Builder();
         Directory.CreateDirectory(Path.Combine(Repo, ".git"));
         Write(Path.Combine(Repo, "src", "TLDRevamp", "Plugin.cs"), "public const string BaseVersion = \"0.69.1\";");
-        Write(Path.Combine(Repo, "packaging", "approved-mods.txt")); Write(Path.Combine(Repo, "COPYING"));
+        Write(Path.Combine(Repo, "packaging")); Write(Path.Combine(Repo, "COPYING"));
         origin = "https://github.com/Normal99/TLD-RevaMP.git";
         b.Build(c, Managed, Core);
         Assert.Contains(calls, x => x.Args.SequenceEqual(new[] { "remote", "set-url", "origin", SourceBuild.Remote }));

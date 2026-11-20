@@ -321,7 +321,7 @@ namespace TLDRevamp
             "CarTune",
             "LateBehaviourUpdate", "LeaseDone", "LeaseFreed", "LeaseGrant", "LeaseReq", "LeaseTaken", "LiveUsable",
             "Loading.UpdatePreloading", "Main Thread", "MarkRename", "MemberGone", "Mesh.UploadMeshData", "MidHz", "MidM", "ModAdd",
-            "ModAssigned", "ModChunk", "ModClaim", "ModClock", "ModEdit", "ModEvent", "ModFetch", "ModOffer", "ModOwner",
+            "ModAssigned", "ModClaim", "ModClock", "ModEdit", "ModEvent", "ModsNeeded", "ModOwner",
             "ModPose", "ModRecord", "ModRemove", "ModSetting", "ModShare", "ModState", "ModStore", "NearHz", "NearM",
             "OtherOutfit", "OtherPose", "OtherState", "Outfit", "Owner", "PartDetached", "PartOff", "PhysLockSync",
             "Physics.BakeCollisionMeshes", "Physics.Processing", "Physics.Simulate", "PlayerDamage", "PlayerJoined",

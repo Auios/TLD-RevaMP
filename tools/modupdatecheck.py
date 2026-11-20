@@ -5,7 +5,7 @@ Road End's previous release is planted as if the mod browser had installed it, t
   B. as at start (the bridge guard off for a moment, the once-per-run flag reset), the game checks by itself, opens the
      Mods screen and asks to update Road End to the catalog's version
   C. No goes back to the main menu and changes nothing
-  D. asked again, Yes downloads it: the new file is the approved one, the old one is set aside, the screen says to restart
+  D. asked again, Yes downloads it: the new file is the catalog one, the old one is set aside, the screen says to restart
 The copy's managed mods (and their enable states) are put back as they were afterwards.
   tools/modupdatecheck.py [--no-build]"""
 import os
@@ -31,10 +31,9 @@ def until(f, timeout, step=1.0):
 catalog = json.loads((ROOT / "packaging/mods.json").read_text())
 versions = next(m for m in catalog["mods"] if m["id"] == MOD)["versions"]
 new, old = versions[0], versions[1]
-approved = {l.split()[0]: l.split()[1:] for l in (ROOT / "packaging/approved-mods.txt").read_text().splitlines() if l and not l.startswith("#")}
 data = urllib.request.urlopen(old["url"], timeout=60).read()
 dll = zipfile.ZipFile(io.BytesIO(data)).read(old["file"])
-assert hashlib.sha256(dll).hexdigest() == old["sha256"] and approved.get(old["sha256"]) == [MOD, old["version"]], "old release does not match"
+assert hashlib.sha256(dll).hexdigest() == old["sha256"], "old release does not match"
 
 if game.running(): game.quit_game()
 if "--no-build" not in sys.argv: game.build()
@@ -86,7 +85,7 @@ try:
     files = ours()
     newfile = managed / f"{MOD}-{new['version']}.dll"
     ok_hash = newfile.exists() and hashlib.sha256(newfile.read_bytes()).hexdigest() == new["sha256"]
-    verdict("D. asked again, Yes installs the approved new version and says to restart",
+    verdict("D. asked again, Yes installs the catalog new version and says to restart",
             ok_hash and msg.startswith("Updated ") and f"Road End {new['version']}" in msg and "Restart the game" in msg and f"{MOD}-{old['version']}.dll" not in files,
             f"{msg!r} files={files}")
     try: print("  screenshot:", b("screenshot"), flush=True)

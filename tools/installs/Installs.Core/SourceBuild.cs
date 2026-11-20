@@ -302,7 +302,7 @@ public sealed class SourceBuild
             Files.CopyFile(Path.Combine(Repo, "src", project, "bin", "Release", "netstandard2.1", file), Path.Combine(dst, file));
         if (!includeDev) File.Delete(Path.Combine(dst, "TLDRevamp.Dev.dll"));
         Verify(installed, sha, hash);
-        foreach (var file in new[] { "packaging/approved-mods.txt", "COPYING" })
+        foreach (var file in new[] { "COPYING" })
             Files.CopyFile(Path.Combine(Repo, file), Path.Combine(dst, Path.GetFileName(file)));
         Builder.SetCfg(c.GameDir, "Debug", "Bridge", "false"); c.Bridge = false;
         c.Commit = commit; c.SourceRef = reference; c.NewerCommits = 0;

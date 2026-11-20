@@ -372,7 +372,6 @@ def plugin_dll():
 MP_API_DLL = ROOT / "src/TLDRevamp.Multiplayer/bin/Release/netstandard2.1/TLDRevamp.Multiplayer.dll"
 # BepInEx runs this patcher before loading the game; deploy the exact preloader that was built.
 PRELOADER_DLL = ROOT / "src/TLDRevamp.Preloader/bin/Release/netstandard2.1/TLDRevamp.Preloader.dll"
-APPROVED_MODS = ROOT / "packaging/approved-mods.txt"   # ships next to TLDRevamp.dll (mods joiners may download)
 # the example mods: deployed only when a test names them (TLD_TEST_MODS=CarTrailer,HeadUnit,TrailerHitches), and removed
 # from the game otherwise, so no other test runs with them. They live in TLD-Mods (tldenv.MODS_REPO, mods/<Mod>); ApiProbe,
 # the mod API test mod (tools/modapi2.py, never shipped), is in this repository (src/Mods/ApiProbe).
@@ -428,7 +427,7 @@ def deploy_local():
         raise RuntimeError("built preloader missing; build the preloader before deploy")
     g = tldenv.GAME_DIR
     dst = g / "BepInEx/plugins/TLDRevamp"; dst.mkdir(parents=True, exist_ok=True)
-    for f in (plugin_dll(), MP_API_DLL, APPROVED_MODS, ROOT / "src/TLDLoaderShim/bin/Release/netstandard2.1/TLDLoader.dll"):
+    for f in (plugin_dll(), MP_API_DLL, ROOT / "src/TLDLoaderShim/bin/Release/netstandard2.1/TLDLoader.dll"):
         if f.exists(): shutil.copy2(f, dst / f.name)
     preloader_dir = g / "BepInEx/patchers/TLDRevamp"
     preloader_dir.mkdir(parents=True, exist_ok=True)
@@ -453,7 +452,7 @@ def deploy():
     dll = plugin_dll()
     remote_dir = tldenv.rsync_path(RGAME) + "/BepInEx/plugins/TLDRevamp/"
     stub = ROOT / "src/TLDLoaderShim/bin/Release/netstandard2.1/TLDLoader.dll"
-    files = [str(dll)] + [str(f) for f in (stub, MP_API_DLL, APPROVED_MODS) if f.exists()]
+    files = [str(dll)] + [str(f) for f in (stub, MP_API_DLL) if f.exists()]
     r = subprocess.run(["rsync", "-a", "-s", "-e", " ".join(ssh_base()[:-1])] + files + [f"{REMOTE}:{remote_dir}"], capture_output=True, text=True)
     if r.returncode != 0: sys.exit("deploy to " + REMOTE + " failed: " + r.stderr)
     patcher_dir = remote_dir.replace("plugins/TLDRevamp/", "patchers/TLDRevamp/")

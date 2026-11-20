@@ -310,9 +310,10 @@ namespace TLDRevamp.Net
             EndCode = c.RejectCode;
             bool inHostWorld = c.MyId > 0 && TestSafety.InHostWorld;
             Plugin.Log.LogInfo("MP session ended: " + EndReason + (inHostWorld ? " — back to the main menu" : ""));
+            var needed = c.NeededMods;
             Mp.Stop();
             if (inHostWorld) TestSafety.LeavingHostWorld = true;   // still the host's world until the menu is in
-            Show(1, "", EndReason);
+            if (needed == null || !ModsScreen.OpenNeeded(needed)) Show(1, "", EndReason);
             // the world here is the host's (never saved): back to the menu, as when leaving
             if (inHostWorld) { ShowInMenu = true; ShowInMenuNotOn = menuhandler.s; LeaveToMenu(); }
         }

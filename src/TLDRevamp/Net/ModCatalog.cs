@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace TLDRevamp.Net
 {
-    /// Format 1 is discovery only. The local approved list is always the trust anchor.
+    /// Format 1 is the live list of installable releases and their DLL hashes.
     /// No Unity or filesystem writes here: these checks also run in the offline tests.
     public static partial class ModCatalog
     {
@@ -70,7 +70,8 @@ namespace TLDRevamp.Net
             return c;
         }
 
-        public static string ApprovalReason(Mod m, Release v, IDictionary<string, string> approved, int maxBytes, Func<string, bool> validId)
+        /// <paramref name="revamp"/>: this RevaMP's version; a release whose "revamp" is newer needs a newer RevaMP (its API).
+        public static string ApprovalReason(Mod m, Release v, int maxBytes, Func<string, bool> validId, string revamp = null)
         {
             if (m == null || v == null || !validId(m.Id)) return "Invalid mod id.";
             if (!ModFiles.SafeVersion(v.Version)) return "Invalid mod version.";
@@ -78,22 +79,21 @@ namespace TLDRevamp.Net
             if (v.Size <= 0 || v.Size > maxBytes) return "Download exceeds the size limit.";
             if (!string.IsNullOrEmpty(v.File) && (!SafeEntry(v.File) || !v.File.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))) return "Invalid DLL path in archive.";
             string hash = (v.Hash ?? "").ToLowerInvariant();
-            if (!Regex.IsMatch(hash, @"\A[0-9a-f]{64}\z") || !approved.TryGetValue(hash, out string line))
-                return "Not approved in this RevaMP version." + (string.IsNullOrEmpty(v.Revamp) ? "" : " Needs RevaMP " + v.Revamp + ".");
-            var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 2 || parts[0] != m.Id || parts[1] != v.Version) return "Approved id/version does not match the catalog.";
+            if (!Regex.IsMatch(hash, @"\A[0-9a-f]{64}\z")) return "Invalid catalog hash.";
+            if (revamp != null && !string.IsNullOrEmpty(v.Revamp) && Version.TryParse(v.Revamp, out var need) &&
+                Version.TryParse(revamp, out var have) && need > have) return "Needs RevaMP " + v.Revamp + ".";
             return null;
         }
 
-        public static Release Offered(Mod m, IDictionary<string, string> approved, int maxBytes, Func<string, bool> validId) =>
-            m.Versions.Find(v => ApprovalReason(m, v, approved, maxBytes, validId) == null) ?? m.Versions[0];
+        public static Release Offered(Mod m, int maxBytes, Func<string, bool> validId, string revamp = null) =>
+            m.Versions.Find(v => ApprovalReason(m, v, maxBytes, validId, revamp) == null) ?? m.Versions[0];
 
-        /// The version an installed mod can be updated to: the newest approved one, if it is newer than the installed one.
-        public static Release UpdateTo(Mod m, string installed, IDictionary<string, string> approved, int maxBytes, Func<string, bool> validId)
+        /// The version an installed mod can be updated to: the newest valid one, if it is newer than the installed one.
+        public static Release UpdateTo(Mod m, string installed, int maxBytes, Func<string, bool> validId, string revamp = null)
         {
             if (installed == null || m.Versions.Count == 0) return null;
-            var v = Offered(m, approved, maxBytes, validId);
-            return ApprovalReason(m, v, approved, maxBytes, validId) == null && Newer(v.Version, installed) ? v : null;
+            var v = Offered(m, maxBytes, validId, revamp);
+            return ApprovalReason(m, v, maxBytes, validId, revamp) == null && Newer(v.Version, installed) ? v : null;
         }
 
         public static bool Newer(string offered, string installed) =>
@@ -133,9 +133,9 @@ namespace TLDRevamp.Net
             public void Dispose() => _data.Dispose();
         }
 
-        public static byte[] Verify(Mod m, Release v, byte[] download, IDictionary<string, string> approved, int maxBytes, Func<string, bool> validId)
+        public static byte[] Verify(Mod m, Release v, byte[] download, int maxBytes, Func<string, bool> validId)
         {
-            string reason = ApprovalReason(m, v, approved, maxBytes, validId);
+            string reason = ApprovalReason(m, v, maxBytes, validId);
             if (reason != null) throw new InvalidDataException(reason);
             if (download == null || download.Length == 0 || download.Length > maxBytes || download.LongLength != v.Size)
                 throw new InvalidDataException("Download size differs from the catalog or exceeds the limit.");
@@ -174,7 +174,7 @@ namespace TLDRevamp.Net
                     }
                 }
             }
-            if (dll.Length > maxBytes || Sha256(dll) != v.Hash.ToLowerInvariant()) throw new InvalidDataException("DLL hash differs from the approved catalog file; refused.");
+            if (dll.Length > maxBytes || Sha256(dll) != v.Hash.ToLowerInvariant()) throw new InvalidDataException("DLL hash differs from the catalog file; refused.");
             return dll;
         }
     }

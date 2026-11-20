@@ -268,7 +268,6 @@ namespace TLDRevamp.Net
     }
     public static class Mp { public static MpServer Server; }
     public sealed class MpServer { public int PlayerOfConn(uint id) => 0; }
-    public static class ModTransfer { }
     public static class PlayerSave { public const byte Record = 67; }
     public static class PlayerCombat { public const byte PlayerDamage = 40; }
     public static class HitCheck { public const byte KCreature = 1; }

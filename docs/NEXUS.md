@@ -20,8 +20,8 @@ Where the copy names a version, a file name or a checksum, it names the one the 
 | Issues and support | <https://github.com/Normal99/TLD-RevaMP/issues> |
 
 If the version numbers below no longer match the newest release when you upload, update them first. The source of
-truth for the catalog is `packaging/mods.json`; the source of truth for what a player may install is
-`packaging/approved-mods.txt`.
+truth for installable releases is the live `packaging/mods.json` catalog on dev. Downloads must match its DLL
+SHA-256. Joiners install missing mods from the catalog; the host never sends files. Hand-installed mods load normally.
 
 ---
 
@@ -423,7 +423,7 @@ https://github.com/Normal99/TLD-RevaMP/issues
 ## Listings 6–8 — the third-party add-ons
 
 **BusGut**, **MountAnything** and **TerrainChoice** are written by **YujiroX2**, not by this project. They are in
-the mod browser because their authors asked for it and their file hashes are on the approved list. Do not upload
+the mod browser because their authors asked for it and their release DLL hashes are in the catalog. Do not upload
 these to a Nexus account that does not represent their author without saying so.
 
 Two options, and the second is better:
@@ -488,7 +488,7 @@ store page or from another mod.
       player's car or another player standing next to it.
 - [ ] **The performance overlay** in the top-left corner (Page Up) while driving, showing the frame rate.
 - [ ] **Settings > Revamp** open, so the reader knows the settings exist and that they are explained.
-- [ ] **Settings > Revamp > Mods**, the mod browser, with the approved add-ons listed.
+- [ ] **Settings > Revamp > Mods**, the mod browser, with the catalog add-ons listed.
 
 **For each add-on listing:**
 
