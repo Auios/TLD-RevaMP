@@ -6,10 +6,7 @@ the [README](../README.md). For how to contribute a change, see [CONTRIBUTING.md
 tools that build, launch and drive the real game, see [tools/README.md](../tools/README.md).
 
 **What is built, what is tested and what is still missing** is in
-[PROJECT-STATUS.md](PROJECT-STATUS.md). The evidence behind every claim there lives in the durable
-worker root, `${XDG_STATE_HOME:-$HOME/.local/state}/tld-revamp/workers/` (the reports in `workers/results/`, the
-integration log in `workers/results/integrate.md`, and the closeout status in
-`workers/context/closeout-20261021/STATUS.md`). The check entrypoint is `tools/verify.sh`.
+[PROJECT-STATUS.md](PROJECT-STATUS.md). The check entrypoint is `tools/verify.sh`.
 
 ## What RevaMP is
 
@@ -72,9 +69,11 @@ What an install does, in order (each step is printed as it happens):
 
 **Repair** compares every installed file against the release and replaces the ones that are missing or different,
 clears `BepInEx/cache` (a stale cache can stop BepInEx loading plugins), and moves any stray second copy of
-`TLDRevamp*.dll` found under `BepInEx/plugins` into the backup folder rather than deleting it. **Uninstall** removes
-exactly the files in `installed-files.txt`, restores everything from the backup, restores the earlier Proton override
-and removes the `RevaMP-installer` folder. RevaMP's own settings (`BepInEx/config`), logs and reports stay.
+RevaMP's own DLLs (`TLDRevamp.dll`, `TLDRevamp.Multiplayer.dll`, `TLDRevamp.Dev.dll`) found under `BepInEx/plugins`
+into the backup folder rather than deleting it; the mod list's downloads in `BepInEx/plugins/TLDRevampMods` stay.
+**Uninstall** removes exactly the files in `installed-files.txt`, restores everything from the backup, restores the
+earlier Proton override and removes the `RevaMP-installer` folder. RevaMP's own settings (`BepInEx/config`), logs and
+reports stay.
 
 Each release's installer is pinned to that release. `tools/pin-installer.sh` rewrites the pinned block in both
 scripts from a release zip, and checks that the BepInEx files inside the zip are byte-identical to the official
@@ -130,7 +129,8 @@ A join is refused, with the reason shown in the multiplayer screen, when:
 | Different mod versions | "The host plays TLD Revamp X, you Y. Both need the same version." |
 | Same version, different code | "… (network protocol N), you … (protocol M): different builds of the same version. Both need the same build." |
 | Unreadable request | "The host couldn't read your join request. … both need the same build." |
-| Different multiplayer-API mods | the mod list is described and compared |
+| Different multiplayer-API mods | the required-mods screen opens instead: what to install from the catalog (the host's exact DLL), what to enable, what to remove |
+| Different TLD Loader mods | "Your TLD Loader mods (BepInEx/TLDLoaderMods) differ from the host's: … Both need the same ones." (`src/TLDRevamp/Net/LoaderModCheck.cs`; nothing is downloaded) |
 | Different game version | "You and the host have different versions of The Long Drive … Update the game in Steam on both (beta branch), then join again." |
 | Same game version, other data files | "Your game files differ from the host's … Verify the game files in Steam on both, then join again." |
 | Different mods patching the world generators | "Mods that change how the world is generated differ between you and the host (the host has …; you have …)." |
@@ -152,8 +152,7 @@ host checks what each joiner generates from (`src/TLDRevamp/Net/WorldCheck.cs`, 
   it gave players different buildings (the missing diner, playtests 2026-10-09/10).
 - **Other mods' patches on the world generators.** Harmony patches on `roadGenScript`, `poiGenScript`, `objGenScript`,
   `terrainGenScript`, `terrainGenSettings`, `mapSettingScript` and the noise types, by any owner but RevaMP (its own
-  are the same by the build check). Compared once the multiplayer-API mods match, so a mod the host can send is
-  offered first.
+  are the same by the build check). Compared once the multiplayer-API mods match, so a missing mod is listed first.
 - **RevaMP's order fixes are on for everyone in a session.** Scenery and ground used to depend on the order an area
   was reached in (`SceneryTileSync`, `TerrainSync`, both on `ObjGenFast`); so did crossroads buildings, which were
   placed while a neighbouring road chunk had no roads yet (`PoiRoadsSettled`: a building waits until all nine road
@@ -221,12 +220,16 @@ protocol, the interest rules and the byte projections are in [MULTIPLAYER-ARCHIT
 
 ## The mod catalog browser
 
-**Settings → Revamp → Mods** opens the browser (`src/TLDRevamp/Net/ModsScreen.cs`, built from
-`src/TLDRevamp/RevampMenu.cs`). Selecting a mod shows its author, description, source, download size, installed
-version and approval state. **Install** or **Update** downloads one mod at a time; **Cancel** (or Back) stops the
-download. **Disable / Enable** keeps a managed mod installed and changes whether it loads at the next start.
-**Remove** also works while disabled and preserves the DLL as `.removed`. Restart after changes. Updates keep
-disabled mods disabled and preserve the old file as `.replaced`.
+**Mods**, a full-size row between Settings and Exit on the game's main menu and pause menu, opens the mod list
+(`src/TLDRevamp/MainMenuButtons.cs` adds the row; the list is `src/TLDRevamp/Net/ModsScreen.List.cs`, its search, sort
+and download numbers `src/TLDRevamp/Net/ModList.cs`). It has the tabs **All mods** and **Installed**, a search (name,
+author, description, id, tags), a sort (*Most downloaded*, *Recently updated*, *Name*) and one row per mod with its
+author, state, description, tags, downloads, last update, size and version. The download counts and dates come from
+the GitHub release lists of the mods' repositories, kept for an hour in `BepInEx/cache/tldrevamp-modstats`.
+**Install** or **Update** on a row downloads one mod at a time; **Cancel** on that row (or **Close**) stops the
+download. **Disable / Enable** keeps a managed mod installed and changes whether it loads at the next start. **Remove**
+asks first, also works while disabled and preserves the DLL as `.removed`. Changes take effect at the next start.
+Updates keep disabled mods disabled and preserve the old file as `.replaced`.
 
 **Updates at start** (like MSCLoader): when the main menu first shows, RevaMP fetches the catalog once in the
 background. If a mod installed from the browser has a newer version in the catalog, the Mods screen opens and
@@ -241,15 +244,16 @@ catalog is unavailable and installed mods keep working. The default catalog is t
 on the `dev` branch (`ModCatalog.DefaultUrl`); override it with `[Mods] CatalogUrl` in
 `BepInEx/config/tldrevamp.core.cfg`.
 
-**The catalog is the mod list.** A downloaded DLL must match its catalog SHA-256. Only GitHub release assets are
+**The catalog is the only approval.** A downloaded DLL must match its catalog SHA-256. Only GitHub release assets are
 accepted (`ModCatalog.ReleaseUrl`), with bounded downloads and single-DLL ZIP validation. The newest valid catalog
 version is offered. New releases become available when the catalog changes, without a RevaMP release.
 When API mods differ at join, `ModsNeeded` lists the host's required files and every problem before Reject. The
-join screen installs identical hashes from the catalog; the host never sends mod files.
+required-mods screen (`src/TLDRevamp/Net/ModsScreen.Needed.cs`: **Install**, **Install all**, **Enable**, **Copy list**)
+installs identical hashes from the catalog; the host never sends mod files.
 
-Only single-file mods are supported. Browser installs use `BepInEx/plugins/TLDRevampMods`, for both the browser and join screen. Mods
-installed by hand are marked **not managed** and must be updated or removed by hand; they must also be enabled or
-disabled by hand. RevaMP's own DLLs and BepInEx core are protected.
+Only single-file mods are supported. The mod list and the required-mods screen both install into
+`BepInEx/plugins/TLDRevampMods`. Mods installed by hand show **By hand** (state *On · installed by hand*) and must be
+updated, removed, enabled or disabled by hand. RevaMP's own DLLs and BepInEx core are protected.
 
 Disabled files live in `BepInEx/disabled-mods/<id>/`, entirely outside the recursively scanned plugins tree. The
 persistent intent lives separately in `BepInEx/disabled-mods/<id>.state`; a missing disabled DLL folder is reported
@@ -298,7 +302,8 @@ shown by `switches`. When an experiment is finished its switch goes, with the ol
 
 ## Building from source
 
-Requirements: .NET SDK 8+, the game (beta) with BepInEx 5.4.23 installed.
+Requirements: .NET SDK 10 (every `tools/unit` project and `tools/modscan` target .NET 10), the game (beta) with
+BepInEx 5.4.23 installed.
 
 ```sh
 tools/libs.sh          # copies the game's and BepInEx's reference assemblies into lib/ (never committed)
@@ -312,10 +317,11 @@ contains configs, logs, third-party mods, or personal strings in the DLLs.
 
 Releases for players are the **player edition** (`-p:RevampEdition=player`, `src/TLDRevamp/PlayerEdition.cs`): the same
 code with the developer things off. Settings → Revamp has no Debugging or Branding section, the developer keys are
-hidden and ignored (their bindings stay in the cfg; the game's own F1 developer menu stays), every debug overlay and the WIP mark are off, the background health, item and part watches don't
-run, and the config's debug bridge is ignored (only an explicit `-tldbridge` on the command line starts it, for the
-test tools). `tools/package.sh` and `tools/previewrelease.py` build it; `tools/build.sh` and `tools/devrelease.py`
-build the full dev edition.
+hidden and ignored (their bindings stay in the cfg; the game's own F1 developer menu stays), every debug overlay and
+the WIP mark are off (the performance overlay starts hidden; Page Up shows it), marks and reports are never shared
+with other players, the background health, item and part watches don't run, and the config's debug bridge is ignored
+(only an explicit `-tldbridge` on the command line starts it, for the test tools). `tools/package.sh` and
+`tools/previewrelease.py` build it; `tools/build.sh` and `tools/devrelease.py` build the full dev edition.
 
 Other build and release steps:
 
@@ -359,10 +365,12 @@ Source builds deploy two BepInEx plugins: `TLDRevamp.dll` runs the game features
 ## Release model
 
 - **Releases** are published from `main` as a GitHub release with the version tag `v<version>`. The assets are the
-  mod zip (`TLD-RevaMP-<version>.zip`), the two installer scripts, a `SHA256SUMS` file, and the example mod zips.
-  The installers pinned to that release are committed in the same change.
-- **Pre-releases** come from `dev`. The version in the tag says so (e.g. `v0.69.1 (dev build)`), and a pre-release
-  is never marked as the latest release.
+  mod zip (`TLD-RevaMP-<version>.zip`, the player edition), the two installer scripts and a `SHA256SUMS` file. The
+  add-ons are not attached: they are released in [TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods) (World Map in its
+  own repository) and installed from the mod list. The installers pinned to that release are committed in the same
+  change.
+- **Pre-releases** come from `dev`. The release title says so (e.g. *TLD RevaMP 0.69.1 (dev build)*, tag `v0.69.1`),
+  and a pre-release is never marked as the latest release.
 - **Dev builds** are drafts or public pre-releases from `tools/devrelease.py`, tagged `v<version>-dev.<commit>`.
 - The wire protocol number changes when the protocol changes, and it is part of the join check: two builds of the
   same version with different protocol numbers do not join.
@@ -376,7 +384,7 @@ shipped as `BepInEx/licenses`): BepInEx 5 (MIT) with HarmonyX, MonoMod and Mono.
 TLD RevaMP is an unofficial fan project, not endorsed by them. Also special thanks to Killenger for his TLDAutopilot mod used in testing.
 
 The parked-trailer creep fix, trailer brakes and the optional driving assists (trailer sway reduction, roll
-correction, traction control) follow ideas from Long Haul Overhaul by QuantumRage & Wisher (LGPL-3.0); they are
+correction, traction control) follow ideas from Long Haul Overhaul by QuantumRage & Wisher; they are
 written anew for TLD RevaMP, no code from it is included.
 
 Copyright (c) 2026 Normal99. TLD RevaMP is free software under the **GNU General Public License, version 3**

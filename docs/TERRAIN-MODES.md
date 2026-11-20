@@ -28,9 +28,9 @@ In order of precedence:
    machine, and everybody has to drive the same roads. The host sends its mode in `Welcome` (protocol 51, one byte; the old terrain since protocol 52)
    and the joiner takes it before its world loads. A joiner without the 2023 game files can't make a 2023 host's
    world and is told how to get them instead.
-2. **The save's own mode**, when you load a save. A save keeps the terrain it was made with, so loading an old save
-   gives the same world it gave before.
-3. **Your own choice**, for a new game.
+2. **The save's own mode**, when you load a save with a tag. A save keeps the terrain it was made with, so loading
+   it again gives the same world it gave before.
+3. **Your own choice**, for a new game and for a save without a tag.
 
 Leaving the host's world puts your own choice back.
 
@@ -40,11 +40,13 @@ The mode is written into the save's map name as a tag: `Dust Belt [MainRoadOnly]
 
 - The tag is added when the save is written (`savedatascript.RefreshProperties`).
 - The tag is read back when the save is loaded, and the mode comes from it.
-- The game never sees the tag: the name the player reads is the plain `Dust Belt`, and the map is still looked up in
-  the game's own map list by its plain name.
+- While RevaMP is loaded, the game never sees the tag: the name the player reads is the plain `Dust Belt`, and the map
+  is still looked up in the game's own map list by its plain name.
 
-A save made before this feature existed has no tag and is played on the game's own world (Crossroads), exactly as
-before.
+**Known issue:** every save is written with the tag, Crossroads worlds too (`Dust Belt [Crossroads]`), because a save
+without a tag, such as one made before this feature existed, gets the terrain picked for the next new game. Without
+RevaMP the plain game shows the tag in the map name, and a save on a custom image or bsp map then opens on the first
+built-in map. Saves on the built-in maps still open fine.
 
 ## Diagnostics
 

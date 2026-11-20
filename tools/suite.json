@@ -11,7 +11,7 @@
   ]
  },
  "full": {
-  "about": "the pre-release set (docs/HANDOVER.md): the mini playtest, combat, the other useful tests; every test on freshly started games",
+  "about": "the pre-release set: the mini playtest, combat, the other useful tests; every test on freshly started games",
   "reuse": false,
   "tests": [
    {

@@ -29,7 +29,7 @@ world.
 ## Installing it (the easy way)
 
 The **Releases** page has everything you need:
-<https://github.com/Normal99/TLD-RevaMP/releases>
+<https://github.com/TLD-RevaMP/TLD-RevaMP/releases>
 
 ### Windows
 
@@ -38,15 +38,18 @@ The **Releases** page has everything you need:
 3. It asks what you want to do: **install or update**, **repair**, or **uninstall**. Pick *Install or update*.
 4. It shows you exactly what it will download (with a checksum for each file) and asks once before it changes
    anything. Say yes.
-5. If the game is somewhere unusual, point it at the folder with `--game-dir`, or install from a folder you
-   already downloaded with `--from`. If it says the game is running, close the game and run it again. If it says
-   the SHA-256 does not match, the file you downloaded is not the one this installer was written for: download it
-   again.
+5. If the game is somewhere unusual, run the installer from a PowerShell window and give it the folder with
+   `-GameDir` (`powershell -ExecutionPolicy Bypass -File .\install.ps1 -GameDir "<game folder>"`), or install from
+   zips you already downloaded with `-From <folder>`. If it says the game is running, close the game and run it
+   again. If it says the SHA-256 does not match, the file you downloaded is not the one this installer was written
+   for: download it again.
 
 ### Linux and Steam Deck
 
 1. Download **`install.sh`** from the release page.
-2. Open a terminal and run `bash install.sh`. On the Steam Deck, use Desktop Mode.
+2. Open a terminal and run `bash install.sh`. On the Steam Deck, use Desktop Mode. If the game is somewhere
+   unusual, run `bash install.sh --game-dir "<game folder>"`; to install from zips you already downloaded, add
+   `--from <folder>`.
 3. Same menu as Windows: **install or update**, **repair**, or **uninstall**.
 
 ### What the installer does, in one paragraph
@@ -73,8 +76,8 @@ with the same steps.
 
 ### Is it installed?
 
-Start the game. A small overlay in the top-left corner shows the RevaMP version and the frame rate. That is your
-proof it loaded.
+Start the game. Its main menu has a **Mods** button between Settings and Exit: that is your proof it loaded.
+**Page Up** shows a small overlay in the top-left corner with the RevaMP version and the frame rate.
 
 ### Updating later
 
@@ -118,8 +121,8 @@ seconds, you get a **Continue anyway** button as well.
 | **Voice** | Hold the game's **Voice chat** key (**K** if you never set one). Only players within about 60 m hear you. Hold **O** (Settings → Revamp → *Talk to everyone key*) to talk to every player, wherever they are. A host can make every voice reach everyone: Session settings → *Voice chat: Everyone hears everyone*. The microphone is the one Steam has chosen. |
 | **The player list** | Shows who is in the game and their ping. The host can **mute** and **kick**. |
 | **Teleport** | Type `/tpa <name>` in the chat to ask another player to teleport to you; they answer `/y` or `/n`. The host can turn this off. |
-| **Performance overlay** | **Page Up** shows and hides the overlay with the frame graph. |
-| **Item traffic** | **Insert** shows which items are moving around the world. |
+| **Performance overlay** | **Page Up** shows and hides the overlay with the frame graph. It starts hidden. |
+| **Bug report** | **Ctrl+Insert**, or `/bug` and a short note in the chat: see *Reporting a problem* below. |
 
 ### What you can see of each other
 
@@ -163,13 +166,13 @@ The session is full. Ask one of the players to leave, or start another game.
 It is waiting for the world. Give it a moment. After 60 seconds without progress you can press **Continue anyway**.
 If the ground never arrives, ask the host to save and reload, or leave and rejoin.
 
-**The game starts but RevaMP does not load (no overlay).**
+**The game starts but RevaMP does not load (no Mods button on the main menu).**
 Most often the game is on the wrong branch, or another mod loader is installed. Check that Steam is on the **beta**
 branch, and remove any old TLDLoader or ModLoader install from the game folder. On Linux, check that the Proton
 override or the launch option is set.
 
 **Everything looks wrong — cars in the wrong place, doors on the wrong car, an item where it should not be.**
-That is a bug. Press **Page Down** right away (see below) and report it.
+That is a bug. Press **Ctrl+Insert** right away (see below) and report it.
 
 **You want to undo everything.**
 Run the installer again and choose *Uninstall*, or *Repair* if you think a file got corrupted or half-copied.
@@ -178,25 +181,30 @@ Run the installer again and choose *Uninstall*, or *Repair* if you think a file 
 
 **Do not open a public issue for a crash you cannot reproduce without a file.** The right route is:
 
-1. **Press Page Down** in the game while the problem is happening. That writes one zip with the recent game state,
-   performance and network numbers, your numeric settings and your hardware models. Screenshots, raw logs, player
-   names, file paths and clock details are left out, and your note is cleaned before it is saved. The zip lands in
-   `BepInEx\tldrevamp-feedback\` in your game folder.
+1. **Press Ctrl+Insert** (either Ctrl) in the game right after the problem. Write what went wrong in the box that
+   opens, if you like, and press **Enter**. Or type `/bug` and a short note in the chat (it is never sent as chat).
+   That saves `TLDRevamp-bug-<date>-<time>.zip` (and a smaller `TLDRevamp-report-<date>-<time>.zip` next to it) in
+   `BepInEx\tldrevamp-feedback\` in your game folder. The bug zip holds the
+   recent game state, performance and network numbers, your numeric settings, your hardware models, and snapshots of
+   the car you sit in, the item you look at and the parts near you. When you host or play alone, it also holds your
+   world save. Screenshots, raw logs, player names and file paths are left out, and your note is cleaned before it
+   is saved. To include what you did before the bug in a multiplayer game, turn on *Record actions for bug reports*
+   (Settings → Revamp → Multiplayer, off by default) before the session starts.
 2. **Describe the bug** in a GitHub issue: what you did, what you expected, what you saw instead, whether you
    hosted or joined, and your RevaMP version. That is all we need to start.
-3. **Keep the report zip on your own computer.** Do not attach it to the issue, and do not upload it anywhere else.
+3. **Keep the report zips on your own computer.** Do not attach them to the issue, and do not upload them anywhere else.
    GitHub issues are public. If we need the file, we will ask you for it privately.
 
-Report bugs here: <https://github.com/Normal99/TLD-RevaMP/issues>
+Report bugs here: <https://github.com/TLD-RevaMP/TLD-RevaMP/issues>
 
 **Scroll Lock** opens *marks*: press it, then **Enter** to save a note about what you were looking at (with a bit of
 game state attached), **Escape** to cancel. You can browse the session's marks afterwards and
-rename your own notes in the panel. Sharing marks with the other players in a session is off by default and lives under
-**Settings → Revamp → Debugging**.
+rename your own notes in the panel. In a release, marks and reports stay on your computer: they are never shared
+with the other players. Dev builds can share them (**Settings → Revamp → Debugging**, off by default).
 
 **Cinematic camera:** a separate camera for filming, in free (fly) and orbit modes, with a bounded speed, field of
 view and orbit distance. It is **unbound by default** — assign `CinematicCamera` in `BepInEx/config/tldrevamp.core.cfg`
-(or Settings → Revamp → Filmmaking) to open it. It never touches the game's own camera, never moves your character
+(or Settings → Revamp → Keys) to open it. It never touches the game's own camera, never moves your character
 and never touches the network: what the other players see stays exactly the same. While it is on, W A S D fly the
 camera instead of walking you, Q and E change the height, the mouse or the arrow keys look, Shift hurries and Ctrl
 creeps. In orbit mode the camera circles a point in front of you: the mouse turns it around the point, W and S move
@@ -211,8 +219,13 @@ item within about 250 m, 20 times a second, in single player and multiplayer, wi
 **Ctrl+F10** plays the latest recording. The world and your character stay where they are; the recorded things are
 drawn in their place until you leave. Space pauses, the arrow keys jump 5 s and change the speed (0.1× to 4×), 1 to 4
 pick the free, orbit, eyes and follow views, Tab picks the player to watch, and Alt + click scrubs the timeline.
-Recordings are saved in `BepInEx/tldrevamp-replays` and hold numbers only. Headlights and lamps are recorded; sounds, smoke
-and animals are not yet. See [replays](docs/REPLAY.md).
+Recordings are saved in `BepInEx/tldrevamp-replays` and hold numbers only. Headlights and lamps are recorded, and animals
+and bodies within about 120 m; sounds and smoke are not yet. See [replays](docs/REPLAY.md).
+
+**Only in dev builds.** The release for players leaves out the developer tools below: its Settings → Revamp has no
+Debugging section, the background checks are off, and it has no debug report (**Page Down**), item health
+(**Home**), debug layout (**Right Shift**) or item traffic (plain **Insert**). Dev builds have them;
+[docs/DEVELOPERS.md](docs/DEVELOPERS.md) says how to build one.
 
 **Debug tools:** Settings → Revamp → Debugging has a set of diagnostic overlays and tools (ownership labels, ghost
 boxes, link lines, live comparison between players, network-condition presets and a repro recorder). They are all off
@@ -254,7 +267,7 @@ long report. There is no shame in asking.
 This is an **unfinished mod**, and it is being developed in the open.
 
 - **Bugs are normal.** Some things will be wrong: a car slightly out of place for a moment, a door that does not
-  line up, an item that lands oddly after you drop it. Press Page Down and tell us.
+  line up, an item that lands oddly after you drop it. Press Ctrl+Insert and tell us.
 - **Things can change between versions.** We are still changing how objects are shared, how the game is patched and
   what the settings look like. Your settings may need resetting.
 - **Everyone must be on the same version.** We cannot support a session where half the players are on an older
@@ -269,7 +282,9 @@ We would rather you have a rough but working version than a perfect one that nev
 
 ## Add-ons
 
-RevaMP comes with a few optional mods of its own, plus a browser for catalog mods:
+RevaMP has a few optional mods of its own. They are not in the RevaMP zip: you install them from the mod list in
+the game. Their source and releases are in [TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods) (World Map has a
+repository of its own):
 
 | Add-on | What it does |
 | --- | --- |
@@ -277,11 +292,18 @@ RevaMP comes with a few optional mods of its own, plus a browser for catalog mod
 | **Car Trailer** | A trailer for carrying a car, shared between players like the game's own trailer. |
 | **Trailer Hitches** | Receiver hitches for cars that cannot take the game's stock trailer drawbar. |
 | **World Map** | A carryable paper map with explored routes, visited places and live player markers. |
+| **TV Browser** | A web browser on the in-game TV, used with the keyboard and mouse; everyone in a session sees the same page. |
+| **Road End** | Picked on the new-game screen: the main road ends after 5000 km of it, at the game's roadside grave, with a note. The land and side roads go on. |
 | **BusGut**, **MountAnything**, **TerrainChoice** | By YujiroX2: strip the buses out for cargo, mount held items anywhere, and pick the terrain for a new game. |
 
-**Settings → Revamp → Mods** opens the browser: pick a mod, press **Install**, and restart the game. **Disable** and
-**Enable** turn a mod off and on without uninstalling it, and **Remove** takes it away again. Mods you install by
-hand are marked *not managed* — you update and remove those yourself.
+The **Mods** button on the game's main menu, between Settings and Exit (also in the pause menu), opens the mod list.
+It has two tabs, **All mods** and **Installed**, a search box and a sort (*Most downloaded*, *Recently updated*,
+*Name*). Each row shows a mod's author, state, description, tags, downloads, last update, size and version, and its
+buttons: **Install** (or **Update**), **Disable** and **Enable** to turn an installed mod off and on without
+uninstalling it, **Remove** to take it away again (it asks first), and **Cancel** while it downloads. Changes take
+effect at the next start, so restart the game. A mod you installed by hand shows **By hand**: you update and remove it
+yourself. When the main menu first shows, RevaMP checks the catalog for newer versions of your mods and, if it finds
+any, asks *Update now?* (*Check for mod updates at start* in Settings → Revamp turns that off).
 
 The live catalog (`packaging/mods.json` on dev) is the mod list. New catalog releases become available without a
 RevaMP update. Only GitHub release assets are accepted, and each downloaded DLL must match the catalog's SHA-256.
@@ -303,7 +325,7 @@ these are the folders that matter:
 | `BepInEx/plugins/TLDRevamp/` | the mod itself |
 | `BepInEx/patchers/TLDRevamp/` | the preloader, the piece that activates the mod |
 | `BepInEx/TLDLoaderMods/` | your TLD Loader mods, if you use any; RevaMP runs them |
-| `BepInEx/tldrevamp-feedback/` | the reports the mod writes when you press **Page Down** |
+| `BepInEx/tldrevamp-feedback/` | the bug reports the mod saves when you press **Ctrl+Insert** (or type `/bug`) |
 | `BepInEx/disabled-mods/` | the mods RevaMP switched off for you (never deleted, only moved aside) |
 | `BepInEx/plugins/TLDRevampMods/` | the mods RevaMP manages for you |
 | `BepInEx/licenses/` | the licence texts of the bundled third-party code |

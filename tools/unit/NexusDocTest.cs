@@ -38,12 +38,13 @@ static class NexusDocTest
             (nexus.Contains("the mod's own version number") || nexus.Contains("update them first")));
 
         // ---- 3. the keys the copy promises must be the code's defaults ----
+        // Page Down is the developers' debug report, which a player release ignores: the copy's report key is Ctrl+Insert.
         Check("F11 is the multiplayer menu", plugin.Contains("KeyCode.F11"));
         Check("Page Up is the overlay", plugin.Contains("KeyCode.PageUp"));
-        Check("Page Down is the report", plugin.Contains("KeyCode.PageDown"));
+        Check("Ctrl+Insert is the bug report", plugin.Contains("KeyCode.Insert, KeyCode.LeftControl"));
         Check("the copy names F11", nexus.Contains("F11"));
         Check("the copy names Page Up", nexus.Contains("Page Up"));
-        Check("the copy names Page Down", nexus.Contains("Page Down"));
+        Check("the copy names Ctrl+Insert", nexus.Contains("Ctrl+Insert"));
 
         // ---- 4. the voice range the copy promises ----
         string voice = Read("src/TLDRevamp/Net/Voice.cs");
@@ -61,7 +62,7 @@ static class NexusDocTest
             nexus.Contains("WINEDLLOVERRIDES=\"winhttp=n,b\" %command%"));
 
         // ---- 6. the support route: the issue tracker, and no attaching files ----
-        Check("the copy points at the issue tracker", nexus.Contains("github.com/Normal99/TLD-RevaMP/issues"));
+        Check("the copy points at the issue tracker", nexus.Contains("github.com/TLD-RevaMP/TLD-RevaMP/issues"));
         Check("the copy says not to attach report zips",
             nexus.Contains("Do NOT attach") || nexus.Contains("Do not attach") || nexus.Contains("NOT attach"));
 
@@ -70,7 +71,8 @@ static class NexusDocTest
         Check("the repository is GPL-3.0", copying.Contains("GNU GENERAL PUBLIC LICENSE") && copying.Contains("Version 3"));
         Check("the copy says GPL-3.0",
             nexus.Contains("GNU General Public License, version 3") || nexus.Contains("GPL-3.0") || nexus.Contains("GPLv3"));
-        Check("the copy names the same repository", nexus.Contains("github.com/Normal99/TLD-RevaMP"));
+        Check("the copy names the same repository", nexus.Contains("github.com/TLD-RevaMP/TLD-RevaMP"));
+        Check("the copy no longer names the old repository address", !nexus.Contains("github.com/Normal99/TLD-RevaMP"));
 
         // ---- 8. the copy must not contradict the README on the basics ----
         foreach (string phrase in new[] { "F11", "beta" })
@@ -87,10 +89,10 @@ static class NexusDocTest
             Check(mod + " is in the catalog", catalog.Contains(mod));
         }
         // the file names the copy gives must be the ones the manifest's URLs end in
-        // The copy may name the file name OR the mod and its version ("Car Trailer 0.1.1"): the property is
+        // The copy may name the file name OR the mod and its version ("Car Trailer 0.1.2"): the property is
         // that the reader can tell WHICH artifact to upload, not the exact spelling.
-        foreach (var zip in new[] { ("HeadUnit-0.2.0.zip", "Head Unit 0.2.0"), ("CarTrailer-0.1.1.zip", "Car Trailer 0.1.1"),
-                                    ("TrailerHitches-0.1.0.zip", "Trailer Hitches 0.1.0") })
+        foreach (var zip in new[] { ("HeadUnit-0.2.1.zip", "Head Unit 0.2.1"), ("CarTrailer-0.1.2.zip", "Car Trailer 0.1.2"),
+                                    ("TrailerHitches-0.2.0.zip", "Trailer Hitches 0.2.0") })
         {
             Check("the copy names " + zip.Item1, nexus.Contains(zip.Item1) || nexus.Contains(zip.Item2));
             Check("the catalog has " + zip.Item1, catalog.Contains(zip.Item1));

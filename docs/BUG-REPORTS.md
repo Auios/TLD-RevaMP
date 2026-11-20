@@ -7,7 +7,6 @@ A bug report is one local bundle that an agent (or a developer) can read first a
 - **Ctrl+Insert** (either Ctrl; `Keys.ReproRecorder` in `tldrevamp.core.cfg`) opens a note box. Write what went wrong
   (optional, 500 characters) and press **Enter**. Escape cancels.
 - Or type **`/bug`** or **`/bug the barrel fell through the floor`** in chat. It is never sent as chat.
-- Or Settings → Revamp → **Report a bug**.
 
 Do it right after the bug. To include what you did before it, turn on *Record actions for bug reports*
 (Settings → Revamp → Multiplayer, off by default) before playing; the recording then runs whenever you are in a session.
@@ -52,6 +51,9 @@ A bug report takes part in report sharing exactly as Page Down does. With *Share
 host asks every sharing player to take theirs: their zips arrive under `players/`. What never travels is the bundle itself
 (`repro.json`, the world, `REPORT.md`): each player's stays on their own computer. A client who wants their actions in the
 picture presses Ctrl+Insert themselves and sends their own bundle (`--peer-recording` replays it as the second participant).
+
+A player release never shares marks or reports with the other players: the sharing switches are in
+Settings → Revamp → Debugging, which only dev builds show, and a player release keeps them off.
 
 ## Replaying one
 

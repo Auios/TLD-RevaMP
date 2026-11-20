@@ -190,21 +190,22 @@ host would be driving on roads the host has never heard of. The **host owns the 
 **one byte, immediately after the session settings snapshot** (the same offset the joiner reads it at). An old host
 sends no byte, and the joiner then keeps the game's own terrain.
 
-Two layouts are offered: **Crossroads** (the game as it ships) and **Main road only**. Both are the game's own road
-generator driven by the two flags it already has (`roadGenScript.hasMainRoad` / `hasSideRoad`), so the world stays
-deterministic from the seed alone. The **2023 terrain is not offered**: it is a different generator that cannot be
-reproduced faithfully, and the only implementation of it is a third-party mod whose source is not published and
-carries no licence, so it cannot be copied or re-derived here. `docs/TERRAIN-MODES.md` has the details and the
+Three layouts are offered: **Crossroads** (the game as it ships), **Main road only** and the **old 2023 terrain**.
+Crossroads and Main road only are the game's own road generator driven by the two flags it already has
+(`roadGenScript.hasMainRoad` / `hasSideRoad`); the old terrain is the 2023 build's own generator code, loaded from the
+player's own Steam download of that build (a joiner without those files can't make a 2023 host's world and is told how
+to get them). Every layout is deterministic from the seed alone. `docs/TERRAIN-MODES.md` has the details and the
 provenance.
 
 **The save format changes.** The layout is written into the save's map name as a tag (`Dust Belt [MainRoadOnly]`),
 because that is the name the game stores in the save file. The tag is stripped before the game's own map lookup
-(and from the map instance's own record), so the game never sees it; a save written before this feature has no tag
-and plays on the game's own world, exactly as before.
+(and from the map instance's own record), so the game never sees it while RevaMP is loaded. A save without a tag
+gets the terrain picked for the next new game, so Crossroads worlds are tagged too (`Dust Belt [Crossroads]`).
 
-- **Release note:** saves written with the terrain mode carry a tag in the map name and **cannot be read by builds
-  before 0.70**. The new build reads saves from **both** tag formats (`[MainRoadOnly]` and the older
-  `[Terrain: MainRoadOnly]`), so a save written by either format loads here.
+- **Release note:** saves written since 0.69.2 carry the tag. A build without the terrain mode (the plain game, or
+  RevaMP before 0.69.2) shows it in the map name and opens a save on a custom image or bsp map on the first built-in
+  map; saves on the built-in maps still open. The new build reads saves from **both** tag formats (`[MainRoadOnly]`
+  and the older `[Terrain: MainRoadOnly]`), so a save written by either format loads here.
 - **Anyone who touches the map name must know this.** The tag is stripped with `TerrainModes.StripTag`; a lookup
   that used the raw name would not find the map.
 
@@ -765,6 +766,6 @@ Ready optionally appends flag 1 and the quantized join position (flag 0/absent r
 
 Escape/`mp loading cancel` leaves to the menu; 60 s without a changed fact, backlog, download byte count or object count offers `mp loading continue`/Continue anyway. Continue bypasses the loading gate explicitly, restores audio and resumes the old join/ground behavior; `ready` remains false. `mp loading` exposes stage timings/counts and scene, geometry, ground and initialSync evidence. Off keeps the old join path with no overlay, audio lease, body hold or manifest request.
 
-The joining screen leases the game's `Canvas/UIOVERLAY/2/TextLoad` once per join, retaining its localized title and driving its road Slider forwards with real stage progress. A full-screen opaque child sits behind the game artwork; all touched objects' original active states and the Slider value are restored on every close path. Missing or unavailable native UI uses a sprite-based IMGUI loading screen over an opaque dark backdrop. Other RevaMP overlays remain suppressed. A `newpaper` nine-sliced paper panel, placed clear of the top-left title and road-bar strip, shows stage details and elapsed seconds on the left, received/applied/expected object counters and a six-entry recent receipt feed on the right; narrow or short windows stack the columns and scroll. Mod approval retains its own scrollable text and Download mods / Decline actions. Buttons use `newmenubutton2` with outlined labels; the panel uses LiberationSans when available and a small Multiplayer · RevaMP credit. The footer shows total seconds, decimal MB received from the host, decimal KB/s and percent; these transport measurements include handshake, mods and shared records. The scene is generated locally from the host's seed/settings, not a downloaded save file. The percentage measures ordered stage progress, with applied/expected progress within shared objects; it is not a byte percentage.
+The joining screen is RevaMP's own sprite-based IMGUI screen in the game's menu style, over an opaque backdrop; the game's own loading UI (`TextLoad` and its road bar) is not touched. Other RevaMP overlays remain suppressed. A `newpaper` nine-sliced paper panel shows stage details and elapsed seconds on the left, received/applied/expected object counters and a six-entry recent receipt feed on the right; narrow or short windows stack the columns and scroll. Buttons use `newmenubutton2` with outlined labels; the panel uses LiberationSans when available and a small "Multiplayer by RevaMP" credit. The footer shows total seconds, decimal MB received from the host, decimal KB/s and percent; these transport measurements include the handshake and shared records. The scene is generated locally from the host's seed/settings, not a downloaded save file. The percentage measures ordered stage progress, with applied/expected progress within shared objects; it is not a byte percentage.
 
-`mp loading` retains all existing fields and adds `bytesReceived`, `receiveBytesPerSecond`, `elapsedMs`, `terrainDone`/`terrainNeeded`, `roadsDone`/`roadsNeeded`, `geometrySampled`, `receivedObjects`, `receivedVehicles`, `receivedItemsParts`, `receivedOther`, `expectedObjects`, `manifestReceived`, `initialRecordsEnded`, `recentObjects` (newest first: net, prefab, kind, privacy-safe prefab name), `hostName`, `route` (unknown/direct/relay), `pingMs` (-1 unknown), `versionCheck`, `worldActivity`, `placementStatus`, `loadingMod`/`loadingModBytes`/`loadingModTotal` and `progressPercent`, plus `loadingScreen` (`native` or `fallback`, retaining the last choice after close). The manifest contains IDs only, so kind counts describe received entities, not guessed expected kinds; attached members remain part of their parent entity, vehicles include trailers and other includes creatures/unknown roots. Records already known before the manifest count as received without inventing a new feed arrival. Text and published feed names refresh at most four times per second; geometry and placement retain the existing 0.2 s gate sampling. No display counter grants readiness.
+`mp loading` retains all existing fields and adds `bytesReceived`, `receiveBytesPerSecond`, `elapsedMs`, `terrainDone`/`terrainNeeded`, `roadsDone`/`roadsNeeded`, `geometrySampled`, `receivedObjects`, `receivedVehicles`, `receivedItemsParts`, `receivedOther`, `expectedObjects`, `manifestReceived`, `initialRecordsEnded`, `recentObjects` (newest first: net, prefab, kind, privacy-safe prefab name), `hostName`, `route` (unknown/direct/relay), `pingMs` (-1 unknown), `versionCheck`, `worldActivity`, `placementStatus` and `progressPercent`, plus `loadingScreen` (always `revamp`). The manifest contains IDs only, so kind counts describe received entities, not guessed expected kinds; attached members remain part of their parent entity, vehicles include trailers and other includes creatures/unknown roots. Records already known before the manifest count as received without inventing a new feed arrival. Text and published feed names refresh at most four times per second; geometry and placement retain the existing 0.2 s gate sampling. No display counter grants readiness.

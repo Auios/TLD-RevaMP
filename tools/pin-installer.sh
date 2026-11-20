@@ -4,7 +4,7 @@
 # official BepInEx release the scripts download (they take BepInEx from there, and only TLDRevamp/ from our zip), so a
 # BepInEx update in the game can't slip past the installer: update BEPINEX_URL/SHA256 in both scripts when it fails.
 #   tools/pin-installer.sh [zip]   (default: dist/TLD-RevaMP-<Plugin.cs version>.zip); then commit both scripts and
-#   attach them to the release next to the zip (docs/HANDOVER.md, release steps).
+#   attach them to the release next to the zip (docs/CONTRIBUTING.md, "Making a release").
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SH="$ROOT/installer/install.sh"; PS="$ROOT/installer/install.ps1"
@@ -13,7 +13,7 @@ ZIP="${1:-$ROOT/dist/TLD-RevaMP-$VER.zip}"
 [ -f "$ZIP" ] || { echo "no $ZIP (tools/package.sh makes it)" >&2; exit 1; }
 VER=$(basename "$ZIP" | sed -n 's/^TLD-RevaMP-\(.*\)\.zip$/\1/p')
 SUM=$(sha256sum "$ZIP" | cut -d' ' -f1)
-URL="https://github.com/Normal99/TLD-RevaMP/releases/download/v$VER/TLD-RevaMP-$VER.zip"
+URL="https://github.com/TLD-RevaMP/TLD-RevaMP/releases/download/v$VER/TLD-RevaMP-$VER.zip"
 
 # the official BepInEx the scripts pin, fetched once into the cache
 BURL=$(sed -n 's/^BEPINEX_URL="\(.*\)"$/\1/p' "$SH"); BSUM=$(sed -n 's/^BEPINEX_SHA256="\(.*\)"$/\1/p' "$SH")

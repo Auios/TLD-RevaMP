@@ -6,9 +6,9 @@ the network can see, and it never touches the game's own camera.
 ## Turning it on
 
 The camera's key is **unbound by default**, so it never steals a key the game or the player uses. Assign
-`Keys.CinematicCamera` in `BepInEx/config/tldrevamp.core.cfg` (or Settings → Revamp → Filmmaking) to a key; press
-it to open the camera and press it again to close it. The key is ignored while the chat box or the marks panel has
-the keyboard, while a menu is open and while the world is still loading.
+`Keys.CinematicCamera` in `BepInEx/config/tldrevamp.core.cfg` (or Settings → Revamp → Keys → *Cinematic camera*) to a
+key; press it to open the camera and press it again to close it. The key is ignored while the chat box or the marks
+panel has the keyboard, while a menu is open and while the world is still loading.
 
 The camera is also driven from the mod's debug bridge (developer tooling, off in a player's install):
 

@@ -99,9 +99,12 @@ A key is about a game item (one with `tosaveitemscript`, or a child of one) that
 256 KB. Record only on change: the latest key at the playhead is what `Shown` gets, once each time it changes and
 once when playback starts. `Shown` gets the copy (a GameObject the replay draws), the live object when it is in this
 world, and `CopyOf(renderer)`, the copy's renderer for one of the live object's: set a material of the mod's own on
-it (the copies share the game's materials). Nothing is sent to other players; replays are local. Keep
-`RegisterReplayChannel` in a method of its own, so the mod still loads with an older RevaMP (`MissingMethodException`
-there means no channels). Example: [`mods/TvBrowser/ReplayTv.cs`](https://github.com/TLD-RevaMP/TLD-Mods/blob/main/mods/TvBrowser/ReplayTv.cs) in TLD-Mods.
+it (the copies share the game's materials). Nothing is sent to other players; replays are local. Example:
+[`mods/TvBrowser/ReplayTv.cs`](https://github.com/TLD-RevaMP/TLD-Mods/blob/main/mods/TvBrowser/ReplayTv.cs) in TLD-Mods.
+To still load with an older RevaMP, keep `RegisterReplayChannel` in a method of its own (`MissingMethodException`
+there means no channels) and keep the API 4 types (`ReplayChannel`, `ReplayShown`) out of the mod's fields: with an
+older RevaMP, a class with such a field fails to load before any catch in it can run. TV Browser keeps one in a field,
+so it needs RevaMP 0.69.2.
 
 ## 1. Why this is needed
 
@@ -155,8 +158,8 @@ Every player's mods that use this API must be the same as the host's: the same m
 Disabling a managed mod in the browser takes effect at the next start. Until then its already loaded code and
 Hello registration remain active. After restart the DLL is outside `BepInEx/plugins`, never loads or registers,
 and is absent from Hello. The ordinary missing-mod check still applies. If a required mod is installed but
-disabled, the join screen tells the player to enable it in the mod browser and restart before joining again.
-The join screen recognizes the multiplayer registration id even when it differs from the browser's plugin GUID;
+disabled, the required-mods screen offers **Enable** for it; the player restarts the game and joins again.
+The required-mods screen recognizes the multiplayer registration id even when it differs from the plugin GUID;
 the browser records that association when queuing a change. No wire fields were added (protocol 45).
 
 - **The host has a mod the joiner lacks, or another version or file of it:** the host sends `ModsNeeded`
@@ -338,9 +341,13 @@ each list is kept for an hour in `BepInEx/cache/tldrevamp-modstats/`, and a list
 mods without numbers. The required-mods screen shown when joining (below) keeps the tapes.
 
 Managed installs have **Disable / Enable** and **Remove** controls, including local entries when the catalog is
-offline. States are **Enabled**, **Disabled (takes effect at next start)**, **Disabled**, and **Enabled at next
-start**. Hand-installed mods are read-only because one DLL or folder can serve several plugins or dependencies.
-RevaMP (`TLDRevamp`, `TLDRevamp.Multiplayer`, `TLDLoader`, its preloader) and BepInEx core cannot be toggled.
+offline. A row's state reads **On**, **Off**, **On at next start** or **Off at next start** (with *· update to v…*
+when the catalog has a newer version), and **Removed at next start** after **Remove**. After **Disable** or
+**Enable**, the message under the list gives the full
+state, as the bridge's `mods list` does: **Enabled**, **Disabled (takes effect at next start)**, **Disabled** or
+**Enabled at next start**. Hand-installed mods show **By hand** (state *On · installed by hand*) and are read-only
+because one DLL or folder can serve several plugins or dependencies. RevaMP (`TLDRevamp`, `TLDRevamp.Multiplayer`,
+`TLDLoader`, its preloader) and BepInEx core cannot be toggled.
 
 `TLDRevamp.Preloader.dll` is installed under `BepInEx/patchers/TLDRevamp/`. Its initializer replays durable intent
 before the chainloader scans plugins. BepInEx 5.4.23's `TypeLoader.FindPluginTypes` uses
@@ -364,11 +371,13 @@ registration used by Hello), and a readable state. `mods enable <id>` / `mods di
 For the list itself: `mods open` / `mods close`; `mods view [search=<text>|-] [tab=all|installed] [sort=0|1|2]
 [scroll=<0..1>] [ask=<question>] [press=<id>:<button label>]` sets what a player would and returns the rows as shown
 (`+` stands for a space); `mods ui` dumps the menu's layout and `mods sprite <name>` saves a UI sprite's texture.
-The external `modtogglecheck.py --selftest` is offline; its live mode owns only hidden LiveTestA on bridge 27060
-and verifies loading, disabling, enabling and removal while disabled across restarts. It must be run separately.
+The external `modtogglecheck.py --selftest` is offline; its live mode works only on one hidden, isolated test copy of
+the game and verifies loading, disabling, enabling and removal while disabled across restarts. It must be run
+separately.
 
 Head Unit 0.2.0 first shipped with RevaMP 0.68.0; the catalog's `revamp: "0.68.0"` records that compatibility
-baseline. The field is an explanatory hint, not a runtime version check. The live catalog and the downloaded
+baseline. The field is checked: a RevaMP older than a release's `revamp` does not offer or install that release; it
+offers the newest one that fits, or shows *Needs RevaMP x.y.z*. Beyond that, the live catalog and the downloaded
 DLL's SHA-256 decide whether installation is allowed.
 
 Car Trailer 0.1.1 is listed with the hash of its existing release DLL. Its catalog ZIP size and both example mods'
@@ -376,14 +385,18 @@ DLL hashes were checked against the v0.69.0 assets. The original assets are reus
 Car Trailer can be installed from the browser and loads after restarting the game; every player still needs it, since it
 does not register for the host's missing-mod check listing.
 
-BusGut 0.2.0, MountAnything 0.2.1 and TerrainChoice 0.4.1 (by YujiroX2, `anonymoustld.*` GUIDs) are hosted in
-their own repositories and listed with the hashes of their release DLLs. All three register with the multiplayer API
-(`busgut`, `mountanything`, `terrainchoice`), so a join with a different set is refused. Their catalog baseline is
-RevaMP 0.69.1, the version their self-tests passed on.
+BusGut, MountAnything and TerrainChoice (by YujiroX2, `anonymoustld.*` GUIDs) have their source and releases in
+TLD-Mods (`mods/BusGut`, `mods/MountAnything`, `mods/TerrainChoice`; tags `<mod>-v<version>`, for example
+`terrainchoice-v0.5.0`) and are listed with the hashes of their release DLLs: BusGut 0.2.0, MountAnything 0.2.1 and
+0.2.2, TerrainChoice 0.4.1, 0.4.2 and 0.5.0. All three register with the multiplayer API (`busgut`, `mountanything`,
+`terrainchoice`), so a join with a different set is refused. Their catalog baseline is RevaMP 0.69.1, the version
+their self-tests passed on.
 
 TV Browser 0.1.0 (`tldrevamp.tvbrowser`) is a mod-only release (tag `tvbrowser-v0.1.0`), listed with its DLL's hash.
-It registers with the multiplayer API (`tvbrowser`), so every player in a session needs it. Its baseline is RevaMP
-0.69.1; the TVs show up in replays only with a RevaMP that has replay channels (API 4).
+It registers with the multiplayer API (`tvbrowser`), so every player in a session needs it. Its baseline, for 0.1.0
+and 0.2.0 alike, is RevaMP 0.69.2: both have a static field of the API 4 type `ReplayChannel` in the plugin class,
+and API 4 came after 0.69.1, so with 0.69.1 that class fails to load before its `MissingMethodException` catch can
+run.
 
 Road End 0.1.0 (`tldrevamp.roadend`) is a mod-only release (tag `roadend-v0.1.0`), listed with its DLL's hash. It
 registers with the multiplayer API (`roadend`) and shares one session setting (`world`: the host's world has an end or

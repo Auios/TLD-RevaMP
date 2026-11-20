@@ -6,9 +6,7 @@ For what RevaMP is, how it is installed and what it does to the game, see
 [DEVELOPERS.md](DEVELOPERS.md). The player-facing introduction is in the [README](../README.md).
 
 For the current state of the project (what is built, what is tested, what is still missing) see
-[PROJECT-STATUS.md](PROJECT-STATUS.md); the evidence behind it is in the durable worker root
-`${XDG_STATE_HOME:-$HOME/.local/state}/tld-revamp/workers/`. The one command that runs every unit project is
-`tools/verify.sh`.
+[PROJECT-STATUS.md](PROJECT-STATUS.md). `tools/verify.sh` runs every unit project.
 
 ## Read the game's code: decompile it yourself
 
@@ -64,19 +62,23 @@ the two-machine multiplayer scenarios. A pull request is easiest to review with 
 
 ## Pull requests
 
-The **Settings → Revamp → Mods** browser uses `packaging/mods.json` (format 1, unknown fields ignored). Versions are
-newest first; URLs must be HTTPS GitHub release assets. `file` names the exact DLL inside a ZIP; omit it for a bare
-DLL. `size` is the download size; `sha256` hashes the DLL, not the archive. `revamp` is a displayed minimum version.
+The **Mods** list (the Mods button on the main menu and in the pause menu) uses `packaging/mods.json` (format 1,
+unknown fields ignored). Versions are newest first; URLs must be HTTPS GitHub release assets. `file` names the exact
+DLL inside a ZIP; omit it for a bare DLL. `size` is the download size; `sha256` hashes the DLL, not the archive.
+`revamp` is the oldest RevaMP the release works with: an older RevaMP does not offer that release (it offers the
+newest one that fits, or shows `Needs RevaMP <version>`). Optional `tags` (at most six, up to 24 characters each)
+show in the list and are searched.
 The catalog is the list of installable releases: the downloaded DLL must match its catalog SHA-256. Publishing a
 new catalog entry makes that release available without a RevaMP update. Joiners install matching releases from the
 catalog; the host never sends files. Hand-installed mods load as usual. Keep third-party DLLs out of the repository. Run `dotnet run --project tools/unit/ModCatalogTest.csproj` for the offline browser tests.
 To try an unpublished catalog in game, set `[Mods] CatalogUrl` to a `file:///absolute/path/to/packaging/mods.json`
-URI in `BepInEx/config/tldrevamp.core.cfg`, then open Mods. Mod downloads still require GitHub release-asset URLs
-and local approval; this changes only where discovery metadata is read.
+URI in `BepInEx/config/tldrevamp.core.cfg`, then open Mods. Downloads still have to be GitHub release assets, and
+each DLL must match the SHA-256 in the catalog you point at.
 
-CI checks every pull request: the tools compile (Python 3.9 and the latest) and their helper tests pass, the network
-reader's unit test passes, and `tools/privacy_scan.py` finds nothing. Run that scan before you push; it looks at what
-git tracks.
+CI checks every pull request: the tools compile (Python 3.9 and the latest) and their helper tests pass, every unit
+project in `tools/unit` passes (`tools/unit/run-all.sh` runs them the same way), the installer scripts pass a lint and
+an install, repair and uninstall on a stand-in game folder, the package audit passes on a package-shaped fixture, and
+`tools/privacy_scan.py` finds nothing. Run that scan before you push; it looks at what git tracks.
 
 ## Making a release
 

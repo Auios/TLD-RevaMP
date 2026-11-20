@@ -9,7 +9,7 @@ Python 3.9+ and the standard library only.
 
 ## Setup
 
-1. Build the mod once as the [main README](../README.md#building-from-source) says (`tools/libs.sh`, then
+1. Build the mod once as [DEVELOPERS.md](../docs/DEVELOPERS.md#building-from-source) says (`tools/libs.sh`, then
    `tools/build.sh`). `build.sh` also turns the debug bridge on in *this* game's config (`Bridge = true` in
    `BepInEx/config/tldrevamp.core.cfg`). A player's install has it off.
 2. Copy `tools/local.env.example` to `tools/local.env` (gitignored), or to `~/.config/tld-revamp/tools.env` to share it
@@ -219,10 +219,11 @@ tld-installs report NAME "what's broken"                             # choose pr
 - Copies go to `~/tld-installs/<name>/` (`%USERPROFILE%\tld-installs` on Windows; `TLD_INSTALLS` or the window's
   Change… button to move it). `make NAME --clean | --vanilla | --release [VERSION] | --source [REF] | --dev | --test`.
 - **Newest dev, built here** (`--source`) needs Git and a .NET SDK. It clones
-  `https://github.com/Normal99/TLD-RevaMP` into `<cache>/source/TLD-RevaMP`, fetches `origin`, and checks out the chosen
-  branch or full commit detached (default `origin/dev`). It never uses or changes your checkout. References come from
-  Steam's Managed DLLs and the pinned, checked BepInEx download, with the same list as `libs.sh`. The player layout
-  has the bridge off and shows `<version>-dev.<short commit>`. Windows also gets CopyIsolation.
+  `https://github.com/TLD-RevaMP/TLD-RevaMP` into `<cache>/source/TLD-RevaMP` (a cache cloned from the old address is
+  pointed there), fetches `origin`, and checks out the chosen branch or full commit detached (default `origin/dev`). It
+  never uses or changes your checkout. References come from Steam's Managed DLLs and the pinned, checked BepInEx
+  download, with the same list as `libs.sh`. The player layout has the bridge off and shows
+  `<version>-dev.<short commit>`. Windows also gets CopyIsolation.
   `update NAME` fetches and rebuilds only when the commit changed; `update NAME --ref BRANCH_OR_SHA` switches refs.
   The card shows the installed commit, title, date and ref, and checks how many newer commits the ref has every two
   minutes. **Build** (or `tld-installs build NAME`) fetches and rebuilds immediately. **Update to the newest commit
@@ -543,8 +544,8 @@ synthetic headers; tests also create report zips and corrupt inputs in temporary
 - `tools/hooks/pre-push`: runs `quick.py` on what a push changes. Not installed by default; install with `git config core.hooksPath tools/hooks`, skip one push with `git push --no-verify`.
 - Without the game: `python3 -m unittest tools/test_tools.py` tests the tools' own helpers, and
   `tools/privacy_scan.py` checks the repository for personal paths, LAN addresses, Steam IDs, keys, binaries and
-  decompiled game code. CI runs both on every pull request, with the network reader's unit test
-  (`dotnet run --project tools/unit/NetReaderTest.csproj`).
+  decompiled game code. CI runs both on every pull request, with every unit project in `tools/unit` (as
+  `tools/unit/run-all.sh` runs them).
   The mod browser's parser, URL allowlist, trust/ZIP/size checks and install/update/remove operations also run without
   the game: `dotnet run --project tools/unit/ModCatalogTest.csproj`. It links the production plain C# functions,
   uses synthetic bytes and temporary folders, and never downloads or loads a mod.

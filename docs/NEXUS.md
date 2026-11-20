@@ -11,13 +11,13 @@ Where the copy names a version, a file name or a checksum, it names the one the 
 
 | | |
 | --- | --- |
-| Core mod | **TLD RevaMP 0.69.1** |
-| Core file | `TLD-RevaMP-0.69.1.zip` |
-| Add-ons in the catalog | Head Unit 0.2.0, Car Trailer 0.1.1, World Map 0.2.0, Trailer Hitches 0.1.0, BusGut 0.2.0, MountAnything 0.2.1, TerrainChoice 0.4.1 |
+| Core mod | **TLD RevaMP 0.69.2** |
+| Core file | `TLD-RevaMP-0.69.2.zip` |
+| Add-ons in the catalog | Head Unit 0.2.1, Car Trailer 0.1.2, World Map 0.2.1, Trailer Hitches 0.2.0, BusGut 0.2.0, MountAnything 0.2.2, TerrainChoice 0.5.0, TV Browser 0.2.0, Road End 0.2.0 |
 | Game | The Long Drive (Steam app id `1017180`), **beta branch** only |
-| Wire protocol | **51** |
-| Source | <https://github.com/Normal99/TLD-RevaMP> |
-| Issues and support | <https://github.com/Normal99/TLD-RevaMP/issues> |
+| Wire protocol | see [PROTOCOL.md](PROTOCOL.md) |
+| Source | <https://github.com/TLD-RevaMP/TLD-RevaMP> |
+| Issues and support | <https://github.com/TLD-RevaMP/TLD-RevaMP/issues> |
 
 If the version numbers below no longer match the newest release when you upload, update them first. The source of
 truth for installable releases is the live `packaging/mods.json` catalog on dev. Downloads must match its DLL
@@ -84,7 +84,7 @@ savedatascript.d, mainscript.M.seed, .load (the world came from a save) and .nap
 (the day/night cycle), and read idInSave as the int it is there. Public names for the player's body, radio volume,
 car lights, menu data and settings also reach the beta's live fields, including writes. Small adapters cover hand
 release, radio refresh, the pause menu, headlight switching and damage calls. `Mods.RetargetLoaderMods` controls these
-rewrites; `mods aliases` lists every mapping, and the load log names those each DLL used. The old save, part and world
+rewrites, and the load log names those each DLL used. The old save, part and world
 systems still need a port. The existing seed/load/napszak fields are host snapshots; writes to those do not change
 the beta's state. TLD Loader's helpers work
 too: SettingAPI settings (read at start, drawn in the Revamp tab), ModLoader.LoadedMods,
@@ -122,7 +122,8 @@ On Linux and the Steam Deck, also set this launch option unless the installer di
   Steam > The Long Drive > Properties > General > Launch options
   WINEDLLOVERRIDES="winhttp=n,b" %command%
 
-Start the game. A small overlay in the top-left corner shows "TLD Revamp" and the version. That means it loaded.
+Start the game. Its main menu now has a Mods button between Settings and Exit: that means it loaded. Page Up shows a
+small overlay in the top-left corner with the version and the frame rate.
 
 PLAYING TOGETHER
 Press F11 (or use the game's own Multiplayer button in the pause menu or main menu).
@@ -133,8 +134,9 @@ saves. While the join loads, a muted loading screen shows each stage and the obj
 you and the objects around you are really there. Escape cancels; after 60 seconds without progress you can continue
 anyway.
 
-Text chat is Enter. Voice is the game's own Voice chat key (K if you never set one) and only nearby players (about
-60 m) hear you. The host can mute and kick players, and players can ask to teleport to each other with /tpa.
+Text chat is Enter. Voice is the game's own Voice chat key (K if you never set one): players within about 60 m hear
+you. Hold O to talk to every player, wherever they are (Settings > Revamp > Multiplayer > Talk to everyone key). The
+host can mute and kick players, and players can ask to teleport to each other with /tpa.
 
 UPDATING
 Run the new release's installer and choose "Install or update", or close the game and copy the new zip's files over
@@ -143,22 +145,24 @@ the old ones. Your saves and settings stay. Everyone in your session should upda
 THIS IS A WORK IN PROGRESS
 Expect bugs. Please back up your saves before playing a test build. Some things may still be missing or occasionally
 wrong - a car slightly out of place for a moment, a door that does not quite line up. If you find a bug, press
-Page Down in the game while it happens: that writes a small zip with the game state, the performance and network
-numbers and your hardware models, with screenshots, logs, player names and file paths left out.
+Ctrl+Insert in the game right after it happens, write what went wrong and press Enter (or type /bug and a short note
+in the chat). That writes one zip with the recent game state, the performance and network numbers, your hardware
+models, your recorded actions if "Record actions for bug reports" (Settings > Revamp > Multiplayer) is on and, unless
+you joined someone else's game, your world save. Screenshots, raw logs, player names and file paths are left out.
 
 Please DO NOT attach those report zips to a public issue or upload them anywhere. GitHub issues and Nexus comments
 are public. Describe the bug and when it happened in the issue, and keep the file on your own computer - we will
 ask for it privately if we need it.
 
 SUPPORT AND BUG REPORTS
-https://github.com/Normal99/TLD-RevaMP/issues
+https://github.com/TLD-RevaMP/TLD-RevaMP/issues
 
 Use that tracker for bugs, questions and anything serious. This Nexus page is for the download and the description;
 we do not read support requests here. Include your RevaMP version and whether you hosted or joined.
 
 SOURCE CODE AND LICENCE
 The project is open source under the GNU General Public License v3:
-https://github.com/Normal99/TLD-RevaMP
+https://github.com/TLD-RevaMP/TLD-RevaMP
 
 BepInEx 5 (MIT) with HarmonyX, MonoMod and Mono.Cecil (MIT), and UnityDoorstop (LGPL-2.1) are bundled unmodified;
 their licence texts ship in the release zip as BepInEx/licenses. The Long Drive is by Gab and Genesz; TLD RevaMP is
@@ -223,15 +227,18 @@ REQUIRES
 - Everyone in a multiplayer session must run the same version of this mod.
 
 INSTALLATION
-Install the mod browser inside RevaMP: Settings > Revamp > Mods, pick Head Unit, press Install, restart the game.
+Install it from RevaMP's mod list: Mods on the main menu, find Head Unit, press Install, restart the game.
 It is also installed by hand: unzip HeadUnit-<version>.zip into your game folder, so that the file ends up at
 BepInEx/plugins/HeadUnit/HeadUnit.dll.
 
 Supports
-https://github.com/Normal99/TLD-RevaMP/issues
+https://github.com/TLD-RevaMP/TLD-RevaMP/issues
 ```
 
 ### Version notes
+
+These are 0.2.0's notes. For 0.2.1, add the notes of the headunit-v0.2.1 release in
+[TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods/releases) above them.
 
 ```
 0.2.0
@@ -277,20 +284,20 @@ The trailer is shared in multiplayer with no extra code: it is a game item, so t
 shares it like the game's own trailer, including a car carried on it. A carried car follows whichever machine is
 simulating its trailer.
 
-Note for multiplayer: the join only checks mods that register with the multiplayer API, and this one does not, so
-every player has to install it by hand.
+Note for multiplayer: the join only lists mods that register with the multiplayer API, and this one does not, so
+every player has to install it themselves (from the mod list or by hand).
 
 REQUIRES
 - TLD RevaMP (this is an add-on for it).
 - The Long Drive on Steam, beta branch.
 
 INSTALLATION
-Install the mod browser inside RevaMP: Settings > Revamp > Mods, pick Car Trailer, press Install, restart the game.
+Install it from RevaMP's mod list: Mods on the main menu, find Car Trailer, press Install, restart the game.
 It is also installed by hand: unzip CarTrailer-<version>.zip into your game folder, so that the file ends up at
 BepInEx/plugins/CarTrailer/CarTrailer.dll.
 
 Supports
-https://github.com/Normal99/TLD-RevaMP/issues
+https://github.com/TLD-RevaMP/TLD-RevaMP/issues
 ```
 
 ### Files to attach
@@ -342,12 +349,12 @@ REQUIRES
 - Everyone in a multiplayer session must run the same version of this mod.
 
 INSTALLATION
-Install the mod browser inside RevaMP: Settings > Revamp > Mods, pick World Map, press Install, restart the game.
+Install it from RevaMP's mod list: Mods on the main menu, find World Map, press Install, restart the game.
 It is also installed by hand: unzip WorldMap-<version>.zip into your game folder, so that the file ends up at
 BepInEx/plugins/WorldMap/WorldMap.dll.
 
 Supports
-https://github.com/Normal99/TLD-RevaMP/issues
+https://github.com/TLD-RevaMP/TLD-RevaMP/issues
 ```
 
 ### Files to attach
@@ -397,15 +404,18 @@ REQUIRES
   configurations is refused.
 
 INSTALLATION
-Install the mod browser inside RevaMP: Settings > Revamp > Mods, pick Trailer Hitches, press Install, restart the
+Install it from RevaMP's mod list: Mods on the main menu, find Trailer Hitches, press Install, restart the
 game. It is also installed by hand: unzip TrailerHitches-<version>.zip into your game folder, so that the file ends
 up at BepInEx/plugins/TrailerHitches/TrailerHitches.dll.
 
 Supports
-https://github.com/Normal99/TLD-RevaMP/issues
+https://github.com/TLD-RevaMP/TLD-RevaMP/issues
 ```
 
 ### Version notes
+
+These are 0.1.0's notes. For 0.2.0, add the notes of the trailerhitches-v0.2.0 release in
+[TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods/releases) above them.
 
 ```
 0.1.0
@@ -428,8 +438,9 @@ these to a Nexus account that does not represent their author without saying so.
 
 Two options, and the second is better:
 
-1. **Point to the author's own page.** The canonical location for each is the GitHub release its catalog entry names,
-   and the catalog records the author's own repository as the source. Put that link in the description.
+1. **Point to the add-on's own page.** The canonical location for each is the GitHub release its catalog entry names,
+   in [TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods), and the catalog records its folder there as the source. Put
+   that link in the description.
 2. **Post them here with a clear credit.** Only with YujiroX2's agreement, and with the author's own
    description and their own screenshots. Keep the author credited by name in the title or the first line, and keep
    the support link pointing at whoever owns the mod.
@@ -439,8 +450,8 @@ What each one does, from `packaging/mods.json`:
 | Add-on | Version | What it does |
 | --- | --- | --- |
 | **BusGut** | 0.2.0 | Empties the buses into cargo space: passenger seats and handrails removed, driver seat and dashboard kept. |
-| **MountAnything** | 0.2.1 | Mount any held item anywhere: on a car, the ground, a building or another item, with a placement preview. |
-| **TerrainChoice** | 0.4.1 | Pick the terrain for a new game: crossroads, main road only, or the old 2023 terrain. |
+| **MountAnything** | 0.2.2 | Mount any held item anywhere: on a car, the ground, a building or another item, with a placement preview. |
+| **TerrainChoice** | 0.5.0 | Pick the terrain for a new game: crossroads, main road only, or the old 2023 terrain. |
 
 If you post them, each listing needs the same structure as the others: a title with the author's name, a short
 description, a full description saying who made it, requirements, installation, a support line pointing at the right
@@ -488,7 +499,7 @@ store page or from another mod.
       player's car or another player standing next to it.
 - [ ] **The performance overlay** in the top-left corner (Page Up) while driving, showing the frame rate.
 - [ ] **Settings > Revamp** open, so the reader knows the settings exist and that they are explained.
-- [ ] **Settings > Revamp > Mods**, the mod browser, with the catalog add-ons listed.
+- [ ] **Mods** on the main menu: the mod list, with the catalog add-ons listed.
 
 **For each add-on listing:**
 
@@ -523,7 +534,7 @@ Everything below is a manual action. Work down it for each listing, one page at 
 - [ ] Check its SHA-256 against the one on the release page (the release also carries a `SHA256SUMS` file).
 - [ ] Upload the zip to Nexus as the main file for the listing.
 - [ ] Upload `install.ps1` and `install.sh` as optional extra files on the core listing only.
-- [ ] For each add-on, upload its own zip (for example `HeadUnit-0.2.0.zip`). **Do not upload add-on zips on the core
+- [ ] For each add-on, upload its own zip (for example `HeadUnit-0.2.1.zip`). **Do not upload add-on zips on the core
       listing**, and do not upload a different add-on's file under the wrong name.
 - [ ] Give every uploaded file a version in Nexus's version field. Set the newest stable release as the current
       version, and the previous one as an old version.
@@ -533,7 +544,7 @@ Everything below is a manual action. Work down it for each listing, one page at 
 - [ ] Paste the title, short description and full description from the matching listing above, and adjust only the
       version numbers if they have moved on.
 - [ ] Paste the version notes for the version you are publishing.
-- [ ] Check that every support link in the copy points at <https://github.com/Normal99/TLD-RevaMP/issues>.
+- [ ] Check that every support link in the copy points at <https://github.com/TLD-RevaMP/TLD-RevaMP/issues>.
 - [ ] Check that the description says clearly that support and bug reports go to GitHub issues, and that Nexus
       comments are not read for support. This is the whole point of issue #38: **users are directed to GitHub for any
       issues or serious posts.**
