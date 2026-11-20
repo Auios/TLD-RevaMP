@@ -97,9 +97,9 @@ namespace TLDRevamp.Net
 
             // the toolbar: tabs, search, sort, refresh
             _tabAll = NewButton(frame, "All mods", ButtonGrey, 40f, () => { _installedTab = false; _shown = null; RefreshList(); });
-            TopLeft((RectTransform)_tabAll.transform, 80f, 120f, 270f, 84f);
+            TopLeft((RectTransform)_tabAll.transform, 80f, 120f, 270f, 84f);   // the row: 20 px between every piece
             _tabInstalled = NewButton(frame, "Installed", ButtonGrey, 40f, () => { _installedTab = true; _shown = null; RefreshList(); });
-            TopLeft((RectTransform)_tabInstalled.transform, 360f, 120f, 300f, 84f);
+            TopLeft((RectTransform)_tabInstalled.transform, 370f, 120f, 300f, 84f);
 
             _search = UnityEngine.Object.Instantiate(save.Find("TMP_IF_SaveName").gameObject, frame, false).GetComponent<TMP_InputField>();
             _search.name = "Search"; Quiet(_search.gameObject);
@@ -109,7 +109,7 @@ namespace TLDRevamp.Net
             _search.characterLimit = 40; _search.text = "";
             if (_search.placeholder is TMP_Text ph) { ph.text = "Search mods..."; ph.fontStyle = FontStyles.Italic; }
             _search.onValueChanged.AddListener(_ => { _shown = null; RefreshList(); });
-            TopLeft((RectTransform)_search.transform, 690f, 122f, 520f, 80f);
+            TopLeft((RectTransform)_search.transform, 690f, 122f, 480f, 80f);
 
             var menuDropdown = mh.Menu != null ? mh.Menu.transform.Find("Language/Dropdown") : null;
             if (menuDropdown != null)
@@ -119,10 +119,10 @@ namespace TLDRevamp.Net
                 _sort.onValueChanged = new TMP_Dropdown.DropdownEvent();
                 _sort.ClearOptions(); _sort.AddOptions(new List<string>(ModList.SortNames)); _sort.SetValueWithoutNotify(0);
                 _sort.onValueChanged.AddListener(_ => { _shown = null; RefreshList(); });
-                TopLeft((RectTransform)_sort.transform, 1230f, 127f, 420f, 70f);
+                TopLeft((RectTransform)_sort.transform, 1190f, 127f, 420f, 70f);
             }
             _listRefresh = NewButton(frame, "Refresh", ButtonGreen, 40f, () => { ModCatalog.Refresh(); ModStatsFetch.Begin(true); _shown = null; RefreshList(); });
-            TopRight((RectTransform)_listRefresh.transform, 80f, 120f, 190f, 84f);
+            TopRight((RectTransform)_listRefresh.transform, 80f, 120f, 210f, 84f);
 
             // the list: rows on a scrolling column, a scrollbar on its right
             var listGo = new GameObject("List", typeof(RectTransform));
@@ -173,7 +173,7 @@ namespace TLDRevamp.Net
             var card = (RectTransform)new GameObject("Card", typeof(RectTransform), typeof(Image)).transform;
             card.SetParent(_dialog.transform, false); card.anchorMin = card.anchorMax = card.pivot = new Vector2(.5f, .5f);
             card.sizeDelta = new Vector2(1040f, 420f);
-            var cImg = card.GetComponent<Image>(); cImg.sprite = _paper; cImg.type = Image.Type.Sliced; cImg.color = Paper; cImg.pixelsPerUnitMultiplier = 1.4f;
+            var cImg = card.GetComponent<Image>(); cImg.sprite = _paper; cImg.type = Image.Type.Sliced; cImg.color = Paper;
             _dialogText = NewText(card, _paperStyle, 40f, Ink, TextAlignmentOptions.Center, "Text");
             var dr = _dialogText.rectTransform; dr.anchorMin = new Vector2(0f, 0f); dr.anchorMax = new Vector2(1f, 1f);
             dr.offsetMin = new Vector2(50f, 140f); dr.offsetMax = new Vector2(-50f, -70f);
@@ -189,16 +189,15 @@ namespace TLDRevamp.Net
             _dialog.SetActive(false);
         }
 
-        /// The Save/Load screen's index card cut above its first dotted rule: rounded top, the blue rule, then plain
-        /// paper (the whole card has three rules and a blue band at the bottom, which crossed the rows' text). The top
-        /// border keeps the rule at a fixed height under the mod's name.
+        /// The Save/Load screen's index card cut above its blue rule: its rounded top and plain paper (the whole card has
+        /// a blue rule, three dotted rules and a blue band at the bottom, which crossed the rows' text).
         private static Sprite CardTop(Sprite card)
         {
             if (card == null || card.texture == null) return card;
             var r = card.rect;
-            float h = Mathf.Min(r.height, 160f * r.height / 512f);
+            float h = Mathf.Min(r.height, 84f * r.height / 512f);
             var cut = Sprite.Create(card.texture, new Rect(r.x, r.yMax - h, r.width, h), new Vector2(.5f, .5f), card.pixelsPerUnit, 0,
-                SpriteMeshType.FullRect, new Vector4(20f, 20f, 19f, Mathf.Min(h - 21f, 110f * r.height / 512f)));
+                SpriteMeshType.FullRect, new Vector4(20f, 0f, 19f, 20f * r.height / 512f));
             cut.name = "TLDRevampModCard";
             return cut;
         }
@@ -352,7 +351,7 @@ namespace TLDRevamp.Net
             var row = new GameObject("Mod " + m.Id, typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             row.transform.SetParent(_rows, false);
             var img = row.GetComponent<Image>(); img.sprite = _paper; img.type = Image.Type.Sliced; img.color = Paper; img.raycastTarget = true;
-            img.pixelsPerUnitMultiplier = 1.4f;   // the card's rule 66 px down, between the name and the description
+            
             row.GetComponent<LayoutElement>().preferredHeight = 178f;
             var rt = (RectTransform)row.transform;
 
@@ -467,7 +466,7 @@ namespace TLDRevamp.Net
             _listRefresh.interactable = !ModCatalog.Busy;
             string catalog = ModCatalog.CatalogUnavailable ? "The mod list could not be reached. " : "";
             _listMessage.text = catalog + (ModCatalog.Progress ?? "") + (string.IsNullOrEmpty(ModCatalog.Progress) ? "" : "\n") +
-                "Changes take effect at the next start. Updates keep disabled mods disabled.";
+                "Changes take effect at the next start.";
         }
 
         private static void Tab(Button b, string label, bool on)
