@@ -463,8 +463,10 @@ namespace TLDRevamp.Net
             Tab(_tabInstalled, "Installed (" + installedCount + ")", _installedTab);
             _listRefresh.interactable = !ModCatalog.Busy;
             string catalog = ModCatalog.CatalogUnavailable ? "The mod list could not be reached. " : "";
-            _listMessage.text = catalog + (ModCatalog.Progress ?? "") + (string.IsNullOrEmpty(ModCatalog.Progress) ? "" : "\n") +
-                "Changes take effect at the next start.";
+            // the reminder only when the message doesn't already say it ("Disabled (takes effect at next start)")
+            string progress = ModCatalog.Progress ?? "";
+            bool says = progress.IndexOf("next start", StringComparison.OrdinalIgnoreCase) >= 0 || progress.IndexOf("restart", StringComparison.OrdinalIgnoreCase) >= 0;
+            _listMessage.text = catalog + progress + (says ? "" : (progress.Length == 0 ? "" : "\n") + "Changes take effect at the next start.");
         }
 
         private static void Tab(Button b, string label, bool on)
