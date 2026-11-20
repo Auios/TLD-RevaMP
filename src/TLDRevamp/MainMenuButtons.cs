@@ -25,6 +25,23 @@ namespace TLDRevamp
         [HarmonyPostfix]
         private static void AfterLoadMainMenu(menuhandler __instance) => TryBuild(__instance);
 
+        /// The menu shows the main menu's buttons or the pause menu's (the game switches them in its Update): while it
+        /// is open the column is laid out again for what shows, a few times a second (nothing moves once it is right).
+        private static float _next;
+        [HarmonyPatch(typeof(menuhandler), "Update")]
+        [HarmonyPostfix]
+        private static void AfterUpdate(menuhandler __instance)
+        {
+            if (__instance != menuhandler.s || __instance.Menu == null || !__instance.Menu.activeInHierarchy || Time.unscaledTime < _next) return;
+            _next = Time.unscaledTime + 0.2f;
+            try
+            {
+                var settings = Find(__instance.transform, "ButtonSettings");
+                if (settings != null && settings.parent != null && settings.parent.Find(ModsName) != null) Tighten(__instance.transform, settings);
+            }
+            catch (System.Exception e) { Diagnostics.QuietErrors.Once("MainMenuButtons.Update", e); }
+        }
+
         public static void TryBuild(menuhandler menu)
         {
             if (menu == null) return;
@@ -65,21 +82,28 @@ namespace TLDRevamp
 
         /// The menu's column one even step apart (asked for 2026-11-11: "spaced out too far"; the game had 130 to 150
         /// between buttons 90 high; 2026-11-20 with the Mods row: "closer together and lower", 10 px between buttons).
-        /// The lowest button (Exit) stays on the game's own spot by the bottom of the screen and the column goes up from
-        /// it, and running it again changes nothing. The buttons sit under two parents, so this works in world space; the
-        /// column is the buttons with Settings' left edge (the save screen has a Load button of its own elsewhere).
+        /// The menu has two sets of buttons on one column: the main menu's (Continue, START, Load) and the pause menu's
+        /// (its own Continue, Save/Load), with Multiplayer, Settings, Mods and Exit shared; the shared ones go where the
+        /// set showing needs them ("in game the menus don't make sense" when only the main menu's order was laid out).
+        /// Only the buttons that show are in the column (Multiplayer hides without Steam). The lowest (Exit) stays on the
+        /// game's own spot by the bottom of the screen and the rest go up from it; once right, nothing moves. The buttons
+        /// sit under several parents, so this works in world space; the column is the buttons with Settings' left edge.
         public static float Step = 100f;
         public static readonly string[] Column = { "ButtonContinue", "ButtonMultiplayer", "ButtonStart", "ButtonLoad", "ButtonSettings", ModsName, "ButtonExit" };
+        public static readonly string[] PauseColumn = { "ButtonContinue", "ButtonSave", "ButtonMultiplayer", "ButtonSettings", ModsName, "ButtonExit" };
+        internal static bool Paused => DataFromMenuScript.s != null && !DataFromMenuScript.s.mainmenu;
+
         internal static void Tighten(Transform root, RectTransform settings)
         {
             if (Step <= 0f) return;
             var found = new System.Collections.Generic.List<RectTransform>();
             float x = settings.position.x, scale = settings.lossyScale.y;
-            foreach (var name in Column)
-                foreach (var t in root.GetComponentsInChildren<RectTransform>(true))
-                    if (t.name == name && Mathf.Abs(t.position.x - x) < 2f * Mathf.Max(scale, 0.0001f)) { found.Add(t); break; }
-            if (found.Count < 3) return;
-            // already laid out (the menu is built again on every return to it): every button one step under the last
+            var all = root.GetComponentsInChildren<RectTransform>(true);
+            foreach (var name in Paused ? PauseColumn : Column)
+                foreach (var t in all)
+                    if (t.name == name && Shows(t, root) && Mathf.Abs(t.position.x - x) < 2f * Mathf.Max(scale, 0.0001f)) { found.Add(t); break; }
+            if (found.Count < 3 || found[found.Count - 1].name != "ButtonExit") return;
+            // already laid out: every button one step under the last
             bool even = true;
             for (int i = 1; i < found.Count && even; i++) even = Mathf.Abs(Bottom(found[i - 1]) - Bottom(found[i]) - Step * scale) < scale;
             if (even) return;
@@ -92,6 +116,13 @@ namespace TLDRevamp
                 var t = found[i];
                 t.position += new Vector3(0f, first - i * step - Bottom(t), 0f);
             }
+        }
+
+        /// Shows when the menu does: it and every parent up to the menu are on (the menu itself may be closed now).
+        private static bool Shows(Transform t, Transform root)
+        {
+            for (var p = t; p != null && p != root; p = p.parent) if (!p.gameObject.activeSelf) return false;
+            return true;
         }
         private static float Bottom(RectTransform t)
         {
