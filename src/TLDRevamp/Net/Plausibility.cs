@@ -24,7 +24,7 @@ namespace TLDRevamp.Net
         // the time a jump may have taken, at most: a car at rest sends nothing, so its last state can be minutes old —
         // a teleport after that would otherwise count as minutes of driving (plausibility.py C, first run)
         public static float MaxGapS = 10f;
-        public static long Checked, PlayerJumps, CarJumps, CarSpeeding, Graced, Dropped;
+        public static long Checked, PlayerJumps, CarJumps, CarSpeeding, Graced, Dropped, Rode;
         public static string Last = "";
 
         private sealed class Track { public double X, Z; public float At; public bool Has; }
@@ -65,13 +65,17 @@ namespace TLDRevamp.Net
         }
 
         /// A car's state from its owner (Entities.ServerReceive State). False: drop it (Enforce only).
-        internal static bool CarState(int owner, string name, uint net, Vector3d pos, float speed, float lastSpeed, bool stored, bool held)
+        /// rode: locked in or riding on something, stored or held, in this state or the one before. Such an object sends
+        /// no world poses while its carrier moves it (cargo physlocked in a car follows the car's states), so its next
+        /// free state can be kilometres from the last one: that is the carrier's travel, whose own states are checked.
+        internal static bool CarState(int owner, string name, uint net, Vector3d pos, float speed, float lastSpeed, bool stored, bool held, bool rode = false)
         {
             if (!Enabled || owner == 0) return true;   // the host's own word is the host's business
             float now = Time.realtimeSinceStartup;
             if (!_cars.TryGetValue(net, out var t)) _cars[net] = t = new Track();
             bool ok = true;
-            if (!stored && !held)
+            if (rode) Rode++;
+            else if (!stored && !held)
             {
                 Checked++;
                 float cap = MaxCarSpeed();
@@ -125,6 +129,6 @@ namespace TLDRevamp.Net
         public static string Stats() =>
             "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"enforce\":" + (Enforce ? "true" : "false") + ",\"checked\":" + Checked +
             ",\"playerJumps\":" + PlayerJumps + ",\"carJumps\":" + CarJumps + ",\"carSpeeding\":" + CarSpeeding + ",\"graced\":" + Graced +
-            ",\"dropped\":" + Dropped + ",\"capKmh\":" + (MaxCarSpeed() * 3.6f).ToString("F0") + ",\"last\":" + Json.Str(Last) + "}";
+            ",\"dropped\":" + Dropped + ",\"rode\":" + Rode + ",\"capKmh\":" + (MaxCarSpeed() * 3.6f).ToString("F0") + ",\"last\":" + Json.Str(Last) + "}";
     }
 }

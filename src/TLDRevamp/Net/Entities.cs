@@ -610,7 +610,8 @@ namespace TLDRevamp.Net
                 var carrier = t.parent != null ? t.parent.GetComponentInParent<Rigidbody>() : null;
                 if (carrier != null && !carrier.isKinematic) v = carrier.GetPointVelocity(t.position);
             }
-            if (e.SeqOut > 0 && ((g - e.LastSentPos).sqrMagnitude > 250000.0 || v.sqrMagnitude > 250000f) && OwnerJumps++ < 30)
+            // (not just out of a lock, a container or a hand: it rode its carrier without world poses, so the gap is that trip)
+            if (e.SeqOut > 0 && !unlocked && !released && !lockChange && ((g - e.LastSentPos).sqrMagnitude > 250000.0 || v.sqrMagnitude > 250000f) && OwnerJumps++ < 30)
                 Plugin.Log.LogWarning($"owner jump: {e.Root.name} net {e.NetId} {System.Math.Sqrt((g - e.LastSentPos).sqrMagnitude):F0} m since the last state, v {v.magnitude:F0} m/s, " +
                                       $"at global {g.x:F0},{g.y:F0},{g.z:F0} parent {(t.parent != null ? t.parent.name : "none")} kin {(rb != null && rb.isKinematic)}");
             // pose is from the last physics step: its time on the frame-start clock. `now` (read here, partway
@@ -824,7 +825,10 @@ namespace TLDRevamp.Net
             // the owner's word about its car: speeds and jumps it couldn't have made (Plausibility)
             // (every root object: the host's own copy of a far car is stored out, so "is it a car" can't be asked here —
             // plausibility.py C, 2026-10-15: the teleported car wasn't checked)
-            if (se.PartIndex < 0 && !Plausibility.CarState(from, RemotePlayers.NameOf(from) ?? ("player " + from), net, sp, sv.magnitude, se.Speed, stored, held)) return;
+            // locked in / riding on / carried by something, now or at its last state: it travelled with its carrier
+            bool rode = se.Locked || se.LockContainer != 0 || se.Stored || se.Held ||
+                        EntityCodec.ReadLockedState || EntityCodec.ReadLockContainer != 0 || EntityCodec.ReadCarriedBy != 0;
+            if (se.PartIndex < 0 && !Plausibility.CarState(from, RemotePlayers.NameOf(from) ?? ("player " + from), net, sp, sv.magnitude, se.Speed, stored, held, rode)) return;
             // never thinned away: ragdoll Keys, the final rest state, a driver change,
             // going into / out of an inventory
             bool lockChanged = se.Locked != EntityCodec.ReadLockedState || se.LockFrame != (EntityCodec.ReadLockedState ? EntityCodec.ReadCarriedBy : 0) || se.LockContainer != EntityCodec.ReadLockContainer;
