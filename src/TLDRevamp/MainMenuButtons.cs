@@ -64,11 +64,11 @@ namespace TLDRevamp
         }
 
         /// The menu's column one even step apart (asked for 2026-11-11: "spaced out too far"; the game had 130 to 150
-        /// between buttons 90 high). Its lowest button (Exit) stays where it was and the column grows upwards (the Mods
-        /// row added one), and running it again changes nothing. The buttons sit under two parents, so this works in
-        /// world space; the column is the buttons with Settings' left edge (the save screen has a Load button of its own
-        /// elsewhere).
-        public static float Step = 115f;
+        /// between buttons 90 high; 2026-11-20 with the Mods row: "closer together and lower", 10 px between buttons).
+        /// The lowest button (Exit) stays on the game's own spot by the bottom of the screen and the column goes up from
+        /// it, and running it again changes nothing. The buttons sit under two parents, so this works in world space; the
+        /// column is the buttons with Settings' left edge (the save screen has a Load button of its own elsewhere).
+        public static float Step = 100f;
         public static readonly string[] Column = { "ButtonContinue", "ButtonMultiplayer", "ButtonStart", "ButtonLoad", "ButtonSettings", ModsName, "ButtonExit" };
         internal static void Tighten(Transform root, RectTransform settings)
         {
@@ -79,9 +79,13 @@ namespace TLDRevamp
                 foreach (var t in root.GetComponentsInChildren<RectTransform>(true))
                     if (t.name == name && Mathf.Abs(t.position.x - x) < 2f * Mathf.Max(scale, 0.0001f)) { found.Add(t); break; }
             if (found.Count < 3) return;
-            // the lowest button's bottom edge stays (the column's last name is the bottom one: Exit)
-            float bottom = Bottom(found[found.Count - 1]);
+            // already laid out (the menu is built again on every return to it): every button one step under the last
+            bool even = true;
+            for (int i = 1; i < found.Count && even; i++) even = Mathf.Abs(Bottom(found[i - 1]) - Bottom(found[i]) - Step * scale) < scale;
+            if (even) return;
+            // the lowest button (Exit) keeps the game's own spot; the rest go up from it one step each
             float step = Step * scale;
+            float bottom = Bottom(found[found.Count - 1]);
             float first = bottom + (found.Count - 1) * step;   // the top button's bottom edge
             for (int i = 0; i < found.Count; i++)
             {

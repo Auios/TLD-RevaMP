@@ -90,6 +90,16 @@ namespace TLDRevamp.Net
             if (arg.Trim() == "open") { ModsScreen.Open(null); return "{\"open\":" + (ModsScreen.IsOpen ? "true" : "false") + "}"; }
             if (arg.Trim() == "close") { ModsScreen.Close(); return "{\"open\":false}"; }
             if (arg.Trim() == "ui") return UiDump();
+            if (arg.Trim() == "menu")
+            {
+                // build the main menu's column again (as on every return to the menu) and report where each button is
+                TLDRevamp.MainMenuButtons.TryBuild(menuhandler.s);
+                var rows = new List<string>();
+                foreach (var name in TLDRevamp.MainMenuButtons.Column)
+                    foreach (var t in menuhandler.s.GetComponentsInChildren<UnityEngine.RectTransform>(true))
+                        if (t.name == name) { var c = new UnityEngine.Vector3[4]; t.GetWorldCorners(c); rows.Add(Json.Str(name + " " + c[0].y.ToString("F1") + ".." + c[1].y.ToString("F1"))); break; }
+                return "{\"last\":" + Json.Str(TLDRevamp.MainMenuButtons.Last) + ",\"column\":[" + string.Join(",", rows) + "]}";
+            }
             if (arg.StartsWith("sprite ", StringComparison.Ordinal))
             {
                 // mods sprite <name>: a UI sprite's whole texture as a PNG in the game folder (to pick a part of it)
