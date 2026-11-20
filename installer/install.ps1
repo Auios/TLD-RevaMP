@@ -33,9 +33,9 @@ $ProgressPreference = "SilentlyContinue"   # PowerShell 5's download progress ba
 
 # ---- Pinned downloads. tools/pin-installer.sh rewrites this block for each release; check the hashes against the
 # ---- release page (GitHub shows each file's sha256) or against Get-FileHash of a zip you downloaded yourself.
-$REVAMP_VERSION = "0.69.1"
-$REVAMP_URL = "https://github.com/Normal99/TLD-RevaMP/releases/download/v0.69.1/TLD-RevaMP-0.69.1.zip"
-$REVAMP_SHA256 = "80cafe6ce09f581c01413c41fa5adfba4777471479f5d247ea5309451f4e9403"
+$REVAMP_VERSION = "0.69.2"
+$REVAMP_URL = "https://github.com/TLD-RevaMP/TLD-RevaMP/releases/download/v0.69.2/TLD-RevaMP-0.69.2.zip"
+$REVAMP_SHA256 = "7dead3a7978d12e2e9e226115f7b025d97de3bb9277c1d15f7b41e6511f5f8fe"
 $BEPINEX_URL = "https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.5/BepInEx_win_x64_5.4.23.5.zip"
 $BEPINEX_SHA256 = "82f9878551030f54657792c0740d9d51a09500eeae1fba21106b0c441e6732c4"
 # ---- end of pinned downloads
