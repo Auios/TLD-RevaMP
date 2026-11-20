@@ -28,10 +28,11 @@ namespace TLDRevamp.Net
         private static float _refreshAt;
         private static Action _yes, _no;            // what the question's Yes and No do (remove the selected mod; update or not)
         private static bool _checked, _offer;       // the start-up update check: started, and its answer still to show
-        public static bool IsOpen => _root != null && _root.activeSelf;
-        internal static bool IsVisible => _root != null && _root.activeInHierarchy;
+        public static bool IsOpen => _root != null && _root.activeSelf || ListOpen;
+        internal static bool IsVisible => _root != null && _root.activeInHierarchy || _list != null && _list.activeInHierarchy;
 
         /// settings: the Revamp settings page to hide while open, or null over the main menu (the game shows it again).
+        /// Browsing mods opens the list (ModsScreen.List.cs); the tapes are kept for the required-mods screen.
         internal static void Open(GameObject settings, bool fetch = true)
         {
             try
@@ -39,6 +40,19 @@ namespace TLDRevamp.Net
                 if (menuhandler.s == null || menuhandler.s.SaveLoadObject == null) return;
                 _needed = null;
                 MpScreen.Close();
+                OpenList(settings, fetch);
+            }
+            catch (Exception e) { Plugin.Log.LogError("ModsScreen: " + e); Close(); }
+        }
+
+        /// The tapes: the required-mods screen (OpenNeeded).
+        private static void OpenTapes(GameObject settings, bool fetch)
+        {
+            try
+            {
+                if (menuhandler.s == null || menuhandler.s.SaveLoadObject == null) return;
+                MpScreen.Close();
+                if (_list != null) _list.SetActive(false);
                 if (_root == null || _builtFor != menuhandler.s) Build(menuhandler.s);
                 _settings = settings; if (_settings != null) _settings.SetActive(false);
                 _root.transform.SetAsLastSibling(); _root.SetActive(true);
@@ -76,10 +90,6 @@ namespace TLDRevamp.Net
                 Ask("Mod updates: " + string.Join(", ", names) + "." + hand + " Update now?", () => { ModCatalog.UpdateAll(updates); Refresh(); }, Close);
             else
                 Ask("Newer mod versions." + hand + " Open the mod browser?", Refresh, Close);
-            // select the first mod the question names
-            string first = updates.Count > 0 ? updates[0].Key.Id : null;
-            int at = first == null ? -1 : _items.FindIndex(x => x.Id == first);
-            if (at >= 0) { _selected = at; _page = at / Math.Max(1, Tiles.Count); Refresh(); }
         }
 
         /// For the bridge (mods check): run the start-up check again now, as at start, even with the bridge on.
@@ -88,8 +98,14 @@ namespace TLDRevamp.Net
             _checked = true;
             ModCatalog.Refresh(true); _offer = ModCatalog.Busy;
         }
-        internal static void Answer(bool yes) { if (Question != null) { _confirm.SetActive(false); (yes ? _yes : _no)?.Invoke(); } }
-        internal static string Question => _confirm != null && _confirm.activeInHierarchy ? _question.text : null;
+        internal static void Answer(bool yes)
+        {
+            if (Question == null) return;
+            if (ListOpen) _dialog.SetActive(false); else _confirm.SetActive(false);
+            (yes ? _yes : _no)?.Invoke();
+        }
+        internal static string Question => ListOpen ? (_dialog != null && _dialog.activeSelf ? _dialogText.text : null)
+            : _confirm != null && _confirm.activeInHierarchy ? _question.text : null;
 
         /// Every catalog mod with a newer catalog version than the installed one; byHand gets the ones installed by hand.
         internal static List<KeyValuePair<ModCatalog.Mod, ModCatalog.Release>> Updates(List<string> byHand)
@@ -114,6 +130,7 @@ namespace TLDRevamp.Net
 
         private static void Ask(string question, Action yes, Action no = null)
         {
+            if (ListOpen) { AskList(question, yes, no); return; }
             _question.text = Esc(question); _yes = yes; _no = no ?? Refresh; _confirm.SetActive(true); Refresh();
         }
 
@@ -122,6 +139,7 @@ namespace TLDRevamp.Net
             _needed = null; _installQueue.Clear();
             ModCatalog.Cancel();
             if (_root != null) _root.SetActive(false);
+            if (_list != null) _list.SetActive(false);
             if (_settings != null) _settings.SetActive(true);
             _settings = null;
         }
@@ -132,7 +150,7 @@ namespace TLDRevamp.Net
         {
             if (__instance == menuhandler.s && DataFromMenuScript.s != null && DataFromMenuScript.s.mainmenu && Time.timeSinceLevelLoad > 1f)
                 StartupCheck(__instance);
-            if (!IsOpen || __instance != _builtFor) return;
+            if (!IsOpen || __instance != (ListOpen ? _listFor : _builtFor)) return;
             if (DataFromMenuScript.s != null && !DataFromMenuScript.s.mainmenu && mainscript.s != null && !mainscript.s.pauseMenuOpen)
             { Close(); return; }
             if (__instance.Menu != null) __instance.Menu.SetActive(false);
@@ -309,6 +327,7 @@ namespace TLDRevamp.Net
 
         private static void Refresh()
         {
+            if (ListOpen) { RefreshList(); return; }
             if (_needed != null) { RefreshNeeded(); return; }
             foreach (var tile in Tiles) { tile.Action.gameObject.SetActive(false); tile.Enable.gameObject.SetActive(false); tile.Required.SetActive(false); }
             Label(_source, "Source"); Label(_refresh, "Refresh");

@@ -24,6 +24,8 @@ namespace TLDRevamp.Net
         private static Mod _mod;
         private static Release _release;
         internal static bool Busy => _request != null;
+        /// The mod being downloaded now (its row says Cancel), or null.
+        internal static string DownloadingId => Busy ? _mod?.Id : null;
         internal static string Progress => Busy ? (_mod == null ? "Fetching catalog" : "Downloading " + _mod.Name) +
             " (" + ModInstall.Size(_download.Length) + ", " + (_request.downloadProgress * 100f).ToString("F0") + "%)" : Message;
 
@@ -109,7 +111,7 @@ namespace TLDRevamp.Net
                 if (_download.Exceeded) throw new InvalidDataException("Download exceeds the size limit.");
                 if (_request.result != UnityWebRequest.Result.Success) throw new IOException(_request.error ?? "Request failed");
                 var bytes = _download.Bytes;
-                if (_mod == null) { Current = Parse(bytes); Message = Current.Mods.Count == 0 ? "No mods in this catalog." : "Select a mod for details."; }
+                if (_mod == null) { Current = Parse(bytes); Message = Current.Mods.Count == 0 ? "No mods in this catalog." : ""; }
                 else
                 {
                     var dll = Verify(_mod, _release, bytes, ModInstall.MaxBytes, MpApi.ValidId);

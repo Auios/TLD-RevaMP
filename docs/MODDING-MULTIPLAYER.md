@@ -329,6 +329,14 @@ BepInEx plugin GUID: `tldrevamp.headunit` and `tldrevamp.cartrailer`. Head Unit'
 the catalog lets the browser recognize mods installed by hand, including Car Trailer, which does not register
 with the multiplayer API.
 
+The Mods screen is a list like the RevaMP launcher's Mods page, drawn with the game's own menu pieces: tabs **All mods**
+and **Installed**, a search (name, author, description, id, tags), a sort (*Most downloaded*, *Recently updated*,
+*Name*), and one row per mod with its buttons. A mod may carry optional `"tags"` in the catalog (at most six short
+words; the launcher shows them too). Download counts and dates come from GitHub's release lists of the repositories
+the catalog's URLs name (`api.github.com/repos/<owner>/<repo>/releases`), summed over a mod's versions by tag/file;
+each list is kept for an hour in `BepInEx/cache/tldrevamp-modstats/`, and a list that can't be fetched leaves its
+mods without numbers. The required-mods screen shown when joining (below) keeps the tapes.
+
 Managed installs have **Disable / Enable** and **Remove** controls, including local entries when the catalog is
 offline. States are **Enabled**, **Disabled (takes effect at next start)**, **Disabled**, and **Enabled at next
 start**. Hand-installed mods are read-only because one DLL or folder can serve several plugins or dependencies.
@@ -353,6 +361,9 @@ Bridge commands: bare `mods` retains the Loader-mod status command; `mods list` 
 `installed`, desired `enabled`, `pending` (null or enabled/disabled/removed), `loaded`, `registered` (the live API
 registration used by Hello), and a readable state. `mods enable <id>` / `mods disable <id>` queue changes;
 `mods remove <id>` queues removal using the same file path as the screen. Existing `mp mods` is unchanged.
+For the list itself: `mods open` / `mods close`; `mods view [search=<text>|-] [tab=all|installed] [sort=0|1|2]
+[scroll=<0..1>] [ask=<question>] [press=<id>:<button label>]` sets what a player would and returns the rows as shown
+(`+` stands for a space); `mods ui` dumps the menu's layout and `mods sprite <name>` saves a UI sprite's texture.
 The external `modtogglecheck.py --selftest` is offline; its live mode owns only hidden LiveTestA on bridge 27060
 and verifies loading, disabling, enabling and removal while disabled across restarts. It must be run separately.
 

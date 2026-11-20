@@ -29,6 +29,8 @@ namespace TLDRevamp.Net
             [DataMember(Name = "description")] public string Description;
             [DataMember(Name = "source")] public string Source;
             [DataMember(Name = "versions")] public List<Release> Versions;
+            /// optional: short words the Mods list shows and searches (the launcher shows them too)
+            [DataMember(Name = "tags")] public List<string> Tags;
         }
         [DataContract] public sealed class Release
         {
@@ -65,6 +67,14 @@ namespace TLDRevamp.Net
             {
                 m.Versions.RemoveAll(v => v == null || !ReleaseUrl(v.Url));
                 if (!SourceUrl(m.Source)) m.Source = null;
+                // tags: at most six short words, none empty, each once
+                var tags = new List<string>();
+                foreach (var t in m.Tags ?? new List<string>())
+                {
+                    string tag = (t ?? "").Trim();
+                    if (tag.Length > 0 && tag.Length <= 24 && !tags.Contains(tag) && tags.Count < 6) tags.Add(tag);
+                }
+                m.Tags = tags;
             }
             c.Mods.RemoveAll(m => m.Versions.Count == 0);
             return c;

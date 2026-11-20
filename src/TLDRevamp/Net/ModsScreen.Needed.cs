@@ -20,7 +20,7 @@ namespace TLDRevamp.Net
         {
             if (DataFromMenuScript.s != null && !DataFromMenuScript.s.mainmenu && mainscript.s != null && !mainscript.s.pauseMenuOpen)
                 mainscript.s.OpenMenuWithEscape();
-            Open(null, false);
+            OpenTapes(null, false);
             if (!IsOpen) return false;
             _needed = list; _installQueue.Clear(); _installedAtOpen = ModInstall.Installed;
             // Refresh even a cached list: a host may already use a release just added to the live catalog.

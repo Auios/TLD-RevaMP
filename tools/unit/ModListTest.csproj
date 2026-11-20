@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Mods list's rules (Net/ModList.cs): GitHub release numbers, search, Installed tab, sort orders. -->
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="ModListTest.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/ModList.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/ModCatalog.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/ModFiles.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/ModActivation.cs" />
+    <None Include="../../packaging/mods.json" Link="mods.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
