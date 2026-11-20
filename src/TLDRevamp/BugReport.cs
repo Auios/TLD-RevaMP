@@ -150,6 +150,9 @@ namespace TLDRevamp
                 foreach (string file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
                 {
                     var entry = zip.CreateEntry(file.Substring(dir.Length + 1).Replace('\\', '/'), System.IO.Compression.CompressionLevel.Optimal);
+                    // a fixed time, as the shared report has (TelemetryPrivacy.Zip): the entries got the local clock, and
+                    // with the UTC stamp in the zip's name that told the reporter's time zone
+                    entry.LastWriteTime = new DateTimeOffset(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
                     using (var source = File.OpenRead(file)) using (var target = entry.Open()) source.CopyTo(target);
                 }
             return path;

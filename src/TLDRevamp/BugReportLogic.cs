@@ -46,7 +46,7 @@ namespace TLDRevamp
 
             sb.Append("## Actions (").Append(ReproFile).Append(")\n\n");
             if (!f.ReproPresent)
-                sb.Append("None. The action recorder was not running (off in Settings → Revamp → Debugging, or not in a multiplayer session), so this bundle cannot be replayed.\n\n");
+                sb.Append("None. The action recorder was not running (Record actions for bug reports off in Settings → Revamp → Multiplayer, or not in a multiplayer session), so this bundle cannot be replayed.\n\n");
             else
             {
                 sb.Append("- ").Append(f.ReproRows.ToString(inv)).Append(" rows over ").Append(Minutes(f.ReproSeconds)).Append(", from the moment this session started recording\n");
