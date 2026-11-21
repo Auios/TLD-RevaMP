@@ -84,33 +84,10 @@ namespace TLDRevamp.Net
             }
             var rows = new List<string>();
             foreach (var kv in kinds) rows.Add(Json.Str(kv.Key) + ":" + kv.Value);
-            return "{\"local\":" + local + ",\"host\":" + EntityLocks.HostPhysicsLock + ",\"used\":" + used + ",\"patched\":" + PhysLockFromHost.Patched +
+            return "{\"local\":" + local + ",\"host\":" + EntityLocks.HostPhysicsLock + ",\"used\":" + used + ",\"patched\":" + EntityLocks.PhysLockFromHost.Patched +
                    ",\"sent\":" + EntityLocks.PhysLockSent + ",\"applied\":" + EntityLocks.PhysLockApplied + ",\"reads\":" + EntityLocks.PhysLockReads + ",\"storesRefused\":" + EntityLocks.ContainerStoresRefused + ",\"copyLocksReleased\":" + EntityLocks.CopyLocksReleased + ",\"startFreezesSkipped\":" + EntityLocks.CopyStartFreezesSkipped +
                    ",\"holds\":{" + string.Join(",", rows) + "}}";
         }
 
-        [HarmonyPatch]
-        internal static class PhysLockFromHost
-        {
-            private static readonly FieldInfo Field = GameLookups.Field(typeof(settingsscript.setting), nameof(settingsscript.setting.IPhysicsLock));
-            private static readonly MethodInfo Replacement = AccessTools.Method(typeof(EntityLocks), nameof(EntityLocks.PhysicsLockSetting));
-            public static int Patched;
-
-            private static IEnumerable<MethodBase> TargetMethods()
-            {
-                yield return GameLookups.Method(typeof(mountStuff), nameof(mountStuff.CanStore));
-                yield return GameLookups.Method(typeof(mountStuff), "Update");
-            }
-
-            [HarmonyTranspiler]
-            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-            {
-                foreach (var ins in instructions)
-                {
-                    if (ins.LoadsField(Field)) { ins.opcode = OpCodes.Call; ins.operand = Replacement; Patched++; }   // stack: setting -> int
-                    yield return ins;
-                }
-            }
-        }
     }
 }

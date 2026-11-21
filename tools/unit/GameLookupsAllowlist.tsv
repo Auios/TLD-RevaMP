@@ -118,7 +118,7 @@ src/TLDRevamp.Dev/Net/Entities.MountLab.cs	typeof(EntityMountLab).GetMethod(name
 src/TLDRevamp.Dev/Net/Entities.MountLab.cs	typeof(EntityMountLab).GetMethod(nameof(WatchLoad), bf)	Our patch/helper method EntityMountLab; not game code.
 src/TLDRevamp.Dev/Net/Entities.MountLab.cs	typeof(EntityMountLab).GetMethod(nameof(WatchAttachEx), bf)	Our patch/helper method EntityMountLab; not game code.
 src/TLDRevamp.Dev/Net/Entities.MountLab.cs	typeof(EntityMountLab).GetMethod(nameof(WatchSetParentProp), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)	Our patch/helper method EntityMountLab; not game code.
-src/TLDRevamp.Dev/Net/Entities.PhysLock.cs	AccessTools.Method(typeof(EntityLocks), nameof(EntityLocks.PhysicsLockSetting))	Our patch/helper method EntityLocks; not game code.
+src/TLDRevamp/Net/EntityLocks.PhysLockFromHost.cs	AccessTools.Method(typeof(EntityLocks), nameof(EntityLocks.PhysicsLockSetting))	Our patch/helper method EntityLocks; not game code.
 src/TLDRevamp.Preloader/LoaderAliases.cs	module.GetType(a[0])	Preloader searches Mono.Cecil game metadata before core loads; core depends on preloader, so it cannot reference core. Loader alias tables are validated separately.
 src/TLDRevamp.Preloader/LoaderAliases.cs	module.GetType(a[2])	Preloader searches Mono.Cecil game metadata before core loads; core depends on preloader, so it cannot reference core. Loader alias tables are validated separately.
 src/TLDLoaderShim/LoaderExtras.cs	instance.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)	Standalone loader compatibility API takes arbitrary names from external mods; cannot reference core without making the standalone loader depend on the plugin.
