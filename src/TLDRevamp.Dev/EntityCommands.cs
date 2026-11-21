@@ -44,6 +44,7 @@ namespace TLDRevamp
                         }
                     return "{\"kinematic\":true,\"buried\":" + (ze.Root.buried ? "true" : "false") + ",\"members\":" + zm + ",\"proxy\":" + (ze.Proxy ? "true" : "false") + "}";
                 }
+                case "mp ownerhistory": return Net.Entities.OwnerHistoryJson(uint.Parse(ma[1]));
                 case "mp forgetowner":
                 {
                     // test: this machine forgets that it owns <net> (its copy role and owner back to [owner], default the

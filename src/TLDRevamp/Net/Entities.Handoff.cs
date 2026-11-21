@@ -69,11 +69,12 @@ namespace TLDRevamp.Net
                     else if (d2 < bestD2 && (p.Key == 0 || KnownBy(p.Key).Contains(se.NetId))) { bestD2 = d2; best = p.Key; }
                 }
                 if (best < 0 || ownerD2 <= far2 || bestD2 >= ownerD2) continue;
-                OwnerLog(se, best, "hand-off (nearer player)");
-                if (HandoffLogged++ < 40) Plugin.Log.LogInfo($"hand-off: net {se.NetId} {se.OwnerId} -> {best}, owner's player {System.Math.Sqrt(ownerD2):F0} m from it, new {System.Math.Sqrt(bestD2):F0} m (where {se.Where}, at rest {se.AtRest}, locked {se.Locked} in {se.LockFrame}, driven {se.Driven})");
-                se.OwnerId = best; se.Epoch++; Handoffs++;
-                W.Reset(); W.U8(Owner); W.U32(se.NetId); W.VarU32((uint)best); W.U32(se.Epoch);
-                ServerSendAll(W, true, -1);
+                ServerSetOwner(se, best, OwnerChange.Handoff, CrashReturnRule.Keep, W, "hand-off (nearer player)",
+                    afterLog: (changed, to) =>
+                    {
+                        if (HandoffLogged++ < 40) Plugin.Log.LogInfo($"hand-off: net {changed.NetId} {changed.OwnerId} -> {to}, owner's player {System.Math.Sqrt(ownerD2):F0} m from it, new {System.Math.Sqrt(bestD2):F0} m (where {changed.Where}, at rest {changed.AtRest}, locked {changed.Locked} in {changed.LockFrame}, driven {changed.Driven})");
+                    },
+                    beforeSend: static (changed, to) => Handoffs++);
                 CascadeOwner(se);
                 if (++n >= HandPerTick) break;
             }

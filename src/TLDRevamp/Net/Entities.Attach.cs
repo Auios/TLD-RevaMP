@@ -212,11 +212,8 @@ namespace TLDRevamp.Net
             if ((se.Held || se.Stored)) { se.Held = false; se.Stored = false; HeldClearedOnAttach++; }
             if (attachType == 1 && Server.TryGetValue(parentNet, out var parent) && parent.OwnerId != se.OwnerId)
             {
-                OwnerLog(se, parent.OwnerId, "attached onto net " + parentNet);
-                se.OwnerId = parent.OwnerId; se.Epoch++;
-                SetLiveRecordFloor(new UsableKey { Net = partNet, Epoch = se.Epoch, Item = 0 }, SessionLog.St);
-                W.Reset(); W.U8(Owner); W.U32(partNet); W.VarU32((uint)se.OwnerId); W.U32(se.Epoch);
-                ServerSendAll(W, true, -1);
+                ServerSetOwner(se, parent.OwnerId, OwnerChange.AttachedToParent, CrashReturnRule.Keep, W, "attached onto net " + parentNet,
+                    beforeSend: static (changed, to) => SetLiveRecordFloor(new UsableKey { Net = changed.NetId, Epoch = changed.Epoch, Item = 0 }, SessionLog.St));
                 CascadeOwner(se);
             }
         }
@@ -303,10 +300,7 @@ namespace TLDRevamp.Net
             foreach (var kid in new List<uint>(se.AttachKids))
             {
                 if (kid == se.NetId || !Server.TryGetValue(kid, out var k) || k.AttachParent != se.NetId || k.HitchCar != 0 || k.OwnerId == se.OwnerId || k.Held || k.Stored) continue;
-                OwnerLog(k, se.OwnerId, "with net " + se.NetId + " (bolted onto it)");
-                k.OwnerId = se.OwnerId; k.Epoch++; k.CrashReturnTo = -1;
-                W.Reset(); W.U8(Owner); W.U32(k.NetId); W.VarU32((uint)k.OwnerId); W.U32(k.Epoch);
-                ServerSendAll(W, true, -1);
+                ServerSetOwner(k, se.OwnerId, OwnerChange.Cascade, CrashReturnRule.Clear, W, "with net " + se.NetId + " (bolted onto it)");
                 OwnerCascaded++;
                 CascadeOwner(k, depth + 1);
             }

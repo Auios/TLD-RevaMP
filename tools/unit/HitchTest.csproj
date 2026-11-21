@@ -12,6 +12,7 @@
     <Compile Include="../../src/TLDRevamp/Net/HitchAuthority.cs" />
     <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
     <Compile Include="../../src/TLDRevamp.Dev/Net/Entities.Hitch.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.OwnerChange.cs" />
   </ItemGroup>
   <Target Name="ExtractHitchBoundary" BeforeTargets="CoreCompile">
     <PropertyGroup>

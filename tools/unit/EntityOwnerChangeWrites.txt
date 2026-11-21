@@ -1,0 +1,38 @@
+Entities.Ai.cs|ls.Flags = f; ls.Fwd = fw; ls.Turn = tu; ls.Look = look; ls.At = now; ls.Epoch = epoch;
+Entities.Attach.cs|SetLiveRecordFloor(new UsableKey { Net = partNet, Epoch = se.Epoch, Item = 0 }, SessionLog.St);
+Entities.Attach.cs|beforeSend: static (changed, to) => SetLiveRecordFloor(new UsableKey { Net = changed.NetId, Epoch = changed.Epoch, Item = 0 }, SessionLog.St));
+Entities.Attach.cs|SetLiveRecordFloor(new UsableKey { Net = net, Epoch = se.Epoch, Item = 0 }, SessionLog.St);
+Entities.Cargo.cs|e.OwnerId = Entities.CargoLocalId;
+Entities.Cargo.cs|e.OwnerId = MyId;
+Entities.DevObservation.cs|{ NetId = net; OwnerId = owner; Where = where; HasState = state; Record = record; }
+Entities.DevObservation.cs|{ OwnerId = owner; Epoch = epoch; Held = held; Stored = stored; Driven = driven; CrashReturnTo = crashReturn; ParentNet = parent; AttachParent = attached; Where = where; AtRest = rest; Locked = locked; LockFrame = frame; }
+Entities.Edits.cs|if ((kinds & KindUsable) != 0) SetLiveRecordFloor(new UsableKey { Net = net, Epoch = se.Epoch, Item = idx }, stamp);
+Entities.FarStore.cs|var se = new SEnt { NetId = _nextNet++, OwnerId = 0, Epoch = 1, Record = RecordCodec.Encode(d), Where = recs[kv.Key].transform.pos, TelemetryCategory = TelemetryPrefabCategory(recs[kv.Key].prefabID) };
+Entities.FarStore.cs|var e = new Ent { NetId = se.NetId, OwnerId = 0, Epoch = 1, RootId = kv.Key, ItemIds = new List<uint>(kv.Value), TelemetryCategory = se.TelemetryCategory };
+Entities.FarStore.cs|var e = new Ent { NetId = net, OwnerId = owner, Epoch = epoch, RootId = map[rootOld], ItemIds = new List<uint>(), TelemetryCategory = TelemetryPrefabCategory(d.items[0].prefabID) };
+Entities.Features.cs|e.OwnerId = MyId;
+Entities.Features.cs|SetProxy(e, false); e.OwnerId = MyId; e.SentWornSlot = -1;
+Entities.Hitch.cs|var transfer = new HitchAuthority.Transfer { From = tr.OwnerId, To = to, Epoch = tr.Epoch, Token = _hitchToken,
+Entities.Hitch.cs|foreach (var e in ByNet.Values) if (wasHost) e.OwnerId = e.HitchAuthorityOwner = MyId;
+Entities.Leases.cs|hit.OwnerId = MyId;
+Entities.Leases.cs|e.OwnerId = MyId;
+Entities.LiveUsables.cs|k.Epoch = r.U32(); k.Item = (int)r.VarU32(); k.Usable = (int)r.VarU32();
+Entities.LiveUsables.cs|if (e != null) SetLiveRecordFloor(new UsableKey { Net = e.NetId, Epoch = e.Epoch, Item = e.Items.IndexOf(it) }, SessionLog.St);
+Entities.LiveUsables.cs|ByNet.TryGetValue(net, out var e) ? LiveUsableOf(new UsableKey { Net = net, Epoch = e.Epoch, Item = item, Usable = usable }, out _) : null;
+Entities.LiveUsables.cs|key = new UsableKey { Net = e.NetId, Epoch = e.Epoch, Item = idx, Usable = ui };
+Entities.LiveUsables.cs|var floor = new UsableKey { Net = e.NetId, Epoch = e.Epoch, Item = item, Usable = -1 };
+Entities.PartOff.cs|var part = new SEnt { NetId = _nextNet++, OwnerId = from, Epoch = 1, ParentNet = car.NetId, PartIndex = idx, HasState = true, Pos = pos, Rot = rot, Where = pos, CarrierNet = carrierNet, CarrierSlot = carrierSlot };
+Entities.PushGrip.cs|e.OwnerId = Entities.CargoLocalId;
+Entities.RabbitRole.cs|Net = e.NetId, Epoch = epoch, Flags = RabFlags(ny),
+Entities.Rabbits.cs|ls.Flags = f; ls.Run = run; ls.Interest = target; ls.Seen = seen; ls.Epoch = e.Epoch;
+Entities.Rabbits.cs|Net = e.NetId, Epoch = e.Epoch, Flags = f, Run = run, Seen = seen, X = target.x, Y = target.y, Z = target.z });
+Entities.Resync.cs|SetLiveRecordFloor(new UsableKey { Net = net, Epoch = epoch, Item = idx }, stamp);
+Entities.Telemetry.cs|SessionLog.History.Trace.Add(new MotionRow { Local = now, St = SessionLog.St, Net = e.NetId, Epoch = e.Epoch, Owner = e.OwnerId,
+Entities.cs|var ent = new Ent { Root = root, Items = items, OwnerId = MyId, ResyncHashes = EntityResync.StateHashes(items, perItem) };
+Entities.cs|var se = new SEnt { NetId = _nextNet++, OwnerId = from, Epoch = 1, Record = rec };
+Entities.cs|e.NetId = net; e.Epoch = epoch; e.OwnerId = MyId;
+Entities.cs|var e = new Ent { NetId = net, OwnerId = owner, Epoch = epoch, Root = root };
+Entities.cs|var sp = new Ent { NetId = partNet, OwnerId = owner, Epoch = epoch, ParentNet = carNet, PartIndex = idx, RootId = gid, ItemIds = new List<uint> { gid } };
+Entities.cs|var pe = new Ent { NetId = partNet, OwnerId = owner, Epoch = epoch, Root = it, ParentNet = carNet, PartIndex = idx };
+Entities.cs|e.OwnerId = owner; e.HitchAuthorityOwner = owner; e.Epoch = epoch; OwnerChanges++; e.OwnerAt = Time.realtimeSinceStartup;
+TelemetryMarks.cs|var row = new StateEntity { Net = e.NetId, Epoch = e.Epoch, Owner = e.OwnerId, Proxy = e.Proxy, Prefab = prefab,

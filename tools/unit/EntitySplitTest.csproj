@@ -116,6 +116,7 @@
     <Compile Include="../../src/TLDRevamp/Net/PartWatchRules.cs" />
     <Compile Include="EntityRepairChecks.cs" />
     <Compile Include="EntityRepairStubs.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.OwnerChange.cs" />
   </ItemGroup>
   <Target Name="ExtractFeatureWire" BeforeTargets="CoreCompile">
     <PropertyGroup>

@@ -153,13 +153,16 @@ namespace TLDRevamp
             "part-off-sent part-state player-damage player-damage-queued player-death proxy-correction proxy-snap " +
             "remove-applied remove-relayed remove-sent resync-applied resync-sent seat-enter seat-leave spawn-add speed-high " +
             "speed-jump test-desync tpa-accept-request tpa-accepted tpa-applied tpa-arrived tpa-failure tpa-pending " +
-            "tpa-refuse-request tpa-refused tpa-request tpa-object-sent tpa-object-applied").Split(' '), StringComparer.Ordinal);
+            "tpa-refuse-request tpa-refused tpa-request tpa-object-sent tpa-object-applied owner-history car-freed-at-wheel").Split(' '), StringComparer.Ordinal);
         internal static string EventKind(string value) => value != null && EventKinds.Contains(value) ? value : Removed;
         private static readonly HashSet<string> Results = new HashSet<string>(new[] {
             "accepted", "entity absent", "not a trailer and car", "stale epoch", "held or stored", "slot taken", "already hitched",
             "slot index", "not hitched to car", "hitch pending", "owner changed", "not loaded", "slot taken or incompatible", "joint change failed",
             "hitch changed during transfer", "old simulator frozen", "hitch handover", "hitched trailer", "hitch player handover", "hitch crash handover", "hitched to car",
             "unshared target or automatic attach", "connect", "disconnect",
+            // owner-history (Entities.OwnerChange) and car-freed-at-wheel (Entities.FreeOwnedCarAtWheel)
+            "now", "Claim", "WornTakeBack", "RabbitNearest", "Handoff", "AttachedToParent", "Cascade", "CrashClaim", "CrashReturn", "PlayerSilent", "PlayerLeft", "HitchTransfer",
+            "the unfreeze ground check found no ground under its middle", "frozen with no hold known",
             "ok", "disabled", "cooldown", "no owner pose", "owner pose old", "copy far from owner", "contact too fast", "part colliders off", "part on held layer", "part not on use layer", "hidden object in front",
             "item colliders off", "item on held layer", "item not on pickup layer", "healed",
             "health body", "health position", "non-finite position", "runaway velocity", "under the ground", "owner left", "part slot mismatch", "repair keeps failing", "declined", "detach", "between sent states", "joint absent or parented",

@@ -33,7 +33,7 @@ namespace TLDRevamp.Net
             internal tosaveitemscript Root; internal readonly List<tosaveitemscript> Items = new List<tosaveitemscript>();
             internal readonly List<Rigidbody> HitchBodies = new List<Rigidbody>(); internal readonly HashSet<uint> HitchAnnounced = new HashSet<uint>();
         }
-        private sealed class SEnt
+        private sealed partial class SEnt
         {
             internal uint NetId, Epoch = 1, HitchCar, AttachParent; internal int OwnerId, HitchSlot, CrashReturnTo = -1;
             internal bool Hitch, Car, Stored, Held, HasState; internal Vector3d Pos, Where; internal Quaternion Rot;

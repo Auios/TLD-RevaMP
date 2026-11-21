@@ -423,15 +423,15 @@ namespace TLDRevamp.Net
             int target = cancelled ? (_hitchDeparted.Contains(from) ? 0 : from) : Server[tr.HitchCar].OwnerId;
             _hitchTransfers.Remove(net);
             HitchOwnerKnows(tr, target);
-            OwnerLog(tr, target, "hitch follows net " + tr.HitchCar);
-            var w = new NetWriter(); w.U8(HitchFreeze); w.U32(net); w.U32(tr.Epoch + 1); w.U32(0);
-            ServerSendTo(target, w, true);
-            tr.OwnerId = target; tr.Epoch++; tr.CrashReturnTo = -1;
-            w = new NetWriter(); w.U8(Owner); w.U32(net); w.VarU32((uint)target); w.U32(tr.Epoch);
-            ServerSendAll(w, true, -1);
+            ServerSetOwner(tr, target, OwnerChange.HitchTransfer, CrashReturnRule.Clear, new NetWriter(), "hitch follows net " + tr.HitchCar,
+                afterLog: static (changed, to) =>
+                {
+                    var freeze = new NetWriter(); freeze.U8(HitchFreeze); freeze.U32(changed.NetId); freeze.U32(changed.Epoch + 1); freeze.U32(0);
+                    ServerSendTo(to, freeze, true);
+                });
             // Normally the old simulator is frozen; a timeout instead fences its late packets with the new epoch.
             // The last known pose goes reliably after the grant so the recipient can always leave HitchWaiting.
-            w = new NetWriter(); w.U8(HitchFrozen); w.U32(net); w.U32(tr.Epoch); w.U32(0); w.Bool(loaded || tr.HasState);
+            var w = new NetWriter(); w.U8(HitchFrozen); w.U32(net); w.U32(tr.Epoch); w.U32(0); w.Bool(loaded || tr.HasState);
             if (loaded || tr.HasState)
             {
                 if (!loaded) { p = tr.Pos; q = tr.Rot; v = Vector3.zero; }

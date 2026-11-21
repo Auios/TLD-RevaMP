@@ -257,7 +257,7 @@ namespace TLDRevamp.Net
             EntityWorldLeases.RestoreBuiltIns();
             HitchReset(wasHost);
             ResetSessionLeftovers();
-            ByNet.Clear(); Server.Clear(); _lateOwners.Clear(); _reconfirmedAt.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
+            ByNet.Clear(); Server.Clear(); _ownerHistoryEvents = 0; _lateOwners.Clear(); _reconfirmedAt.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
             // keyed by copies and network ids (which start at 1 again next session). (Known, the server's "sent to player N"
             // sets, needs nothing here: ServerOnJoin starts every joiner with an empty one - rehost.py)
             EntityPhysics.ResetPhysicalCars(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); EntityAI.BreaksReset();
@@ -984,6 +984,7 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<uint, int> _refuseLogged = new Dictionary<uint, int>();
         private static void RefuseClaim(int from, SEnt se, string why, ClaimReason reason = 0)
         {
+            LogOwnerHistory(se);
             SessionLog.Event("claim-refused", se.NetId, from: from, to: se.OwnerId, result: why, epoch: se.Epoch, count: (int)reason);
             ClaimsRefused++;
             if (why.StartsWith("crash")) RefusedCrash++; else if (why == "held") RefusedHeld++; else if (why == "stored") RefusedStored++; else if (why == "worn") EntityHands.WornRefused++; else RefusedDriven++;
@@ -1044,10 +1045,7 @@ namespace TLDRevamp.Net
             foreach (var se in Server.Values)
                 if (se.HitchCar == 0 && se.OwnerId == playerId && se.HasState && !se.Held && !se.Stored && !ServerWornNow(se) && se.Speed > 0.5f)
                 {
-                    OwnerLog(se, 0, "player " + playerId + " silent");
-                    se.OwnerId = 0; se.Epoch++; se.CrashReturnTo = -1;
-                    W.Reset(); W.U8(Owner); W.U32(se.NetId); W.VarU32(0); W.U32(se.Epoch);
-                    ServerSendAll(W, true, -1);
+                    ServerSetOwner(se, 0, OwnerChange.PlayerSilent, CrashReturnRule.Clear, W, "player " + playerId + " silent");
                     CascadeOwner(se);
                     n++; SilentTakeovers++;
                 }
@@ -1068,10 +1066,7 @@ namespace TLDRevamp.Net
             foreach (var se in Server.Values)
                 if (se.OwnerId == playerId && se.HitchCar == 0)
                 {
-                    OwnerLog(se, 0, "player " + playerId + " left");
-                    se.OwnerId = 0; se.Epoch++;
-                    W.Reset(); W.U8(Owner); W.U32(se.NetId); W.VarU32(0); W.U32(se.Epoch);
-                    ServerSendAll(W, true, -1);
+                    ServerSetOwner(se, 0, OwnerChange.PlayerLeft, CrashReturnRule.Keep, W, "player " + playerId + " left");
                     CascadeOwner(se);
                 }
             foreach (var tr in new List<SEnt>(Server.Values))

@@ -364,10 +364,8 @@ namespace TLDRevamp.Net
                 double bd = System.Math.Sqrt(bestD), cd = curD == double.MaxValue ? double.MaxValue : System.Math.Sqrt(curD);
                 if (cd <= bd + EntityRabbits.RabbitSwitchM) continue;
                 EntityRabbits.RabbitLastMove = "net " + se.NetId + ": " + se.OwnerId + " -> " + best + " (" + bd.ToString("F1") + " m against " + (cd == double.MaxValue ? "none" : cd.ToString("F1")) + ")";
-                OwnerLog(se, best, "rabbit: nearest player / moving car");
-                se.OwnerId = best; se.Epoch++; EntityRabbits.RabbitOwnerMoves++;
-                W.Reset(); W.U8(Owner); W.U32(se.NetId); W.VarU32((uint)best); W.U32(se.Epoch);
-                ServerSendAll(W, true, -1);
+                ServerSetOwner(se, best, OwnerChange.RabbitNearest, CrashReturnRule.Keep, W,
+                    "rabbit: nearest player / moving car", beforeSend: static (changed, to) => EntityRabbits.RabbitOwnerMoves++);
                 CascadeOwner(se);
             }
         }
@@ -566,10 +564,7 @@ namespace TLDRevamp.Net
                 return false;
             }
             se.ClaimedBy = from; se.ClaimedAt = Time.realtimeSinceStartup; se.ClaimedFromEpoch = se.Epoch;
-            OwnerLog(se, from, "on their head before the claim got here");
-            se.OwnerId = from; se.Epoch++;
-            W.Reset(); W.U8(Owner); W.U32(se.NetId); W.VarU32((uint)from); W.U32(se.Epoch);
-            ServerSendAll(W, true, -1);
+            ServerSetOwner(se, from, OwnerChange.WornTakeBack, CrashReturnRule.Keep, W, "on their head before the claim got here");
             CascadeOwner(se);
             EntityHands.WornTakenBack++;
             return true;

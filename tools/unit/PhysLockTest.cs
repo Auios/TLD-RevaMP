@@ -296,6 +296,6 @@ namespace TLDRevamp.Net
 
     static class SessionLog
     {
-        internal static void Event(string kind, uint net, uint other = 0, int from = -1, uint epoch = 0, int to = -1, string result = null, int count = 0) { if (kind == "claim-refused") Net.Entities.RecordRefusal(result); }
+        internal static void Event(string kind, uint net, uint other = 0, int from = -1, uint epoch = 0, int to = -1, string result = null, int count = 0, float value = 0) { if (kind == "claim-refused") Net.Entities.RecordRefusal(result); }
     }
 }
