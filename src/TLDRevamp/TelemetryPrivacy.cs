@@ -153,7 +153,11 @@ namespace TLDRevamp
             "part-off-sent part-state player-damage player-damage-queued player-death proxy-correction proxy-snap " +
             "remove-applied remove-relayed remove-sent resync-applied resync-sent seat-enter seat-leave spawn-add speed-high " +
             "speed-jump test-desync tpa-accept-request tpa-accepted tpa-applied tpa-arrived tpa-failure tpa-pending " +
-            "tpa-refuse-request tpa-refused tpa-request tpa-object-sent tpa-object-applied owner-history car-freed-at-wheel").Split(' '), StringComparer.Ordinal);
+            "tpa-refuse-request tpa-refused tpa-request tpa-object-sent tpa-object-applied owner-history car-freed-at-wheel " +
+            // every kind the code logs is listed (EventKindsTest): these were "[removed]" in marks and reports until 2026-11-21
+            "attach-forwarded detach-forwarded auto-mark-over-limit break-again break-gave-up break-got break-no-object break-on-copy " +
+            "break-sent breaks-forgotten copy-dynamic copy-fluid-restored edit-returned fall-rescued part-off-already place-repair " +
+            "repair-failed slot-part-replaced tune-applied tune-refused tune-sent worn-refused").Split(' '), StringComparer.Ordinal);
         internal static string EventKind(string value) => value != null && EventKinds.Contains(value) ? value : Removed;
         private static readonly HashSet<string> Results = new HashSet<string>(new[] {
             "accepted", "entity absent", "not a trailer and car", "stale epoch", "held or stored", "slot taken", "already hitched",
@@ -163,6 +167,10 @@ namespace TLDRevamp
             // owner-history (Entities.OwnerChange) and car-freed-at-wheel (Entities.FreeOwnedCarAtWheel)
             "now", "Claim", "WornTakeBack", "RabbitNearest", "Handoff", "AttachedToParent", "Cascade", "CrashClaim", "CrashReturn", "PlayerSilent", "PlayerLeft", "HitchTransfer",
             "the unfreeze ground check found no ground under its middle", "frozen with no hold known",
+            // the fixed results of the kinds added 2026-11-21 (results built from names or free text stay "[removed]")
+            "sender no longer owns it", "threw", "kept", "member", "late kept", "late member", "kept, no object", "member, no object",
+            "late kept, no object", "late member, no object", "not shared", "made kinematic again", "already owner", "no longer theirs",
+            "carried", "missing entity", "reliable pose", "freeze timeout; server pose",
             "ok", "disabled", "cooldown", "no owner pose", "owner pose old", "copy far from owner", "contact too fast", "part colliders off", "part on held layer", "part not on use layer", "hidden object in front",
             "item colliders off", "item on held layer", "item not on pickup layer", "healed",
             "health body", "health position", "non-finite position", "runaway velocity", "under the ground", "owner left", "part slot mismatch", "repair keeps failing", "declined", "detach", "between sent states", "joint absent or parented",
