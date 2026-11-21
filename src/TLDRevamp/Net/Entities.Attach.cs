@@ -299,7 +299,8 @@ namespace TLDRevamp.Net
             if (se.AttachKids == null || depth > 8) return;
             foreach (var kid in new List<uint>(se.AttachKids))
             {
-                if (kid == se.NetId || !Server.TryGetValue(kid, out var k) || k.AttachParent != se.NetId || k.HitchCar != 0 || k.OwnerId == se.OwnerId || k.Held || k.Stored) continue;
+                if (kid == se.NetId || !Server.TryGetValue(kid, out var k) || k.AttachParent != se.NetId ||
+                    Busy(k, BusyKind.Hitched) != BusyKind.None || k.OwnerId == se.OwnerId || Busy(k, CascadeBusy) != BusyKind.None) continue;
                 ServerSetOwner(k, se.OwnerId, OwnerChange.Cascade, CrashReturnRule.Clear, W, "with net " + se.NetId + " (bolted onto it)");
                 OwnerCascaded++;
                 CascadeOwner(k, depth + 1);

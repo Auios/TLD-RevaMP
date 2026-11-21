@@ -149,4 +149,8 @@
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractEntityDiag.py&quot; &quot;$(IntermediateOutputPath)EntityDiag.g.cs&quot; $(DiagBaseline)" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)EntityDiag.g.cs" /></ItemGroup>
   </Target>
+  <ItemGroup>
+    <Compile Include="../../src/TLDRevamp/Net/Entities.InUse.cs" />
+    <Compile Include="EntityInUseUnusedLookups.cs" />
+  </ItemGroup>
 </Project>

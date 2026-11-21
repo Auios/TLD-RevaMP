@@ -344,7 +344,7 @@ namespace TLDRevamp.Net
                 anchors.Add(new System.Collections.Generic.KeyValuePair<int, Vector3d>(0, mainscript.GlobalFromUnityPos(mainscript.s.player.transform.position)));
             float rt = Time.realtimeSinceStartup;
             foreach (var c in Server.Values)
-                if (c.Car && c.PartIndex < 0 && c.HasState && ((c.Driven && rt - c.DrivenAt < 1f) || c.Speed > EntityRabbits.RabbitCarMoveMps))
+                if (c.Car && c.PartIndex < 0 && c.HasState && (Busy(c, BusyKind.Driven, rt) != BusyKind.None || c.Speed > EntityRabbits.RabbitCarMoveMps))
                     anchors.Add(new System.Collections.Generic.KeyValuePair<int, Vector3d>(c.OwnerId, c.Where));
             if (anchors.Count < 2) return;   // one machine: nothing to decide
             double near2 = EntityRabbits.RabbitNearM * (double)EntityRabbits.RabbitNearM;
@@ -352,7 +352,7 @@ namespace TLDRevamp.Net
             {
                 // locked in a container (a dead rabbit in a car's bed): it goes with the container's owner (contents claims),
                 // and this rule took it back every ~2 s — an owner change on every machine each time
-                if (!se.Rabbit || se.PartIndex >= 0 || se.CrashReturnTo >= 0 || se.Held || se.Stored || se.LockFrame != 0 || rt < se.RabbitHoldUntil) continue;
+                if (!se.Rabbit || Busy(se, RabbitBusy) != BusyKind.None || rt < se.RabbitHoldUntil) continue;
                 int best = -1; double bestD = double.MaxValue, curD = double.MaxValue;
                 foreach (var p in anchors)
                 {
@@ -557,7 +557,8 @@ namespace TLDRevamp.Net
         private static bool WornTakesBack(SEnt se, int from, byte slot)
         {
             if (slot == 255) return false;   // taken off: the new owner's game has it off already
-            if (se.PrevOwnerId != from || Time.realtimeSinceStartup - se.PrevOwnerAt > HandoverAcceptS || se.Held || se.Stored || ServerWornNow(se) || se.HitchCar != 0)
+            if (se.PrevOwnerId != from || Time.realtimeSinceStartup - se.PrevOwnerAt > HandoverAcceptS ||
+                Busy(se, WornTakeBackBusy) != BusyKind.None || Busy(se, BusyKind.Hitched) != BusyKind.None)
             {
                 EntityHands.WornTooLate++;
                 SessionLog.Event("worn-refused", se.NetId, from: from, to: se.OwnerId, result: "no longer theirs");

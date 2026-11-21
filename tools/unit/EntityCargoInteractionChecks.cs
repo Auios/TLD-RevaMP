@@ -201,7 +201,7 @@ static partial class EntitySplitTest
         Check(item.Contains("foreach (var e in Placed())") && item.Contains("foreach (var x in LookupSet())"), "item scans and car cache validation stay in kernel");
         Check(push.Split("    public static partial class Entities")[1].Contains("WS.Bytes(r.Buf, 0, r.End);") && push.Contains("public const byte PushIn = 53;"), "raw owner relay and message constant stay in kernel");
         Check(cargo.Contains("internal static bool IsHeld(") && cargo.Contains("private static void ShowCarriedCollisions("), "held pipeline stays with the kernel and lock boundary");
-        Check(File.ReadAllText("src/TLDRevamp/Net/Entities.Pickup.cs").Contains("if (se.HitchCar != 0)"), "server claim transaction stays on kernel");
+        Check(File.ReadAllText("src/TLDRevamp/Net/Entities.Pickup.cs").Contains("var busy = Busy(se, ClaimBusy);"), "server claim transaction stays on kernel");
         string physical = File.ReadAllText("src/TLDRevamp/Net/Entities.Physical.cs");
         Check(physical.IndexOf("CargoNearTick(dt);") < physical.IndexOf("EntityCargoInteraction.BodyNearTick(dt);") && physical.IndexOf("EntityCargoInteraction.BodyNearTick(dt);") < physical.IndexOf("ItemNearTick(dt);") && physical.IndexOf("ItemNearTick(dt);") < physical.IndexOf("EntityRabbits.RabbitNearTick(dt);"), "cargo body item rabbit claim scan order is unchanged");
         string kernel = File.ReadAllText("src/TLDRevamp/Net/Entities.cs");

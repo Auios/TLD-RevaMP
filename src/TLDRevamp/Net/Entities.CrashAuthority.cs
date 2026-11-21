@@ -156,9 +156,9 @@ namespace TLDRevamp.Net
         internal static void ServerCrashClaim(int from, uint net, uint partnerNet)
         {
             if (!Server.TryGetValue(net, out var se)) return;
-            if (se.HitchCar != 0) { RefuseClaim(from, se, "hitched to car"); return; }
+            if (Busy(se, BusyKind.Hitched) != BusyKind.None) { RefuseClaim(from, se, "hitched to car"); return; }
             bool refuse = se.OwnerId == from ? false
-                        : se.CrashReturnTo >= 0                                                   // already in someone's crash
+                        : Busy(se, BusyKind.CrashLease) != BusyKind.None                           // already in someone's crash
                           || (partnerNet != 0 && Server.TryGetValue(partnerNet, out var pe) && pe.CrashReturnTo == from);   // the other machine claimed first
             if (refuse)
             {

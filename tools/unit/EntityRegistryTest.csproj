@@ -17,4 +17,8 @@
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractEntityRegistry.py&quot; &quot;$(IntermediateOutputPath)Registry.g.cs&quot;" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)Registry.g.cs" /></ItemGroup>
   </Target>
+  <ItemGroup>
+    <Compile Include="../../src/TLDRevamp/Net/Entities.InUse.cs" />
+    <Compile Include="EntityInUseUnusedLookups.cs" />
+  </ItemGroup>
 </Project>

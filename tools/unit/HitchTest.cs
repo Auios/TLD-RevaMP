@@ -384,10 +384,14 @@ namespace TLDRevamp.Net
                 check(!tr.Root.attachable.attached && tr.Root.attachable.slot == null && tr.Root.attachable.J == null && !tr.HitchWaiting && !tr.Root.RB.isKinematic,
                     "deletion unmounts and thaws the trailer without executing the stale command");
                 Server.Remove(10);
-                // ServerOnLeave skips only HitchCar != 0: this released trailer now takes its ordinary owner-to-host path.
-                check(Server[20].OwnerId == 1 && Server[20].HitchCar == 0 && entities.Substring(leaveStart).Contains("se.OwnerId == playerId && se.HitchCar == 0"),
+                // A released trailer takes the ordinary owner-to-host path.
+                string inUse = File.ReadAllText("src/TLDRevamp/Net/Entities.InUse.cs");
+                check(Server[20].OwnerId == 1 && Server[20].HitchCar == 0 &&
+                      entities.Substring(leaveStart).Contains("se.OwnerId == playerId && Busy(se, LeaveBusy) == BusyKind.None") &&
+                      inUse.Contains("const BusyKind LeaveBusy = BusyKind.Hitched;"),
                     "released trailer is eligible for ordinary leave recovery");
-                check(File.ReadAllText("src/TLDRevamp/Net/Entities.Pickup.cs").Contains("if (se.HitchCar != 0)") && Server[20].HitchCar == 0 && !Server[20].Held && !Server[20].Stored,
+                check(File.ReadAllText("src/TLDRevamp/Net/Entities.Pickup.cs").Contains("var busy = Busy(se, ClaimBusy);") &&
+                      inUse.Contains("const BusyKind ClaimBusy = BusyKind.Hitched |") && Server[20].HitchCar == 0 && !Server[20].Held && !Server[20].Stored,
                     "released trailer no longer trips the pickup hitch guard");
             }
 

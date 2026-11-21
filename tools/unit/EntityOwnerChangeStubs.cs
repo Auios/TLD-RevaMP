@@ -46,8 +46,8 @@ namespace TLDRevamp.Net
     internal static class DedicatedServer { internal static bool Enabled = true; }
     internal static class EntityRabbits { internal static float RabbitNearM = 100, RabbitSwitchM = 10, RabbitCarMoveMps = 1, RabbitHoldS = 5; internal static long RabbitOwnerMoves; internal static string RabbitLastMove; }
     internal static class EntityHands { internal static long WornTooLate, WornTakenBack, WornRefused; }
-    internal static class EntitySeats { internal static long DriverSeatRefused; }
-    internal static class EntityPhysics { internal static float CrashLeaseS = 4; internal static long CrashGranted, CrashRefused, CrashLeasesKept; }
+    internal static partial class EntitySeats { internal static long DriverSeatRefused; }
+    internal static partial class EntityPhysics { internal static float CrashLeaseS = 4; internal static long CrashGranted, CrashRefused, CrashLeasesKept; }
     internal static class EntityAuthorityInterest { internal static void ShareQuotaForget(int p) => Entities.Trace.Add("quota-forget:" + p); }
     internal static class EntityWorldLeases { internal static void ServerLeaseLeave(int p) => Entities.Trace.Add("lease-leave:" + p); }
     internal static class Mp
@@ -80,7 +80,7 @@ namespace TLDRevamp.Net
         private class Op { public bool Connect; }
         private sealed partial class SEnt { internal byte[] RagdollKeyState; internal uint RagdollKeyEpoch; }
         public class Ent { public Root Root; }
-        public class Root { public string name = "fixture"; }
+        public partial class Root { public string name = "fixture"; }
         private static readonly Dictionary<uint, Ent> ByNet = new();
         internal static float HandoverAcceptS = 5, HandFarM, HandNearM;
         internal static int HandPerTick = 16;
@@ -90,16 +90,12 @@ namespace TLDRevamp.Net
         private static readonly List<KeyValuePair<int, Vector3d>> _handPlayers = new();
         private static float _handAcc;
         internal struct UsableKey { internal uint Net, Epoch; internal int Item; }
-        private static bool ServerWornNow(SEnt e) => false;
-        private static string DriverSeatClaimRefusal(SEnt e, int from) => null;
         private static HashSet<uint> KnownBy(int p) => Known.TryGetValue(p, out var k) ? k : Known[p] = new() { 7, 8, 9 };
         private static void OwnerLog(SEnt e, int to, string why) { if (RecordTrace) Trace.Add($"log:{e.NetId}:{e.OwnerId}>{to}@{e.Epoch}:{why}:claim={e.ClaimedBy}:crash={e.CrashReturnTo}"); }
         private static string SendObservation() => $":at-send={EntityRabbits.RabbitOwnerMoves},{Handoffs},{EntityPhysics.CrashGranted},{EntityHands.WornTakenBack},{OwnerCascaded},{SilentTakeovers}:" + string.Join(",", System.Linq.Enumerable.Select(Server.Values, Fields));
         internal static void CaptureSend(string target, NetWriter w) { if (RecordTrace) Trace.Add(target + ":" + Convert.ToHexString(w.Buf, 0, w.Len) + SendObservation()); }
         private static void Deliver(NetWriter w) { CaptureSend("local:0", w); DuringDeliver?.Invoke(); }
         private static void CascadeHitches(SEnt e) => Trace.Add("cascade-hitches:" + e.NetId);
-        private static bool Mounted(SEnt e) => false;
-        private static bool LooseSplit(SEnt e) => false;
         private static bool HitchTrailer(SEnt e) => false;
         private static void BeginHitchTransfer(SEnt e, int to) => Trace.Add("begin-hitch:" + e.NetId + ":" + to);
         private static void HitchOwnerKnows(SEnt e, int to) => Trace.Add("hitch-knows:" + e.NetId + ":" + to);
@@ -109,5 +105,11 @@ namespace TLDRevamp.Net
         private static void EditCheckForget(int p) => Trace.Add("edit-forget:" + p);
         private static void SetLiveRecordFloor(UsableKey k, double st) => Trace.Add($"floor:{k.Net}@{k.Epoch}:{st}");
         private static void KeepAttach(SEnt e, uint parent, byte[] msg, int len) { e.AttachParent = parent; Trace.Add("keep-attach:" + e.NetId + ":" + parent); }
+#if !ENTITY_IN_USE_FIXTURE
+        private static bool ServerWornNow(SEnt e) => false;
+        private static string DriverSeatClaimRefusal(SEnt e, int from) => null;
+        private static bool Mounted(SEnt e) => false;
+        private static bool LooseSplit(SEnt e) => false;
+#endif
     }
 }

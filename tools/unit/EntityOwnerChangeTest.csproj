@@ -9,6 +9,9 @@
     <Reference Include="Microsoft.CodeAnalysis"><HintPath>$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.dll</HintPath></Reference>
     <Reference Include="Microsoft.CodeAnalysis.CSharp"><HintPath>$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath></Reference>
   </ItemGroup>
+  <ItemGroup Condition="'$(OwnerChangeBaseline)' != '--baseline'">
+    <Compile Include="../../src/TLDRevamp/Net/Entities.InUse.cs" />
+  </ItemGroup>
   <Target Name="ExtractOwnerChange" BeforeTargets="CoreCompile">
     <PropertyGroup>
       <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>

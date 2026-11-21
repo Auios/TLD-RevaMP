@@ -61,4 +61,8 @@
     <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractLockProxy.py&quot; &quot;$(IntermediateOutputPath)LockProxy.g.cs&quot;" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)LockProxy.g.cs" /></ItemGroup>
   </Target>
+  <ItemGroup>
+    <Compile Include="../../src/TLDRevamp/Net/Entities.InUse.cs" />
+    <Compile Include="EntityInUseUnusedLookups.cs" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <StartupObject>EntityInUseChecks</StartupObject>
+    <DefineConstants>$(DefineConstants);ENTITY_IN_USE_FIXTURE</DefineConstants>
+    <NoWarn>CS0649;CS0414;CS0169;CS8981</NoWarn>
+    <PythonExecutable Condition="'$(PythonExecutable)' == '' And '$(OS)' == 'Windows_NT'">py -3</PythonExecutable>
+    <PythonExecutable Condition="'$(PythonExecutable)' == ''">python3</PythonExecutable>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EntityInUseBaseline)' == '--in-use-baseline'">
+    <DefineConstants>$(DefineConstants);ENTITY_IN_USE_BASELINE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="EntityInUseChecks.cs" />
+    <Compile Include="EntityInUseSourceChecks.cs" />
+    <Compile Include="EntityInUseStubs.cs" />
+    <Compile Include="EntityOwnerChangeChecks.cs" />
+    <Compile Include="EntityOwnerChangeStubs.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
+    <Compile Include="../../src/TLDRevamp/Net/Entities.RotCodec.cs" />
+    <Reference Include="Microsoft.CodeAnalysis"><HintPath>$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.dll</HintPath></Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp"><HintPath>$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath></Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(EntityInUseBaseline)' != '--in-use-baseline'">
+    <Compile Include="../../src/TLDRevamp/Net/Entities.InUse.cs" />
+  </ItemGroup>
+  <Target Name="ExtractInUsePaths" BeforeTargets="CoreCompile">
+    <Exec Command="$(PythonExecutable) -I &quot;$(MSBuildThisFileDirectory)ExtractEntityOwnerChange.py&quot; &quot;$(IntermediateOutputPath)EntityInUse.g.cs&quot; --in-use $(EntityInUseBaseline)" />
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)EntityInUse.g.cs" /></ItemGroup>
+  </Target>
+</Project>

@@ -1043,7 +1043,8 @@ namespace TLDRevamp.Net
         {
             int n = 0;
             foreach (var se in Server.Values)
-                if (se.HitchCar == 0 && se.OwnerId == playerId && se.HasState && !se.Held && !se.Stored && !ServerWornNow(se) && se.Speed > 0.5f)
+                if (Busy(se, BusyKind.Hitched) == BusyKind.None && se.OwnerId == playerId && se.HasState &&
+                    Busy(se, SilentBusy) == BusyKind.None && se.Speed > 0.5f)
                 {
                     ServerSetOwner(se, 0, OwnerChange.PlayerSilent, CrashReturnRule.Clear, W, "player " + playerId + " silent");
                     CascadeOwner(se);
@@ -1064,13 +1065,13 @@ namespace TLDRevamp.Net
             foreach (var se in Server.Values)
                 if (se.CrashReturnTo == playerId) { OwnerLog(se, se.OwnerId, "crash lease: player " + playerId + " left, kept"); se.CrashReturnTo = -1; EntityPhysics.CrashLeasesKept++; }
             foreach (var se in Server.Values)
-                if (se.OwnerId == playerId && se.HitchCar == 0)
+                if (se.OwnerId == playerId && Busy(se, LeaveBusy) == BusyKind.None)
                 {
                     ServerSetOwner(se, 0, OwnerChange.PlayerLeft, CrashReturnRule.Keep, W, "player " + playerId + " left");
                     CascadeOwner(se);
                 }
             foreach (var tr in new List<SEnt>(Server.Values))
-                if (tr.OwnerId == playerId && tr.HitchCar != 0 && Server.TryGetValue(tr.HitchCar, out var tow)) BeginHitchTransfer(tr, tow.OwnerId);
+                if (tr.OwnerId == playerId && Busy(tr, BusyKind.Hitched) != BusyKind.None && Server.TryGetValue(tr.HitchCar, out var tow)) BeginHitchTransfer(tr, tow.OwnerId);
             // the leaver's leases: finished ones stay (their content is shared, holder 0 = the server), unfinished
             // ones are freed so the building isn't stuck half-spawned with spawn flags on everywhere
             EntityWorldLeases.ServerLeaseLeave(playerId);
