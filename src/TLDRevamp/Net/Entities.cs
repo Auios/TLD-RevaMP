@@ -257,7 +257,7 @@ namespace TLDRevamp.Net
             EntityWorldLeases.RestoreBuiltIns();
             HitchReset(wasHost);
             ResetSessionLeftovers();
-            ByNet.Clear(); Server.Clear(); _lateOwners.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
+            ByNet.Clear(); Server.Clear(); _lateOwners.Clear(); _reconfirmedAt.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
             // keyed by copies and network ids (which start at 1 again next session). (Known, the server's "sent to player N"
             // sets, needs nothing here: ServerOnJoin starts every joiner with an empty one - rehost.py)
             EntityPhysics.ResetPhysicalCars(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); EntityAI.BreaksReset();
@@ -419,29 +419,43 @@ namespace TLDRevamp.Net
         /// Our car, our player at its wheel, its body still frozen two checks (1.5 s) apart: let it go. Taking a car over
         /// only restores the bodies the copy froze (MadeKinematic); one the GAME had frozen first (every placed item is
         /// frozen; a car placed again for a player who comes back to it) goes through the game's unfreeze, which
-        /// UnfreezeOnGround holds while it finds no ground under the car's middle (up to 2 minutes) and which skips a car
-        /// marked buried for good. The friend sat at the wheel of a car frozen two wheels up and couldn't move it; the
-        /// host, whose own body had been frozen by the copy and was restored at once, drove off (2026-11-21). A player in
-        /// the seat means the world around it is there. Holds that are real stay: a teleport's landing, a world loading,
-        /// a join, a trailer waiting for its hitch.
+        /// UnfreezeOnGround holds while it finds no ground under the car's middle (up to 2 minutes). The friend sat at the
+        /// wheel of a car frozen two wheels up and couldn't move it; the host, whose own body had been frozen by the copy
+        /// and was restored at once, drove off (2026-11-21). A player in the seat means the world around it is there.
+        /// Holds that are real stay: a teleport's landing, a world loading, a join, a trailer waiting for its hitch — and
+        /// burial: a car marked buried is buried in the game's own sense (undergroundSpawnScript buries what it spawns, the
+        /// shovel digs it out, the flag is saved and shared), never dug out by sitting in it. The car's other members the
+        /// game froze (a door or hood on a joint holds the car where it is) go with it, as the game's own unfreeze
+        /// (tosaveitemscript.DistUnFreezeRB) would let them go: not buried, not in a hand.
         private static Ent _frozenAtWheel;
         private static float _frozenAtWheelSince;
-        public static long CarsFreedAtWheel;
+        public static long CarsFreedAtWheel, MembersFreedAtWheel;
         private static void FreeOwnedCarAtWheel(Ent e)
         {
             var it = e.Root;
             var rb = it.GetComponent<Rigidbody>();
-            if (rb == null || !rb.isKinematic || Tpa.Holding(rb) || Fixes.LoadFreeze.Holding || JoinLoading.Showing || e.HitchWaiting)
+            if (rb == null || !rb.isKinematic || it.buried || Tpa.Holding(rb) || Fixes.LoadFreeze.Holding || JoinLoading.Showing || e.HitchWaiting)
             { _frozenAtWheel = null; return; }
             float now = Time.realtimeSinceStartup;
             if (_frozenAtWheel != e) { _frozenAtWheel = e; _frozenAtWheelSince = now; return; }
-            string why = it.buried ? "marked buried" : Fixes.UnfreezeOnGround.Holding(it) ? "the unfreeze ground check found no ground under its middle" : "frozen with no hold known";
-            CarsFreedAtWheel++;
-            if (CarsFreedAtWheel <= 20)
-                Plugin.Log.LogWarning($"car frozen at our wheel: {it.name} net {e.NetId} (owner {e.OwnerId}, ours), {now - _frozenAtWheelSince:F1} s: {why} — let go");
-            SessionLog.Event("car-freed-at-wheel", e.NetId, epoch: e.Epoch, result: why);
+            string why = Fixes.UnfreezeOnGround.Holding(it) ? "the unfreeze ground check found no ground under its middle" : "frozen with no hold known";
             Fixes.UnfreezeOnGround.Forget(it);
-            if (it.buried) it.UnBury(); else rb.isKinematic = false;
+            rb.isKinematic = false;
+            int members = 0;
+            for (int i = 0; i < e.Items.Count; i++)
+            {
+                var m = e.Items[i];
+                if (m == null || m == it || PartApart(e, i) || m.buried || (m.P != null && m.P.inRightHand)) continue;
+                var mrb = m.GetComponent<Rigidbody>();
+                if (mrb == null || !mrb.isKinematic || Tpa.Holding(mrb)) continue;
+                Fixes.UnfreezeOnGround.Forget(m);
+                mrb.isKinematic = false;
+                members++;
+            }
+            CarsFreedAtWheel++; MembersFreedAtWheel += members;
+            if (CarsFreedAtWheel <= 20)
+                Plugin.Log.LogWarning($"car frozen at our wheel: {it.name} net {e.NetId} (owner {e.OwnerId}, ours), {now - _frozenAtWheelSince:F1} s: {why} — let go, with {members} frozen member(s)");
+            SessionLog.Event("car-freed-at-wheel", e.NetId, epoch: e.Epoch, count: members, result: why);
             _frozenAtWheel = null;
         }
 
@@ -1188,9 +1202,19 @@ namespace TLDRevamp.Net
         private static readonly Dictionary<uint, (int Owner, uint Epoch, float At)> _lateOwners = new Dictionary<uint, (int, uint, float)>();
         public static long LateOwnersKept, LateOwnersApplied;
         internal static float LateOwnerKeepS = 120f;
+        private static readonly List<uint> _lateExpired = new List<uint>();
         private static void RememberLateOwner(uint net, int owner, uint epoch)
         {
-            if (_lateOwners.Count > 4096) _lateOwners.Clear();
+            // every Owner goes to every player, so this fills with far objects that never come here (rabbits change hands
+            // often): drop the expired ones, not all — a clear could lose the one that matters
+            if (_lateOwners.Count >= 4096)
+            {
+                float now = Time.realtimeSinceStartup;
+                _lateExpired.Clear();
+                foreach (var kv in _lateOwners) if (now - kv.Value.At > LateOwnerKeepS) _lateExpired.Add(kv.Key);
+                foreach (var k in _lateExpired) _lateOwners.Remove(k);
+                if (_lateOwners.Count >= 16384) _lateOwners.Clear();   // 16k in 2 minutes: something is wrong, start over
+            }
             if (_lateOwners.TryGetValue(net, out var had) && had.Epoch > epoch) return;
             _lateOwners[net] = (owner, epoch, Time.realtimeSinceStartup);
             LateOwnersKept++;

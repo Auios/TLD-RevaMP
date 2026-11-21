@@ -82,6 +82,8 @@ output.append(re.search(r'^        public static long MarkersPruned;', p, re.M)[
 output.append(block(s, s.index('        internal static bool IsStored(uint')))
 # The late Owner messages kept for objects not here yet (ClientOwner keeps them, ClientAdd applies them; 2026-11-21).
 output.append(s[s.index('        /// An Owner message for an object not here at that moment'):s.index('        private static void ClientAdd(NetReader r)')])
+# the server's per-object confirmation clock (ServerClaim), cleared by Reset
+output.append(next(line for line in read('Pickup').splitlines() if ' _reconfirmedAt = ' in line))
 output.append(block(s, s.index('        private sealed partial class SEnt')))
 output.append('public static void ServerReceive(int from, byte type, NetReader r) {' + cases(s, 'ServerReceive', ['Share']) + '}')
 prefix = '''if (EntityTeleportRefresh.DeferTpa(type, r)) return;

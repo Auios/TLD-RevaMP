@@ -32,9 +32,17 @@ namespace TLDRevamp
                     if (!Net.Entities.ObservedEntities.TryGetValue(uint.Parse(ma[1]), out var ze) || ze.Root == null) return "{\"error\":\"no such object here\"}";
                     var zrb = ze.Root.GetComponent<Rigidbody>();
                     if (zrb == null) return "{\"error\":\"no body\"}";
+                    if (ma.Length > 2 && ma[2] == "unbury") { ze.Root.UnBury(); return "{\"unburied\":true}"; }   // the game's own, as a shovel ends it
                     zrb.isKinematic = true;
                     if (ma.Length > 2 && ma[2] == "buried") ze.Root.buried = true;
-                    return "{\"kinematic\":true,\"buried\":" + (ze.Root.buried ? "true" : "false") + ",\"proxy\":" + (ze.Proxy ? "true" : "false") + "}";
+                    int zm = 0;   // "all": every member with a body of its own too (a door or hood on a joint)
+                    if (ma.Length > 2 && ma[2] == "all")
+                        foreach (var zi in ze.Items)
+                        {
+                            var zmb = zi != null && zi != ze.Root ? zi.GetComponent<Rigidbody>() : null;
+                            if (zmb != null && !zmb.isKinematic) { zmb.isKinematic = true; zm++; }
+                        }
+                    return "{\"kinematic\":true,\"buried\":" + (ze.Root.buried ? "true" : "false") + ",\"members\":" + zm + ",\"proxy\":" + (ze.Proxy ? "true" : "false") + "}";
                 }
                 case "mp forgetowner":
                 {

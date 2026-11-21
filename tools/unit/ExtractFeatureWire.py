@@ -37,7 +37,8 @@ def without_wheel_freeze(code):
 pickup = (root / 'src/TLDRevamp/Net/Entities.Pickup.cs').read_text(encoding='utf-8')
 with target.open('a', encoding='utf-8', newline='\n') as output:
     output.write('namespace TLDRevamp.Net { public static partial class Entities {\n'
-                 + next(line for line in pickup.splitlines() if 'static long OwnerReconfirmed' in line) + '\n'
+                 + '\n'.join(line for line in pickup.splitlines()
+                             if 'static long OwnerReconfirmed' in line or 'ReconfirmEveryS =' in line or ' _reconfirmedAt = ' in line) + '\n'
                  + '\n'.join(without_wheel_freeze(method(part, name)) for part, name in (
                      ('Pickup', 'WriteClaim'), ('Pickup', 'ServerClaim'), ('', 'RefuseClaim'),
                      ('', 'DriveClaimTick'), ('', 'CheckDriverSeat'))) + '\n} }\n')

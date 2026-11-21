@@ -12,6 +12,8 @@ namespace TLDRevamp.Net
 
         private static string ClaimName(ClaimReason reason) => "claim: " + reason.ToString();
         public static long OwnerReconfirmed;
+        internal static float ReconfirmEveryS = 2f;
+        private static readonly System.Collections.Generic.Dictionary<uint, float> _reconfirmedAt = new System.Collections.Generic.Dictionary<uint, float>();
         internal static void WriteClaim(NetWriter w, uint net, ClaimReason reason)
         {
             w.U8(Claim); w.U32(net); w.U8((byte)reason);
@@ -28,8 +30,13 @@ namespace TLDRevamp.Net
                 // message that reached it while its copy was being fetched again, a re-sent record older than the grant).
                 // Ignored, it claimed for ever and nobody simulated the object: a car frozen where it was, the friend at
                 // its wheel unable to move it until the host sat in (2026-11-21). Tell it again.
-                if (from != 0)
+                // at most one per object every ReconfirmEveryS: a client whose producer claims its own object (cargo,
+                // rabbit claims check only their cooldown) costs a reply and one fresh state from it each time
+                float nowR = Time.realtimeSinceStartup;
+                if (from != 0 && (!_reconfirmedAt.TryGetValue(net, out float lastR) || nowR - lastR >= ReconfirmEveryS))
                 {
+                    if (_reconfirmedAt.Count > 4096) _reconfirmedAt.Clear();
+                    _reconfirmedAt[net] = nowR;
                     W.Reset(); W.U8(Owner); W.U32(net); W.VarU32((uint)from); W.U32(se.Epoch);
                     ServerSendTo(from, W, true);
                     OwnerReconfirmed++;
