@@ -24,6 +24,8 @@ namespace TLDRevamp
             DebugBridge.Register("mp throwpoint", arg => EntityCommands.Run("mp throwpoint", arg));
             DebugBridge.Register("mp throwat", arg => EntityCommands.Run("mp throwat", arg));
             DebugBridge.Register("mp sitpassenger", arg => EntityCommands.Run("mp sitpassenger", arg));
+            DebugBridge.Register("mp forgetowner", arg => EntityCommands.Run("mp forgetowner", arg));
+            DebugBridge.Register("mp freezeroot", arg => EntityCommands.Run("mp freezeroot", arg));
             DebugBridge.Register("mp carbreak", arg => EntityCommands.Run("mp carbreak", arg));
             DebugBridge.Register("mp interp", arg => EntityCommands.Run("mp interp", arg));
             DebugBridge.Register("mp copystate", arg => EntityCommands.Run("mp copystate", arg));

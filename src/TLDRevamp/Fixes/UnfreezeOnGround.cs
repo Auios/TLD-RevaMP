@@ -34,6 +34,9 @@ namespace TLDRevamp.Fixes
         /// This item is being kept frozen here (nothing within reach under it yet): kinematic on purpose (health checks).
         internal static bool Holding(tosaveitemscript t) => t != null && _held.ContainsKey(t.GetInstanceID());
 
+        /// Let go elsewhere (Entities.FreeOwnedCarAtWheel): no longer waited for.
+        internal static void Forget(tosaveitemscript t) { if (t == null) return; int id = t.GetInstanceID(); _held.Remove(id); _reach.Remove(id); }
+
         [HarmonyPrefix, HarmonyPriority(Priority.Low)]
         private static bool Prefix(tosaveitemscript __instance, bool __runOriginal)
         {

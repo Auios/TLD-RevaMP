@@ -25,6 +25,26 @@ namespace TLDRevamp
                 case "mp throwpoint": return Net.EntityDebug.ThrowAtPoint(double.Parse(ma[1], System.Globalization.CultureInfo.InvariantCulture), double.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture), float.Parse(ma[3], System.Globalization.CultureInfo.InvariantCulture));
                 case "mp throwat": return Net.EntityDebug.ThrowAt(uint.Parse(ma[1]), float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture));
                 case "mp sitpassenger": return Net.EntityDebug.SitPassenger(uint.Parse(ma[1]));
+                case "mp freezeroot":
+                {
+                    // test: freeze the root body of <net> here as the game would (isKinematic), optionally marked buried
+                    // (the game's own unfreeze then skips it for good)
+                    if (!Net.Entities.ObservedEntities.TryGetValue(uint.Parse(ma[1]), out var ze) || ze.Root == null) return "{\"error\":\"no such object here\"}";
+                    var zrb = ze.Root.GetComponent<Rigidbody>();
+                    if (zrb == null) return "{\"error\":\"no body\"}";
+                    zrb.isKinematic = true;
+                    if (ma.Length > 2 && ma[2] == "buried") ze.Root.buried = true;
+                    return "{\"kinematic\":true,\"buried\":" + (ze.Root.buried ? "true" : "false") + ",\"proxy\":" + (ze.Proxy ? "true" : "false") + "}";
+                }
+                case "mp forgetowner":
+                {
+                    // test: this machine forgets that it owns <net> (its copy role and owner back to [owner], default the
+                    // host) while the server keeps it as ours — what a lost or out-of-order Owner message leaves behind
+                    if (!Net.Entities.ObservedEntities.TryGetValue(uint.Parse(ma[1]), out var fe)) return "{\"error\":\"no such object here\"}";
+                    fe.OwnerId = ma.Length > 2 ? int.Parse(ma[2]) : 0;
+                    Net.Entities.SetProxy(fe, true);
+                    return "{\"proxy\":" + (fe.Proxy ? "true" : "false") + ",\"owner\":" + fe.OwnerId + "}";
+                }
                 case "mp carbreak": return Net.EntityDebug.CarBreak(uint.Parse(ma[1]));
                 case "mp interp": return Net.EntityDebug.InterpDump(uint.Parse(ma[1]));
                 case "mp copystate": return Net.EntityDebug.CopyState(uint.Parse(ma[1]));

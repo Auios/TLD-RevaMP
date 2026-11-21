@@ -80,6 +80,8 @@ p = read('Placed')
 output.append(re.search(r'^        private static int _markersStaleFrame = [^;]*;', p, re.M)[0])
 output.append(re.search(r'^        public static long MarkersPruned;', p, re.M)[0])
 output.append(block(s, s.index('        internal static bool IsStored(uint')))
+# The late Owner messages kept for objects not here yet (ClientOwner keeps them, ClientAdd applies them; 2026-11-21).
+output.append(s[s.index('        /// An Owner message for an object not here at that moment'):s.index('        private static void ClientAdd(NetReader r)')])
 output.append(block(s, s.index('        private sealed partial class SEnt')))
 output.append('public static void ServerReceive(int from, byte type, NetReader r) {' + cases(s, 'ServerReceive', ['Share']) + '}')
 prefix = '''if (EntityTeleportRefresh.DeferTpa(type, r)) return;

@@ -24,9 +24,21 @@ target.write_text('using UnityEngine;\nusing System.Collections.Generic;\nnamesp
                   + method('Edits', 'EditTick').replace('EntityEdits.TankChangesNow(', 'TankChangesForFixture(') + '\n} }\n', encoding='utf-8', newline='\n')
 
 # Driver claims remain in the kernel. Exercise their real producer and arbitration bodies too.
+def without_wheel_freeze(code):
+    # the frozen-car safety net at the wheel (FreeOwnedCarAtWheel, 2026-11-21) needs the game's freeze holds: this fixture
+    # exercises the claims, so an owned car at the wheel is left alone here as before the net
+    code = code.replace('{ _frozenAtWheel = null; return; }', 'return;')
+    code = code.replace('if (!e.Proxy) { FreeOwnedCarAtWheel(e); return; }', 'if (!e.Proxy) return;')
+    code = code.replace('                    _frozenAtWheel = null;\n', '').replace('            _frozenAtWheel = null;\n', '')
+    assert '_frozenAtWheel' not in code and 'FreeOwnedCarAtWheel' not in code, 'DriveClaimTick changed: update ExtractFeatureWire.py'
+    return code
+
+
+pickup = (root / 'src/TLDRevamp/Net/Entities.Pickup.cs').read_text(encoding='utf-8')
 with target.open('a', encoding='utf-8', newline='\n') as output:
     output.write('namespace TLDRevamp.Net { public static partial class Entities {\n'
-                 + '\n'.join(method(part, name) for part, name in (
+                 + next(line for line in pickup.splitlines() if 'static long OwnerReconfirmed' in line) + '\n'
+                 + '\n'.join(without_wheel_freeze(method(part, name)) for part, name in (
                      ('Pickup', 'WriteClaim'), ('Pickup', 'ServerClaim'), ('', 'RefuseClaim'),
                      ('', 'DriveClaimTick'), ('', 'CheckDriverSeat'))) + '\n} }\n')
 

@@ -71,7 +71,11 @@ namespace TLDRevamp.Net
                 IdleTrafficTest.Check(se.OwnerId == 1 && se.Epoch == 2 && !se.Held && se.ReceivedStateAt == 7 &&
                     LastOwnerReason == "claim: " + reason, "all producers use the same arbitration without pickup protection: " + reason);
                 ServerClaim(1, ClaimReader(packet));
-                IdleTrafficTest.Check(se.Epoch == 2 && OwnerReplies.Count == 0, "same-owner claims are ignored without confirmation: " + reason);
+                // a claim from its own owner: that client still has it as a copy (a lost or late Owner message) — told again, to
+                // it alone, nothing changes on the server (2026-11-21: the friend's car frozen at his wheel)
+                IdleTrafficTest.Check(se.Epoch == 2 && se.OwnerId == 1 && OwnerReplies.Count == 1 && OwnerReplies[0].Target == 1 &&
+                    OwnerReplies[0].Bytes[0] == Owner && new NetReader { Buf = OwnerReplies[0].Bytes, Pos = 1, End = OwnerReplies[0].Bytes.Length }.U32() == 8,
+                    "same-owner claims are confirmed to that client, epoch unchanged: " + reason);
                 se.Held = true; ServerClaim(0, ClaimReader(packet));
                 IdleTrafficTest.Check(Refusal == "held" && se.OwnerId == 1, "ordinary held pose still prevents claims: " + reason);
                 se.Held = false; ServerClaim(0, ClaimReader(packet));

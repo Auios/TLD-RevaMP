@@ -11,6 +11,7 @@ namespace TLDRevamp.Net
         }
 
         private static string ClaimName(ClaimReason reason) => "claim: " + reason.ToString();
+        public static long OwnerReconfirmed;
         internal static void WriteClaim(NetWriter w, uint net, ClaimReason reason)
         {
             w.U8(Claim); w.U32(net); w.U8((byte)reason);
@@ -20,7 +21,22 @@ namespace TLDRevamp.Net
         {
             uint net = r.U32();
             var reason = (ClaimReason)r.U8();
-            if (r.Bad || r.Remaining != 0 || reason < ClaimReason.Driver || reason > ClaimReason.ItemContact || !Server.TryGetValue(net, out var se) || se.OwnerId == from) return;
+            if (r.Bad || r.Remaining != 0 || reason < ClaimReason.Driver || reason > ClaimReason.ItemContact || !Server.TryGetValue(net, out var se)) return;
+            if (se.OwnerId == from)
+            {
+                // theirs already: a claim from its owner means its game still has it as someone else's copy (an Owner
+                // message that reached it while its copy was being fetched again, a re-sent record older than the grant).
+                // Ignored, it claimed for ever and nobody simulated the object: a car frozen where it was, the friend at
+                // its wheel unable to move it until the host sat in (2026-11-21). Tell it again.
+                if (from != 0)
+                {
+                    W.Reset(); W.U8(Owner); W.U32(net); W.VarU32((uint)from); W.U32(se.Epoch);
+                    ServerSendTo(from, W, true);
+                    OwnerReconfirmed++;
+                    if (OwnerReconfirmed <= 20) Plugin.Log.LogWarning($"claim from its own owner: net {net} by player {from} ({ClaimName(reason)}) — its game had it as a copy; told it again (epoch {se.Epoch})");
+                }
+                return;
+            }
             if (se.HitchCar != 0) { RefuseClaim(from, se, "hitched to car", reason); return; }
             // a crash is being simulated on another machine: its car comes back when the crash is over
             if (se.CrashReturnTo >= 0)

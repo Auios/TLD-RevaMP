@@ -26,6 +26,7 @@ target.parent.mkdir(parents=True, exist_ok=True)
 roles = method('SetProxy') + '\n' + method('ApplyProxyBodies')
 roles += '\n' + method('ForgetProxyMap<T>') + '\n' + method('ForgetProxyMaps') + '\n' + method('RefreshProxyMaps')
 roles += '\n' + method('RefuseClaim')
+roles += '\n' + source[source.index('        /// An Owner message for an object not here at that moment'):source.index('        private static void ClientAdd(NetReader r)')]
 owner_method = method('ClientOwner')
 owner = owner_method[owner_method.index('{') + 1:owner_method.rindex('}')]
 roles += '\n        static void ApplyOwner(NetReader r) {\n' + owner + '\n        }\n'

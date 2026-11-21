@@ -458,7 +458,7 @@ namespace TLDRevamp.Net
         public static void ClientWorldReload()
         {
             LiveUsablesReset(keepPoiSequences: true);
-            ByNet.Clear(); PendingShare.Clear(); ProxyItems.Clear();
+            ByNet.Clear(); PendingShare.Clear(); ProxyItems.Clear(); _lateOwners.Clear();
             ClearProxyBindings();
             EntityWorldLeases.ReloadClient();
             Mp.SceneTearingDown = false;

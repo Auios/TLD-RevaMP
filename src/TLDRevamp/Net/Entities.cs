@@ -257,7 +257,7 @@ namespace TLDRevamp.Net
             EntityWorldLeases.RestoreBuiltIns();
             HitchReset(wasHost);
             ResetSessionLeftovers();
-            ByNet.Clear(); Server.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
+            ByNet.Clear(); Server.Clear(); _lateOwners.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; DevHooks.EntitySessionReset?.Invoke();
             // keyed by copies and network ids (which start at 1 again next session). (Known, the server's "sent to player N"
             // sets, needs nothing here: ServerOnJoin starts every joiner with an empty one - rehost.py)
             EntityPhysics.ResetPhysicalCars(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); EntityAI.BreaksReset();
@@ -401,16 +401,48 @@ namespace TLDRevamp.Net
             if (Time.unscaledTime - _lastDriveClaimTry < 1.5f) return;
             _lastDriveClaimTry = Time.unscaledTime;
             var pl = mainscript.s != null ? mainscript.s.player : null;
-            if (pl == null || !pl.Bsitting || pl.seat == null) return;
-            if (!pl.seat.driverSeat0) return;   // passengers never claim — incl. shotgun (driverSeat1 = the front passenger)
+            if (pl == null || !pl.Bsitting || pl.seat == null) { _frozenAtWheel = null; return; }
+            if (!pl.seat.driverSeat0) { _frozenAtWheel = null; return; }   // passengers never claim — incl. shotgun (driverSeat1 = the front passenger)
             var root = pl.seat.transform.root;
             foreach (var e in LookupSet())
-                if (e.Proxy && e.Root != null && e.Root.transform.root == root && (e.Root.transform == root))
+                if (e.Root != null && e.Root.transform.root == root && (e.Root.transform == root))
                 {
+                    if (!e.Proxy) { FreeOwnedCarAtWheel(e); return; }
+                    _frozenAtWheel = null;
                     W.Reset(); WriteClaim(W, e.NetId, ClaimReason.DriverRetry); ToServer(W, true);
                     ClaimsSent++;
                     return;
                 }
+            _frozenAtWheel = null;
+        }
+
+        /// Our car, our player at its wheel, its body still frozen two checks (1.5 s) apart: let it go. Taking a car over
+        /// only restores the bodies the copy froze (MadeKinematic); one the GAME had frozen first (every placed item is
+        /// frozen; a car placed again for a player who comes back to it) goes through the game's unfreeze, which
+        /// UnfreezeOnGround holds while it finds no ground under the car's middle (up to 2 minutes) and which skips a car
+        /// marked buried for good. The friend sat at the wheel of a car frozen two wheels up and couldn't move it; the
+        /// host, whose own body had been frozen by the copy and was restored at once, drove off (2026-11-21). A player in
+        /// the seat means the world around it is there. Holds that are real stay: a teleport's landing, a world loading,
+        /// a join, a trailer waiting for its hitch.
+        private static Ent _frozenAtWheel;
+        private static float _frozenAtWheelSince;
+        public static long CarsFreedAtWheel;
+        private static void FreeOwnedCarAtWheel(Ent e)
+        {
+            var it = e.Root;
+            var rb = it.GetComponent<Rigidbody>();
+            if (rb == null || !rb.isKinematic || Tpa.Holding(rb) || Fixes.LoadFreeze.Holding || JoinLoading.Showing || e.HitchWaiting)
+            { _frozenAtWheel = null; return; }
+            float now = Time.realtimeSinceStartup;
+            if (_frozenAtWheel != e) { _frozenAtWheel = e; _frozenAtWheelSince = now; return; }
+            string why = it.buried ? "marked buried" : Fixes.UnfreezeOnGround.Holding(it) ? "the unfreeze ground check found no ground under its middle" : "frozen with no hold known";
+            CarsFreedAtWheel++;
+            if (CarsFreedAtWheel <= 20)
+                Plugin.Log.LogWarning($"car frozen at our wheel: {it.name} net {e.NetId} (owner {e.OwnerId}, ours), {now - _frozenAtWheelSince:F1} s: {why} — let go");
+            SessionLog.Event("car-freed-at-wheel", e.NetId, epoch: e.Epoch, result: why);
+            Fixes.UnfreezeOnGround.Forget(it);
+            if (it.buried) it.UnBury(); else rb.isKinematic = false;
+            _frozenAtWheel = null;
         }
 
         public static void Tick()
@@ -1149,9 +1181,34 @@ namespace TLDRevamp.Net
             Bind(e);
         }
 
+        /// An Owner message for an object not here at that moment (its copy lost and being fetched again, not added yet):
+        /// before, dropped — and the record that came next, built before the change, made the object someone else's copy
+        /// here while the server had it as ours (the friend's car frozen at his wheel, 2026-11-21). Kept for a while and
+        /// applied to the record when it comes, if newer.
+        private static readonly Dictionary<uint, (int Owner, uint Epoch, float At)> _lateOwners = new Dictionary<uint, (int, uint, float)>();
+        public static long LateOwnersKept, LateOwnersApplied;
+        internal static float LateOwnerKeepS = 120f;
+        private static void RememberLateOwner(uint net, int owner, uint epoch)
+        {
+            if (_lateOwners.Count > 4096) _lateOwners.Clear();
+            if (_lateOwners.TryGetValue(net, out var had) && had.Epoch > epoch) return;
+            _lateOwners[net] = (owner, epoch, Time.realtimeSinceStartup);
+            LateOwnersKept++;
+        }
+        private static void LateOwner(uint net, ref int owner, ref uint epoch)
+        {
+            if (!_lateOwners.TryGetValue(net, out var late)) return;
+            _lateOwners.Remove(net);
+            if (late.Epoch <= epoch || Time.realtimeSinceStartup - late.At > LateOwnerKeepS) return;
+            owner = late.Owner; epoch = late.Epoch;
+            LateOwnersApplied++;
+            if (LateOwnersApplied <= 20) Plugin.Log.LogWarning($"owner of net {net} came before its record: player {owner}, epoch {epoch} (the record said older)");
+        }
+
         private static void ClientAdd(NetReader r)
         {
             uint net = r.U32(); int owner = (int)r.VarU32(); uint epoch = r.U32();
+            LateOwner(net, ref owner, ref epoch);
             bool hasState = r.Bool(); Vector3d pos = default; Quaternion rot = Quaternion.identity;
             if (hasState) { pos = new Vector3d(r.F64(), r.F64(), r.F64()); rot = new Quaternion(r.F32(), r.F32(), r.F32(), r.F32()); }
             int n = (int)r.VarU32();
@@ -1394,7 +1451,9 @@ namespace TLDRevamp.Net
         private static void ClientOwner(NetReader r)
         {
             uint net = r.U32(); int owner = (int)r.VarU32(); uint epoch = r.U32();
-            if (r.Bad || !ByNet.TryGetValue(net, out var e) || epoch < e.Epoch) return;
+            if (r.Bad) return;
+            if (!ByNet.TryGetValue(net, out var e)) { RememberLateOwner(net, owner, epoch); return; }
+            if (epoch < e.Epoch) return;
             HitchBeforeOwner(e, owner, epoch);
             // ours until now, someone else's from this epoch on: our last word on its state goes to them
             if (!e.Proxy && e.OwnerId == MyId && owner != MyId && epoch != e.Epoch) { EntityRabbits.SendRabbitHandover(e, epoch); SendHandover(e, epoch); }
