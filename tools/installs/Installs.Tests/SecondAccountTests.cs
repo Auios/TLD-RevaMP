@@ -132,4 +132,57 @@ public sealed class SecondAccountTests : IDisposable
         foreach (var outside in new[] { c.GameDir, c.UserData, c.Dir, Path.GetDirectoryName(c.Dir)! })
             Assert.False((Path.GetFullPath(outside) + Path.DirectorySeparatorChar).StartsWith(prefix, StringComparison.OrdinalIgnoreCase), outside);
     }
+
+    /// <summary>A fake box on a fake clock: seconds pass with each sleep, Steam appears when a start "takes".</summary>
+    sealed class FakeBox
+    {
+        public int Seconds, Starts, SignInAt = int.MaxValue, LoseStarts, ClosedAt = int.MaxValue;
+        public bool Running, Unreadable;
+        public readonly List<string> Log = new();
+        public void Start() { Starts++; if (Starts > LoseStarts) Running = true; }
+        public int? User() => Unreadable ? null : Seconds >= SignInAt ? 76561 : 0;
+        public bool InBox() => Running && Seconds < ClosedAt;
+        public void Wait() => SecondAccount.WaitSignedIn("TLD2", User, InBox, () => { Start(); }, ms => Seconds += ms / 1000, Log.Add);
+    }
+
+    [Fact]
+    public void AStartLostWhileSandboxieComesUpIsMadeAgain()
+    {
+        var box = new FakeBox { LoseStarts = 1, SignInAt = 40 };
+        box.Start();   // the launcher's first start: Sandboxie drops it
+        box.Wait();
+        Assert.Equal(2, box.Starts);
+        Assert.Contains(box.Log, l => l.Contains("starting it again (2/3)"));
+    }
+
+    [Fact]
+    public void ABoxThatNeverRunsSteamFailsAfterThreeTriesNotFiveMinutes()
+    {
+        var box = new FakeBox { LoseStarts = int.MaxValue };
+        box.Start();
+        var e = Assert.Throws<UserError>(box.Wait);
+        Assert.Contains("3 tries", e.Message);
+        Assert.Equal(3, box.Starts);
+        Assert.True(box.Seconds <= 3 * SecondAccount.StartRetryS + 1, box.Seconds.ToString());
+    }
+
+    [Fact]
+    public void SteamTheUserClosedIsNotStartedAgain()
+    {
+        var box = new FakeBox { ClosedAt = 20, SignInAt = 60 };
+        box.Start();
+        box.Wait();   // it ran (seen at 10 s), was closed at 20 s, and a sign-in still counts
+        Assert.Equal(1, box.Starts);
+        Assert.Empty(box.Log);
+    }
+
+    [Fact]
+    public void AnUnreadableLoginStillEndsTheWaitOnceSteamRuns()
+    {
+        var box = new FakeBox { Unreadable = true };
+        box.Start();
+        box.Wait();
+        Assert.Equal(26, box.Seconds);
+        Assert.Equal(1, box.Starts);
+    }
 }

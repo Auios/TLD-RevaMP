@@ -173,19 +173,44 @@ public static class SecondAccount
     static void SignedIn(string start, string box, Action<string> log)
     {
         if (ActiveUser(box) is > 0 && SteamInBox(start, box)) return;
+        Action startSteam = () => { };
         if (!SteamInBox(start, box))
         {
             var steam = Steam.Roots(true).Select(r => Path.Combine(r, "steam.exe")).FirstOrDefault(File.Exists)
                         ?? throw new UserError("couldn't find steam.exe");
             log($"Starting Steam in Sandboxie box {box}: the first time, sign in there with the SECOND account");
-            Files.Run(start, "/box:" + box, steam);
+            startSteam = () => Files.Run(start, "/box:" + box, steam);
+            startSteam();
         }
         log("  waiting for the second account's Steam to sign in…");
-        for (int i = 0; i < 300; i++)   // 5 minutes: time to type a password and a Steam Guard code
+        WaitSignedIn(box, () => ActiveUser(box), () => SteamInBox(start, box), startSteam, Thread.Sleep, log);
+    }
+
+    /// <summary>How long Steam may take to show up in the box before it is started again, and how often.</summary>
+    internal const int StartRetryS = 10, StartTries = 3;
+
+    /// <summary>Waits for the box's Steam to sign in (5 minutes: time to type a password and a Steam Guard code). A start
+    /// that never shows up in the box is made again: Sandboxie, not running yet after a restart, is started by the first
+    /// Start.exe call and drops what it was asked to run while its driver comes up - Steam never started and the wait
+    /// ran its full 5 minutes for a sign-in that couldn't come (2026-11-22).</summary>
+    internal static void WaitSignedIn(string box, Func<int?> activeUser, Func<bool> steamInBox, Action startSteam,
+        Action<int> sleep, Action<string> log)
+    {
+        int tries = 1, sinceStart = 0;
+        bool seen = false;   // once it has run in the box, it is the user's: closing it is not a failed start
+        for (int i = 0; i < 300; i++)
         {
-            Thread.Sleep(1000);
-            if (ActiveUser(box) is > 0) { Thread.Sleep(3000); return; }   // a moment for Steam to settle before the game asks it
-            if (ActiveUser(box) == null && i >= 25 && SteamInBox(start, box)) return;   // can't see the login: Steam's had 25 s
+            sleep(1000); sinceStart++;
+            var user = activeUser();
+            if (user is > 0) { sleep(3000); return; }   // a moment for Steam to settle before the game asks it
+            if (user == null && i >= 25 && steamInBox()) return;   // can't see the login: Steam's had 25 s
+            if (seen || sinceStart < StartRetryS) continue;
+            if (steamInBox()) { seen = true; continue; }
+            if (tries >= StartTries)
+                throw new UserError($"Steam didn't start in Sandboxie box {box} ({tries} tries): open Sandboxie-Plus and check that the box works");
+            tries++; sinceStart = 0;
+            log($"  Steam didn't show up in the box (Sandboxie may have been starting): starting it again ({tries}/{StartTries})");
+            startSteam();
         }
         throw new UserError("the second account's Steam didn't sign in within 5 minutes");
     }
