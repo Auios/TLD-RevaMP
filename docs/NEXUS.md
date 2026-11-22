@@ -11,8 +11,8 @@ Where the copy names a version, a file name or a checksum, it names the one the 
 
 | | |
 | --- | --- |
-| Core mod | **TLD RevaMP 0.69.2** |
-| Core file | `TLD-RevaMP-0.69.2.zip` |
+| Core mod | **TLD RevaMP 0.69.3** |
+| Core file | `TLD-RevaMP-0.69.3.zip` |
 | Add-ons in the catalog | Head Unit 0.2.1, Car Trailer 0.1.2, World Map 0.2.1, Trailer Hitches 0.2.0, BusGut 0.2.0, MountAnything 0.2.2, TerrainChoice 0.5.0, TV Browser 0.2.0, Road End 0.2.0 |
 | Game | The Long Drive (Steam app id `1017180`), **beta branch** only |
 | Wire protocol | see [PROTOCOL.md](PROTOCOL.md) |

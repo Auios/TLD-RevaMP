@@ -35,7 +35,7 @@ namespace TLDRevamp
             foreach (var other in KeyBindings.Entries())   // every key in Settings > Revamp > Keys
                 if (other != null && other != k && !PlayerEdition.Blocked.Contains(other) && other.Value.MainKey == k.Value.MainKey) yield return Modifiers(other.Value);
         }
-        public const string BaseVersion = "0.69.2";
+        public const string BaseVersion = "0.69.3";
         public static readonly string Version = Metadata("RevampVersion", BaseVersion);
         /// Built with -p:RevampEdition=player (a release for players): PlayerEdition.
         public static readonly bool IsPlayerEdition = Metadata("RevampEdition", "") == "player";

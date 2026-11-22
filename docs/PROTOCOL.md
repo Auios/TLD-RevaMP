@@ -12,14 +12,14 @@ The number changes once between public releases, not with every wire change:
 - Two dev builds can't join each other anyway: the join check compares the source commit, and a build with local
   changes needs the identical DLL (`Net/BuildCheck.cs`). So the number protects nobody between dev builds.
 
-The public release v0.69.1 carries 28 and v0.69.2 carries 62. The numbers from 29 to 61 were raised on dev, one per
+The public release v0.69.1 carries 28; v0.69.2 and v0.69.3 carry 62. The numbers from 29 to 61 were raised on dev, one per
 change, before this rule.
 
 ## History
 
 ## 62
 
-Released in v0.69.2.
+Released in v0.69.2; unchanged in v0.69.3.
 
 - ModsNeeded (81) lists required API mods and problems before Reject. Host file transfers (81–83) are retired; joiners install matching hashes from the live catalog.
 
