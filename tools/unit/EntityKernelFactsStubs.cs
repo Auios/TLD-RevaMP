@@ -131,5 +131,7 @@ namespace KernelFactsFakes
         internal static string Result = "{}";
         internal static string ShareCar(Item item) { Shares.Add("car:" + item.name); return Result; }
         internal static string ShareItem(Item item, List<Item> group) { Shares.Add("item:" + item.name); return Result; }
+        internal static bool CopyAnswer;   // what IsProxy answers (MpApi.SimulatedHere)
+        internal static bool IsProxy(object c) => CopyAnswer;
     }
 }

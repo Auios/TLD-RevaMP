@@ -22,7 +22,7 @@ static class MpApiRagdollTest
 
     static int Main()
     {
-        Check("API version 4", MpApi.ApiVersion == 4);
+        Check("API version 5", MpApi.ApiVersion == 5);
         Check("starts empty without RevaMP or a session", !MpApi.Available && !MpApi.InSession && MpApi.RagdollCount == 0);
         var root = new GameObject("creature");
         var a = new GameObject("hip").transform;
@@ -166,6 +166,7 @@ static class MpApiRagdollTest
         public uint WorldObjectId(GameObject go) => 0;
         public GameObject FindWorldObject(uint id) => null;
         public bool ShareWorldObject(GameObject go) => false;
+        public bool SimulatedHere(GameObject go) => true;
         public void Log(string line) => Lines.Add(line);
     }
 }

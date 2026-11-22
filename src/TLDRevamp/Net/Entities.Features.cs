@@ -31,6 +31,7 @@ namespace TLDRevamp.Net
             net = 0; return false;
         }
         internal static GameObject ModObject(uint net) => ByNet.TryGetValue(net, out var e) && e.Root != null ? e.Root.gameObject : null;
+        internal static bool ModIsCopy(Transform t) => IsProxy(t);   // MpApi.SimulatedHere: a copy of another player's object
         internal static string ModShareRoot(tosaveitemscript top) => top.car != null ? ShareCar(top) : ShareItem(top, null);
         internal static uint MountRootNet(Transform root)
         {

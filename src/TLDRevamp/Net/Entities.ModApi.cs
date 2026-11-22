@@ -19,6 +19,10 @@ namespace TLDRevamp.Net
             return 0;
         }
 
+        /// MpApi.SimulatedHere: not a display copy of another player's object. The proxy set holds every copy's root and
+        /// members, so this is a set lookup, cheap enough to ask every frame.
+        internal static bool SimulatedHere(GameObject go) => go == null || !Entities.InSession || !Entities.ModIsCopy(go.transform);
+
         internal static GameObject GameObjectOf(uint net) =>
             Entities.ModObject(net);
 

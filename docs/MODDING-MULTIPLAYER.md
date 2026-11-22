@@ -53,7 +53,9 @@ player through `RequestOwnership` if the type allows it), copies on every other 
 get it from the host's latest record, removal everywhere. `SyncPose` types get their position sent by the owner and
 played back smoothly on copies (which are kinematic). Objects parented to something else (a part in a car) are not
 moved by the session: they ride their parent. `MpApi.WorldObjectId` / `FindWorldObject` let a record point at one
-of the game's shared objects (a car). `MpApi.SessionTime` is the host's clock on every machine, for things that must
+of the game's shared objects (a car). `MpApi.SimulatedHere` (API 5) says whether this machine runs an object's game logic: true outside a
+session and for objects owned here, false for a copy of another player's car, so logic that changes saved state (a part
+wearing) runs only where it counts. `MpApi.SessionTime` is the host's clock on every machine, for things that must
 happen at the same moment everywhere (a video's position). `MpApi.SendEvent` / `OnEvent` carry short messages that
 are not object state.
 

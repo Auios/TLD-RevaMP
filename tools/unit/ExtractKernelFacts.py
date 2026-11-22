@@ -59,7 +59,7 @@ for part, owner in owners.items():
         output.append('namespace TLDRevamp.Net {\n' + source[start:end] + '\n}')
 # Exercise the original narrow identity facts too, against fixture-owned records.
 source = read('Features')
-body = '\n'.join(method(source, name) for name in ('TryModRootNet', 'ModObject', 'ModShareRoot', 'MountRootNet'))
+body = '\n'.join(method(source, name) for name in ('TryModRootNet', 'ModObject', 'ModShareRoot', 'ModIsCopy', 'MountRootNet'))
 output.append('namespace KernelFactsFakes { internal static partial class Kernel {\n' + body + '\n} }')
 target = Path(sys.argv[1])
 target.parent.mkdir(parents=True, exist_ok=True)

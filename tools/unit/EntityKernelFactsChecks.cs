@@ -93,7 +93,7 @@ static partial class EntitySplitTest
             string owner = text.Split("    internal static class " + helper.Item2)[1].Split("\n    }")[0];
             string code = Regex.Replace(owner, @"//[^\r\n]*", "");
             Check(!text.Contains("using static") && !Regex.IsMatch(code, @"\b(?:ByNet|Server|SEnt|W|WS|LookupSet|Placed)\b"), helper.Item2 + " cannot access kernel tables or writers");
-            foreach (Match call in Regex.Matches(code, @"Entities\.(\w+)")) Check(new[] { "TryModRootNet", "ModObject", "ModShareRoot", "InSession", "MountRootNet" }.Contains(call.Groups[1].Value), "narrow helper dependency " + call.Value);
+            foreach (Match call in Regex.Matches(code, @"Entities\.(\w+)")) Check(new[] { "TryModRootNet", "ModObject", "ModShareRoot", "ModIsCopy", "InSession", "MountRootNet" }.Contains(call.Groups[1].Value), "narrow helper dependency " + call.Value);
         }
         // Pin actual outside references, including raw reflection; new source files are scanned too.
         var actual = new List<string>();

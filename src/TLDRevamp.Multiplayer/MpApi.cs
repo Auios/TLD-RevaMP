@@ -22,8 +22,10 @@ namespace TLDRevamp.Multiplayer
     /// object that is owned here, edits are applied here, events reach only this machine.
     public static class MpApi
     {
-        /// Raised with each release that changes the API. Mods can check it to use newer calls.
-        public const int ApiVersion = 4;   // 4: replay channels (RegisterReplayChannel); 3: custom ragdolls (RegisterRagdoll); 2: state records with interest, the far store (SharedType.HasState, ViewRange), session-wide settings
+        /// Raised with each release that changes the API. Mods can check it to use newer calls. It is a constant, so a
+        /// mod sees the version it was built against: to use a newer call on whatever RevaMP is installed, look the
+        /// member up by reflection first (typeof(MpApi).GetMethod("SimulatedHere")).
+        public const int ApiVersion = 5;   // 5: SimulatedHere; 4: replay channels (RegisterReplayChannel); 3: custom ragdolls (RegisterRagdoll); 2: state records with interest, the far store (SharedType.HasState, ViewRange), session-wide settings
 
         /// TLD Revamp is installed and running (multiplayer may still be off).
         public static bool Available => Backend != null;
@@ -141,6 +143,14 @@ namespace TLDRevamp.Multiplayer
         /// Ask TLD Revamp to share one of the game's objects (a car with its parts) so it gets a WorldObjectId. Returns
         /// false outside a session or if the game can't save it. The id arrives a moment later.
         public static bool ShareWorldObject(GameObject gameObject) => Backend != null && Backend.ShareWorldObject(gameObject);
+
+        /// Is this machine the one that runs gameObject's game logic (API 5)? True outside a session, for the game's
+        /// objects this machine owns, and for objects that aren't shared (each machine runs its own); false for a copy
+        /// of another player's car or item, which only shows what its owner sends. Logic that changes saved state - a
+        /// car part wearing, fuel used - belongs on the machine where this is true: the owner's changes reach the
+        /// copies with the object's state, while a change made on a copy is overwritten by the owner's next one.
+        /// Ownership moves (a player takes the wheel, walks away), so ask again rather than keeping the answer.
+        public static bool SimulatedHere(GameObject gameObject) => Backend == null || gameObject == null || Backend.SimulatedHere(gameObject);
 
         // ------------------------------------------------------------------ custom ragdolls (API 3)
 
@@ -291,6 +301,7 @@ namespace TLDRevamp.Multiplayer
             uint WorldObjectId(GameObject go);
             GameObject FindWorldObject(uint id);
             bool ShareWorldObject(GameObject go);
+            bool SimulatedHere(GameObject go);
             void Log(string line);
         }
 

@@ -136,6 +136,7 @@ namespace TLDRevamp.Net
         public uint WorldObjectId(GameObject go) => EntityModApi.NetIdOf(go);
         public GameObject FindWorldObject(uint id) => EntityModApi.GameObjectOf(id);
         public bool ShareWorldObject(GameObject go) => EntityModApi.ShareGameObject(go);
+        public bool SimulatedHere(GameObject go) => EntityModApi.SimulatedHere(go);
 
         // ------------------------------------------------------------------ local side
 
