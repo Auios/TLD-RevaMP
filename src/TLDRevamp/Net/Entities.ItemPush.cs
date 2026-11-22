@@ -58,6 +58,7 @@ namespace TLDRevamp.Net
         public static float ItemNearM = 0.15f, ItemMinSpeed = 0.5f, ItemNearSteps = 3f;
         public static long ItemClaimedNear, ItemClaimedOnContact;
         private static readonly Collider[] _itemNear = new Collider[32];
+        private static readonly System.Collections.Generic.List<Collider> _itemCols = new System.Collections.Generic.List<Collider>();
 
         /// Per physics step, before the copies move (Entities.Physical): loose copies ahead of loose items moving here.
         private static void ItemNearTick(float dt)
@@ -70,7 +71,8 @@ namespace TLDRevamp.Net
                 var v = EntityCargoInteraction.RideVelocity(e, rb);
                 if (v.sqrMagnitude < ItemMinSpeed * ItemMinSpeed) continue;
                 bool any = false; var b = default(Bounds);
-                foreach (var c in e.Root.GetComponentsInChildren<Collider>(false))
+                e.Root.GetComponentsInChildren(false, _itemCols);   // into one list: an array per moving item per step before
+                foreach (var c in _itemCols)
                 {
                     if (c == null || c.isTrigger || !c.enabled) continue;
                     if (!any) { b = c.bounds; any = true; } else b.Encapsulate(c.bounds);

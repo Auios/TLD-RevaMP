@@ -521,6 +521,18 @@ namespace TLDRevamp.Net
                 }
             }
             if (_rabMine.Count == 0) return;
+            // Our rabbits' bodies once per step. Each item looked them up again, and measured its own colliders again for
+            // every rabbit (GetComponentsInChildren, an array each time): items × rabbits per physics step. A joiner with
+            // six rabbits near ~340 placed items spent 120 ms of every second here (perfbug, 2026-11-22), and the
+            // stutter grew as more rabbits came to it. Same rule, same numbers: the item's size is kept (ItemRadius).
+            _rabBodies.Clear();
+            foreach (var m in _rabMine)
+            {
+                var mrb = m.Root.GetComponent<Rigidbody>();
+                if (mrb == null || mrb.isKinematic) continue;
+                _rabBodies.Add(new RabBody { Pos = mrb.position, Vel = mrb.velocity, R = RabRadius(m) });
+            }
+            if (_rabBodies.Count == 0) return;
             foreach (var o in Entities.PlacedHandItems())
             {
                 if (!o.Proxy || o.Root == null || o.PartIndex >= 0 || o.Held || o.Stored || o.Physical || o.CrashTaking || NyOf(o) != null) continue;
@@ -528,14 +540,19 @@ namespace TLDRevamp.Net
                 if (car ? o.Driven : o.Root.P == null) continue;
                 var orb = o.Root.GetComponent<Rigidbody>();
                 if (orb == null || !orb.detectCollisions) continue;
-                foreach (var m in _rabMine)
+                float ir = -1f;
+                foreach (var m in _rabBodies)
                 {
-                    var mrb = m.Root.GetComponent<Rigidbody>();
-                    if (mrb == null || mrb.isKinematic) continue;
-                    var p = mrb.position; float rr = RabRadius(m);
-                    float closing = (mrb.velocity - o.LastVel).magnitude;
-                    bool near = car ? NearBox(o.Root.car.transform, Entities.RabbitCarBounds(o.Root.car), p, rr, closing, dt)
-                                    : (orb.position - p).magnitude < rr + ItemRadius(o) + RabbitClaimM + closing * dt * RabbitClaimSteps;
+                    var p = m.Pos; float rr = m.R;
+                    float closing = (m.Vel - o.LastVel).magnitude;
+                    bool near;
+                    if (car) near = NearBox(o.Root.car.transform, Entities.RabbitCarBounds(o.Root.car), p, rr, closing, dt);
+                    else
+                    {
+                        if (ir < 0f) ir = ItemRadius(o);
+                        float reach = rr + ir + RabbitClaimM + closing * dt * RabbitClaimSteps;
+                        near = (orb.position - p).sqrMagnitude < reach * reach;
+                    }
                     if (!near) continue;
                     if (car ? Entities.ClaimNow(o, ClaimReason.RabbitObjectNear) : Entities.ClaimRabbitObject(o, reason: ClaimReason.RabbitObjectNear)) RabbitClaimedObjects++;
                     break;
@@ -563,7 +580,25 @@ namespace TLDRevamp.Net
             return _rabRadius[e] = r;
         }
 
+        private struct RabBody { public Vector3 Pos, Vel; public float R; }
+        private static readonly List<RabBody> _rabBodies = new List<RabBody>();
+
+        /// An item's size for the rabbit claim, measured at most every ItemRadiusKeepS per item (its colliders rarely
+        /// change: a part bolted on, a door opened). Measured on the step it first comes near a rabbit, so the entries
+        /// age apart and never all refresh in one step.
+        internal static float ItemRadiusKeepS = 5f;
+        private static readonly Dictionary<Ent, (float R, float At)> _itemRadius = new Dictionary<Ent, (float, float)>();
         private static float ItemRadius(Ent o)
+        {
+            float now = Time.time;
+            if (_itemRadius.TryGetValue(o, out var k) && now - k.At < ItemRadiusKeepS) return k.R;
+            if (_itemRadius.Count > 4096) _itemRadius.Clear();
+            float r = MeasureItemRadius(o);
+            _itemRadius[o] = (r, now);
+            return r;
+        }
+
+        private static float MeasureItemRadius(Ent o)
         {
             float r = 0.1f;
             foreach (var c in o.Root.GetComponentsInChildren<Collider>()) if (c.enabled && !c.isTrigger) r = Mathf.Max(r, c.bounds.extents.magnitude);
@@ -587,7 +622,7 @@ namespace TLDRevamp.Net
         internal static void RabbitReset()
         {
             RabViews.Clear(); RabLastSent.Clear(); RabGreen.Clear(); RabEnts.Clear(); RabSeen.Clear(); _rabDmg.Clear(); _rabDmgDir.Clear(); _rabDmgAt.Clear(); _rabDmgNet.Clear();
-            _rabHits.Clear(); _rabTriggerOf.Clear(); _rabRadius.Clear(); _rabMine.Clear(); RabCharges.Clear();
+            _rabHits.Clear(); _rabTriggerOf.Clear(); _rabRadius.Clear(); _rabMine.Clear(); _rabBodies.Clear(); _itemRadius.Clear(); RabCharges.Clear();
         }
 
         // ================================================================ diagnostics / test hooks
