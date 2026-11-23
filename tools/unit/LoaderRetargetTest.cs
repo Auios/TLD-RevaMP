@@ -137,6 +137,10 @@ static class LoaderRetargetTest
             Check("compat: the first id neither an item (0, 1) nor a record (2) has: 3", got == 3);
             Check("compat: FStart(int) starts the item with that id", t.Started == 3);
             Check("compat: removeFromMemory reaches the helper", TestCompat.Removed);
+            Check("compat: a method's return of the other sign (GetNewKey: 5)", changes.Contains("savedatascript.GetNewKey() Int32 -> UInt32") &&
+                  (int)LoadBytes(mod).GetType("AliasMod").GetMethod("NewKey").Invoke(null, new object[] { new savedatascript() }) == 5);
+            Check("compat: Assembly.Location asks the helper (a rewritten mod has none)", changes.Contains("Assembly.Location -> the mod's own DLL") &&
+                  (string)LoadBytes(mod).GetType("AliasMod").GetMethod("Where").Invoke(null, null) == "the mod's own DLL");
             Check("compat: a field the beta dropped is kept for the mod (tosaveitemscript.category: 7)",
                   changes.Contains("tosaveitemscript.category kept for the mod (the beta has none)") &&
                   (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Category").Invoke(null, new object[] { new tosaveitemscript() }) == 7);
@@ -203,8 +207,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all twelve fields, fourteen method shapes, the five part redirects, the coordinate type and the generator chain are retargeted", changes.Count == 38);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 88);
+            Check("all twelve fields, fourteen method shapes, the five part redirects, the coordinate type, the generator chain and a return sign are retargeted", changes.Count == 39);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 91);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -280,6 +284,7 @@ public static class TestCompat
     public static bool GetRemoveFromMemory(tosaveitemscript t) => Removed;
     public static void SetRemoveFromMemory(tosaveitemscript t, bool value) { Removed = value; }
     public static mapSettingScript Map(mapSettingScript m) => m;
+    public static string AssemblyLocation(System.Reflection.Assembly a) => "the mod's own DLL";
     static readonly System.Collections.Generic.Dictionary<string, object> KeptValues = new System.Collections.Generic.Dictionary<string, object>();
     public static T Kept<T>(object owner, string field) => KeptValues.TryGetValue(field, out var v) ? (T)v : default(T);
     public static void Keep<T>(object owner, string field, T value) => KeptValues[field] = value;

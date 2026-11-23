@@ -47,6 +47,12 @@ public static class AliasMod
     /// A field the beta dropped, stored and read back (tosaveitemscript.category).
     public static int Category(tosaveitemscript t) { t.category = 7; return t.category; }
 
+    /// A game method whose return changed sign (savedatascript.GetNewKey: int there, uint here).
+    public static int NewKey(savedatascript s) => s.GetNewKey();
+
+    /// Where the mod's DLL is (the Advanced Modding Toolkit finds its assets next to it).
+    public static string Where() => typeof(AliasMod).Assembly.Location;
+
     /// The workshop's part walk (M_VehicleDeterioration, SpeedOrBoom): every slot's part that knows its car and slot,
     /// then the slots replaced by the first one. Tens: the parts found, ones: the slots left.
     public static int Parts(tosaveitemscript car)

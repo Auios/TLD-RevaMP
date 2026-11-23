@@ -144,6 +144,7 @@ namespace TLDRevamp
             new[] { "tosaveitemscript", "FStart", "System.Int32", "FStart" },
             new[] { "attachablescript", "Attach", "UnityEngine.Transform,UnityEngine.RaycastHit", "Attach" },
             new[] { "tankcapscript", "UpdCap", "System.Boolean", "UpdCap" },
+            new[] { "attachablescript", "Refresh", "", "RefreshAttachable" },
         };
 
         public static IEnumerable<string> AliasDescriptions()
@@ -158,6 +159,8 @@ namespace TLDRevamp
                     if (f[0] == "mainscript" && f[1] == a[1]) yield return "mainscript." + a[0] + "(System.Boolean) -> store " + f[3] + "." + f[4];
             foreach (var a in MovedMethods) yield return "mainscript." + a[0] + "(System.Single) -> kaposztaleves.s." + a[1] + "(System.Single)";
             yield return "same-name integer fields -> beta integer sign (including tosaveitemscript.idInSave Int32 -> UInt32)";
+            yield return "same-name game methods whose return is the other integer sign (savedatascript.GetNewKey Int32 -> UInt32)";
+            yield return "Assembly.Location -> the rewritten mod's own DLL (LoaderCompat.AssemblyLocation)";
             foreach (var a in CompatFields) yield return a[0] + "." + a[1] + " -> LoaderCompat." + a[3] + (a[4].Length > 0 ? "/" + a[4] : "");
             foreach (var a in CompatMethods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> LoaderCompat." + a[3];
             yield return "Dictionary<Int32,save_prefab>.ContainsKey -> LoaderCompat.RecordIdUsed; GetComponent<a type the beta lacks>() -> LoaderCompat.NoComponent";
@@ -196,6 +199,25 @@ namespace TLDRevamp
                 string was = fr.FieldType.Name;
                 fr.FieldType = swap(mod.TypeSystem);
                 changes.Add(fr.DeclaringType.FullName + "." + fr.Name + " " + was + " -> " + fr.FieldType.Name);
+            }
+            // the same for a game method's return type (savedatascript.GetNewKey: an int there, a uint here)
+            foreach (var mr in mod.GetMemberReferences())
+            {
+                if (!(mr is MethodReference m) || m is GenericInstanceMethod) continue;
+                var owner = GameType(game, gameName, m.DeclaringType);
+                if (owner == null) continue;
+                MethodInfo exact = null, signed = null;
+                foreach (var c in owner.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+                {
+                    if (c.Name != m.Name || c.IsStatic == m.HasThis || c.IsGenericMethodDefinition) continue;
+                    if (string.Join(",", System.Linq.Enumerable.Select(c.GetParameters(), p => CecilName(p.ParameterType))) != Parameters(m)) continue;
+                    if (CecilName(c.ReturnType) == m.ReturnType.FullName) exact = c;
+                    else if (OtherSign(m.ReturnType.MetadataType, c.ReturnType) != null) signed = c;
+                }
+                if (exact != null || signed == null) continue;
+                string was = m.ReturnType.Name;
+                m.ReturnType = OtherSign(m.ReturnType.MetadataType, signed.ReturnType)(mod.TypeSystem);
+                changes.Add(m.DeclaringType.FullName + "." + m.Name + "() " + was + " -> " + m.ReturnType.Name);
             }
             // Snapshot the methods: adapters added below must not themselves be visited.
             var bodies = new List<MethodDefinition>();
@@ -275,6 +297,13 @@ namespace TLDRevamp
                 return null;
             }
             if (!(ins.Operand is MethodReference mr) || (ins.OpCode != OpCodes.Call && ins.OpCode != OpCodes.Callvirt)) return null;
+            if (mr.Name == "get_Location" && mr.DeclaringType.FullName == "System.Reflection.Assembly" && mr.Parameters.Count == 0)
+            {
+                var m = compat.GetMethod("AssemblyLocation", Statics);
+                if (m == null) return null;
+                what = LocationChange;
+                return m;
+            }
             // Dictionary<int, save_prefab>.ContainsKey: the spawner's id test on the old records
             if (mr.Name == "ContainsKey" && mr.DeclaringType is GenericInstanceType git && git.ElementType.FullName == "System.Collections.Generic.Dictionary`2" &&
                 git.GenericArguments.Count == 2 && git.GenericArguments[0].MetadataType == MetadataType.Int32 && Missing(game, gameName, git.GenericArguments[1]))
@@ -573,6 +602,12 @@ namespace TLDRevamp
             return null;
         }
 
+        /// The DLL each rewritten mod came from: loaded from bytes, its Assembly.Location is empty, and mods find their
+        /// assets next to it (the Advanced Modding Toolkit's icons and bundles). Their Location calls ask here (compat's
+        /// AssemblyLocation); a mod whose only change would be that loads from its file as before.
+        public static readonly Dictionary<Assembly, string> Origins = new Dictionary<Assembly, string>();
+        private const string LocationChange = "Assembly.Location -> the mod's own DLL";
+
         /// Reads the mod's DLL, rewrites it if it needs it and loads it: from the bytes when something changed (the
         /// assembly then has no Location), as before with LoadFrom when nothing did or the rewrite failed.
         public static Assembly Load(string dll, Assembly game, IEnumerable<string> searchDirs, Action<string> log, Type compat = null)
@@ -585,11 +620,12 @@ namespace TLDRevamp
                            new ReaderParameters { AssemblyResolver = resolver, ReadingMode = ReadingMode.Immediate }))
                 {
                     var changes = Apply(mod, game, compat);
-                    if (changes.Count > 0)
+                    if (changes.Exists(c => c != LocationChange))
                     {
                         var ms = new MemoryStream();
                         mod.Write(ms);
                         var asm = Assembly.Load(ms.ToArray());
+                        lock (Origins) Origins[asm] = Path.GetFullPath(dll);
                         log(Path.GetFileName(dll) + " retargeted to the beta: " + string.Join(", ", changes.ToArray()));
                         return asm;
                     }

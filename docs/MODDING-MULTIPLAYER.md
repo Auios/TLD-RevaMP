@@ -281,7 +281,10 @@ road generators have no aliases. Attach targets (hitches, plates, trunk mounts) 
 attachTargetscript -> partslotscript, its target/attachs -> T/parts, attachablescript.target -> slot and
 tosaveitemscript.attachTargets -> partslotscripts. TerrainGenerator.roads -> the map's roadGens. Any other field the
 beta dropped, of a type it has (attachablescript.lockRotation in the Advanced Modding Toolkit's item setup), is kept per
-object for the mod alone (LoaderCompat.Kept/Keep) so the method naming it runs; the DLL's log line lists each one. The beta's item database has empty slots the public
+object for the mod alone (LoaderCompat.Kept/Keep) so the method naming it runs; the DLL's log line lists each one. A
+game method's return of the other integer sign is retargeted as fields are (savedatascript.GetNewKey), and
+attachablescript.Refresh() does nothing. A rewritten mod loads from bytes and has no Assembly.Location: its Location
+calls get the DLL it came from (mods find their assets next to it). The beta's item database has empty slots the public
 game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
 Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator and save records have no

@@ -183,6 +183,11 @@ public class savedatascript
 {
     public savedata data = new savedata();
 #if PUBLIC_GAME
+    public int GetNewKey() => 0;
+#else
+    public uint GetNewKey() => 5;
+#endif
+#if PUBLIC_GAME
     public System.Collections.Generic.Dictionary<int, tosaveitemscript> toSaveStuff;
 #else
     public System.Collections.Generic.Dictionary<uint, tosaveitemscript> items = new System.Collections.Generic.Dictionary<uint, tosaveitemscript>();

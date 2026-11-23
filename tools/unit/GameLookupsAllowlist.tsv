@@ -160,3 +160,4 @@ src/TLDRevamp/LoaderRetarget.cs	.GetField(a[3], BindingFlags.Public | BindingFla
 src/TLDRevamp/LoaderRetarget.cs	list.GetMethod("ToArray", Type.EmptyTypes)	System.Collections.Generic.List`1 of a game element type (the Lists table); not a game member.
 src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod(store ? "Keep" : "Kept", BindingFlags.Public | BindingFlags.Static)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
 src/TLDRevamp/LoaderRetarget.cs	GameLookups.RuntimeField(owner, old.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)	Member/type names come from external mod IL; core records game resolutions at runtime, no fixed source target.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("AssemblyLocation", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.

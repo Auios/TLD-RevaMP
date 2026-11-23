@@ -115,6 +115,17 @@ namespace TLDRevamp
             (owner == null ? _keptStatic : _kept.GetValue(owner, _ => new Dictionary<string, object>()))[field] = value;
         }
 
+        /// attachablescript.Refresh(): the public game refreshed the attach point's save data; the beta keeps none there.
+        public static void RefreshAttachable(attachablescript a) { Calls++; }
+
+        /// Assembly.Location: for a rewritten mod (loaded from bytes, no location) the DLL it came from.
+        public static string AssemblyLocation(System.Reflection.Assembly a)
+        {
+            if (a == null) return null;
+            lock (LoaderRetarget.Origins) if (LoaderRetarget.Origins.TryGetValue(a, out var p)) return p;
+            return a.Location;
+        }
+
         // ------------------------------------------------------------------ fuel caps
 
         /// tankcapscript.TCap/TOpen/TClosed and UpdCap(bool): the public game moved the cap between two transforms; the
