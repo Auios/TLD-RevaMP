@@ -119,6 +119,9 @@ public static class AliasMod
     /// Stronger Sandstorms: the forward key held.
     public static bool Forward(inputscript i) => i.forward;
 
+    /// SpawnerTLD: a spawn, plain and painted (the beta's return what they made).
+    public static void Spawns(mainscript m, UnityEngine.GameObject g) { m.Spawn(g, -1); m.Spawn(g, new UnityEngine.Color(), 0, -1); }
+
     /// RUNDEN's car battery into its slot.
     public static void Craft(partslotscript s, partscript p) => s.Craft(p, true);
 

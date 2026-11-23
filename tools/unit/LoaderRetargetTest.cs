@@ -254,8 +254,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all twelve fields, fifteen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu and a return sign are retargeted", changes.Count == 43);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 109);
+            Check("all twelve fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu and a return sign are retargeted", changes.Count == 45);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 111);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -308,6 +308,9 @@ static class LoaderRetargetTest
             var slot = new partslotscript(); var battery = new attachablescript();
             rewritten.GetMethod("Craft").Invoke(null, new object[] { slot, battery });
             Check("Craft(part, bool) crafts the part into the slot with the beta's one argument", slot.Crafted == battery);
+            var made = new UnityEngine.GameObject(); var spawner = new mainscript();
+            rewritten.GetMethod("Spawns").Invoke(null, new object[] { spawner, made });
+            Check("Spawn's returned object is dropped where the mod expects nothing; the painted one paints", spawner.Spawned == made && spawner.Painted);
             Check("the alias pass is idempotent", LoaderRetarget.Apply(mod, typeof(mainscript).Assembly).Count == 0);
             string logged = null;
             var loaded = LoaderRetarget.Load(dll, typeof(mainscript).Assembly, new[] { Path.GetDirectoryName(dll) }, line => logged = line);

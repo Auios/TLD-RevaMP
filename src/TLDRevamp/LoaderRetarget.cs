@@ -112,6 +112,10 @@ namespace TLDRevamp
             new[] { "pickupable", "Drop", "System.Boolean", "", "" },
             // the beta's Craft has no second argument (RUNDEN's car battery)
             new[] { "partslotscript", "Craft", "attachablescript,System.Boolean", "attachablescript", "1" },
+            // the beta's spawns return what they made (SpawnerTLD's calls expect nothing back: the adapter drops it); the
+            // painted one has a paint flag the public game's always did
+            new[] { "mainscript", "Spawn", "UnityEngine.GameObject,System.Int32", "UnityEngine.GameObject,System.Int32", "1,2" },
+            new[] { "mainscript", "Spawn", "UnityEngine.GameObject,UnityEngine.Color,System.Int32,System.Int32", "UnityEngine.GameObject,UnityEngine.Color,System.Int32,System.Int32,System.Boolean", "1,2,3,4,true" },
         };
 
         // The public game's save and attach members the beta changed or dropped, answered by a helper type the caller
@@ -686,8 +690,8 @@ namespace TLDRevamp
                 {
                     if (candidate.Name != a[1]) continue;
                     string args = string.Join(",", System.Linq.Enumerable.Select(candidate.GetParameters(), p => TypeName(p.ParameterType)));
-                    if (args == a[2]) return null;
-                    if (args == a[3] && candidate.ReturnType == typeof(void)) target = candidate;
+                    if (args == a[2] && candidate.ReturnType == typeof(void)) return null;
+                    if (args == a[3]) target = candidate;
                 }
                 if (target == null) return null;
                 var nextLight = owner.GetField("switchToState", PublicFields);
@@ -724,6 +728,7 @@ namespace TLDRevamp
                     }
                 }
                 il.Emit(OpCodes.Callvirt, mod.ImportReference(target));
+                if (target.ReturnType != typeof(void)) il.Emit(OpCodes.Pop);   // the mod expects nothing back
                 il.Emit(OpCodes.Ret);
                 description = a[0] + "." + a[1] + "(" + a[2] + ") -> " + a[0] + "." + a[1] + "(" + a[3] + ") [" + a[4] + "]";
                 return m;

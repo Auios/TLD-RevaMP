@@ -4,6 +4,7 @@ namespace UnityEngine
     public class Transform { }
     public class GameObject { public string Name; public static GameObject Find(string name) => null; }
     public struct Vector3 { public float x, y, z; }
+    public struct Color { public float r, g, b, a; }
 #if !PUBLIC_GAME
     public struct Vector3d { public double x, y, z; }
 #endif
@@ -84,7 +85,12 @@ public class mainscript   // test stub, not game code
     public void PissCh(float value) { }
     public void ShitCh(float value) { }
     public void PressedEscape() { }
+    public void Spawn(UnityEngine.GameObject g, int rtype) { }
+    public void Spawn(UnityEngine.GameObject g, UnityEngine.Color c, int s, int rtype) { }
 #else
+    public UnityEngine.GameObject Spawned; public bool Painted;
+    public UnityEngine.GameObject Spawn(UnityEngine.GameObject g, int rtype) { Spawned = g; return g; }
+    public UnityEngine.GameObject Spawn(UnityEngine.GameObject g, UnityEngine.Color c, int s, int rtype, bool paint) { Spawned = g; Painted = paint; return g; }
     public bool Screenshot, MainMenu;
     public void PressedEscape(bool screenshot, bool mainMenu) { Screenshot = screenshot; MainMenu = mainMenu; }
 #endif
