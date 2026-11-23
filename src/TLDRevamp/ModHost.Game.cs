@@ -60,7 +60,8 @@ namespace TLDRevamp
         /// A/B (bridge `set`): false = before 2026-11-11 (mainscript.M.seed/load/napszak exist but stay 0/false/null).
         public static bool GameAliasesOn = true;
         private static bool _fromSave, _loadPending, _aliasWasUp;
-        private static FieldInfo _fSeed, _fLoad, _fNapszak;
+        private static FieldInfo _fSeed, _fLoad, _fNapszak, _fLoaded, _fMulti, _fWorld;
+        private static UnityEngine.Transform _worldAnchor;
         private static bool _aliasLooked;
         private static bool _loadSignal;   // a save was chosen since the last look (the flag may be set and cleared between looks)
 
@@ -83,6 +84,7 @@ namespace TLDRevamp
                 _aliasLooked = true;
                 const BindingFlags f = BindingFlags.Public | BindingFlags.Instance;
                 _fSeed = GameLookups.ReflectionField(typeof(mainscript), "seed", f); _fLoad = GameLookups.ReflectionField(typeof(mainscript), "load", f); _fNapszak = GameLookups.ReflectionField(typeof(mainscript), "napszak", f);
+                _fLoaded = GameLookups.ReflectionField(typeof(mainscript), "loaded", f); _fMulti = GameLookups.ReflectionField(typeof(mainscript), "multi", f); _fWorld = GameLookups.ReflectionField(typeof(mainscript), "world", f);
             }
             var dm = DataFromMenuScript.s;
             bool signal = _loadSignal; _loadSignal = false;
@@ -95,8 +97,22 @@ namespace TLDRevamp
                 if (_fSeed != null && dm != null) _fSeed.SetValue(m, dm.seed);
                 if (_fLoad != null) _fLoad.SetValue(m, load);
                 if (_fNapszak != null && !ReferenceEquals(_fNapszak.GetValue(m), napszakvaltakozas.s)) _fNapszak.SetValue(m, napszakvaltakozas.s);
+                // before this frame's OnLoad: false through it and its frame's Update, true from the next frame
+                if (_fLoaded != null) _fLoaded.SetValue(m, worldUp && _gameLoadedCalled);
+                if (_fMulti != null) _fMulti.SetValue(m, Net.Entities.InSession);
+                if (_fWorld != null && worldUp)
+                {
+                    if (_worldAnchor == null)
+                    {
+                        _worldAnchor = new UnityEngine.GameObject("RevaMP mainscript.world (TLD Loader mods)").transform;
+                        _fWorld.SetValue(m, _worldAnchor);
+                    }
+                    else if (!ReferenceEquals(_fWorld.GetValue(m), _worldAnchor)) _fWorld.SetValue(m, _worldAnchor);
+                    var o = m.visszarakva;   // global = unity - offset: world.InverseTransformPoint(p) = p - offset
+                    _worldAnchor.position = new UnityEngine.Vector3((float)o.x, (float)o.y, (float)o.z);
+                }
             }
-            catch (Exception e) { GameAliasesOn = false; Plugin.Log.LogWarning("ModHost: mainscript.seed/load/napszak: " + e.Message); }
+            catch (Exception e) { GameAliasesOn = false; Plugin.Log.LogWarning("ModHost: mainscript.seed/load/napszak/loaded/multi/world: " + e.Message); }
         }
 
         public static string AliasStatus()
@@ -104,7 +120,8 @@ namespace TLDRevamp
             var aliases = new System.Collections.Generic.List<string>();
             foreach (var a in new[] { "mainscript.M -> mainscript.s (host mirror)", "itemdatabase.d -> itemdatabase.s (host mirror)",
                                      "savedatascript.d -> savedatascript.s (host mirror)", "mainscript.seed -> DataFromMenuScript.s.seed (host snapshot)",
-                                     "mainscript.load -> from-save latch (host snapshot)", "mainscript.napszak -> napszakvaltakozas.s (host mirror)" })
+                                     "mainscript.load -> from-save latch (host snapshot)", "mainscript.napszak -> napszakvaltakozas.s (host mirror)",
+                                     "mainscript.loaded -> world up and OnLoad done", "mainscript.multi -> RevaMP session", "mainscript.world -> a transform at the world offset" })
                 aliases.Add(Json.Str(a));
             foreach (var a in LoaderRetarget.AliasDescriptions()) aliases.Add(Json.Str(a));
             string list = "\"aliases\":[" + string.Join(",", aliases.ToArray()) + "],\"rewrites\":" + (Retarget ? "true" : "false") + ",";

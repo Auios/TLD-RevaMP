@@ -25,12 +25,17 @@ namespace TLDRevamp.Preloader
         /// TLDRevamp's ModHost sets them while a world is up: seed = DataFromMenuScript.s.seed (the world seed), load = the
         /// world came from a save (latched while it loads; the beta clears its own flag on the world's first frame, before
         /// the mods' OnLoad), napszak = napszakvaltakozas.s (the day/night cycle). 2026-11-11: seed is named by 65 workshop
-        /// DLLs, load by 58, napszak by 18.
+        /// DLLs, load by 58, napszak by 18. 2026-11-23: loaded = the world is up and the mods' OnLoad has run (false during
+        /// OnLoad and that frame's Update), multi = a RevaMP session, world = a transform at the beta's world offset
+        /// (world.InverseTransformPoint(p) is p's world position, as on the public game); named by 10, 3 and 3 DLLs.
         internal static readonly string[][] InstanceAliases =
         {
             new[] { "mainscript", "seed", "System.Int32" },
             new[] { "mainscript", "load", "System.Boolean" },
             new[] { "mainscript", "napszak", "napszakvaltakozas" },
+            new[] { "mainscript", "loaded", "System.Boolean" },
+            new[] { "mainscript", "multi", "System.Boolean" },
+            new[] { "mainscript", "world", "UnityEngine.Transform" },
         };
 
         public static void Patch(AssemblyDefinition assembly)
@@ -56,6 +61,7 @@ namespace TLDRevamp.Preloader
                 foreach (var p in type.Properties) if (p.Name == a[1]) taken = true;
                 if (taken) continue;
                 TypeReference ft = a[2] == "System.Int32" ? module.TypeSystem.Int32 : a[2] == "System.Boolean" ? module.TypeSystem.Boolean : module.GetType(a[2]);
+                if (ft == null) foreach (var r in module.GetTypeReferences()) if (r.FullName == a[2]) { ft = r; break; }   // Unity's (UnityEngine.Transform)
                 if (ft == null) { log.LogWarning(a[2] + " not found: no " + a[0] + "." + a[1]); continue; }
                 type.Fields.Add(new FieldDefinition(a[1], FieldAttributes.Public | FieldAttributes.NotSerialized, ft));
             }
