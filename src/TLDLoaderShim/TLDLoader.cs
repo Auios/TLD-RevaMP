@@ -11,8 +11,8 @@ using UnityEngine;
 // textures, OBJ meshes), and its helpers (LoaderSettings.cs: SettingAPI; LoaderLogging.cs: Logger; LoaderExtras.cs:
 // Keybind, Events, GameUtil, ComponentExtensions). TLDRevamp's ModHost finds the mods, creates them and calls their
 // lifecycle: Config once at load, UseHarmony patches, DbLoad/dbLoad once the item database exists (mods with LoadInDB),
-// OnMenuLoad in the menu, OnLoad once a game is loaded; Update, FixedUpdate and OnGUI in the world (Update and OnGUI in
-// the menu too with LoadInMenu).
+// OnMenuLoad once in the menu (before the first OnLoad if the menu was skipped), OnLoad once a game is loaded; Update,
+// FixedUpdate and OnGUI in the world (Update and OnGUI in the menu too with LoadInMenu).
 // The API is TLD Loader's, member for member as the workshop's mods call it (2026-11-11: every TLDLoader member the
 // 224 workshop DLLs reference, except item registration); the behaviour was checked against TLD Loader's, the code is
 // RevaMP's own.

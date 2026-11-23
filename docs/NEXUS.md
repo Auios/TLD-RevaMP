@@ -77,7 +77,7 @@ RevaMP also runs existing TLD Loader mods: put their DLLs in
 BepInEx\TLDLoaderMods (their asset files in BepInEx\TLDLoaderMods\Assets\<mod ID>,
 as in TLD Loader's Mods\Assets) and they load on the next start, with their logger,
 their config folder, LoadAssets (asset bundles, textures, .obj meshes) and their usual
-lifecycle calls (DbLoad when the item database is ready, OnMenuLoad in the menu,
+lifecycle calls (DbLoad when the item database is ready, OnMenuLoad once in the menu,
 OnLoad when the world is up, OnUnload when it goes away, Update, FixedUpdate and
 OnGUI in the world, Update and OnGUI in the menu too for LoadInMenu mods, as TLD Loader does). They can use the public game's names mainscript.M, itemdatabase.d and
 savedatascript.d, mainscript.M.seed, .load (the world came from a save) and .napszak

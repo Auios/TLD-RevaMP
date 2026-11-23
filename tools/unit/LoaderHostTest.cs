@@ -121,11 +121,28 @@ static class LoaderHostTest
         mainscript.s = null;                       // the world is gone: the player with it
         ModHost.Tick();
         Check("OnUnload is called when the world goes away", GetCalls().Contains("OnUnload"));
-        Check("OnMenuLoad is called again in the menu", GetCalls().Contains("OnMenuLoad"));
+        Check("OnMenuLoad is not called again in the menu (TLD Loader calls it once, when it makes the mod)", !GetCalls().Contains("OnMenuLoad"));
         Reset();
         ModHost.Tick();
         Check("OnUnload is not called again in the menu", !GetCalls().Contains("OnUnload"));
         Check("OnMenuLoad is not called again either", !GetCalls().Contains("OnMenuLoad"));
+
+        Section("straight into a world (auto continue): OnMenuLoad before OnLoad, as TLD Loader had called it");
+        var menuCalled = typeof(ModHost).GetField("_menuCalled", BindingFlags.NonPublic | BindingFlags.Static);
+        menuCalled.SetValue(null, false);   // a host that never saw the menu
+        UnityEngine.SceneManagement.SceneManager.ActiveSceneName = "game";
+        mainscript.s = new mainscript { player = new TLDRevamp.Fixtures.Player() };
+        Reset();
+        ModHost.Tick();
+        {
+            var c = GetCalls();
+            Check("OnMenuLoad, then OnLoad", c.Contains("OnMenuLoad") && c.IndexOf("OnMenuLoad") < c.IndexOf("OnLoad"));
+        }
+        UnityEngine.SceneManagement.SceneManager.ActiveSceneName = "menu";
+        mainscript.s = null;
+        Reset();
+        ModHost.Tick();
+        Check("back in the menu, it isn't called again", !GetCalls().Contains("OnMenuLoad") && GetCalls().Contains("OnUnload"));
 
         Section("Update, FixedUpdate, OnGUI and Config");
         Reset();

@@ -277,7 +277,7 @@ namespace TLDRevamp
             {
                 WorldsReplaced++;
                 _unloadCalled = true; foreach (var l in Mods) Call(l, l.OnUnload, "OnUnload");
-                _gameLoadedCalled = false; _menuCalled = false;
+                _gameLoadedCalled = false;
                 GameAliases(false);   // the old world ended (for mainscript.M.load)
             }
             if (worldUp != _worldUp)
@@ -286,20 +286,22 @@ namespace TLDRevamp
                 _worldUp = worldUp;
                 Scene(worldUp);   // ModLoader.isOnMainMenu / GetCurrentScene
                 _gameLoadedCalled = false;
-                _menuCalled = false;
                 // Leaving the world unloads the mod: TLDLoader calls OnUnload when the
                 // game it loaded into goes away, so the mod can undo what it did.
                 if (wasUp && !worldUp) { _unloadCalled = true; foreach (var l in Mods) Call(l, l.OnUnload, "OnUnload"); }
             }
             // The menu is the game's own main-menu scene; the world is up whenever the
             // player exists. In the menu the player does not exist, so a mod that asked
-            // for the menu gets its OnMenuLoad there.
+            // for the menu gets its OnMenuLoad there: once, as TLD Loader calls it when it makes the mod (in the menu,
+            // never again). Before 2026-11-23 each return to the menu called it again (a bundle it loads there twice).
             GameAliases(worldUp);   // ModHost.Game.cs: mainscript.M.seed/load/napszak, before the mods' OnLoad below
             bool inMenu = !worldUp && !_gameLoadedCalled && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != menuhandler.sceneName;
             if (inMenu && !_menuCalled) { _menuCalled = true; foreach (var l in Mods) Call(l, l.OnMenuLoad, "OnMenuLoad"); }
             // OnLoad once the world is actually up (the player exists), as TLDLoader calls it after the game loaded
             if (worldUp && !_gameLoadedCalled)
             {
+                // straight into a world, the menu never seen (the beta's auto continue): TLD Loader had called it already
+                if (!_menuCalled) { _menuCalled = true; foreach (var l in Mods) Call(l, l.OnMenuLoad, "OnMenuLoad"); }
                 _gameLoadedCalled = true;
                 _unloadCalled = false;
                 foreach (var l in Mods) Call(l, l.OnLoad, "OnLoad");
