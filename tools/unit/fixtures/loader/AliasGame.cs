@@ -120,7 +120,14 @@ public class mainmenuscript { public static mainmenuscript mainmenu; public Unit
 #if PUBLIC_GAME
 public class ObjClass { public UnityEngine.GameObject prefab; }
 public class ObjectGenerationScript { public ObjClass[] objTypes; }
-public class TerrainGenerationSettings { public ObjectGenerationScript objGeneration; }
+public class TerrainGenerationSettings
+{
+    public ObjectGenerationScript objGeneration;
+    public static TerrainGenerationSettings staticReference;
+    public roadBuildingScript roadBuildingGeneration;
+}
+// the generator of the buildings along the road; the beta places them as points of interest
+public class roadBuildingScript { public UnityEngine.Transform parent; public System.Collections.Generic.Dictionary<int, UnityEngine.GameObject> placedBuildings; }
 public class TerrainManager { public TerrainGenerationSettings settings; }
 public class TerrainGenerator { public static TerrainGenerator TG; public TerrainManager manager; }
 #else
@@ -187,10 +194,14 @@ public class visszarako { public UnityEngine.Vector3d coord; }
 // answers part().
 #if PUBLIC_GAME
 public class partscript { public tosaveitemscript tosaveitem; public partslotscript slot; }
-public class partslotscript { public partscript part; }
+public class partslotscript { public partscript part; public void Craft(partscript p, bool b) { } }
 #else
 public class attachablescript { public tosaveitemscript tosave; public partslotscript slot; }
-public class partslotscript { public attachablescript Part; public attachablescript part() => Part; }
+public class partslotscript
+{
+    public attachablescript Part; public attachablescript part() => Part;
+    public attachablescript Crafted; public void Craft(attachablescript p) { Crafted = p; }
+}
 #endif
 public class save_rendszam { public uint id; public string S; }
 #if PUBLIC_GAME
@@ -201,7 +212,17 @@ public class save_prefab
 }
 // the menu's switch for the world's spawners (More UFOs' sandstorm UFO keeps one); the beta has none
 public class temporaryTurnOffGeneration { }
+// a hole dug in the ground (KARL's wells look for them); the beta has none
+public class digholescript2 { public int depth; }
 #endif
+public class inputscript
+{
+#if PUBLIC_GAME
+    public bool forward;
+#else
+    public float forward;
+#endif
+}
 public class savedata
 {
 #if PUBLIC_GAME

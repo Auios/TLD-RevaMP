@@ -101,6 +101,31 @@ public static class AliasMod
     /// Achievements' menu button: shown unless the menu's settings or save screen is open.
     public static string MenuScreens() => mainmenuscript.mainmenu.SettingsScreenObj.Name + "," + mainmenuscript.mainmenu.SaveScreenObj.Name;
 
+    /// RUNDEN's AI traffic: is a collider's root the road buildings' parent; Stronger Sandstorms: the buildings placed.
+    public static string RoadBuildings(UnityEngine.Transform root)
+    {
+        var g = TerrainGenerationSettings.staticReference.roadBuildingGeneration;
+        return (root == g.parent) + "," + g.placedBuildings.Count;
+    }
+
+    /// KARL's wells: the dig holes among what was found (the beta has none), in a list of them. One more than that.
+    public static int Holes(object[] found)
+    {
+        var holes = new System.Collections.Generic.List<digholescript2>();
+        foreach (var o in found) if (o is digholescript2 h) holes.Add(h);
+        return holes.Count + 1;
+    }
+
+    /// Stronger Sandstorms: the forward key held.
+    public static bool Forward(inputscript i) => i.forward;
+
+    /// RUNDEN's car battery into its slot.
+    public static void Craft(partslotscript s, partscript p) => s.Craft(p, true);
+
+    /// RUNDEN's AI traffic names a text's SetText by name; the beta's text has more than one.
+    public class Texty { public void SetText(System.Text.StringBuilder b) { } public void SetText(string s) { } public void SetText(string s, bool b) { } }
+    public static string Ambiguous() => string.Join(",", System.Linq.Enumerable.Select(typeof(Texty).GetMethod("SetText").GetParameters(), p => p.ParameterType.Name));
+
     public static void Calls(fpscontroller p, radioscript r, mainscript m, headlightscript h, survivalscript s)
     {
         p.RightHandRelease(); r.UpdValues(true); m.PressedEscape();

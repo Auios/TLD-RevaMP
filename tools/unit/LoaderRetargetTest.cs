@@ -125,6 +125,14 @@ static class LoaderRetargetTest
             try { LoadBytes(mod).GetType("AliasMod").GetMethod("Spawn").Invoke(null, new object[] { s, t }); }
             catch (TargetInvocationException e) { threw = e.InnerException is MissingFieldException || e.InnerException is TypeLoadException; }
             Check("compat: without the helpers the spawner stops (before)", threw);
+            threw = false;
+            try { LoadBytes(mod).GetType("AliasMod").GetMethod("Holes").Invoke(null, new object[] { new object[0] }); }
+            catch (TargetInvocationException e) { threw = e.InnerException is TypeLoadException; }
+            Check("compat: without the helpers a method naming a dropped type stops (before: KARL's dbLoad)", threw);
+            threw = false;
+            try { LoadBytes(mod).GetType("AliasMod").GetMethod("Ambiguous").Invoke(null, null); }
+            catch (TargetInvocationException e) { threw = e.InnerException is AmbiguousMatchException; }
+            Check("compat: without the helpers an ambiguous GetMethod throws (before)", threw);
         }
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
@@ -169,6 +177,20 @@ static class LoaderRetargetTest
                   changes.Contains("UfoMod/Sandstorms.Temp temporaryTurnOffGeneration -> Object (the beta has no temporaryTurnOffGeneration)") &&
                   ufo.GetField("Temp").FieldType == typeof(object) && ((System.Type[])LoadBytes(mod).GetType("UfoMod").GetField("Types").GetValue(null)).Length == 1 &&
                   (int)ufo.GetField("Speed").GetValue(System.Activator.CreateInstance(ufo)) == 3);
+            menuhandler.s.currentMainMap = new mapSettingScript();
+            Check("compat: the road buildings are the helper's stand-in: no parent, the placed buildings (RUNDEN's AI, Stronger Sandstorms)",
+                  changes.Contains("type roadBuildingScript -> TestCompat.RoadBuildings") &&
+                  changes.Contains("mapSettingScript.roadBuildingGeneration read -> TestCompat.RoadBuildingGeneration") &&
+                  (string)asm.GetMethod("RoadBuildings").Invoke(null, new object[] { new UnityEngine.Transform() }) == "False,2" && TestCompat.RoadBuildingsMap == menuhandler.s.currentMainMap);
+            Check("compat: another dropped game type is the helper's Gone, and a method naming it runs (KARL's wells: none found)",
+                  changes.Contains("type digholescript2 -> TestCompat.Gone (the beta has none)") &&
+                  (int)asm.GetMethod("Holes").Invoke(null, new object[] { new object[] { new object(), "x" } }) == 1);
+            Check("compat: inputscript.forward as a bool asks the helper (the beta's is a float)",
+                  changes.Contains("inputscript.forward read -> TestCompat.InputForward") &&
+                  (bool)asm.GetMethod("Forward").Invoke(null, new object[] { new inputscript { forward = 0.5f } }) &&
+                  !(bool)asm.GetMethod("Forward").Invoke(null, new object[] { new inputscript() }));
+            Check("compat: an ambiguous GetMethod gets the fewest parameters, a string first (the real LooseMethod)",
+                  changes.Contains("Type.GetMethod -> TestCompat.GetMethod") && (string)asm.GetMethod("Ambiguous").Invoke(null, null) == "String");
         }
     }
 
@@ -232,8 +254,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all twelve fields, fourteen method shapes, the five part redirects, the coordinate type, the generator chain, the main menu and a return sign are retargeted", changes.Count == 41);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 102);
+            Check("all twelve fields, fifteen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu and a return sign are retargeted", changes.Count == 43);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 109);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -283,6 +305,9 @@ static class LoaderRetargetTest
             Check("HpCh calls the moved callback with its argument", kaposztaleves.s.Hp == 3);
             Check("PissCh calls the moved callback with its argument", kaposztaleves.s.Piss == 4);
             Check("ShitCh calls the moved callback with its argument", kaposztaleves.s.Shit == 5);
+            var slot = new partslotscript(); var battery = new attachablescript();
+            rewritten.GetMethod("Craft").Invoke(null, new object[] { slot, battery });
+            Check("Craft(part, bool) crafts the part into the slot with the beta's one argument", slot.Crafted == battery);
             Check("the alias pass is idempotent", LoaderRetarget.Apply(mod, typeof(mainscript).Assembly).Count == 0);
             string logged = null;
             var loaded = LoaderRetarget.Load(dll, typeof(mainscript).Assembly, new[] { Path.GetDirectoryName(dll) }, line => logged = line);
@@ -318,6 +343,18 @@ public static class TestCompat
     public static bool GetRemoveFromMemory(tosaveitemscript t) => Removed;
     public static void SetRemoveFromMemory(tosaveitemscript t, bool value) { Removed = value; }
     public static mapSettingScript Map(mapSettingScript m) => m;
+    public class RoadBuildings { public UnityEngine.Transform parent; public System.Collections.Generic.Dictionary<int, UnityEngine.GameObject> placedBuildings; }
+    public static mapSettingScript RoadBuildingsMap;
+    public static RoadBuildings RoadBuildingGeneration(mapSettingScript m)
+    {
+        RoadBuildingsMap = m;
+        return new RoadBuildings { placedBuildings = new System.Collections.Generic.Dictionary<int, UnityEngine.GameObject> { { 0, new UnityEngine.GameObject() }, { 1, new UnityEngine.GameObject() } } };
+    }
+    public class Gone { }
+    public static bool InputForward(inputscript i) => i.forward > 0f;
+    public static System.Reflection.MethodInfo GetMethod(System.Type t, string name) =>
+        LoaderRetarget.LooseMethod(t, name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+    public static System.Reflection.MethodInfo GetMethodFlags(System.Type t, string name, System.Reflection.BindingFlags flags) => LoaderRetarget.LooseMethod(t, name, flags);
     public static string AssemblyLocation(System.Reflection.Assembly a) => "the mod's own DLL";
     public static UnityEngine.GameObject FindMain(string name) => new UnityEngine.GameObject { Name = "the main object" };
     public static void RefreshUsable(usablescript u, float slide, float x, float y) => u.Refresh(slide, x, y, u.currentTurnState);

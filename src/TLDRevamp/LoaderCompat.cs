@@ -285,6 +285,75 @@ namespace TLDRevamp
             return all.ToArray();
         }
 
+        // ------------------------------------------------------------------ the buildings along the road
+
+        /// roadBuildingScript, the public game's generator of the buildings along the road
+        /// (TerrainGenerationSettings.roadBuildingGeneration): the beta places them as points of interest, each a root of its
+        /// own. Made without its native half, it equals null in Unity's sense, so mods that test it first skip it (Killenger's
+        /// Autopilot and Road Rage); parent is null (M-ultiTool places a building at the root, as the beta does, and RUNDEN's AI
+        /// traffic finds no building under it); placedBuildings is the current map's placed points of interest (Stronger
+        /// Sandstorms starts its storms at one).
+        public class RoadBuildings : MonoBehaviour
+        {
+            public Transform parent;
+            public Dictionary<int, GameObject> placedBuildings;
+        }
+
+        private static RoadBuildings _roadBuildings;
+        private static float _roadBuildingsAt = float.MinValue;
+        public static RoadBuildings RoadBuildingGeneration(mapSettingScript m)
+        {
+            Calls++;
+            if ((object)_roadBuildings == null)
+            {
+                _roadBuildings = (RoadBuildings)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(RoadBuildings));
+                _roadBuildings.placedBuildings = new Dictionary<int, GameObject>();
+            }
+            // RUNDEN's AI asks per car while it drives: the list is made again at most once a second
+            if (Time.unscaledTime - _roadBuildingsAt < 1f) return _roadBuildings;
+            _roadBuildingsAt = Time.unscaledTime;
+            var placed = _roadBuildings.placedBuildings;
+            placed.Clear();
+            if (m != null && m.poiGens != null)
+                foreach (var g in m.poiGens)
+                    if (g != null && g.chunks != null)
+                        foreach (var c in g.chunks.Values)
+                            if (c != null && c.pois != null)
+                                foreach (var poi in c.pois.Values)
+                                    if (poi != null && poi.pobj != null && poi.pobj.gameObject.activeInHierarchy) placed[placed.Count] = poi.pobj.gameObject;
+            return _roadBuildings;
+        }
+
+        // ------------------------------------------------------------------ what the beta dropped
+
+        /// A game type the beta has no counterpart for (KARL's digholescript2, flashlightscript): nothing in the world has
+        /// one, so finding one finds none.
+        public class Gone : MonoBehaviour { }
+
+        /// inputscript.forward: a float on the beta, a bool on the public game.
+        public static bool InputForward(inputscript i) => i != null && i.forward > 0f;
+
+        /// Type.GetMethod(name) and (name, flags) where the beta's overloads make the name ambiguous (LoaderRetarget.LooseMethod).
+        public static System.Reflection.MethodInfo GetMethod(System.Type t, string name) =>
+            LoaderRetarget.LooseMethod(t, name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+        public static System.Reflection.MethodInfo GetMethodFlags(System.Type t, string name, System.Reflection.BindingFlags flags) =>
+            LoaderRetarget.LooseMethod(t, name, flags);
+
+        /// No_TumbleWeeds destroys the tumbleweed spawners (thumbleweedMain) it finds, as on the public game, where nothing
+        /// else held them. The beta's map keeps them in a list and updates each every frame: the destroyed one threw there,
+        /// the rest of the map's Update never ran and the world never finished loading. Destroyed ones leave the list.
+        [HarmonyLib.HarmonyPatch(typeof(mapSettingScript), "Update")]
+        private static class DropDestroyedTumbleweeds
+        {
+            [HarmonyLib.HarmonyPrefix]
+            private static void Prefix(mapSettingScript __instance)
+            {
+                var list = __instance.thumbleweeds;
+                if (list == null) return;
+                for (int i = list.Count - 1; i >= 0; i--) if (list[i] == null) list.RemoveAt(i);
+            }
+        }
+
         // ------------------------------------------------------------------ buildings
 
         /// buildingscript.itemsSpawned (buildingscript is the beta's poiScript): the place has started, which is when the

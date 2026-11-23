@@ -110,6 +110,8 @@ namespace TLDRevamp
             new[] { "survivalscript", "Damage", "System.Single,System.Boolean", "System.Single,UnityEngine.Vector3,System.Boolean", "1,zero,2" },
             new[] { "survivalscript", "DamageInstant", "System.Single,System.Boolean", "System.Single,UnityEngine.Vector3,System.Boolean", "1,zero,2" },
             new[] { "pickupable", "Drop", "System.Boolean", "", "" },
+            // the beta's Craft has no second argument (RUNDEN's car battery)
+            new[] { "partslotscript", "Craft", "attachablescript,System.Boolean", "attachablescript", "1" },
         };
 
         // The public game's save and attach members the beta changed or dropped, answered by a helper type the caller
@@ -143,6 +145,18 @@ namespace TLDRevamp
             new[] { "mapSettingScript", "generator", "mapSettingScript", "Map", "" },
             new[] { "mapSettingScript", "objGeneration", "mapSettingScript", "Map", "" },
             new[] { "mapSettingScript", "objTypes", "objGenScript/prefabClass[]", "ObjTypes", "" },
+            // the generator of the buildings along the road: the helper's stand-in, RoadBuildings (StandIns)
+            new[] { "mapSettingScript", "roadBuildingGeneration", "roadBuildingScript", "RoadBuildingGeneration", "" },
+            new[] { "mapSettingScript", "RoadBuildingScript", "roadBuildingScript", "RoadBuildingGeneration", "" },
+            // the forward key held: a float on the beta (Stronger Sandstorms read a bool)
+            new[] { "inputscript", "forward", "System.Boolean", "InputForward", "" },
+        };
+        // Game types the beta dropped that a helper type stands in for (a nested type of the helper of that name). Every
+        // other dropped one becomes the helper's Gone.
+        private static readonly string[][] StandIns =
+        {
+            new[] { "save_prefab", "SaveRecord" },
+            new[] { "roadBuildingScript", "RoadBuildings" },
         };
         // old owner, method, old parameter list, helper (the instance first, then the arguments)
         private static readonly string[][] CompatMethods =
@@ -175,7 +189,10 @@ namespace TLDRevamp
             yield return "Harmony.PatchAll() -> LoaderCompat.PatchAll (all of them or none)";
             yield return "Dictionary<Int32,save_prefab>.ContainsKey -> LoaderCompat.RecordIdUsed; GetComponent<a type the beta lacks>() -> LoaderCompat.NoComponent";
             yield return "type save_prefab -> LoaderCompat.SaveRecord (a mod's own records, kept in the save as plate strings)";
+            yield return "type roadBuildingScript -> LoaderCompat.RoadBuildings (no common parent; the placed points of interest)";
             yield return "a mod's own field of another game type the beta dropped -> Object (its class loads)";
+            yield return "any other game type the beta dropped -> LoaderCompat.Gone (a component nothing has)";
+            yield return "Type.GetMethod(name) that the beta's overloads make ambiguous -> LoaderCompat.GetMethod (fewest parameters)";
             yield return "any other field the beta dropped (of a type it has) -> kept per object for the mod: LoaderCompat.Kept/Keep";
         }
 
@@ -283,18 +300,17 @@ namespace TLDRevamp
             // save_prefab, the public game's record of a far item: the beta has none. The M_ mods and RUNDEN's keep their own
             // data in one (a string in a fake plate record, rendszam.S, under farStuff[hash of the mod's ID]); they get the
             // helper's stand-in, SaveRecord, and farStuff/nearStuff answer a dictionary of those that LoaderCompat keeps in
-            // the save. Last: the instructions above still saw the dropped type (its ContainsKey -> RecordIdUsed).
-            var record = compat?.GetNestedType("SaveRecord");
-            if (record != null)
-            {
-                var to = mod.ImportReference(record);
+            // the save. roadBuildingScript likewise (StandIns). Last: the instructions above still saw the dropped types
+            // (save_prefab's ContainsKey -> RecordIdUsed, roadBuildingGeneration -> RoadBuildingGeneration).
+            if (compat != null)
                 foreach (var tr in new List<TypeReference>(mod.GetTypeReferences()))
-                {
-                    if (tr.DeclaringType != null || tr.Namespace != "" || tr.Name != "save_prefab" || !Missing(game, gameName, tr)) continue;
-                    tr.DeclaringType = to.DeclaringType; tr.Name = to.Name;
-                    changes.Add("type save_prefab -> " + compat.Name + "." + record.Name);
-                }
-            }
+                    foreach (var a in StandIns)
+                    {
+                        var to = tr.Name == a[0] ? compat.GetNestedType(a[1]) : null;
+                        if (to == null || tr.DeclaringType != null || tr.Namespace != "" || !Missing(game, gameName, tr)) continue;
+                        Rename(mod, tr, to);
+                        changes.Add("type " + a[0] + " -> " + compat.Name + "." + to.Name);
+                    }
             // A mod's own field of another game type the beta dropped (More UFOs' sandstorm UFO keeps the menu's
             // temporaryTurnOffGeneration): its class couldn't load, nor any type naming it, and More UFOs' list of its UFO
             // types took the whole mod down. As an object the field holds what it held; code using it stops when it runs.
@@ -311,6 +327,18 @@ namespace TLDRevamp
                         changes.Add(t.FullName + "." + f.Name + " " + was + " -> Object (the beta has no " + was + ")");
                     }
             }
+            // Every other game type the beta dropped (KARL's digholescript2, flashlightscript): the helper's Gone, a component
+            // nothing in the world has. A method naming the type stopped at its first call, KARL's whole dbLoad with its car;
+            // now only code using the type's own members stops, and finding one finds none. Structs stay as they were.
+            var gone = compat?.GetNestedType("Gone");
+            if (gone != null)
+                foreach (var tr in new List<TypeReference>(mod.GetTypeReferences()))
+                {
+                    if (tr.DeclaringType != null || tr.Namespace != "" || tr.IsValueType || !Missing(game, gameName, tr)) continue;
+                    string was = tr.Name;
+                    Rename(mod, tr, gone);
+                    changes.Add("type " + was + " -> " + compat.Name + "." + gone.Name + " (the beta has none)");
+                }
             return changes;
         }
 
@@ -345,6 +373,16 @@ namespace TLDRevamp
                 var m = compat.GetMethod("AssemblyLocation", Statics);
                 if (m == null) return null;
                 what = LocationChange;
+                return m;
+            }
+            // Type.GetMethod(string) and (string, BindingFlags): ambiguous on the beta where the public game had one
+            if (mr.Name == "GetMethod" && mr.DeclaringType.FullName == "System.Type" && mr.HasThis && mr.Parameters.Count >= 1 && mr.Parameters.Count <= 2 &&
+                mr.Parameters[0].ParameterType.MetadataType == MetadataType.String &&
+                (mr.Parameters.Count == 1 || mr.Parameters[1].ParameterType.FullName == "System.Reflection.BindingFlags"))
+            {
+                var m = compat.GetMethod(mr.Parameters.Count == 1 ? "GetMethod" : "GetMethodFlags", Statics);
+                if (m == null) return null;
+                what = "Type.GetMethod -> " + compat.Name + "." + m.Name;
                 return m;
             }
             // the mod's own Harmony.PatchAll(): on the beta it can stop at a patch naming a type the beta dropped, with the
@@ -405,6 +443,30 @@ namespace TLDRevamp
             if (t.IsGenericType && !t.IsGenericTypeDefinition)
                 return TypeName(t.GetGenericTypeDefinition()) + "<" + string.Join(",", System.Linq.Enumerable.Select(t.GetGenericArguments(), CecilName)) + ">";
             return TypeName(t);
+        }
+
+        /// Points a mod's reference to a dropped game type at a nested type of the helper.
+        private static void Rename(ModuleDefinition mod, TypeReference tr, Type to)
+        {
+            var into = mod.ImportReference(to);
+            tr.Scope = into.Scope; tr.DeclaringType = into.DeclaringType; tr.Namespace = into.Namespace; tr.Name = into.Name;
+        }
+
+        /// Type.GetMethod(name) where the beta's types have overloads the public game's didn't (TextMeshPro's SetText, which
+        /// RUNDEN's AI traffic looks up on the settings menu's sliders): the one with the fewest parameters, string ones first.
+        public static MethodInfo LooseMethod(Type type, string name, BindingFlags flags)
+        {
+            try { return type.GetMethod(name, flags); }
+            catch (AmbiguousMatchException) { }
+            MethodInfo best = null; int bestScore = int.MaxValue;
+            foreach (var m in type.GetMethods(flags))
+            {
+                if (m.Name != name) continue;
+                int score = 0;
+                foreach (var p in m.GetParameters()) score += p.ParameterType == typeof(string) ? 100 : 101;
+                if (score < bestScore) { best = m; bestScore = score; }
+            }
+            return best;
         }
 
         /// A type of the game's the beta doesn't have (save_prefab, partscript).

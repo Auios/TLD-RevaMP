@@ -291,7 +291,15 @@ item record, is LoaderCompat.SaveRecord: the records a mod keeps of its own in s
 RUNDEN's settings and progress, a string in rendszam.S under the hash of the mod's ID) are saved with the game as plate
 strings (itemData.rendszam) under ids from 2^31 up; the game's own far items aren't records on the beta. A mod's own
 field of another game type the beta dropped is an object, so its class loads (More UFOs' sandstorm UFO kept the menu's
-temporaryTurnOffGeneration, and More UFOs' list of its UFO types took the whole mod down). The main menu
+temporaryTurnOffGeneration, and More UFOs' list of its UFO types took the whole mod down). Every other dropped game
+type is LoaderCompat.Gone, a component nothing in the world has: only code using its own members stops (KARL's dbLoad
+stopped at a search for the public game's dig holes, its car with it). The road buildings' generator
+(roadBuildingGeneration) is LoaderCompat.RoadBuildings: equal to null in Unity's sense, with no parent (the beta's
+points of interest are roots of their own) and the current map's placed points of interest as placedBuildings.
+inputscript.forward read as a bool is the beta's float above zero, partslotscript.Craft(part, bool) the beta's
+Craft(part), and Type.GetMethod(name) that the beta's overloads make ambiguous (TextMeshPro's SetText) gets the one
+with the fewest parameters, a string first. A destroyed tumbleweed spawner leaves the map's list (No_TumbleWeeds
+destroys them; the beta's map updated the destroyed one every frame and the world never loaded). The main menu
 (mainmenuscript.mainmenu) is menuhandler.s, its SettingsScreenObj/SaveScreenObj the beta's settings and save screens
 (active while open) and its Canvas the menu's. A DLL's module initializer runs before its types are checked, as it would
 before the mod's first code: Costura-built mods (Achievements, Better Radio, The Long Who, World Tweaker, M-ultiTool)
