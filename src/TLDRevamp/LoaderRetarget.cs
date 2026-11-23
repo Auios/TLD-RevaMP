@@ -27,6 +27,38 @@ namespace TLDRevamp
             new[] { "mainscript", "GSettings", "gamemodesettingsscript/gamemodesettings", "gamemodesettingsscript", "s.S" },
             new[] { "mainscript", "godmode", "System.Boolean", "kaposztaleves", "s.settings.god" },
             new[] { "mainscript", "Showkmh", "System.Boolean", "kaposztaleves", "s.settings.kmh" },
+            // partscript (now attachablescript, Types above)
+            new[] { "attachablescript", "tosaveitem", "tosaveitemscript", "attachablescript", "tosave" },
+            new[] { "attachablescript", "p", "pickupable", "attachablescript", "tosave.P" },
+            new[] { "tosaveitemscript", "part", "attachablescript", "tosaveitemscript", "attachable" },
+            new[] { "pickupable", "part", "attachablescript", "pickupable", "tosave.attachable" },
+        };
+
+        // The public game's parts: the beta folded partscript into attachablescript (the same slot, condition, tipus and
+        // FallOFf). A type the beta lacks, renamed in the mod to the beta's (every use: fields, locals, GetComponent<T>).
+        private static readonly string[][] Types =
+        {
+            new[] { "partscript", "attachablescript" },
+        };
+
+        // Fields that became methods: old owner, old field, field type, beta method (no parameters, returns the field type)
+        private static readonly string[][] Getters =
+        {
+            new[] { "partslotscript", "part", "attachablescript", "part" },
+        };
+
+        // Arrays the beta keeps as lists: old owner, old field, element type, beta field (a List`1 of it). Reads get a copy
+        // (writes into the copy's elements don't reach the game), stores replace the list.
+        private static readonly string[][] Lists =
+        {
+            new[] { "tosaveitemscript", "partslotscripts", "partslotscript", "partslotscripts" },
+            new[] { "tosaveitemscript", "partconditions", "partconditionscript", "partconditions" },
+            new[] { "tosaveitemscript", "tanks", "tankscript", "tanks" },
+            new[] { "tosaveitemscript", "usables", "usablescript", "usables" },
+            new[] { "tosaveitemscript", "tankcapscripts", "tankcapscript", "tankcapscripts" },
+            new[] { "tosaveitemscript", "physlocks", "mountStuff", "physLocks" },
+            new[] { "tosaveitemscript", "colors", "colorscript", "colors" },
+            new[] { "tosaveitemscript", "door_rots", "door_rot", "door_rots" },
         };
 
         private static readonly string[][] Setters =
@@ -78,6 +110,9 @@ namespace TLDRevamp
         {
             foreach (var a in Fields) yield return a[0] + "." + a[1] + " -> " + a[3] + "." + a[4] + " (read/write/address)";
             foreach (var a in Methods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> " + a[0] + "." + a[1] + "(" + a[3] + ") [" + a[4] + "]";
+            foreach (var a in Types) yield return "type " + a[0] + " -> " + a[1];
+            foreach (var a in Getters) yield return a[0] + "." + a[1] + " -> " + a[0] + "." + a[3] + "()";
+            foreach (var a in Lists) yield return a[0] + "." + a[1] + " " + a[2] + "[] -> " + a[0] + "." + a[3] + " List<" + a[2] + ">";
             foreach (var a in Setters)
                 foreach (var f in Fields)
                     if (f[0] == "mainscript" && f[1] == a[1]) yield return "mainscript." + a[0] + "(System.Boolean) -> store " + f[3] + "." + f[4];
@@ -94,6 +129,14 @@ namespace TLDRevamp
         {
             var changes = new List<string>();
             string gameName = game.GetName().Name;
+            foreach (var tr in mod.GetTypeReferences())
+                foreach (var a in Types)
+                {
+                    if (tr.DeclaringType != null || tr.Namespace != "" || tr.Name != a[0] || !(tr.Scope is AssemblyNameReference scope) || scope.Name != gameName) continue;
+                    if (GameLookups.RuntimeType(game, a[0], false) != null || GameLookups.RuntimeType(game, a[1], false) == null) continue;   // the game has the old one, or not the new
+                    tr.Name = a[1];
+                    changes.Add("type " + a[0] + " -> " + a[1]);
+                }
             foreach (var mr in mod.GetMemberReferences())
             {
                 if (!(mr is FieldReference fr)) continue;
@@ -136,7 +179,8 @@ namespace TLDRevamp
                 if (!adapters.TryGetValue(key, out adapter))
                 {
                     string description;
-                    adapter = FieldAdapter(mod, game, ins, out description) ?? MethodAdapter(mod, game, ins, out description);
+                    adapter = FieldAdapter(mod, game, ins, out description) ?? GetterAdapter(mod, game, ins, out description) ??
+                              ListAdapter(mod, game, ins, out description) ?? MethodAdapter(mod, game, ins, out description);
                     if (adapter == null) continue;
                     if (helpers == null)
                     {
@@ -284,6 +328,73 @@ namespace TLDRevamp
                 }
                 il.Emit(OpCodes.Ret);
                 description = a[0] + "." + a[1] + " -> " + a[3] + "." + a[4];
+                return m;
+            }
+            return null;
+        }
+
+        /// A read of a field the beta replaced with a method of the same meaning (partslotscript.part -> part()).
+        private static MethodDefinition GetterAdapter(ModuleDefinition mod, Assembly game, Instruction ins, out string description)
+        {
+            description = null;
+            var old = ins.Operand as FieldReference;
+            if (old == null || ins.OpCode != OpCodes.Ldfld) return null;
+            foreach (var a in Getters)
+            {
+                if (old.DeclaringType.FullName != a[0] || old.Name != a[1] || old.FieldType.FullName != a[2]) continue;
+                var owner = game.GetType(a[0]);
+                if (owner == null || owner.GetField(a[1], PublicFields) != null) return null;
+                var target = owner.GetMethod(a[3], BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
+                if (target == null || TypeName(target.ReturnType) != a[2]) return null;
+                var m = NewAdapter(mod, old.DeclaringType, mod.ImportReference(target.ReturnType));
+                var il = m.Body.GetILProcessor();
+                il.Emit(OpCodes.Ldarg_0); il.Emit(OpCodes.Callvirt, mod.ImportReference(target)); il.Emit(OpCodes.Ret);
+                description = a[0] + "." + a[1] + " -> " + a[0] + "." + a[3] + "()";
+                return m;
+            }
+            return null;
+        }
+
+        /// An array field the beta keeps as a List of the same elements (Lists): a read gets the list's copy as an array
+        /// (null for none), a store a new list of the array's elements.
+        private static MethodDefinition ListAdapter(ModuleDefinition mod, Assembly game, Instruction ins, out string description)
+        {
+            description = null;
+            var old = ins.Operand as FieldReference;
+            bool store = ins.OpCode == OpCodes.Stfld;
+            if (old == null || (!store && ins.OpCode != OpCodes.Ldfld) || !(old.FieldType is ArrayType at)) return null;
+            foreach (var a in Lists)
+            {
+                if (old.DeclaringType.FullName != a[0] || old.Name != a[1] || at.ElementType.FullName != a[2]) continue;
+                var owner = game.GetType(a[0]);
+                var f = owner?.GetField(a[3], BindingFlags.Public | BindingFlags.Instance);
+                if (f == null || !f.FieldType.IsGenericType || f.FieldType.GetGenericTypeDefinition() != typeof(List<>) || TypeName(f.FieldType.GetGenericArguments()[0]) != a[2]) return null;
+                if (a[1] == a[3] && f.FieldType.IsArray) return null;
+                var list = f.FieldType;
+                var m = NewAdapter(mod, old.DeclaringType, store ? mod.TypeSystem.Void : mod.ImportReference(list.GetGenericArguments()[0].MakeArrayType()));
+                var il = m.Body.GetILProcessor();
+                var none = Instruction.Create(OpCodes.Ldnull);
+                if (store)
+                {
+                    m.Parameters.Add(new ParameterDefinition(mod.ImportReference(list.GetGenericArguments()[0].MakeArrayType())));
+                    var set = Instruction.Create(OpCodes.Stfld, mod.ImportReference(f));
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldarg_1); il.Emit(OpCodes.Brfalse, none);
+                    il.Emit(OpCodes.Ldarg_1);
+                    il.Emit(OpCodes.Newobj, mod.ImportReference(list.GetConstructor(new[] { typeof(IEnumerable<>).MakeGenericType(list.GetGenericArguments()[0]) })));
+                    il.Emit(OpCodes.Br, set);
+                    il.Append(none); il.Append(set); il.Emit(OpCodes.Ret);
+                }
+                else
+                {
+                    var done = Instruction.Create(OpCodes.Ret);
+                    il.Emit(OpCodes.Ldarg_0); il.Emit(OpCodes.Ldfld, mod.ImportReference(f)); il.Emit(OpCodes.Dup);
+                    var copy = Instruction.Create(OpCodes.Callvirt, mod.ImportReference(list.GetMethod("ToArray", Type.EmptyTypes)));
+                    il.Emit(OpCodes.Brtrue, copy);
+                    il.Emit(OpCodes.Pop); il.Append(none); il.Emit(OpCodes.Br, done);
+                    il.Append(copy); il.Append(done);
+                }
+                description = a[0] + "." + a[1] + (store ? " write" : " read") + " -> " + a[0] + "." + a[3] + " (List<" + a[2] + ">)";
                 return m;
             }
             return null;

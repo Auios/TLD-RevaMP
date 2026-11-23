@@ -33,6 +33,17 @@ public static class AliasMod
     }
 
     /// The spawner RUNDEN's and M_'s workshop mods share: the first id no item and no record has, then FStart(int).
+    /// The workshop's part walk (M_VehicleDeterioration, SpeedOrBoom): every slot's part that knows its car and slot,
+    /// then the slots replaced by the first one. Tens: the parts found, ones: the slots left.
+    public static int Parts(tosaveitemscript car)
+    {
+        int n = 0;
+        foreach (var slot in car.partslotscripts)
+            if (slot.part != null && slot.part.tosaveitem == car && slot.part.slot == slot) n++;
+        car.partslotscripts = new[] { car.partslotscripts[0] };
+        return n * 10 + car.partslotscripts.Length;
+    }
+
     public static int Spawn(savedatascript s, tosaveitemscript t)
     {
         int i;

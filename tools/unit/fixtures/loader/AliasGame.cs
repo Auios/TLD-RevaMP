@@ -120,11 +120,24 @@ public class tosaveitemscript   // test stub, not game code
 #if PUBLIC_GAME
     public bool removeFromMemory;
     public void FStart(int key) { }
+    public partslotscript[] partslotscripts;
 #else
     public uint Started; public bool dontUnparent;
     public void FStart(uint key) { Started = key; }
+    public System.Collections.Generic.List<partslotscript> partslotscripts = new System.Collections.Generic.List<partslotscript>();
+    public attachablescript attachable;
 #endif
 }
+
+// The public game's parts (partscript, its slot's part field) and the beta's: parts are attachablescripts, the slot
+// answers part().
+#if PUBLIC_GAME
+public class partscript { public tosaveitemscript tosaveitem; public partslotscript slot; }
+public class partslotscript { public partscript part; }
+#else
+public class attachablescript { public tosaveitemscript tosave; public partslotscript slot; }
+public class partslotscript { public attachablescript Part; public attachablescript part() => Part; }
+#endif
 #if PUBLIC_GAME
 public class save_prefab { }
 #endif

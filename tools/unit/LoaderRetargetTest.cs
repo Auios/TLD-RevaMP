@@ -61,6 +61,7 @@ static class LoaderRetargetTest
     {
         Aliases();
         Compat();
+        Parts();
         var gameAsm = typeof(Saved).Assembly;
         var sample = new Saved { key = 7, size = 1.5f };
 
@@ -138,6 +139,33 @@ static class LoaderRetargetTest
         }
     }
 
+    /// partscript is the beta's attachablescript; the slot's part field its part() method; the car's slot array a list.
+    static void Parts()
+    {
+        string dll = Path.Combine(Path.GetDirectoryName(typeof(LoaderRetargetTest).Assembly.Location), "AliasMod.dll");
+        var car = new tosaveitemscript();
+        for (int i = 0; i < 3; i++)
+        {
+            var slot = new partslotscript(); car.partslotscripts.Add(slot);
+            if (i < 2) slot.Part = new attachablescript { tosave = car, slot = slot };
+        }
+        bool threw = false;
+        try { System.Reflection.Assembly.Load(File.ReadAllBytes(dll)).GetType("AliasMod").GetMethod("Parts").Invoke(null, new object[] { car }); }
+        catch (TargetInvocationException e) { threw = e.InnerException is MissingFieldException || e.InnerException is TypeLoadException; }
+        catch (TypeLoadException) { threw = true; }
+        Check("parts: unchanged, the walk stops at the dropped partscript (before)", threw);
+        using (var mod = ModuleDefinition.ReadModule(dll))
+        {
+            var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
+            Check("parts: the redirects are listed", changes.Contains("type partscript -> attachablescript") && changes.Contains("partslotscript.part -> partslotscript.part()") &&
+                  changes.Exists(c => c.StartsWith("tosaveitemscript.partslotscripts read")) && changes.Exists(c => c.StartsWith("tosaveitemscript.partslotscripts write")) &&
+                  changes.Contains("attachablescript.tosaveitem -> attachablescript.tosave"));
+            int got = (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Parts").Invoke(null, new object[] { car });
+            Check("parts: two parts found through part() and tosave, one slot left after the store", got == 21);
+            Check("parts: the store reached the game's list", car.partslotscripts.Count == 1);
+        }
+    }
+
     static void Aliases()
     {
         string dll = Path.Combine(Path.GetDirectoryName(typeof(LoaderRetargetTest).Assembly.Location), "AliasMod.dll");
@@ -145,8 +173,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all twelve fields and fourteen method shapes are retargeted", changes.Count == 26);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 39);
+            Check("all twelve fields, fourteen method shapes and the five part redirects are retargeted", changes.Count == 31);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 53);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();

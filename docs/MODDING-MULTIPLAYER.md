@@ -259,11 +259,16 @@ both SwitchState overloads (null sender; the no-argument call advances the light
 answers from the beta's (config Mods.LoaderCompat): the spawner many workshop mods share (the first id free in
 savedatascript.toSaveStuff and the records' nearStuff/farStuff, then tosaveitemscript.FStart(int)), removeFromMemory
 (kept where the mod put it), pickupable.attach/cols/cols2 and attachablescript.targetTosave/C/Attach(Transform,RaycastHit);
-GetComponent of a type the beta dropped (partscript) is none. The beta's item database has empty slots the public
+GetComponent of another type the beta dropped is none. The public game's parts are the beta's attachablescript: the
+type partscript is renamed in the mod (its fields, locals and GetComponent<partscript> too), partscript.tosaveitem/p
+-> attachablescript.tosave/tosave.P, tosaveitemscript.part and pickupable.part -> the item's attachablescript,
+partslotscript.part -> part(); arrays the beta keeps as lists (tosaveitemscript.partslotscripts, partconditions,
+tanks, usables, tankcapscripts, physlocks -> physLocks, colors, door_rots) read as a copy and store as a new list.
+Of the workshop's 202 mods (2026-11-23), 41 named partscript. The beta's item database has empty slots the public
 game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
 Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL
-logs which ones it used. Unchanged DLLs still load from their files. The old save, part and world systems have no
-aliases in this batch. The existing seed/load/napszak fields are host snapshots; writing those does not write beta
+logs which ones it used. Unchanged DLLs still load from their files. The old world generator and save records have no
+aliases. The existing seed/load/napszak fields are host snapshots; writing those does not write beta
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,
 UseHarmony (all of a
 mod's patches or none: a patch naming what the beta lacks would throw inside the game's own method), Events,
