@@ -209,6 +209,36 @@ namespace TLDRevamp
                                                                                 // the join's status reads: a joiner still connecting has no session policy yet
                                                                                 // (DeveloperAccess: denied until Ready), and tests poll these while it joins
                                                                                 "session" };
+        /// `findgo <name part> [radius m]`: root objects whose name contains the text (any case) within the radius of the
+        /// player (default 50 m): where, held by physics or frozen, colliders on, save id, and their components.
+        private static string FindGo(string arg)
+        {
+            var a = (arg ?? "").Trim().Split(' ');
+            string part = a[0].ToLowerInvariant();
+            float r = a.Length > 1 && float.TryParse(a[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var rr) ? rr : 50f;
+            var pl = mainscript.s != null ? mainscript.s.player : null;
+            var at = pl != null ? pl.transform.position : Vector3.zero;
+            var rows = new System.Collections.Generic.List<string>();
+            foreach (var t in UnityEngine.Object.FindObjectsOfType<Transform>())
+            {
+                if (t.parent != null || !t.name.ToLowerInvariant().Contains(part) || (pl != null && (t.position - at).sqrMagnitude > r * r)) continue;
+                var rb = t.GetComponent<Rigidbody>();
+                var ts = t.GetComponent<tosaveitemscript>();
+                int on = 0, all = 0, inactive = 0;
+                foreach (var c in t.GetComponentsInChildren<Collider>(true)) { all++; if (!c.gameObject.activeInHierarchy) inactive++; else if (c.enabled && !c.isTrigger) on++; }
+                var kids = new System.Collections.Generic.List<string>();
+                foreach (Transform k in t) { kids.Add(k.name + (k.gameObject.activeSelf ? "" : "(off)")); if (kids.Count >= 12) break; }
+                var kinds = new System.Collections.Generic.List<string>();
+                foreach (var c in t.GetComponents<Component>()) if (c != null && !(c is Transform)) kinds.Add(c.GetType().Name);
+                var g = mainscript.GlobalFromUnityPos(t.position);
+                rows.Add("{\"name\":" + Json.Str(t.name) + ",\"active\":" + (t.gameObject.activeInHierarchy ? "true" : "false") + ",\"pos\":[" + Json.Num((float)g.x) + "," + Json.Num((float)g.y) + "," + Json.Num((float)g.z) + "]" +
+                         ",\"dist\":" + Json.Num(pl != null ? (t.position - at).magnitude : -1f) + ",\"rb\":" + (rb == null ? "null" : "{\"kinematic\":" + (rb.isKinematic ? "true" : "false") + ",\"speed\":" + Json.Num(rb.velocity.magnitude) + "}") +
+                         ",\"colliders\":[" + on + "," + all + "],\"collidersInactive\":" + inactive + ",\"children\":" + Json.Str(string.Join(" ", kids.ToArray())) + ",\"save\":" + (ts != null ? ts.idInSave.ToString() : "null") + ",\"components\":" + Json.Str(string.Join(" ", kinds.ToArray())) + "}");
+                if (rows.Count >= 40) break;
+            }
+            return "{\"found\":[" + string.Join(",", rows.ToArray()) + "]}";
+        }
+
         private static bool ReadOnlyCmd(string cmd, string arg)
         {
             if (_readCmds.Contains(cmd)) return true;
@@ -350,6 +380,8 @@ namespace TLDRevamp
                 case "il": return TLDRevamp.ScriptProfilerTools.Il(arg.Trim());
                 case "telemetrytest": return TLDRevamp.SessionLogTools.SelfTest(arg.Length > 0 ? int.Parse(arg) : 20000);
                 case "scenecount": return SceneCounts.Scan(SessionLog.St);
+                // Objects in the scene by part of their name, near the player: what a mod made and whether it lives (issue 44)
+                case "findgo": return FindGo(arg);
                 case "mark": return Net.TelemetryMarks.Local(arg);
                 case "markpanel": return TLDRevamp.MarkPanelTools.Bridge(arg);
                 case "markrename": return TLDRevamp.MarkPanelTools.Bridge(arg, true);
