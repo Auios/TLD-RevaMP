@@ -53,6 +53,27 @@ namespace TLDRevamp
             new[] { "survivalscript", "DamageInstant", "System.Single,System.Boolean", "System.Single,UnityEngine.Vector3,System.Boolean", "1,zero,2" },
         };
 
+        // The public game's save and attach members the beta changed or dropped, answered by a helper type the caller
+        // passes (TLDRevamp.LoaderCompat; tests pass their own): old owner, member, field type, load helper, store helper.
+        private static readonly string[][] CompatFields =
+        {
+            new[] { "savedatascript", "toSaveStuff", "System.Collections.Generic.Dictionary`2<System.Int32,tosaveitemscript>", "ToSaveStuff", "" },
+            new[] { "savedata", "nearStuff", "System.Collections.Generic.Dictionary`2<System.Int32,save_prefab>", "SavedRecords", "" },
+            new[] { "savedata", "farStuff", "System.Collections.Generic.Dictionary`2<System.Int32,save_prefab>", "SavedRecords", "" },
+            new[] { "tosaveitemscript", "removeFromMemory", "System.Boolean", "GetRemoveFromMemory", "SetRemoveFromMemory" },
+            new[] { "pickupable", "attach", "attachablescript", "GetAttach", "SetAttach" },
+            new[] { "pickupable", "cols", "layerScript[]", "GetCols", "SetCols" },
+            new[] { "pickupable", "cols2", "layerScript[]", "GetCols2", "SetCols2" },
+            new[] { "attachablescript", "targetTosave", "tosaveitemscript", "TargetTosave", "" },
+            new[] { "attachablescript", "C", "System.Collections.Generic.List`1<UnityEngine.Collider>", "GetC", "SetC" },
+        };
+        // old owner, method, old parameter list, helper (the instance first, then the arguments)
+        private static readonly string[][] CompatMethods =
+        {
+            new[] { "tosaveitemscript", "FStart", "System.Int32", "FStart" },
+            new[] { "attachablescript", "Attach", "UnityEngine.Transform,UnityEngine.RaycastHit", "Attach" },
+        };
+
         public static IEnumerable<string> AliasDescriptions()
         {
             foreach (var a in Fields) yield return a[0] + "." + a[1] + " -> " + a[3] + "." + a[4] + " (read/write/address)";
@@ -62,11 +83,14 @@ namespace TLDRevamp
                     if (f[0] == "mainscript" && f[1] == a[1]) yield return "mainscript." + a[0] + "(System.Boolean) -> store " + f[3] + "." + f[4];
             foreach (var a in MovedMethods) yield return "mainscript." + a[0] + "(System.Single) -> kaposztaleves.s." + a[1] + "(System.Single)";
             yield return "same-name integer fields -> beta integer sign (including tosaveitemscript.idInSave Int32 -> UInt32)";
+            foreach (var a in CompatFields) yield return a[0] + "." + a[1] + " -> LoaderCompat." + a[3] + (a[4].Length > 0 ? "/" + a[4] : "");
+            foreach (var a in CompatMethods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> LoaderCompat." + a[3];
+            yield return "Dictionary<Int32,save_prefab>.ContainsKey -> LoaderCompat.RecordIdUsed; GetComponent<a type the beta lacks>() -> LoaderCompat.NoComponent";
         }
 
         /// Rewrites <paramref name="mod"/>'s member accesses into <paramref name="game"/> (matched by assembly name)
         /// and returns one line per change; empty when the mod needed nothing.
-        public static List<string> Apply(ModuleDefinition mod, Assembly game)
+        public static List<string> Apply(ModuleDefinition mod, Assembly game, Type compat = null)
         {
             var changes = new List<string>();
             string gameName = game.GetName().Name;
@@ -92,7 +116,19 @@ namespace TLDRevamp
             foreach (var ins in method.Body.Instructions)
             {
                 var member = ins.Operand as MemberReference;
-                if (member == null || GameType(game, gameName, member.DeclaringType) == null) continue;
+                if (member == null) continue;
+                if (compat != null && !(ins.Previous != null && ins.Previous.OpCode.OpCodeType == OpCodeType.Prefix))
+                {
+                    var helper = CompatHelper(game, gameName, compat, ins, out string what);
+                    if (helper != null)
+                    {
+                        ins.OpCode = OpCodes.Call;
+                        ins.Operand = mod.ImportReference(helper);
+                        if (!changes.Contains(what)) changes.Add(what);
+                        continue;
+                    }
+                }
+                if (GameType(game, gameName, member.DeclaringType) == null) continue;
                 // A field prefix cannot prefix a call. Leave such unusual IL alone.
                 if (ins.Previous != null && ins.Previous.OpCode.OpCodeType == OpCodeType.Prefix) continue;
                 string key = ins.OpCode.Code + " " + member.FullName;
@@ -120,6 +156,78 @@ namespace TLDRevamp
             }
             return changes;
         }
+
+        /// The helper for an instruction on a public-game member the beta doesn't have (CompatFields, CompatMethods, the
+        /// dropped save_prefab's ContainsKey, GetComponent of a dropped type), or null. A member the game has is left alone.
+        private static MethodInfo CompatHelper(Assembly game, string gameName, Type compat, Instruction ins, out string what)
+        {
+            what = null;
+            const BindingFlags Statics = BindingFlags.Public | BindingFlags.Static;
+            if (ins.Operand is FieldReference fr && (ins.OpCode == OpCodes.Ldfld || ins.OpCode == OpCodes.Stfld))
+            {
+                var owner = GameType(game, gameName, fr.DeclaringType);
+                if (owner == null) return null;
+                // the game has it as the mod knows it: nothing to do. The same name with another type is not it (pickupable.cols
+                // is a List here, attachablescript.C a private Collider[]): the mod's access stopped its whole method
+                var has = GameLookups.RuntimeField(owner, fr.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+                if (has != null && CecilName(has.FieldType) == fr.FieldType.FullName) return null;
+                foreach (var a in CompatFields)
+                {
+                    if (fr.DeclaringType.FullName != a[0] || fr.Name != a[1] || fr.FieldType.FullName != a[2]) continue;
+                    string name = ins.OpCode == OpCodes.Ldfld ? a[3] : a[4];
+                    var m = name.Length > 0 ? compat.GetMethod(name, Statics) : null;
+                    if (m == null) return null;
+                    what = a[0] + "." + a[1] + (ins.OpCode == OpCodes.Ldfld ? " read" : " write") + " -> " + compat.Name + "." + name;
+                    return m;
+                }
+                return null;
+            }
+            if (!(ins.Operand is MethodReference mr) || (ins.OpCode != OpCodes.Call && ins.OpCode != OpCodes.Callvirt)) return null;
+            // Dictionary<int, save_prefab>.ContainsKey: the spawner's id test on the old records
+            if (mr.Name == "ContainsKey" && mr.DeclaringType is GenericInstanceType git && git.ElementType.FullName == "System.Collections.Generic.Dictionary`2" &&
+                git.GenericArguments.Count == 2 && git.GenericArguments[0].MetadataType == MetadataType.Int32 && Missing(game, gameName, git.GenericArguments[1]))
+            {
+                var m = compat.GetMethod("RecordIdUsed", Statics);
+                if (m == null) return null;
+                what = "Dictionary<Int32," + git.GenericArguments[1].Name + ">.ContainsKey -> " + compat.Name + ".RecordIdUsed";
+                return m;
+            }
+            // GetComponent<T>() and its relatives with a type the beta dropped (partscript): there is none
+            if (mr is GenericInstanceMethod gim && gim.GenericArguments.Count == 1 && gim.Parameters.Count == 0 && mr.HasThis &&
+                (mr.Name == "GetComponent" || mr.Name == "GetComponentInChildren" || mr.Name == "GetComponentInParent") && Missing(game, gameName, gim.GenericArguments[0]))
+            {
+                var m = compat.GetMethod("NoComponent", Statics);
+                if (m == null) return null;
+                what = mr.Name + "<" + gim.GenericArguments[0].Name + "> -> " + compat.Name + ".NoComponent";
+                return m;
+            }
+            var type = GameType(game, gameName, mr.DeclaringType);
+            if (type == null || !mr.HasThis) return null;
+            foreach (var a in CompatMethods)
+            {
+                if (mr.DeclaringType.FullName != a[0] || mr.Name != a[1] || Parameters(mr) != a[2]) continue;
+                foreach (var candidate in type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
+                    if (candidate.Name == a[1] && string.Join(",", System.Linq.Enumerable.Select(candidate.GetParameters(), p => TypeName(p.ParameterType))) == a[2]) return null;   // the game has it
+                var m = compat.GetMethod(a[3], Statics);
+                if (m == null) return null;
+                what = a[0] + "." + a[1] + "(" + a[2] + ") -> " + compat.Name + "." + a[3];
+                return m;
+            }
+            return null;
+        }
+
+        /// A runtime type as Cecil writes it (List`1<UnityEngine.Collider>, layerScript[], Outer/Inner).
+        private static string CecilName(Type t)
+        {
+            if (t.IsArray) return CecilName(t.GetElementType()) + "[]";
+            if (t.IsGenericType && !t.IsGenericTypeDefinition)
+                return TypeName(t.GetGenericTypeDefinition()) + "<" + string.Join(",", System.Linq.Enumerable.Select(t.GetGenericArguments(), CecilName)) + ">";
+            return TypeName(t);
+        }
+
+        /// A type of the game's the beta doesn't have (save_prefab, partscript).
+        private static bool Missing(Assembly game, string gameName, TypeReference tr) =>
+            tr != null && !(tr is TypeSpecification) && tr.Scope is AssemblyNameReference scope && scope.Name == gameName && GameType(game, gameName, tr) == null;
 
         private static void Collect(TypeDefinition type, List<MethodDefinition> methods)
         {
@@ -268,7 +376,7 @@ namespace TLDRevamp
 
         /// Reads the mod's DLL, rewrites it if it needs it and loads it: from the bytes when something changed (the
         /// assembly then has no Location), as before with LoadFrom when nothing did or the rewrite failed.
-        public static Assembly Load(string dll, Assembly game, IEnumerable<string> searchDirs, Action<string> log)
+        public static Assembly Load(string dll, Assembly game, IEnumerable<string> searchDirs, Action<string> log, Type compat = null)
         {
             try
             {
@@ -277,7 +385,7 @@ namespace TLDRevamp
                 using (var mod = ModuleDefinition.ReadModule(new MemoryStream(File.ReadAllBytes(dll)),
                            new ReaderParameters { AssemblyResolver = resolver, ReadingMode = ReadingMode.Immediate }))
                 {
-                    var changes = Apply(mod, game);
+                    var changes = Apply(mod, game, compat);
                     if (changes.Count > 0)
                     {
                         var ms = new MemoryStream();

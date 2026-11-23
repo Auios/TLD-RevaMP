@@ -255,7 +255,13 @@ FoodCh/WaterCh/HpCh/PissCh/ShitCh to kaposztaleves.s.PressedFoodCh/PressedWaterC
 The other method adapters cover RightHandRelease() (sync=true), UpdValues(bool) (the unused argument is dropped),
 PressedEscape() (true,false),
 both SwitchState overloads (null sender; the no-argument call advances the light state), and Damage/DamageInstant
-(zero direction, preserving amount and show). `mods aliases` lists their mappings even in the menu; each changed DLL
+(zero direction, preserving amount and show). What the public game's save and attach code was, TLDRevamp.LoaderCompat
+answers from the beta's (config Mods.LoaderCompat): the spawner many workshop mods share (the first id free in
+savedatascript.toSaveStuff and the records' nearStuff/farStuff, then tosaveitemscript.FStart(int)), removeFromMemory
+(kept where the mod put it), pickupable.attach/cols/cols2 and attachablescript.targetTosave/C/Attach(Transform,RaycastHit);
+GetComponent of a type the beta dropped (partscript) is none. The beta's item database has empty slots the public
+game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
+Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old save, part and world systems have no
 aliases in this batch. The existing seed/load/napszak fields are host snapshots; writing those does not write beta
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,

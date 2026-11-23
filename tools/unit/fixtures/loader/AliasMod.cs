@@ -32,6 +32,16 @@ public static class AliasMod
         Set(ref c.KmhObj, Display);
     }
 
+    /// The spawner RUNDEN's and M_'s workshop mods share: the first id no item and no record has, then FStart(int).
+    public static int Spawn(savedatascript s, tosaveitemscript t)
+    {
+        int i;
+        for (i = 0; s.toSaveStuff.ContainsKey(i) || s.data.farStuff.ContainsKey(i) || s.data.nearStuff.ContainsKey(i); i++) { }
+        t.FStart(i);
+        t.removeFromMemory = true;
+        return i;
+    }
+
     public static void Calls(fpscontroller p, radioscript r, mainscript m, headlightscript h, survivalscript s)
     {
         p.RightHandRelease(); r.UpdValues(true); m.PressedEscape();

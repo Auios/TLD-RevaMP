@@ -3,6 +3,10 @@ src/TLDRevamp/DevModeKeys.cs	AccessTools.Method(typeof(DevModeKeys), with)	Our p
 src/TLDRevamp/KeyBindings.cs	AccessTools.Method(typeof(DevMenuKey), nameof(Down))	Our patch/helper method DevMenuKey; not game code.
 src/TLDRevamp/LoaderRetarget.cs	GameLookups.RuntimeField(owner, fr.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)	Member/type names come from external mod IL; core records game resolutions at runtime, no fixed source target.
 src/TLDRevamp/LoaderRetarget.cs	GameLookups.RuntimeType(game, name, false)	Member/type names come from external mod IL; core records game resolutions at runtime, no fixed source target.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod(name, Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("RecordIdUsed", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("NoComponent", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod(a[3], Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
 src/TLDRevamp/ModHost.cs	stub.GetType("TLDLoader.Mod")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
 src/TLDRevamp/ModHost.cs	stub.GetType("TLDLoader.ModLoader").GetField("ConfigRoot")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
 src/TLDRevamp/ModHost.cs	stub.GetType("TLDLoader.ModLoader")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.

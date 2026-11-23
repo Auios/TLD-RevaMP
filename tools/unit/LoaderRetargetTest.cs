@@ -60,6 +60,7 @@ static class LoaderRetargetTest
     static int Main()
     {
         Aliases();
+        Compat();
         var gameAsm = typeof(Saved).Assembly;
         var sample = new Saved { key = 7, size = 1.5f };
 
@@ -106,6 +107,37 @@ static class LoaderRetargetTest
         return failures == 0 ? 0 : 1;
     }
 
+    /// The old save ids through a helper type (as TLDRevamp.LoaderCompat; TestCompat below): the spawner finds the first
+    /// free id among the placed items and the records, and starts the item with it. Without the helpers the method stops
+    /// at its first instruction, as the dingus and Nitrous spawners did on the beta (issue 44).
+    static void Compat()
+    {
+        string dll = Path.Combine(Path.GetDirectoryName(typeof(LoaderRetargetTest).Assembly.Location), "AliasMod.dll");
+        var s = new savedatascript(); s.items[0] = new tosaveitemscript(); s.items[1] = new tosaveitemscript();
+        TestCompat.Used.Clear(); TestCompat.Used.Add(2); TestCompat.Removed = false;
+        using (var mod = ModuleDefinition.ReadModule(dll))
+        {
+            LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
+            var t = new tosaveitemscript();
+            bool threw = false;
+            try { LoadBytes(mod).GetType("AliasMod").GetMethod("Spawn").Invoke(null, new object[] { s, t }); }
+            catch (TargetInvocationException e) { threw = e.InnerException is MissingFieldException || e.InnerException is TypeLoadException; }
+            Check("compat: without the helpers the spawner stops (before)", threw);
+        }
+        using (var mod = ModuleDefinition.ReadModule(dll))
+        {
+            var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly, typeof(TestCompat));
+            Check("compat: the old save members are listed", changes.Exists(c => c.Contains("toSaveStuff read -> TestCompat.ToSaveStuff")) &&
+                  changes.Exists(c => c.Contains("ContainsKey -> TestCompat.RecordIdUsed")) && changes.Exists(c => c.Contains("FStart(System.Int32) -> TestCompat.FStart")) &&
+                  changes.Exists(c => c.Contains("removeFromMemory write -> TestCompat.SetRemoveFromMemory")));
+            var t = new tosaveitemscript();
+            int got = (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Spawn").Invoke(null, new object[] { s, t });
+            Check("compat: the first id neither an item (0, 1) nor a record (2) has: 3", got == 3);
+            Check("compat: FStart(int) starts the item with that id", t.Started == 3);
+            Check("compat: removeFromMemory reaches the helper", TestCompat.Removed);
+        }
+    }
+
     static void Aliases()
     {
         string dll = Path.Combine(Path.GetDirectoryName(typeof(LoaderRetargetTest).Assembly.Location), "AliasMod.dll");
@@ -114,7 +146,7 @@ static class LoaderRetargetTest
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
             Check("all twelve fields and fourteen method shapes are retargeted", changes.Count == 26);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 27);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 39);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -171,4 +203,22 @@ static class LoaderRetargetTest
             Check("the public-shaped fixture stays unchanged on disk", System.Linq.Enumerable.SequenceEqual(original, File.ReadAllBytes(dll)));
         }
     }
+}
+
+/// Stands in for TLDRevamp.LoaderCompat against the made-up beta: the same names and shapes.
+public static class TestCompat
+{
+    public static readonly System.Collections.Generic.HashSet<int> Used = new System.Collections.Generic.HashSet<int>();
+    public static bool Removed;
+    public static System.Collections.Generic.Dictionary<int, tosaveitemscript> ToSaveStuff(savedatascript s)
+    {
+        var d = new System.Collections.Generic.Dictionary<int, tosaveitemscript>();
+        foreach (var kv in s.items) d[(int)kv.Key] = kv.Value;
+        return d;
+    }
+    public static object SavedRecords(savedata d) => d;
+    public static bool RecordIdUsed(object records, int id) => Used.Contains(id);
+    public static void FStart(tosaveitemscript t, int id) => t.FStart((uint)id);
+    public static bool GetRemoveFromMemory(tosaveitemscript t) => Removed;
+    public static void SetRemoveFromMemory(tosaveitemscript t, bool value) { Removed = value; }
 }

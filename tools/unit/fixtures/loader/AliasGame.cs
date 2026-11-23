@@ -113,3 +113,33 @@ public class survivalscript
     public void DamageInstant(float amount, UnityEngine.Vector3 direction, bool show) { InstantLost = amount; InstantDirection = direction; InstantShown = show; }
 #endif
 }
+
+// The old save ids the TLD Workshop's spawners use (issue 44), and what the beta has instead.
+public class tosaveitemscript   // test stub, not game code
+{
+#if PUBLIC_GAME
+    public bool removeFromMemory;
+    public void FStart(int key) { }
+#else
+    public uint Started; public bool dontUnparent;
+    public void FStart(uint key) { Started = key; }
+#endif
+}
+#if PUBLIC_GAME
+public class save_prefab { }
+#endif
+public class savedata
+{
+#if PUBLIC_GAME
+    public System.Collections.Generic.Dictionary<int, save_prefab> nearStuff, farStuff;
+#endif
+}
+public class savedatascript
+{
+    public savedata data = new savedata();
+#if PUBLIC_GAME
+    public System.Collections.Generic.Dictionary<int, tosaveitemscript> toSaveStuff;
+#else
+    public System.Collections.Generic.Dictionary<uint, tosaveitemscript> items = new System.Collections.Generic.Dictionary<uint, tosaveitemscript>();
+#endif
+}

@@ -130,14 +130,19 @@ namespace TLDRevamp
         /// A/B (config Mods.RetargetLoaderMods, read before the mods load): false = before 2026-11-11, every mod loaded
         /// as it is, without LoaderRetarget's integer-sign fixes or public-name adapters.
         public static bool Retarget = true;
+        /// A/B (config Mods.LoaderCompat, read before the mods load): false = before 2026-11-23, no LoaderCompat helpers for
+        /// the public game's save ids and attach members (issue 44: dingus, Nitrous, Attach Everything).
+        public static bool Compat = true;
         public static int Retargeted;
+        static partial void CompatType(ref Type type);   // ModHost.Game.cs: LoaderCompat
+        private static Type CompatHelpers() { Type t = null; if (Compat) CompatType(ref t); return t; }
 
         private static Assembly LoadMod(string dll)
         {
             if (!Retarget) return Assembly.LoadFrom(dll);
             var asm = LoaderRetarget.Load(dll, typeof(mainscript).Assembly,
                 new[] { ModsDir, BepInEx.Paths.ManagedPath, BepInEx.Paths.BepInExAssemblyDirectory, Path.GetDirectoryName(typeof(ModHost).Assembly.Location) },
-                m => Plugin.Log.LogInfo("ModHost: " + m));
+                m => Plugin.Log.LogInfo("ModHost: " + m), CompatHelpers());
             if (string.IsNullOrEmpty(asm.Location)) Retargeted++;
             return asm;
         }
@@ -219,6 +224,12 @@ namespace TLDRevamp
         }
 
         /// Per frame (Runner.Update): menu/game transitions, then the mods' own Update.
+        /// The beta's item database has empty slots: filled for the mods' DbLoad (ModHost.Game.cs). A/B: false = before 2026-11-23.
+        public static bool FillEmptySlots = true;
+        public static int EmptySlotsFilled;
+        static partial void FillHoles();
+        static partial void RestoreHoles();
+
         public static void Tick()
         {
             if (Mods.Count == 0) return;
@@ -232,7 +243,9 @@ namespace TLDRevamp
                 DbLoadRuns++;
                 var order = new List<Loaded>(Mods);
                 order.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
-                foreach (var l in order) { Call(l, l.DbLoad, "DbLoad"); Call(l, l.DbLoadOld, "dbLoad"); }
+                if (FillEmptySlots) FillHoles();
+                try { foreach (var l in order) { Call(l, l.DbLoad, "DbLoad"); Call(l, l.DbLoadOld, "dbLoad"); } }
+                finally { if (FillEmptySlots) RestoreHoles(); }
             }
             // The world's own signal is the PLAYER, not the scene name: the game loads
             // scenes for a restart and for a new game, and the active scene is briefly

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
@@ -8,6 +9,41 @@ namespace TLDRevamp
     /// ModHost's game-only parts: TLD Loader's loading panel and its Events, raised from the game's own calls.
     public static partial class ModHost
     {
+        /// The beta's item database has empty slots (items taken out of the game keep their ids); the public game's had none.
+        /// Mods go through every item in DbLoad (Nitrous gives every car its nitrous system, Attach Everything makes every
+        /// item attachable) and stopped at the first empty one: no nitrous spawners added, nothing attachable (issue 44).
+        /// During DbLoad each empty slot holds an inactive placeholder; afterwards the slots are empty again (also in the
+        /// array a mod made by appending to it), so no item id moves. A/B: false = before 2026-11-23.
+        private static GameObject _slotPlaceholder;
+        private static readonly List<int> _holes = new List<int>();
+        static partial void CompatType(ref Type type) { type = typeof(LoaderCompat); }
+        static partial void FillHoles()
+        {
+            var db = itemdatabase.s;
+            var holes = _holes; holes.Clear();
+            if (db == null || db.items == null) return;
+            for (int i = 0; i < db.items.Length; i++)
+                if (db.items[i] == null)
+                {
+                    if (_slotPlaceholder == null)
+                    {
+                        _slotPlaceholder = new GameObject("(empty item slot)") { hideFlags = HideFlags.HideAndDontSave };
+                        _slotPlaceholder.SetActive(false);
+                    }
+                    db.items[i] = _slotPlaceholder; holes.Add(i);
+                }
+            EmptySlotsFilled = holes.Count;
+        }
+        static partial void RestoreHoles()
+        {
+            var db = itemdatabase.s; var holes = _holes;
+            if (db != null && db.items != null)
+                foreach (int i in holes) if (i < db.items.Length && ReferenceEquals(db.items[i], _slotPlaceholder)) db.items[i] = null;
+            if (_slotPlaceholder != null) { UnityEngine.Object.Destroy(_slotPlaceholder); _slotPlaceholder = null; }   // with what mods added to it
+            holes.Clear();
+        }
+
+
         /// TLD Loader's loading panel (ModLoader.loading): an inactive object, so a mod's `loading.activeSelf` is false.
         static partial void MakeLoadingPanel()
         {
