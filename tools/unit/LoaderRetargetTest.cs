@@ -137,6 +137,9 @@ static class LoaderRetargetTest
             Check("compat: the first id neither an item (0, 1) nor a record (2) has: 3", got == 3);
             Check("compat: FStart(int) starts the item with that id", t.Started == 3);
             Check("compat: removeFromMemory reaches the helper", TestCompat.Removed);
+            Check("compat: a field the beta dropped is kept for the mod (tosaveitemscript.category: 7)",
+                  changes.Contains("tosaveitemscript.category kept for the mod (the beta has none)") &&
+                  (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Category").Invoke(null, new object[] { new tosaveitemscript() }) == 7);
         }
     }
 
@@ -201,7 +204,7 @@ static class LoaderRetargetTest
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
             Check("all twelve fields, fourteen method shapes, the five part redirects, the coordinate type and the generator chain are retargeted", changes.Count == 38);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 86);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 88);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -277,6 +280,9 @@ public static class TestCompat
     public static bool GetRemoveFromMemory(tosaveitemscript t) => Removed;
     public static void SetRemoveFromMemory(tosaveitemscript t, bool value) { Removed = value; }
     public static mapSettingScript Map(mapSettingScript m) => m;
+    static readonly System.Collections.Generic.Dictionary<string, object> KeptValues = new System.Collections.Generic.Dictionary<string, object>();
+    public static T Kept<T>(object owner, string field) => KeptValues.TryGetValue(field, out var v) ? (T)v : default(T);
+    public static void Keep<T>(object owner, string field, T value) => KeptValues[field] = value;
     public static objGenScript.prefabClass[] ObjTypes(mapSettingScript m)
     {
         var all = new System.Collections.Generic.List<objGenScript.prefabClass>();

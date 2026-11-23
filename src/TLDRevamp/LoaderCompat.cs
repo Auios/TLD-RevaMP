@@ -97,6 +97,24 @@ namespace TLDRevamp
             if (a != null) s.AddPart(a);
         }
 
+        // ------------------------------------------------------------------ fields the beta dropped
+
+        /// A field of the public game the beta has no counterpart for (LoaderRetarget's last resort): what the mod stored,
+        /// per object (static fields: owner null), so the methods that name it run instead of stopping at their first line.
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, Dictionary<string, object>> _kept =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<object, Dictionary<string, object>>();
+        private static readonly Dictionary<string, object> _keptStatic = new Dictionary<string, object>();
+        public static T Kept<T>(object owner, string field)
+        {
+            var d = owner == null ? _keptStatic : _kept.TryGetValue(owner, out var x) ? x : null;
+            return d != null && d.TryGetValue(field, out var v) && v is T t ? t : default(T);
+        }
+        public static void Keep<T>(object owner, string field, T value)
+        {
+            Calls++;
+            (owner == null ? _keptStatic : _kept.GetValue(owner, _ => new Dictionary<string, object>()))[field] = value;
+        }
+
         // ------------------------------------------------------------------ fuel caps
 
         /// tankcapscript.TCap/TOpen/TClosed and UpdCap(bool): the public game moved the cap between two transforms; the

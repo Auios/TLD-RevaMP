@@ -144,6 +144,7 @@ public class tosaveitemscript   // test stub, not game code
     public bool removeFromMemory;
     public void FStart(int key) { }
     public partslotscript[] partslotscripts;
+    public int category;   // nothing on the beta: kept for the mod
 #else
     public uint Started; public bool dontUnparent;
     public void FStart(uint key) { Started = key; }

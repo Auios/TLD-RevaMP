@@ -44,6 +44,9 @@ public static class AliasMod
         return n;
     }
 
+    /// A field the beta dropped, stored and read back (tosaveitemscript.category).
+    public static int Category(tosaveitemscript t) { t.category = 7; return t.category; }
+
     /// The workshop's part walk (M_VehicleDeterioration, SpeedOrBoom): every slot's part that knows its car and slot,
     /// then the slots replaced by the first one. Tens: the parts found, ones: the slots left.
     public static int Parts(tosaveitemscript car)

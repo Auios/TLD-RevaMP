@@ -279,7 +279,9 @@ TerrainGenerationSettings.staticReference): each step is the current map (menuha
 its objGenScripts' prefabs (the same prefab objects), ObjClass -> objGenScript/prefabClass; the desert, mountain and
 road generators have no aliases. Attach targets (hitches, plates, trunk mounts) are slots on the beta:
 attachTargetscript -> partslotscript, its target/attachs -> T/parts, attachablescript.target -> slot and
-tosaveitemscript.attachTargets -> partslotscripts. The beta's item database has empty slots the public
+tosaveitemscript.attachTargets -> partslotscripts. TerrainGenerator.roads -> the map's roadGens. Any other field the
+beta dropped, of a type it has (attachablescript.lockRotation in the Advanced Modding Toolkit's item setup), is kept per
+object for the mod alone (LoaderCompat.Kept/Keep) so the method naming it runs; the DLL's log line lists each one. The beta's item database has empty slots the public
 game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
 Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator and save records have no

@@ -36,6 +36,7 @@ namespace TLDRevamp
             new[] { "mapSettingScript", "TG", "mapSettingScript", "menuhandler", "s.currentMainMap" },
             new[] { "mapSettingScript", "staticReference", "mapSettingScript", "menuhandler", "s.currentMainMap" },
             new[] { "mainscript", "terrainGenerationSettings", "mapSettingScript", "menuhandler", "s.currentMainMap" },
+            new[] { "mapSettingScript", "roads", "System.Collections.Generic.List`1<roadGenScript>", "mapSettingScript", "roadGens" },
             new[] { "partslotscript", "target", "UnityEngine.Transform", "partslotscript", "T" },
             new[] { "partslotscript", "attachs", "System.Collections.Generic.List`1<attachablescript>", "partslotscript", "parts" },
             new[] { "attachablescript", "target", "partslotscript", "attachablescript", "slot" },
@@ -160,6 +161,7 @@ namespace TLDRevamp
             foreach (var a in CompatFields) yield return a[0] + "." + a[1] + " -> LoaderCompat." + a[3] + (a[4].Length > 0 ? "/" + a[4] : "");
             foreach (var a in CompatMethods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> LoaderCompat." + a[3];
             yield return "Dictionary<Int32,save_prefab>.ContainsKey -> LoaderCompat.RecordIdUsed; GetComponent<a type the beta lacks>() -> LoaderCompat.NoComponent";
+            yield return "any other field the beta dropped (of a type it has) -> kept per object for the mod: LoaderCompat.Kept/Keep";
         }
 
         /// Rewrites <paramref name="mod"/>'s member accesses into <paramref name="game"/> (matched by assembly name)
@@ -225,7 +227,8 @@ namespace TLDRevamp
                 {
                     string description;
                     adapter = FieldAdapter(mod, game, ins, out description) ?? GetterAdapter(mod, game, ins, out description) ??
-                              ListAdapter(mod, game, ins, out description) ?? MethodAdapter(mod, game, ins, out description);
+                              ListAdapter(mod, game, ins, out description) ?? MethodAdapter(mod, game, ins, out description) ??
+                              (compat != null ? KeptAdapter(mod, game, gameName, compat, ins, out description) : null);
                     if (adapter == null) continue;
                     if (helpers == null)
                     {
@@ -444,6 +447,45 @@ namespace TLDRevamp
                 return m;
             }
             return null;
+        }
+
+        /// The last resort for a field the beta dropped and nothing above maps (attachablescript.lockRotation, an AMT item's
+        /// setup): its value kept per object for the mod alone (compat's Kept/Keep), so the method that names it runs. A
+        /// field whose own type the beta dropped stays as it is.
+        private static MethodDefinition KeptAdapter(ModuleDefinition mod, Assembly game, string gameName, Type compat, Instruction ins, out string description)
+        {
+            description = null;
+            var old = ins.Operand as FieldReference;
+            bool store = ins.OpCode == OpCodes.Stfld || ins.OpCode == OpCodes.Stsfld, statics = ins.OpCode == OpCodes.Ldsfld || ins.OpCode == OpCodes.Stsfld;
+            if (old == null || (!store && ins.OpCode != OpCodes.Ldfld && ins.OpCode != OpCodes.Ldsfld)) return null;
+            var owner = GameType(game, gameName, old.DeclaringType);
+            if (owner == null || GameLookups.RuntimeField(owner, old.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static) != null) return null;
+            if (FieldTypeMissing(game, gameName, old.FieldType)) return null;
+            var helper = compat.GetMethod(store ? "Keep" : "Kept", BindingFlags.Public | BindingFlags.Static);
+            if (helper == null || !helper.IsGenericMethodDefinition) return null;
+            var generic = new GenericInstanceMethod(mod.ImportReference(helper));
+            generic.GenericArguments.Add(old.FieldType);
+            var m = NewAdapter(mod, old.DeclaringType, store ? mod.TypeSystem.Void : old.FieldType);
+            if (statics) m.Parameters.Clear();
+            if (store) m.Parameters.Add(new ParameterDefinition(old.FieldType));
+            var il = m.Body.GetILProcessor();
+            if (statics) il.Emit(OpCodes.Ldnull); else il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldstr, old.DeclaringType.FullName + "." + old.Name);
+            if (store) il.Emit(OpCodes.Ldarg, m.Parameters[m.Parameters.Count - 1]);
+            il.Emit(OpCodes.Call, generic);
+            il.Emit(OpCodes.Ret);
+            description = old.DeclaringType.FullName + "." + old.Name + " kept for the mod (the beta has none)";
+            return m;
+        }
+
+        /// The field's type, or one of its generic arguments or its element type, is a game type the beta dropped.
+        private static bool FieldTypeMissing(Assembly game, string gameName, TypeReference t)
+        {
+            if (t is ArrayType a) return FieldTypeMissing(game, gameName, a.ElementType);
+            if (t is GenericInstanceType g) { foreach (var x in g.GenericArguments) if (FieldTypeMissing(game, gameName, x)) return true; return FieldTypeMissing(game, gameName, g.ElementType); }
+            if (t is TypeSpecification) return false;
+            var root = t; while (root.DeclaringType != null) root = root.DeclaringType;
+            return root.Scope is AssemblyNameReference s && s.Name == gameName && GameType(game, gameName, t) == null;
         }
 
         private static MethodDefinition MethodAdapter(ModuleDefinition mod, Assembly game, Instruction ins, out string description)
