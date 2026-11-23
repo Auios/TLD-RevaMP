@@ -105,12 +105,16 @@ namespace TLDRevamp
             new[] { "attachablescript", "C", "System.Collections.Generic.List`1<UnityEngine.Collider>", "GetC", "SetC" },
             new[] { "poiScript", "itemsSpawned", "System.Boolean", "ItemsSpawned", "" },
             new[] { "partslotscript", "part", "attachablescript", "", "SetSlotPart" },   // reads: part() (Getters)
+            new[] { "tankcapscript", "TCap", "UnityEngine.Transform", "GetCapT", "SetCapT" },
+            new[] { "tankcapscript", "TOpen", "UnityEngine.Transform", "GetCapOpen", "SetCapOpen" },
+            new[] { "tankcapscript", "TClosed", "UnityEngine.Transform", "GetCapClosed", "SetCapClosed" },
         };
         // old owner, method, old parameter list, helper (the instance first, then the arguments)
         private static readonly string[][] CompatMethods =
         {
             new[] { "tosaveitemscript", "FStart", "System.Int32", "FStart" },
             new[] { "attachablescript", "Attach", "UnityEngine.Transform,UnityEngine.RaycastHit", "Attach" },
+            new[] { "tankcapscript", "UpdCap", "System.Boolean", "UpdCap" },
         };
 
         public static IEnumerable<string> AliasDescriptions()

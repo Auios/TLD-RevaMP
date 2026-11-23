@@ -262,7 +262,8 @@ both SwitchState overloads (null sender; the no-argument call advances the light
 answers from the beta's (config Mods.LoaderCompat): the spawner many workshop mods share (the first id free in
 savedatascript.toSaveStuff and the records' nearStuff/farStuff, then tosaveitemscript.FStart(int)), removeFromMemory
 (kept where the mod put it), pickupable.attach/cols/cols2, attachablescript.targetTosave/C/Attach(Transform,RaycastHit) and a store into
-partslotscript.part (the slot's list then holds that part alone);
+partslotscript.part (the slot's list then holds that part alone), tankcapscript.TCap/TOpen/TClosed and UpdCap(bool)
+(kept for the mod to read back; the beta's cap turns by its usable, left as it is);
 GetComponent of another type the beta dropped is none. The public game's parts are the beta's attachablescript: the
 type partscript is renamed in the mod (its fields, locals and GetComponent<partscript> too), partscript.tosaveitem/p
 -> attachablescript.tosave/tosave.P, tosaveitemscript.part and pickupable.part -> the item's attachablescript,

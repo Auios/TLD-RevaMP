@@ -97,6 +97,24 @@ namespace TLDRevamp
             if (a != null) s.AddPart(a);
         }
 
+        // ------------------------------------------------------------------ fuel caps
+
+        /// tankcapscript.TCap/TOpen/TClosed and UpdCap(bool): the public game moved the cap between two transforms; the
+        /// beta's cap turns by its usable between closedRot and openRot. Engine mods (DIESEL_V8ENGINE and nine more) set
+        /// these in the middle of the method that builds the whole engine, which stopped at them: kept here for the mod to
+        /// read back, the beta's own cap left as it is.
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<tankcapscript, Transform[]> _caps =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<tankcapscript, Transform[]>();
+        private static Transform CapGet(tankcapscript c, int i) => c != null && _caps.TryGetValue(c, out var t) ? t[i] : null;
+        private static void CapSet(tankcapscript c, int i, Transform v) { Calls++; if (c != null) _caps.GetValue(c, _ => new Transform[3])[i] = v; }
+        public static Transform GetCapT(tankcapscript c) => CapGet(c, 0) ?? (c != null ? c.transform : null);
+        public static void SetCapT(tankcapscript c, Transform v) => CapSet(c, 0, v);
+        public static Transform GetCapOpen(tankcapscript c) => CapGet(c, 1);
+        public static void SetCapOpen(tankcapscript c, Transform v) => CapSet(c, 1, v);
+        public static Transform GetCapClosed(tankcapscript c) => CapGet(c, 2);
+        public static void SetCapClosed(tankcapscript c, Transform v) => CapSet(c, 2, v);
+        public static void UpdCap(tankcapscript c, bool sound) { Calls++; }
+
         // ------------------------------------------------------------------ buildings
 
         /// buildingscript.itemsSpawned (buildingscript is the beta's poiScript): the place has started, which is when the
