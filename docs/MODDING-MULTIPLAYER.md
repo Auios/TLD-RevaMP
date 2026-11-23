@@ -277,7 +277,9 @@ Modding Toolkit puts its mods' items into buildings then); doublecoord -> UnityE
 scattered prefabs (TerrainGenerator.TG.manager.settings.objGeneration.objTypes[i].prefab, and
 TerrainGenerationSettings.staticReference): each step is the current map (menuhandler.s.currentMainMap), objTypes
 its objGenScripts' prefabs (the same prefab objects), ObjClass -> objGenScript/prefabClass; the desert, mountain and
-road generators have no aliases. The beta's item database has empty slots the public
+road generators have no aliases. Attach targets (hitches, plates, trunk mounts) are slots on the beta:
+attachTargetscript -> partslotscript, its target/attachs -> T/parts, attachablescript.target -> slot and
+tosaveitemscript.attachTargets -> partslotscripts. The beta's item database has empty slots the public
 game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
 Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator and save records have no

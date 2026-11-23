@@ -36,6 +36,9 @@ namespace TLDRevamp
             new[] { "mapSettingScript", "TG", "mapSettingScript", "menuhandler", "s.currentMainMap" },
             new[] { "mapSettingScript", "staticReference", "mapSettingScript", "menuhandler", "s.currentMainMap" },
             new[] { "mainscript", "terrainGenerationSettings", "mapSettingScript", "menuhandler", "s.currentMainMap" },
+            new[] { "partslotscript", "target", "UnityEngine.Transform", "partslotscript", "T" },
+            new[] { "partslotscript", "attachs", "System.Collections.Generic.List`1<attachablescript>", "partslotscript", "parts" },
+            new[] { "attachablescript", "target", "partslotscript", "attachablescript", "slot" },
         };
 
         // The public game's parts: the beta folded partscript into attachablescript (the same slot, condition, tipus and
@@ -55,6 +58,8 @@ namespace TLDRevamp
             new[] { "TerrainGenerationSettings", "mapSettingScript" },
             new[] { "ObjectGenerationScript", "mapSettingScript" },
             new[] { "ObjClass", "objGenScript/prefabClass" },
+            // attach targets (hitches, plates, trunk mounts) are slots on the beta (partslotscript.attachTarget)
+            new[] { "attachTargetscript", "partslotscript" },
         };
 
         // Fields that became methods: old owner, old field, field type, beta method (no parameters, returns the field type)
@@ -75,6 +80,7 @@ namespace TLDRevamp
             new[] { "tosaveitemscript", "physlocks", "mountStuff", "physLocks" },
             new[] { "tosaveitemscript", "colors", "colorscript", "colors" },
             new[] { "tosaveitemscript", "door_rots", "door_rot", "door_rots" },
+            new[] { "tosaveitemscript", "attachTargets", "partslotscript", "partslotscripts" },
         };
 
         private static readonly string[][] Setters =
@@ -349,7 +355,7 @@ namespace TLDRevamp
                     if (f == null || (path.Count > 0 && f.IsStatic)) return null;
                     path.Add(f); current = f.FieldType;
                 }
-                if (TypeName(current) != a[2] || (a[3] != a[0] && !path[0].IsStatic)) return null;
+                if (CecilName(current) != a[2] || (a[3] != a[0] && !path[0].IsStatic)) return null;
                 var last = path[path.Count - 1];
                 if ((store || address) && last.IsInitOnly) return null;
                 var ft = mod.ImportReference(current);
