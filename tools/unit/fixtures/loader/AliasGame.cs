@@ -124,7 +124,7 @@ public class TerrainGenerationSettings { public ObjectGenerationScript objGenera
 public class TerrainManager { public TerrainGenerationSettings settings; }
 public class TerrainGenerator { public static TerrainGenerator TG; public TerrainManager manager; }
 #else
-public class objGenScript
+public class objGenScript   // test stub, not game code
 {
     public class prefabClass { public UnityEngine.GameObject prefab; }
     public class categoryClass { public System.Collections.Generic.List<prefabClass> prefabs = new System.Collections.Generic.List<prefabClass>(); }
