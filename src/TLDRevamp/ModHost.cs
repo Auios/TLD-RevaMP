@@ -22,6 +22,7 @@ namespace TLDRevamp
             public MethodInfo OnMenuLoad, OnLoad, OnUnload, Config, Update, FixedUpdate, OnGUI;   // null: not overridden
             public MethodInfo DbLoad, DbLoadOld;   // with LoadInDB: DbLoad and the older dbLoad, both as TLDLoader calls them
             public string LastError;
+            public bool Menu;   // LoadInMenu: its Update and OnGUI run in the menu too
             public int BrokenTypes;   // types in its DLL that failed to load on the beta (UseHarmony is not applied then)
         }
 
@@ -102,6 +103,7 @@ namespace TLDRevamp
                             // to ask for it with LoadInMenu.)  The base class's methods are
                             // empty, so calling them would be a no-op; not binding them
                             // keeps "did the mod override it" answerable.
+                            l.Menu = menu;
                             l.OnMenuLoad = menu ? Overridden(t, modBase, "OnMenuLoad") : null;
                             l.OnLoad = Overridden(t, modBase, "OnLoad") ?? modBase.GetMethod("OnLoad");
                             l.OnUnload = Overridden(t, modBase, "OnUnload");
@@ -218,8 +220,10 @@ namespace TLDRevamp
             try { m.Invoke(l.Mod, null); }
             catch (Exception e)
             {
-                string err = what + ": " + (e.InnerException ?? e).Message;
-                if (err != l.LastError) { l.LastError = err; Plugin.Log.LogError("ModHost: " + l.Id + " " + err); }   // once, not per frame
+                var inner = e.InnerException ?? e;
+                string err = what + ": " + inner.Message;
+                // once, not per frame; the stack says which line of the mod (the error alone doesn't)
+                if (err != l.LastError) { l.LastError = err; Plugin.Log.LogError("ModHost: " + l.Id + " " + err + "\n" + inner.StackTrace); }
             }
         }
 
@@ -291,7 +295,9 @@ namespace TLDRevamp
                 _unloadCalled = false;
                 foreach (var l in Mods) Call(l, l.OnLoad, "OnLoad");
             }
-            foreach (var l in Mods) Call(l, l.Update, "Update");
+            // TLDLoader runs a mod's Update in a world only, unless it asked for the menu (LoadInMenu): mods read
+            // mainscript.M.player there with no null check (FastPedal, Fugitive). Before 2026-11-23 every mod's ran in the menu.
+            foreach (var l in Mods) if (worldUp || l.Menu) Call(l, l.Update, "Update");
             DevHooks.ModsTick?.Invoke();
         }
 
@@ -323,8 +329,10 @@ namespace TLDRevamp
             foreach (var l in Mods) Call(l, l.OnUnload, "OnUnload");
         }
 
-        public static void FixedTick() { foreach (var l in Mods) Call(l, l.FixedUpdate, "FixedUpdate"); }
-        public static void Gui() { foreach (var l in Mods) Call(l, l.OnGUI, "OnGUI"); }
+        /// As TLDLoader: FixedUpdate once the mods' OnLoad ran in a world, OnGUI then too or in the menu for a LoadInMenu mod.
+        public static void FixedTick() { if (!ModsLoaded()) return; foreach (var l in Mods) Call(l, l.FixedUpdate, "FixedUpdate"); }
+        public static void Gui() { bool loaded = ModsLoaded(); foreach (var l in Mods) if (loaded || l.Menu) Call(l, l.OnGUI, "OnGUI"); }
+        private static bool ModsLoaded() => _worldUp && _gameLoadedCalled;
 
         /// Set by the settings screen while it is open: a Loader mod's Config() draws
         /// its own window, and it must only be called then.  Unity runs the IMGUI

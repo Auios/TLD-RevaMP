@@ -2,7 +2,7 @@
 namespace UnityEngine
 {
     public class Transform { }
-    public class GameObject { }
+    public class GameObject { public string Name; public static GameObject Find(string name) => null; }
     public struct Vector3 { public float x, y, z; }
 #if !PUBLIC_GAME
     public struct Vector3d { public double x, y, z; }
@@ -16,7 +16,25 @@ public class gamemodesettingsscript
     public static gamemodesettingsscript s;
     public gamemodesettings S;
 }
-public class usablescript { public float tunedLerp; public int currentTurnState; }
+public class usablescript
+{
+    public float tunedLerp; public int currentTurnState;
+#if PUBLIC_GAME
+    public void Refresh(float slide, float x, float y) { }
+#else
+    public float Got;
+    public void Refresh(float slide, float x, float y, int turn) { Got = slide + x + y + turn; }
+#endif
+}
+public class layerScript
+{
+#if PUBLIC_GAME
+    public void FStart() { }
+#else
+    public object p; public int index = -1;
+    public void FStart(object _p, int _index) { p = _p; index = _index; }
+#endif
+}
 public class fpscontroller
 {
 #if PUBLIC_GAME

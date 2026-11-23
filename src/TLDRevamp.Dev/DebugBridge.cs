@@ -214,7 +214,7 @@ namespace TLDRevamp
         private static string FindGo(string arg)
         {
             var a = (arg ?? "").Trim().Split(' ');
-            string part = a[0].ToLowerInvariant();
+            string part = a[0] == "*" ? "" : a[0].ToLowerInvariant();   // *: every root object in range
             float r = a.Length > 1 && float.TryParse(a[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var rr) ? rr : 50f;
             var pl = mainscript.s != null ? mainscript.s.player : null;
             var at = pl != null ? pl.transform.position : Vector3.zero;

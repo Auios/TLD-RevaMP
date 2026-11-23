@@ -118,6 +118,33 @@ namespace TLDRevamp
         /// attachablescript.Refresh(): the public game refreshed the attach point's save data; the beta keeps none there.
         public static void RefreshAttachable(attachablescript a) { Calls++; }
 
+        /// usablescript.Refresh(slide, xRot, yRot): the beta's Refresh also takes the turn state; the usable keeps its own.
+        public static void RefreshUsable(usablescript u, float slide, float xRot, float yRot) { Calls++; u.Refresh(slide, xRot, yRot, u.currentTurnState); }
+
+        /// layerScript.FStart(): the beta's takes the item and the collider's place in its list (nothing reads that index).
+        public static void LayerFStart(layerScript l) { Calls++; if (l != null) l.FStart(l.p != null ? l.p : l.GetComponentInParent<pickupable>(), 0); }
+
+        /// Harmony.PatchAll() in the mod's own code: as the mod asked, but a patch that fails on the beta undoes the ones
+        /// applied before it (all or none, as ModHost's UseHarmony), and the mod's code goes on after the call.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public static void PatchAll(HarmonyLib.Harmony h) => PatchAllFrom(h, new System.Diagnostics.StackTrace().GetFrame(1).GetMethod().ReflectedType.Assembly);
+        public static void PatchAllFrom(HarmonyLib.Harmony h, System.Reflection.Assembly a)
+        {
+            Calls++;
+            try { h.PatchAll(a); }
+            catch (System.Exception e)
+            {
+                try { h.UnpatchSelf(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("LoaderCompat.PatchAll", quietError); }
+                PatchAllRefused++;
+                Plugin.Log.LogWarning("ModHost: " + a.GetName().Name + ": its Harmony patches can't all apply on the beta, none applied: " + (e.InnerException ?? e).Message);
+            }
+        }
+        public static int PatchAllRefused;
+
+        /// GameObject.Find("Main"): the public game's object with mainscript on it. The beta's has another name, and an
+        /// object named Main is something else; in the menu (no mainscript) the name is looked up as the mod asked.
+        public static GameObject FindMain(string name) { Calls++; return mainscript.s != null ? mainscript.s.gameObject : GameObject.Find(name); }
+
         /// Assembly.Location: for a rewritten mod (loaded from bytes, no location) the DLL it came from.
         public static string AssemblyLocation(System.Reflection.Assembly a)
         {

@@ -145,6 +145,8 @@ namespace TLDRevamp
             new[] { "attachablescript", "Attach", "UnityEngine.Transform,UnityEngine.RaycastHit", "Attach" },
             new[] { "tankcapscript", "UpdCap", "System.Boolean", "UpdCap" },
             new[] { "attachablescript", "Refresh", "", "RefreshAttachable" },
+            new[] { "usablescript", "Refresh", "System.Single,System.Single,System.Single", "RefreshUsable" },
+            new[] { "layerScript", "FStart", "", "LayerFStart" },
         };
 
         public static IEnumerable<string> AliasDescriptions()
@@ -163,6 +165,8 @@ namespace TLDRevamp
             yield return "Assembly.Location -> the rewritten mod's own DLL (LoaderCompat.AssemblyLocation)";
             foreach (var a in CompatFields) yield return a[0] + "." + a[1] + " -> LoaderCompat." + a[3] + (a[4].Length > 0 ? "/" + a[4] : "");
             foreach (var a in CompatMethods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> LoaderCompat." + a[3];
+            yield return "GameObject.Find(\"Main\") -> LoaderCompat.FindMain";
+            yield return "Harmony.PatchAll() -> LoaderCompat.PatchAll (all of them or none)";
             yield return "Dictionary<Int32,save_prefab>.ContainsKey -> LoaderCompat.RecordIdUsed; GetComponent<a type the beta lacks>() -> LoaderCompat.NoComponent";
             yield return "any other field the beta dropped (of a type it has) -> kept per object for the mod: LoaderCompat.Kept/Keep";
         }
@@ -302,6 +306,24 @@ namespace TLDRevamp
                 var m = compat.GetMethod("AssemblyLocation", Statics);
                 if (m == null) return null;
                 what = LocationChange;
+                return m;
+            }
+            // the mod's own Harmony.PatchAll(): on the beta it can stop at a patch naming a type the beta dropped, with the
+            // patches before it applied, and abort the mod's OnLoad there (Ask Jimmy). The helper undoes them instead.
+            if (mr.Name == "PatchAll" && mr.DeclaringType.FullName == "HarmonyLib.Harmony" && mr.HasThis && mr.Parameters.Count <= 1)
+            {
+                var m = compat.GetMethod(mr.Parameters.Count == 0 ? "PatchAll" : "PatchAllFrom", Statics);
+                if (m == null) return null;
+                what = "Harmony.PatchAll -> " + compat.Name + "." + m.Name;
+                return m;
+            }
+            // GameObject.Find("Main"): the public game's mainscript object; the beta's world has another object by that name
+            if (mr.Name == "Find" && mr.DeclaringType.FullName == "UnityEngine.GameObject" && mr.Parameters.Count == 1 &&
+                ins.Previous != null && ins.Previous.OpCode == OpCodes.Ldstr && (string)ins.Previous.Operand == "Main")
+            {
+                var m = compat.GetMethod("FindMain", Statics);
+                if (m == null) return null;
+                what = "GameObject.Find(\"Main\") -> " + compat.Name + ".FindMain";
                 return m;
             }
             // Dictionary<int, save_prefab>.ContainsKey: the spawner's id test on the old records

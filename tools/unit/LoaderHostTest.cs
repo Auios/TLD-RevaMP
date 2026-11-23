@@ -71,6 +71,12 @@ static class LoaderHostTest
         // the recorder's own list, not a copy of it: Clear() has to empty the real one
         var callsList = (List<string>)calls;
         Action Reset = () => callsList.Clear();
+        // the loaded mod's LoadInMenu as the host read it at load
+        Action<bool> SetMenu = menu =>
+        {
+            foreach (var l in (System.Collections.IEnumerable)typeof(ModHost).GetField("Mods", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null))
+                l.GetType().GetField("Menu").SetValue(l, menu);
+        };
 
         Section("OnMenuLoad in the menu, once");
         Reset();
@@ -127,10 +133,23 @@ static class LoaderHostTest
         Check("Update is called every tick", GetCalls().Contains("Update"));
         Reset();
         ModHost.FixedTick();
-        Check("FixedUpdate is called in the fixed tick", GetCalls().Contains("FixedUpdate"));
+        Check("FixedUpdate waits for a world, as TLD Loader's (after the mods' OnLoad)", !GetCalls().Contains("FixedUpdate"));
         Reset();
         ModHost.Gui();
-        Check("OnGUI is called in the gui pass", GetCalls().Contains("OnGUI"));
+        Check("OnGUI is called in the menu for a LoadInMenu mod", GetCalls().Contains("OnGUI"));
+        SetMenu(false);                      // as a mod without LoadInMenu
+        Reset();
+        ModHost.Tick(); ModHost.Gui();
+        Check("without LoadInMenu, Update and OnGUI don't run in the menu (FastPedal reads mainscript.M.player there)",
+              !GetCalls().Contains("Update") && !GetCalls().Contains("OnGUI"));
+        mainscript.s = new mainscript { player = new TLDRevamp.Fixtures.Player() };
+        ModHost.Tick();
+        Reset();
+        ModHost.Tick(); ModHost.FixedTick(); ModHost.Gui();
+        Check("in the world Update, FixedUpdate and OnGUI all run", GetCalls().Contains("Update") && GetCalls().Contains("FixedUpdate") && GetCalls().Contains("OnGUI"));
+        SetMenu(true);
+        mainscript.s = null;
+        ModHost.Tick();
         Reset();
         ModHost.ConfigScreenOpen = true;     // a settings screen is open
         ModHost.DrawConfigs();

@@ -283,7 +283,10 @@ tosaveitemscript.attachTargets -> partslotscripts. TerrainGenerator.roads -> the
 beta dropped, of a type it has (attachablescript.lockRotation in the Advanced Modding Toolkit's item setup), is kept per
 object for the mod alone (LoaderCompat.Kept/Keep) so the method naming it runs; the DLL's log line lists each one. A
 game method's return of the other integer sign is retargeted as fields are (savedatascript.GetNewKey), and
-attachablescript.Refresh() does nothing. A rewritten mod loads from bytes and has no Assembly.Location: its Location
+attachablescript.Refresh() does nothing; usablescript.Refresh(slide, x, y) passes the usable's own turn state to the
+beta's, layerScript.FStart() passes the collider's item, and GameObject.Find("Main") gets the object mainscript is on
+(the beta's has another name). A mod's own Harmony.PatchAll() is all or none: one patch that fails on the beta
+undoes the rest and the mod goes on (Ask Jimmy's stopped its OnLoad half patched). A rewritten mod loads from bytes and has no Assembly.Location: its Location
 calls get the DLL it came from (mods find their assets next to it). The beta's item database has empty slots the public
 game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
 Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL

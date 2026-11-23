@@ -50,6 +50,12 @@ public static class AliasMod
     /// A game method whose return changed sign (savedatascript.GetNewKey: int there, uint here).
     public static int NewKey(savedatascript s) => s.GetNewKey();
 
+    /// The public game's main object by name, a usable's three-value Refresh and a collider's FStart() (CompanyCruiser,
+    /// Better AM Radio, Badger's Rotary).
+    public static UnityEngine.GameObject Main() => UnityEngine.GameObject.Find("Main");
+    public static void Refresh(usablescript u) => u.Refresh(1f, 2f, 3f);
+    public static void Layer(layerScript l) => l.FStart();
+
     /// Where the mod's DLL is (the Advanced Modding Toolkit finds its assets next to it).
     public static string Where() => typeof(AliasMod).Assembly.Location;
 

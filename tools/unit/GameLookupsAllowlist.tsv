@@ -161,3 +161,5 @@ src/TLDRevamp/LoaderRetarget.cs	list.GetMethod("ToArray", Type.EmptyTypes)	Syste
 src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod(store ? "Keep" : "Kept", BindingFlags.Public | BindingFlags.Static)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
 src/TLDRevamp/LoaderRetarget.cs	GameLookups.RuntimeField(owner, old.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)	Member/type names come from external mod IL; core records game resolutions at runtime, no fixed source target.
 src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("AssemblyLocation", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod(mr.Parameters.Count == 0 ? "PatchAll" : "PatchAllFrom", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("FindMain", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.

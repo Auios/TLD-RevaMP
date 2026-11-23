@@ -144,6 +144,15 @@ static class LoaderRetargetTest
             Check("compat: a field the beta dropped is kept for the mod (tosaveitemscript.category: 7)",
                   changes.Contains("tosaveitemscript.category kept for the mod (the beta has none)") &&
                   (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Category").Invoke(null, new object[] { new tosaveitemscript() }) == 7);
+            var asm = LoadBytes(mod).GetType("AliasMod");
+            Check("compat: GameObject.Find(\"Main\") gets mainscript's object", changes.Contains("GameObject.Find(\"Main\") -> TestCompat.FindMain") &&
+                  ((UnityEngine.GameObject)asm.GetMethod("Main").Invoke(null, null)).Name == "the main object");
+            var u = new usablescript { currentTurnState = 4 };
+            asm.GetMethod("Refresh").Invoke(null, new object[] { u });
+            Check("compat: usablescript.Refresh(slide, x, y) passes the usable's turn state (1+2+3+4)", u.Got == 10f);
+            var l = new layerScript();
+            asm.GetMethod("Layer").Invoke(null, new object[] { l });
+            Check("compat: layerScript.FStart() starts it with its item", l.index == 0 && (string)l.p == "the item");
         }
     }
 
@@ -208,7 +217,7 @@ static class LoaderRetargetTest
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
             Check("all twelve fields, fourteen method shapes, the five part redirects, the coordinate type, the generator chain and a return sign are retargeted", changes.Count == 39);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 91);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 95);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -285,6 +294,9 @@ public static class TestCompat
     public static void SetRemoveFromMemory(tosaveitemscript t, bool value) { Removed = value; }
     public static mapSettingScript Map(mapSettingScript m) => m;
     public static string AssemblyLocation(System.Reflection.Assembly a) => "the mod's own DLL";
+    public static UnityEngine.GameObject FindMain(string name) => new UnityEngine.GameObject { Name = "the main object" };
+    public static void RefreshUsable(usablescript u, float slide, float x, float y) => u.Refresh(slide, x, y, u.currentTurnState);
+    public static void LayerFStart(layerScript l) => l.FStart("the item", 0);
     static readonly System.Collections.Generic.Dictionary<string, object> KeptValues = new System.Collections.Generic.Dictionary<string, object>();
     public static T Kept<T>(object owner, string field) => KeptValues.TryGetValue(field, out var v) ? (T)v : default(T);
     public static void Keep<T>(object owner, string field, T value) => KeptValues[field] = value;
