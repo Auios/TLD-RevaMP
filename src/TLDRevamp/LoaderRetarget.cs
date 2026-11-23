@@ -33,6 +33,9 @@ namespace TLDRevamp
             new[] { "tosaveitemscript", "part", "attachablescript", "tosaveitemscript", "attachable" },
             new[] { "pickupable", "part", "attachablescript", "pickupable", "tosave.attachable" },
             new[] { "itemdatabase", "buildings", "UnityEngine.GameObject[]", "itemdatabase", "pois" },
+            new[] { "mapSettingScript", "TG", "mapSettingScript", "menuhandler", "s.currentMainMap" },
+            new[] { "mapSettingScript", "staticReference", "mapSettingScript", "menuhandler", "s.currentMainMap" },
+            new[] { "mainscript", "terrainGenerationSettings", "mapSettingScript", "menuhandler", "s.currentMainMap" },
         };
 
         // The public game's parts: the beta folded partscript into attachablescript (the same slot, condition, tipus and
@@ -44,6 +47,14 @@ namespace TLDRevamp
             new[] { "buildingscript", "poiScript" },
             // a struct of three doubles, as Vector3d (visszarako.coord, the world offset: mainscript.world below)
             new[] { "doublecoord", "UnityEngine.Vector3d" },
+            // the public game's world generator: TerrainGenerator.TG.manager.settings.objGeneration.objTypes[i].prefab, the
+            // prefabs it scatters (cacti, rocks, tumbleweeds), is the current map's objGenScripts' prefabs on the beta. The
+            // chain's four types are the map (mapSettingScript), each step to the next the map itself (CompatFields)
+            new[] { "TerrainGenerator", "mapSettingScript" },
+            new[] { "TerrainManager", "mapSettingScript" },
+            new[] { "TerrainGenerationSettings", "mapSettingScript" },
+            new[] { "ObjectGenerationScript", "mapSettingScript" },
+            new[] { "ObjClass", "objGenScript/prefabClass" },
         };
 
         // Fields that became methods: old owner, old field, field type, beta method (no parameters, returns the field type)
@@ -110,6 +121,11 @@ namespace TLDRevamp
             new[] { "tankcapscript", "TClosed", "UnityEngine.Transform", "GetCapClosed", "SetCapClosed" },
             new[] { "carscript", "driverSeat", "seatscript", "DriverSeat", "" },
             new[] { "carscript", "ISwitches", "usablescript[]", "Switches", "" },
+            new[] { "mapSettingScript", "manager", "mapSettingScript", "Map", "" },
+            new[] { "mapSettingScript", "settings", "mapSettingScript", "Map", "" },
+            new[] { "mapSettingScript", "generator", "mapSettingScript", "Map", "" },
+            new[] { "mapSettingScript", "objGeneration", "mapSettingScript", "Map", "" },
+            new[] { "mapSettingScript", "objTypes", "objGenScript/prefabClass[]", "ObjTypes", "" },
         };
         // old owner, method, old parameter list, helper (the instance first, then the arguments)
         private static readonly string[][] CompatMethods =
@@ -146,10 +162,14 @@ namespace TLDRevamp
                 foreach (var a in Types)
                 {
                     if (tr.DeclaringType != null || tr.Namespace != "" || tr.Name != a[0] || !(tr.Scope is AssemblyNameReference scope) || scope.Name != gameName) continue;
-                    if (GameLookups.RuntimeType(game, a[0], false) != null || GameLookups.RuntimeType(game, a[1], false) == null) continue;   // the game has the old one, or not the new
-                    int dot = a[1].LastIndexOf('.');
-                    tr.Namespace = dot < 0 ? "" : a[1].Substring(0, dot);
-                    tr.Name = a[1].Substring(dot + 1);
+                    if (GameLookups.RuntimeType(game, a[0], false) != null || GameLookups.RuntimeType(game, a[1].Replace('/', '+'), false) == null) continue;   // the game has the old one, or not the new
+                    int dot = a[1].LastIndexOf('.'), nest = a[1].IndexOf('/');
+                    if (nest > 0)   // a nested type of the game's: objGenScript/prefabClass
+                    {
+                        tr.DeclaringType = new TypeReference("", a[1].Substring(0, nest), mod, tr.Scope);
+                        tr.Namespace = ""; tr.Name = a[1].Substring(nest + 1);
+                    }
+                    else { tr.Namespace = dot < 0 ? "" : a[1].Substring(0, dot); tr.Name = a[1].Substring(dot + 1); }
                     changes.Add("type " + a[0] + " -> " + a[1]);
                 }
             foreach (var mr in mod.GetMemberReferences())
@@ -309,8 +329,8 @@ namespace TLDRevamp
         {
             description = null;
             var old = ins.Operand as FieldReference;
-            bool store = ins.OpCode == OpCodes.Stfld, address = ins.OpCode == OpCodes.Ldflda;
-            if (old == null || (!store && !address && ins.OpCode != OpCodes.Ldfld)) return null;
+            bool store = ins.OpCode == OpCodes.Stfld, address = ins.OpCode == OpCodes.Ldflda, statics = ins.OpCode == OpCodes.Ldsfld;
+            if (old == null || (!store && !address && !statics && ins.OpCode != OpCodes.Ldfld)) return null;
             foreach (var a in Fields)
             {
                 if (old.DeclaringType.FullName != a[0] || old.Name != a[1] || old.FieldType.FullName != a[2]) continue;
@@ -330,6 +350,7 @@ namespace TLDRevamp
                 if ((store || address) && last.IsInitOnly) return null;
                 var ft = mod.ImportReference(current);
                 var m = NewAdapter(mod, old.DeclaringType, store ? mod.TypeSystem.Void : address ? new ByReferenceType(ft) : ft);
+                if (statics) { if (!path[0].IsStatic) return null; m.Parameters.Clear(); }   // a static of the old owner: nothing to pass
                 if (store) m.Parameters.Add(new ParameterDefinition(ft));
                 var il = m.Body.GetILProcessor();
                 if (!path[0].IsStatic) il.Emit(OpCodes.Ldarg_0);

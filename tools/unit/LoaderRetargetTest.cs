@@ -62,6 +62,7 @@ static class LoaderRetargetTest
         Aliases();
         Compat();
         Parts();
+        Generator();
         var gameAsm = typeof(Saved).Assembly;
         var sample = new Saved { key = 7, size = 1.5f };
 
@@ -139,6 +140,29 @@ static class LoaderRetargetTest
         }
     }
 
+    /// TerrainGenerator.TG...objTypes: a static of a type the beta lacks (the map from menuhandler.s), three steps that are
+    /// the map itself, and the nested prefabClass for ObjClass.
+    static void Generator()
+    {
+        string dll = Path.Combine(Path.GetDirectoryName(typeof(LoaderRetargetTest).Assembly.Location), "AliasMod.dll");
+        var map = new mapSettingScript();
+        for (int g = 0; g < 2; g++)
+        {
+            var gen = new objGenScript(); map.objGens.Add(gen);
+            var cat = new objGenScript.categoryClass(); gen.categories.Add(cat);
+            for (int i = 0; i < 3; i++) cat.prefabs.Add(new objGenScript.prefabClass { prefab = new UnityEngine.GameObject() });
+        }
+        menuhandler.s = new menuhandler { currentMainMap = map };
+        using (var mod = ModuleDefinition.ReadModule(dll))
+        {
+            var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly, typeof(TestCompat));
+            Check("generator: ObjClass is the nested objGenScript/prefabClass", changes.Contains("type ObjClass -> objGenScript/prefabClass"));
+            Check("generator: the static TG is the current map", changes.Contains("mapSettingScript.TG -> menuhandler.s.currentMainMap"));
+            int got = (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Scattered").Invoke(null, null);
+            Check("generator: every scattered prefab of every generator (6)", got == 6);
+        }
+    }
+
     /// partscript is the beta's attachablescript; the slot's part field its part() method; the car's slot array a list.
     static void Parts()
     {
@@ -176,8 +200,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all twelve fields, fourteen method shapes, the five part redirects and the coordinate type are retargeted", changes.Count == 32);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 64);
+            Check("all twelve fields, fourteen method shapes, the five part redirects, the coordinate type and the generator chain are retargeted", changes.Count == 38);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 77);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -252,4 +276,11 @@ public static class TestCompat
     public static void FStart(tosaveitemscript t, int id) => t.FStart((uint)id);
     public static bool GetRemoveFromMemory(tosaveitemscript t) => Removed;
     public static void SetRemoveFromMemory(tosaveitemscript t, bool value) { Removed = value; }
+    public static mapSettingScript Map(mapSettingScript m) => m;
+    public static objGenScript.prefabClass[] ObjTypes(mapSettingScript m)
+    {
+        var all = new System.Collections.Generic.List<objGenScript.prefabClass>();
+        foreach (var g in m.objGens) foreach (var c in g.categories) all.AddRange(c.prefabs);
+        return all.ToArray();
+    }
 }

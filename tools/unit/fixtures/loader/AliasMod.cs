@@ -36,6 +36,14 @@ public static class AliasMod
     /// The Advanced Modding Toolkit's global position: a Unity position minus the world offset's coordinate.
     public static double GlobalX(visszarako world, float x) => 0.0 - world.coord.x + x;
 
+    /// Remove-cactus/rock mods: every prefab the world generator scatters, counted.
+    public static int Scattered()
+    {
+        int n = 0;
+        foreach (var o in TerrainGenerator.TG.manager.settings.objGeneration.objTypes) if (o.prefab != null) n++;
+        return n;
+    }
+
     /// The workshop's part walk (M_VehicleDeterioration, SpeedOrBoom): every slot's part that knows its car and slot,
     /// then the slots replaced by the first one. Tens: the parts found, ones: the slots left.
     public static int Parts(tosaveitemscript car)

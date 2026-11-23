@@ -129,6 +129,25 @@ namespace TLDRevamp
         /// carscript.ISwitches: the car's switches, the usables the beta lists on its tosaveitemscript (a copy).
         public static usablescript[] Switches(carscript c) => c != null && c.tosave != null && c.tosave.usables != null ? c.tosave.usables.ToArray() : null;
 
+        // ------------------------------------------------------------------ the world generator
+
+        /// TerrainGenerator.TG.manager.settings.objGeneration: on the beta each step is the current map.
+        public static mapSettingScript Map(mapSettingScript m) => m;
+
+        /// ObjectGenerationScript.objTypes: every prefab the current map's object generators scatter, in their order (the
+        /// same prefab objects: a mod's change to one is the game's).
+        public static objGenScript.prefabClass[] ObjTypes(mapSettingScript m)
+        {
+            Calls++;
+            var all = new List<objGenScript.prefabClass>();
+            if (m != null && m.objGens != null)
+                foreach (var g in m.objGens)
+                    if (g != null && g.categories != null)
+                        foreach (var c in g.categories)
+                            if (c != null && c.prefabs != null) foreach (var p in c.prefabs) if (p != null && p.prefab != null) all.Add(p);
+            return all.ToArray();
+        }
+
         // ------------------------------------------------------------------ buildings
 
         /// buildingscript.itemsSpawned (buildingscript is the beta's poiScript): the place has started, which is when the

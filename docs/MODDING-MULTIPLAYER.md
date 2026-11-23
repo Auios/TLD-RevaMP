@@ -272,7 +272,11 @@ partslotscript.part -> part(); arrays the beta keeps as lists (tosaveitemscript.
 tanks, usables, tankcapscripts, physlocks -> physLocks, colors, door_rots) read as a copy and store as a new list.
 Of the workshop's 202 mods (2026-11-23), 41 named partscript. Buildings are the beta's points of interest:
 buildingscript -> poiScript, itemdatabase.buildings -> pois, itemsSpawned -> the place has started (the Advanced
-Modding Toolkit puts its mods' items into buildings then); doublecoord -> UnityEngine.Vector3d. The beta's item database has empty slots the public
+Modding Toolkit puts its mods' items into buildings then); doublecoord -> UnityEngine.Vector3d. The world generator's
+scattered prefabs (TerrainGenerator.TG.manager.settings.objGeneration.objTypes[i].prefab, and
+TerrainGenerationSettings.staticReference): each step is the current map (menuhandler.s.currentMainMap), objTypes
+its objGenScripts' prefabs (the same prefab objects), ObjClass -> objGenScript/prefabClass; the desert, mountain and
+road generators have no aliases. The beta's item database has empty slots the public
 game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
 Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator and save records have no

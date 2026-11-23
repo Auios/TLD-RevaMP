@@ -88,8 +88,28 @@ public class menuhandler   // test stub, not game code
 #if PUBLIC_GAME
     public DataFromMenuScript DFMS;
     public settingsscript Settings;
+#else
+    public static menuhandler s;
+    public mapSettingScript currentMainMap;
 #endif
 }
+
+// The world generator's scattered prefabs: the public game's chain of four types, the beta's map and its generators.
+#if PUBLIC_GAME
+public class ObjClass { public UnityEngine.GameObject prefab; }
+public class ObjectGenerationScript { public ObjClass[] objTypes; }
+public class TerrainGenerationSettings { public ObjectGenerationScript objGeneration; }
+public class TerrainManager { public TerrainGenerationSettings settings; }
+public class TerrainGenerator { public static TerrainGenerator TG; public TerrainManager manager; }
+#else
+public class objGenScript
+{
+    public class prefabClass { public UnityEngine.GameObject prefab; }
+    public class categoryClass { public System.Collections.Generic.List<prefabClass> prefabs = new System.Collections.Generic.List<prefabClass>(); }
+    public System.Collections.Generic.List<categoryClass> categories = new System.Collections.Generic.List<categoryClass>();
+}
+public class mapSettingScript { public System.Collections.Generic.List<objGenScript> objGens = new System.Collections.Generic.List<objGenScript>(); }
+#endif
 public class headlightscript
 {
     public int switchToState;
