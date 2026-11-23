@@ -10,6 +10,8 @@ namespace TLDRevamp
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "tldrevamp.core";
+        /// The game's own Multiplayer button opens the game's built-in lobby (MpScreen.InsteadOfGameLobby).
+        public static BepInEx.Configuration.ConfigEntry<bool> GameMultiplayerButton;
         public static BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> KeyMpScreen, KeyOverlay, KeyReport, KeyItemTraffic, KeyMark, KeyDebugLayout, KeyItemHealth, KeyDevMenu, KeyOwnership, KeyOwnerGhost, KeyLinks, KeyCompare, KeyEvents, KeyRepro, KeyDebugView, KeyCinematic, KeyReplayRecord, KeyReplayPlay;
         internal static string KeyName(BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> k)
         {
@@ -166,6 +168,9 @@ namespace TLDRevamp
             // stay the game's (2026-10-08: F7–F9 were ours too). F12 is Steam's screenshot key.
             KeyMpScreen = Config.Bind("Keys", "MultiplayerScreen", new BepInEx.Configuration.KeyboardShortcut(KeyCode.F11),
                 "Opens the multiplayer screen (also the game's own Multiplayer button).");
+            GameMultiplayerButton = Config.Bind("Multiplayer", "GameMultiplayerButton", false,
+                "The game's own Multiplayer button (and its T key) opens the game's built-in multiplayer lobby instead of " +
+                "RevaMP's multiplayer screen. F11 still opens RevaMP's. Only one of the two can be on at a time.");
             KeyOverlay = Config.Bind("Keys", "PerformanceOverlay", new BepInEx.Configuration.KeyboardShortcut(KeyCode.PageUp),
                 "Shows or hides the performance overlay (also Settings → Revamp).");
             KeyReport = Config.Bind("Keys", "DebugReport", new BepInEx.Configuration.KeyboardShortcut(KeyCode.PageDown),

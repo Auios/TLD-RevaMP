@@ -129,6 +129,9 @@ PLAYING TOGETHER
 Press F11 (or use the game's own Multiplayer button in the pause menu or main menu).
   Host: load or start your world, then press Host. A password is optional.
   Join: pick the friend who is hosting and press Join. Type the password if there is one.
+  The game's own built-in multiplayer: the "Game's multiplayer" button on this screen opens its lobby. To have the
+  Multiplayer button open it every time, set GameMultiplayerButton = true under [Multiplayer] in
+  BepInEx/config/tldrevamp.core.cfg (F11 still opens RevaMP's). Only one of the two can be on at a time.
 Your game loads the HOST's world. The host's machine owns the world and the save; joining never touches your own
 saves. While the join loads, a muted loading screen shows each stage and the object counts until the ground under
 you and the objects around you are really there. Escape cancels; after 60 seconds without progress you can continue

@@ -17,8 +17,15 @@ namespace TLDRevamp.Net
         public static MpServer Server;
         public static MpClient Client;
 
+        /// The game's built-in multiplayer is on (its lobby): a RevaMP session would sync the same world a second time.
+        private static void NotWithGameMultiplayer()
+        {
+            if (MpScreen.GameMultiplayerOn) throw new InvalidOperationException("The game's own multiplayer is on: leave its lobby first");
+        }
+
         public static string Host(ushort port, string password = "")
         {
+            NotWithGameMultiplayer();
             Stop();
             // a port another program holds: Steam would host on it anyway, and joiners would reach the other one
             if (JoinChecks.PortTaken(port))
@@ -60,6 +67,7 @@ namespace TLDRevamp.Net
 
         public static string Join(string address, string password = "")
         {
+            NotWithGameMultiplayer();
             Stop();
             SessionRules.DeathSession = SessionRules.NextSessionId();   // the anchor belongs to this session only
             SessionRules.DeathReset();
@@ -74,6 +82,7 @@ namespace TLDRevamp.Net
 
         public static string JoinFriend(ulong steamId, string password = "")
         {
+            NotWithGameMultiplayer();
             Stop();
             SessionRules.DeathSession = SessionRules.NextSessionId();   // the anchor belongs to this session only
             SessionRules.DeathReset();

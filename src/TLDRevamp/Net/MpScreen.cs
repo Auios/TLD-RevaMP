@@ -72,9 +72,37 @@ namespace TLDRevamp.Net
         // ---- opening: the game's Multiplayer button (and its T key), F11 (Plugin.KeyMpScreen)
         // Not over the Mods screens: a stray T there closed them and cancelled the download running (F11 still switches);
         // and not over this screen itself, which it would set back to its start (the selection, a typed password).
+        // The game's own lobby (its built-in multiplayer) instead, when the setting asks for it or this screen's button
+        // did, and no RevaMP session is on: the two would both sync the world. Its window closes the same way.
         [HarmonyPatch(typeof(SteamP2PMenuHandlerScript), nameof(SteamP2PMenuHandlerScript.APressedMulti))]
         [HarmonyPrefix]
-        private static bool InsteadOfGameLobby() { if (!ModsScreen.IsOpen && !IsOpen) Open(); return false; }
+        private static bool InsteadOfGameLobby(SteamP2PMenuHandlerScript __instance)
+        {
+            bool toGame = _toGameLobby; _toGameLobby = false;
+            if (__instance.menuOpen) return true;
+            if ((toGame || Plugin.GameMultiplayerButton.Value) && !RevampSessionOn) { Close(); return true; }
+            if (!ModsScreen.IsOpen && !IsOpen) Open();
+            return false;
+        }
+        private static bool _toGameLobby;
+        private static GameObject _gameLobbyButton;
+        internal static GameObject ObservedGameLobbyButton => _gameLobbyButton;
+        private static bool RevampSessionOn => Mp.Server != null || Mp.Client != null;
+
+        /// The game's built-in multiplayer on: RevaMP's sessions wait until it is left (the two would both sync the world).
+        public static bool GameMultiplayerOn
+        {
+            get { try { return GeneszSteamP2PBase.SteamP2PNetworkingUnderTheHoodScript.IsConnected(); } catch { return false; } }
+        }
+
+        /// This screen's "Game's multiplayer" button: the game's own lobby window, this once.
+        private static void OpenGameLobby()
+        {
+            var game = SteamP2PMenuHandlerScript.ss;
+            if (game == null || RevampSessionOn) return;
+            _toGameLobby = true;
+            game.APressedMulti();
+        }
 
         /// Typing in this screen's own fields (the join password, the host's session password): the game takes no
         /// input, as for the chat. They are copies of the save screen's name field, which the game's check doesn't
@@ -207,6 +235,12 @@ namespace TLDRevamp.Net
             _down = Btn(t, "ButtonDown", () => { _page++; Refresh(); }, hideIcon: false);
             Label(_kick, "Kick");
             BuildSessionSettings(t);
+            // where the session-settings button is in a game (they never show together)
+            _gameLobbyButton = UnityEngine.Object.Instantiate(_settingsButton, t);
+            _gameLobbyButton.name = "TLDRevampGameLobbyButton";
+            var gb = _gameLobbyButton.GetComponent<Button>(); gb.onClick = new Button.ButtonClickedEvent();
+            gb.onClick.AddListener(OpenGameLobby);
+            Label(gb, "Game's multiplayer");
 
             // the save screen's "Delete Save?" question → "Kick NAME?"
             _confirm = t.Find("TextDelete").gameObject;
@@ -359,6 +393,8 @@ namespace TLDRevamp.Net
             bool showButton = inGame;
             if (_settingsPanel.activeSelf != (showButton && _settingsOpen)) _settingsPanel.SetActive(showButton && _settingsOpen);
             _settingsButton.SetActive(showButton && !_confirm.activeSelf);
+            if (_gameLobbyButton != null)
+                _gameLobbyButton.SetActive(!RevampSessionOn && SteamP2PMenuHandlerScript.ss != null && !_confirm.activeSelf);
             FillSettingRows();
         }
 
