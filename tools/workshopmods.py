@@ -80,9 +80,16 @@ def place(mod):
     if PROBE and amt(mod): shutil.copy2(PROBE, LM / PROBE.name)
     return sorted(str(p.relative_to(LM)) for p in LM.rglob("*") if p.is_file() and "Logs" not in p.parts)[:40]
 
+# The game's own settings as they were when the sweep started, put back before every launch: a mod's change to them is
+# saved by the game and stayed for every mod after it (RUNDEN's automatic gearbox turns the game's auto shift off, and
+# every later drive sat in neutral at 0 m/s).
+SETTINGS = game.DOCS / "settings.tldc"
+SETTINGS_KEPT = None
+
 def run_mod(mod, base):
     r = {"mod": mod, "t": time.strftime("%Y-%m-%d %H:%M:%S")}
     r["files"] = place(mod) if mod else []
+    if SETTINGS_KEPT is not None: SETTINGS.write_bytes(SETTINGS_KEPT)
     global LOGSIZES
     LOGSIZES = {p: p.stat().st_size for p in (LM / "Logs").rglob("*") if p.is_file()} if (LM / "Logs").exists() else {}
     game.quit_game(); game.launch()
@@ -210,6 +217,7 @@ def run_mod(mod, base):
 def stop(signum, frame): raise KeyboardInterrupt   # a stopped service still runs the cleanup below
 
 def main():
+    global SETTINGS_KEPT
     import signal; signal.signal(signal.SIGTERM, stop)
     done = set()
     if OUT.exists():
@@ -227,6 +235,9 @@ def main():
         if p.name != "Logs": shutil.move(str(p), ASIDE / p.name)
     with game.ProtectedSession():
         try:
+            if SETTINGS.exists():
+                SETTINGS_KEPT = SETTINGS.read_bytes()
+                if b'"BAutoShift": false' in SETTINGS_KEPT: sys.exit(f"{SETTINGS} has auto shift off: the drive needs it on")
             if "--no-build" not in sys.argv: game.build()
             if base is None:
                 log("== baseline (no workshop mods)")
