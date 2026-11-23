@@ -167,11 +167,42 @@ static int read_ll(const char *leaf, long long *value) {
 static int write_ll(const char *leaf, long long value) {
     char b[64]; snprintf(b, sizeof b, "%lld\n", value); return write_state(leaf, b);
 }
+/* The cgroup the desktop compositor runs in, from /proc (any user's: the second Steam account has no desktop of its
+ * own and watches the owner's). Hyprland started from a login shell (start-hyprland) runs in session-N.scope, not
+ * in the uwsm service the fixed path names, and N changes at every login: with the fixed path gone every reading
+ * was -1 and the guard refused every launch ("memory readings unavailable", 2026-11-23). The default path only:
+ * TLD_ADMIT_WATCHED_CGROUP is used as it is. */
+static int compositor_cgroup(char *out, size_t n) {
+    DIR *d = opendir("/proc");
+    if (!d) return 0;
+    struct dirent *e; int found = 0;
+    while (!found && (e = readdir(d))) {
+        if (!isdigit((unsigned char)e->d_name[0])) continue;
+        char path[PATH_MAX], b[4096];
+        snprintf(path, sizeof path, "/proc/%s/comm", e->d_name);
+        if (!read_text(path, b, sizeof b)) continue;
+        b[strcspn(b, "\n")] = 0;
+        if (strcmp(b, "Hyprland") != 0) continue;
+        snprintf(path, sizeof path, "/proc/%s/cgroup", e->d_name);
+        if (!read_text(path, b, sizeof b)) continue;
+        char *line = strstr(b, "0::/");   /* the unified hierarchy's line, also with a legacy net_cls line before it */
+        if (!line) continue;
+        line += 3; line[strcspn(line, "\n")] = 0;
+        found = snprintf(out, n, "/sys/fs/cgroup%s", line) < (int)n;
+    }
+    closedir(d);
+    return found;
+}
 static const char *watched(void) {
-    const char *v = getenv("TLD_ADMIT_WATCHED_CGROUP");
-    if (v && *v) return v;
     static char path[PATH_MAX];
-    if (!path[0]) snprintf(path, sizeof path, WATCHED_FMT, (unsigned long)getuid(), (unsigned long)getuid());
+    char probe[PATH_MAX];
+    const char *v = getenv("TLD_ADMIT_WATCHED_CGROUP");
+    if (v && *v) return v;   /* named on purpose: exactly that one (the tests name a made-up one) */
+    snprintf(path, sizeof path, WATCHED_FMT, (unsigned long)getuid(), (unsigned long)getuid());
+    if (join(probe, sizeof probe, path, "memory.stat") && access(probe, R_OK) == 0) return path;
+    char found[PATH_MAX];
+    if (compositor_cgroup(found, sizeof found) && join(probe, sizeof probe, found, "memory.stat") && access(probe, R_OK) == 0)
+        snprintf(path, sizeof path, "%s", found);
     return path;
 }
 static void read_gauge(AdmitReading *r) {
