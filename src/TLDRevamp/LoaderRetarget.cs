@@ -99,6 +99,7 @@ namespace TLDRevamp
             new[] { "headlightscript", "SwitchState", "", "System.Int32,usablescript", "nextLight,null" },
             new[] { "survivalscript", "Damage", "System.Single,System.Boolean", "System.Single,UnityEngine.Vector3,System.Boolean", "1,zero,2" },
             new[] { "survivalscript", "DamageInstant", "System.Single,System.Boolean", "System.Single,UnityEngine.Vector3,System.Boolean", "1,zero,2" },
+            new[] { "pickupable", "Drop", "System.Boolean", "", "" },
         };
 
         // The public game's save and attach members the beta changed or dropped, answered by a helper type the caller
@@ -121,6 +122,9 @@ namespace TLDRevamp
             new[] { "tankcapscript", "TClosed", "UnityEngine.Transform", "GetCapClosed", "SetCapClosed" },
             new[] { "carscript", "driverSeat", "seatscript", "DriverSeat", "" },
             new[] { "carscript", "ISwitches", "usablescript[]", "Switches", "" },
+            new[] { "pickupable", "slots", "System.Collections.Generic.List`1<partslotscript>", "PickupSlots", "" },
+            new[] { "tankcapscript", "GOpen", "System.Collections.Generic.List`1<UnityEngine.GameObject>", "GetCapGOpen", "SetCapGOpen" },
+            new[] { "tankcapscript", "GClosed", "System.Collections.Generic.List`1<UnityEngine.GameObject>", "GetCapGClosed", "SetCapGClosed" },
             new[] { "mapSettingScript", "manager", "mapSettingScript", "Map", "" },
             new[] { "mapSettingScript", "settings", "mapSettingScript", "Map", "" },
             new[] { "mapSettingScript", "generator", "mapSettingScript", "Map", "" },

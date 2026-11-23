@@ -114,6 +114,17 @@ namespace TLDRevamp
         public static Transform GetCapClosed(tankcapscript c) => CapGet(c, 2);
         public static void SetCapClosed(tankcapscript c, Transform v) => CapSet(c, 2, v);
         public static void UpdCap(tankcapscript c, bool sound) { Calls++; }
+        // GOpen/GClosed: what the public game showed open or closed (lists of objects), kept the same way
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<tankcapscript, List<GameObject>[]> _capObjs =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<tankcapscript, List<GameObject>[]>();
+        private static List<GameObject> CapObjs(tankcapscript c, int i) => c == null ? new List<GameObject>() : _capObjs.GetValue(c, _ => new[] { new List<GameObject>(), new List<GameObject>() })[i];
+        public static List<GameObject> GetCapGOpen(tankcapscript c) => CapObjs(c, 0);
+        public static void SetCapGOpen(tankcapscript c, List<GameObject> v) { Calls++; if (c != null) _capObjs.GetValue(c, _ => new[] { new List<GameObject>(), new List<GameObject>() })[0] = v ?? new List<GameObject>(); }
+        public static List<GameObject> GetCapGClosed(tankcapscript c) => CapObjs(c, 1);
+        public static void SetCapGClosed(tankcapscript c, List<GameObject> v) { Calls++; if (c != null) _capObjs.GetValue(c, _ => new[] { new List<GameObject>(), new List<GameObject>() })[1] = v ?? new List<GameObject>(); }
+
+        /// pickupable.slots: the item's part slots, the beta's tosaveitemscript list (the same list).
+        public static List<partslotscript> PickupSlots(pickupable p) { var t = SaveOf(p); return t != null ? t.partslotscripts : null; }
 
         // ------------------------------------------------------------------ cars
 
