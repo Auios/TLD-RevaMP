@@ -163,6 +163,9 @@ static class LoaderRetargetTest
             int got = (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Parts").Invoke(null, new object[] { car });
             Check("parts: two parts found through part() and tosave, one slot left after the store", got == 21);
             Check("parts: the store reached the game's list", car.partslotscripts.Count == 1);
+            var world = new visszarako(); world.coord.x = 1000;
+            Check("coordinates: doublecoord is the beta's UnityEngine.Vector3d (by address, another namespace)", changes.Contains("type doublecoord -> UnityEngine.Vector3d") &&
+                  (double)LoadBytes(mod).GetType("AliasMod").GetMethod("GlobalX").Invoke(null, new object[] { world, 1500f }) == 500);
         }
     }
 
@@ -173,8 +176,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all twelve fields, fourteen method shapes and the five part redirects are retargeted", changes.Count == 31);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 53);
+            Check("all twelve fields, fourteen method shapes, the five part redirects and the coordinate type are retargeted", changes.Count == 32);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 57);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();

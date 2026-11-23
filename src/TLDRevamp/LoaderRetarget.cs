@@ -32,6 +32,7 @@ namespace TLDRevamp
             new[] { "attachablescript", "p", "pickupable", "attachablescript", "tosave.P" },
             new[] { "tosaveitemscript", "part", "attachablescript", "tosaveitemscript", "attachable" },
             new[] { "pickupable", "part", "attachablescript", "pickupable", "tosave.attachable" },
+            new[] { "itemdatabase", "buildings", "UnityEngine.GameObject[]", "itemdatabase", "pois" },
         };
 
         // The public game's parts: the beta folded partscript into attachablescript (the same slot, condition, tipus and
@@ -39,6 +40,10 @@ namespace TLDRevamp
         private static readonly string[][] Types =
         {
             new[] { "partscript", "attachablescript" },
+            // buildings are points of interest (itemdatabase.pois, the same prefabs and names: kut, benzinkut01, ...)
+            new[] { "buildingscript", "poiScript" },
+            // a struct of three doubles, as Vector3d (visszarako.coord, the world offset: mainscript.world below)
+            new[] { "doublecoord", "UnityEngine.Vector3d" },
         };
 
         // Fields that became methods: old owner, old field, field type, beta method (no parameters, returns the field type)
@@ -98,6 +103,7 @@ namespace TLDRevamp
             new[] { "pickupable", "cols2", "layerScript[]", "GetCols2", "SetCols2" },
             new[] { "attachablescript", "targetTosave", "tosaveitemscript", "TargetTosave", "" },
             new[] { "attachablescript", "C", "System.Collections.Generic.List`1<UnityEngine.Collider>", "GetC", "SetC" },
+            new[] { "poiScript", "itemsSpawned", "System.Boolean", "ItemsSpawned", "" },
         };
         // old owner, method, old parameter list, helper (the instance first, then the arguments)
         private static readonly string[][] CompatMethods =
@@ -134,7 +140,9 @@ namespace TLDRevamp
                 {
                     if (tr.DeclaringType != null || tr.Namespace != "" || tr.Name != a[0] || !(tr.Scope is AssemblyNameReference scope) || scope.Name != gameName) continue;
                     if (GameLookups.RuntimeType(game, a[0], false) != null || GameLookups.RuntimeType(game, a[1], false) == null) continue;   // the game has the old one, or not the new
-                    tr.Name = a[1];
+                    int dot = a[1].LastIndexOf('.');
+                    tr.Namespace = dot < 0 ? "" : a[1].Substring(0, dot);
+                    tr.Name = a[1].Substring(dot + 1);
                     changes.Add("type " + a[0] + " -> " + a[1]);
                 }
             foreach (var mr in mod.GetMemberReferences())

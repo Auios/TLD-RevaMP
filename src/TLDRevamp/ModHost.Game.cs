@@ -60,8 +60,9 @@ namespace TLDRevamp
         /// A/B (bridge `set`): false = before 2026-11-11 (mainscript.M.seed/load/napszak exist but stay 0/false/null).
         public static bool GameAliasesOn = true;
         private static bool _fromSave, _loadPending, _aliasWasUp;
-        private static FieldInfo _fSeed, _fLoad, _fNapszak, _fLoaded, _fMulti, _fWorld;
+        private static FieldInfo _fSeed, _fLoad, _fNapszak, _fLoaded, _fMulti, _fWorld, _fMainWorld;
         private static UnityEngine.Transform _worldAnchor;
+        private static visszarako _mainWorld;
         private static bool _aliasLooked;
         private static bool _loadSignal;   // a save was chosen since the last look (the flag may be set and cleared between looks)
 
@@ -85,6 +86,7 @@ namespace TLDRevamp
                 const BindingFlags f = BindingFlags.Public | BindingFlags.Instance;
                 _fSeed = GameLookups.ReflectionField(typeof(mainscript), "seed", f); _fLoad = GameLookups.ReflectionField(typeof(mainscript), "load", f); _fNapszak = GameLookups.ReflectionField(typeof(mainscript), "napszak", f);
                 _fLoaded = GameLookups.ReflectionField(typeof(mainscript), "loaded", f); _fMulti = GameLookups.ReflectionField(typeof(mainscript), "multi", f); _fWorld = GameLookups.ReflectionField(typeof(mainscript), "world", f);
+                _fMainWorld = GameLookups.ReflectionField(typeof(mainscript), "mainWorld", f);
             }
             var dm = DataFromMenuScript.s;
             bool signal = _loadSignal; _loadSignal = false;
@@ -100,19 +102,24 @@ namespace TLDRevamp
                 // before this frame's OnLoad: false through it and its frame's Update, true from the next frame
                 if (_fLoaded != null) _fLoaded.SetValue(m, worldUp && _gameLoadedCalled);
                 if (_fMulti != null) _fMulti.SetValue(m, Net.Entities.InSession);
-                if (_fWorld != null && worldUp)
+                if ((_fWorld != null || _fMainWorld != null) && worldUp)
                 {
                     if (_worldAnchor == null)
                     {
                         _worldAnchor = new UnityEngine.GameObject("RevaMP mainscript.world (TLD Loader mods)").transform;
-                        _fWorld.SetValue(m, _worldAnchor);
+                        // the public game's mainWorld: its coord is the world offset. Started already, so the game never
+                        // lists it among the objects it moves back (this anchor follows the offset below)
+                        _mainWorld = _worldAnchor.gameObject.AddComponent<visszarako>();
+                        _mainWorld.started = true; _mainWorld.dont = true; _mainWorld.dontlookUnderMap = true;
                     }
-                    else if (!ReferenceEquals(_fWorld.GetValue(m), _worldAnchor)) _fWorld.SetValue(m, _worldAnchor);
+                    if (_fWorld != null && !ReferenceEquals(_fWorld.GetValue(m), _worldAnchor)) _fWorld.SetValue(m, _worldAnchor);
+                    if (_fMainWorld != null && !ReferenceEquals(_fMainWorld.GetValue(m), _mainWorld)) _fMainWorld.SetValue(m, _mainWorld);
                     var o = m.visszarakva;   // global = unity - offset: world.InverseTransformPoint(p) = p - offset
                     _worldAnchor.position = new UnityEngine.Vector3((float)o.x, (float)o.y, (float)o.z);
+                    _mainWorld.coord = o;
                 }
             }
-            catch (Exception e) { GameAliasesOn = false; Plugin.Log.LogWarning("ModHost: mainscript.seed/load/napszak/loaded/multi/world: " + e.Message); }
+            catch (Exception e) { GameAliasesOn = false; Plugin.Log.LogWarning("ModHost: mainscript.seed/load/napszak/loaded/multi/world/mainWorld: " + e.Message); }
         }
 
         public static string AliasStatus()
@@ -121,7 +128,8 @@ namespace TLDRevamp
             foreach (var a in new[] { "mainscript.M -> mainscript.s (host mirror)", "itemdatabase.d -> itemdatabase.s (host mirror)",
                                      "savedatascript.d -> savedatascript.s (host mirror)", "mainscript.seed -> DataFromMenuScript.s.seed (host snapshot)",
                                      "mainscript.load -> from-save latch (host snapshot)", "mainscript.napszak -> napszakvaltakozas.s (host mirror)",
-                                     "mainscript.loaded -> world up and OnLoad done", "mainscript.multi -> RevaMP session", "mainscript.world -> a transform at the world offset" })
+                                     "mainscript.loaded -> world up and OnLoad done", "mainscript.multi -> RevaMP session", "mainscript.world -> a transform at the world offset",
+                                     "mainscript.mainWorld -> a visszarako whose coord is the world offset" })
                 aliases.Add(Json.Str(a));
             foreach (var a in LoaderRetarget.AliasDescriptions()) aliases.Add(Json.Str(a));
             string list = "\"aliases\":[" + string.Join(",", aliases.ToArray()) + "],\"rewrites\":" + (Retarget ? "true" : "false") + ",";

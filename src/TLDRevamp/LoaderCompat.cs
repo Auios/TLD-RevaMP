@@ -88,6 +88,12 @@ namespace TLDRevamp
         }
         public static void SetC(attachablescript a, List<Collider> v) { Calls++; if (a != null && _c != null && _c.FieldType == typeof(Collider[])) _c.SetValue(a, v != null ? v.ToArray() : null); }
 
+        // ------------------------------------------------------------------ buildings
+
+        /// buildingscript.itemsSpawned (buildingscript is the beta's poiScript): the place has started, which is when the
+        /// beta spawns its items. The Advanced Modding Toolkit puts its mods' items into a building when this turns true.
+        public static bool ItemsSpawned(poiScript p) => p != null && p.started;
+
         /// attachablescript.Attach(Transform, RaycastHit): attached where the ray hit, as the beta's Attach(RaycastHit).
         public static void Attach(attachablescript a, Transform target, RaycastHit hit) { Calls++; if (a != null && hit.collider != null) a.Attach(hit); }
     }

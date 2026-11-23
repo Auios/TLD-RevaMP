@@ -4,6 +4,9 @@ namespace UnityEngine
     public class Transform { }
     public class GameObject { }
     public struct Vector3 { public float x, y, z; }
+#if !PUBLIC_GAME
+    public struct Vector3d { public double x, y, z; }
+#endif
 }
 public class DataFromMenuScript { public static DataFromMenuScript s; }   // test stub, not game code
 public class settingsscript { public static settingsscript s; }
@@ -128,6 +131,14 @@ public class tosaveitemscript   // test stub, not game code
     public attachablescript attachable;
 #endif
 }
+
+// The world offset's coordinate: the public game's doublecoord, the beta's UnityEngine.Vector3d (another namespace).
+#if PUBLIC_GAME
+public struct doublecoord { public double x, y, z; }
+public class visszarako { public doublecoord coord; }
+#else
+public class visszarako { public UnityEngine.Vector3d coord; }
+#endif
 
 // The public game's parts (partscript, its slot's part field) and the beta's: parts are attachablescripts, the slot
 // answers part().

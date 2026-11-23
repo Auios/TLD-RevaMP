@@ -241,10 +241,11 @@ back when the session ends.
 TLD Revamp already runs TLD Loader mods under BepInEx on the beta (the mod's lifecycle calls including DbLoad, its
 logger, its config and assets folders, LoadAssets, and the public game's singleton names mainscript.M, itemdatabase.d
 and savedatascript.d, which the preloader adds to the game's classes: TLDRevamp.Preloader.LoaderAliases, with
-mainscript.seed/load/napszak/loaded/multi/world as instance fields Unity never saves, set from the beta's world seed,
-its load flag (kept for the whole world: the game clears its own on the first frame), napszakvaltakozas.s, whether the
-world is up with the mods' OnLoad done (false through OnLoad and that frame's Update), whether a RevaMP session runs,
-and a transform at the beta's world offset (world.InverseTransformPoint(p) is p's world position); and where a
+mainscript.seed/load/napszak/loaded/multi/world/mainWorld as instance fields Unity never saves, set from the beta's
+world seed, its load flag (kept for the whole world: the game clears its own on the first frame), napszakvaltakozas.s,
+whether the world is up with the mods' OnLoad done (false through OnLoad and that frame's Update), whether a RevaMP
+session runs, a transform at the beta's world offset (world.InverseTransformPoint(p) is p's world position) and a
+visszarako there whose coord is that offset (global = unity position - mainWorld.coord); and where a
 game field is the same integer with the other sign on the beta, as idInSave (an int there, a uint here), ModHost points
 the mod's own reference at the beta's type before loading it: LoaderRetarget, config Mods.RetargetLoaderMods.
 That switch also enables public-name rewrites: fpscontroller.Tb -> BodyRot, radioscript.v -> Bvolume.tunedLerp,
@@ -266,11 +267,13 @@ type partscript is renamed in the mod (its fields, locals and GetComponent<parts
 -> attachablescript.tosave/tosave.P, tosaveitemscript.part and pickupable.part -> the item's attachablescript,
 partslotscript.part -> part(); arrays the beta keeps as lists (tosaveitemscript.partslotscripts, partconditions,
 tanks, usables, tankcapscripts, physlocks -> physLocks, colors, door_rots) read as a copy and store as a new list.
-Of the workshop's 202 mods (2026-11-23), 41 named partscript. The beta's item database has empty slots the public
+Of the workshop's 202 mods (2026-11-23), 41 named partscript. Buildings are the beta's points of interest:
+buildingscript -> poiScript, itemdatabase.buildings -> pois, itemsSpawned -> the place has started (the Advanced
+Modding Toolkit puts its mods' items into buildings then); doublecoord -> UnityEngine.Vector3d. The beta's item database has empty slots the public
 game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
 Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator and save records have no
-aliases. The existing seed/load/napszak/loaded/multi/world fields are host snapshots; writing those does not write beta
+aliases. The existing seed/load/napszak/loaded/multi/world/mainWorld fields are host snapshots; writing those does not write beta
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,
 UseHarmony (all of a
 mod's patches or none: a patch naming what the beta lacks would throw inside the game's own method), Events,

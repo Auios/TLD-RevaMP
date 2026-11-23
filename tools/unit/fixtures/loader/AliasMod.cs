@@ -33,6 +33,9 @@ public static class AliasMod
     }
 
     /// The spawner RUNDEN's and M_'s workshop mods share: the first id no item and no record has, then FStart(int).
+    /// The Advanced Modding Toolkit's global position: a Unity position minus the world offset's coordinate.
+    public static double GlobalX(visszarako world, float x) => 0.0 - world.coord.x + x;
+
     /// The workshop's part walk (M_VehicleDeterioration, SpeedOrBoom): every slot's part that knows its car and slot,
     /// then the slots replaced by the first one. Tens: the parts found, ones: the slots left.
     public static int Parts(tosaveitemscript car)
