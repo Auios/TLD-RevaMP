@@ -79,6 +79,28 @@ public static class AliasMod
         return i;
     }
 
+    /// M-'s save template (M_TR_Radiation, M-ultiTool, The Long Who): the mod's data as a string in a fake plate record
+    /// under its ID's hash, made the first time.
+    public static string Record(savedatascript s, string input)
+    {
+        int key = 12345;
+        save_rendszam val = null;
+        if ((s.data.farStuff.TryGetValue(key, out var value) || s.data.nearStuff.TryGetValue(key, out value)) && value.rendszam != null) val = value.rendszam;
+        if (val == null)
+        {
+            var rec = new save_prefab(3, 4, double.MaxValue, double.MaxValue, double.MaxValue, 0f, 0f, 0f);
+            rec.rendszam = new save_rendszam();
+            val = rec.rendszam;
+            val.S = string.Empty;
+            s.data.farStuff.Add(key, rec);
+        }
+        if (!string.IsNullOrEmpty(input)) val.S = input;
+        return val.S;
+    }
+
+    /// Achievements' menu button: shown unless the menu's settings or save screen is open.
+    public static string MenuScreens() => mainmenuscript.mainmenu.SettingsScreenObj.Name + "," + mainmenuscript.mainmenu.SaveScreenObj.Name;
+
     public static void Calls(fpscontroller p, radioscript r, mainscript m, headlightscript h, survivalscript s)
     {
         p.RightHandRelease(); r.UpdValues(true); m.PressedEscape();
@@ -86,4 +108,11 @@ public static class AliasMod
         m.ChGodMode(false); m.ChKmh(false);
         m.FoodCh(1); m.WaterCh(2); m.HpCh(3); m.PissCh(4); m.ShitCh(5);
     }
+}
+
+/// More UFOs: its list of UFO types names one that keeps a game type the beta dropped.
+public static class UfoMod
+{
+    public static readonly System.Type[] Types = { typeof(Sandstorms) };
+    public class Sandstorms { public temporaryTurnOffGeneration Temp; public int Speed = 3; }
 }

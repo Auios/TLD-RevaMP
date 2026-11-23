@@ -153,6 +153,22 @@ static class LoaderRetargetTest
             var l = new layerScript();
             asm.GetMethod("Layer").Invoke(null, new object[] { l });
             Check("compat: layerScript.FStart() starts it with its item", l.index == 0 && (string)l.p == "the item");
+            TestCompat.Records.Clear();
+            var s2 = new savedatascript();
+            string first = (string)asm.GetMethod("Record").Invoke(null, new object[] { s2, "{\"rads\":3}" });
+            string again = (string)asm.GetMethod("Record").Invoke(null, new object[] { s2, null });
+            Check("compat: save_prefab is the helper's SaveRecord", changes.Contains("type save_prefab -> TestCompat.SaveRecord"));
+            Check("compat: a mod's own record (M-'s save template) is made once and read back",
+                  first == "{\"rads\":3}" && again == first && TestCompat.Records.Count == 1 && TestCompat.Records[12345].categoryID == 3);
+            menuhandler.s = new menuhandler();
+            Check("compat: the main menu is menuhandler.s, its screens from the helper (mainmenuscript.mainmenu.SettingsScreenObj)",
+                  changes.Contains("type mainmenuscript -> menuhandler") && changes.Contains("menuhandler.mainmenu -> menuhandler.s") &&
+                  (string)asm.GetMethod("MenuScreens").Invoke(null, null) == "settings,save");
+            var ufo = LoadBytes(mod).GetType("UfoMod+Sandstorms");
+            Check("compat: a mod's field of a dropped game type is an object, and its class loads (More UFOs)",
+                  changes.Contains("UfoMod/Sandstorms.Temp temporaryTurnOffGeneration -> Object (the beta has no temporaryTurnOffGeneration)") &&
+                  ufo.GetField("Temp").FieldType == typeof(object) && ((System.Type[])LoadBytes(mod).GetType("UfoMod").GetField("Types").GetValue(null)).Length == 1 &&
+                  (int)ufo.GetField("Speed").GetValue(System.Activator.CreateInstance(ufo)) == 3);
         }
     }
 
@@ -216,8 +232,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all twelve fields, fourteen method shapes, the five part redirects, the coordinate type, the generator chain and a return sign are retargeted", changes.Count == 39);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 95);
+            Check("all twelve fields, fourteen method shapes, the five part redirects, the coordinate type, the generator chain, the main menu and a return sign are retargeted", changes.Count == 41);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 102);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -287,7 +303,16 @@ public static class TestCompat
         foreach (var kv in s.items) d[(int)kv.Key] = kv.Value;
         return d;
     }
-    public static object SavedRecords(savedata d) => d;
+    public class SaveRecord
+    {
+        public int categoryID, id; public save_rendszam rendszam;
+        public SaveRecord(int category, int id, double x, double y, double z, float rx, float ry, float rz) { categoryID = category; this.id = id; }
+    }
+    public static readonly System.Collections.Generic.Dictionary<int, SaveRecord> Records = new System.Collections.Generic.Dictionary<int, SaveRecord>();
+    public static System.Collections.Generic.Dictionary<int, SaveRecord> SavedRecords(savedata d) => Records;
+    public static UnityEngine.GameObject MenuSettingsScreen(menuhandler m) => new UnityEngine.GameObject { Name = m == menuhandler.s ? "settings" : "?" };
+    public static UnityEngine.GameObject MenuSaveScreen(menuhandler m) => new UnityEngine.GameObject { Name = "save" };
+    public static UnityEngine.Transform MenuCanvas(menuhandler m) => null;
     public static bool RecordIdUsed(object records, int id) => Used.Contains(id);
     public static void FStart(tosaveitemscript t, int id) => t.FStart((uint)id);
     public static bool GetRemoveFromMemory(tosaveitemscript t) => Removed;

@@ -32,19 +32,76 @@ namespace TLDRevamp
             return _toSave;
         }
 
-        /// savedata.nearStuff / farStuff: the records it kept per id. Their type (save_prefab) is gone too, so the only use
-        /// the spawner makes of them, ContainsKey, comes to RecordIdUsed with this token instead.
-        public static object SavedRecords(savedata d) { Calls++; return d; }
+        /// save_prefab, the public game's record of a far item, as the mods use it (LoaderRetarget points the type here): the
+        /// M_ mods and RUNDEN's keep their settings and progress in one, a string in a fake plate record,
+        /// `farStuff.Add(Mathf.Abs(ID.GetHashCode()), new save_prefab(plate, ...) { rendszam = new save_rendszam { S = json } })`.
+        public class SaveRecord
+        {
+            public int categoryID, id;
+            public save_rendszam rendszam;
+            public SaveRecord(int category, int id, double x, double y, double z, float rx, float ry, float rz) { categoryID = category; this.id = id; }
+        }
+
+        /// The beta's save has its plate strings by item id (itemData.rendszam); a mod's record is one of them under this
+        /// base + its key. Item ids count up from 0, and the beta renumbers only the ids it knows (a construction's).
+        public const uint RecordIdBase = 0x80000000u;
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<savedata, Dictionary<int, SaveRecord>> _records =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<savedata, Dictionary<int, SaveRecord>>();
+
+        /// savedata.nearStuff / farStuff: the mods' own records of this save (both: a mod reads either, then adds to far).
+        /// The spawner's ContainsKey on them comes to RecordIdUsed.
+        public static Dictionary<int, SaveRecord> SavedRecords(savedata d)
+        {
+            Calls++;
+            if (d == null) return new Dictionary<int, SaveRecord>();
+            if (_records.TryGetValue(d, out var map)) return map;
+            map = ReadRecords(d.itemData?.rendszam);
+            _records.Add(d, map);
+            return map;
+        }
+
+        public static Dictionary<int, SaveRecord> ReadRecords(List<save_rendszam> plates)
+        {
+            var map = new Dictionary<int, SaveRecord>();
+            if (plates != null)
+                foreach (var plate in plates)
+                    if (plate != null && plate.id >= RecordIdBase) map[(int)(plate.id - RecordIdBase)] = new SaveRecord(0, 0, 0, 0, 0, 0, 0, 0) { rendszam = plate };
+            return map;
+        }
+
+        /// The records as they are now, one plate string each, in place of the ones there.
+        public static void WriteRecords(Dictionary<int, SaveRecord> map, List<save_rendszam> plates)
+        {
+            plates.RemoveAll(p => p != null && p.id >= RecordIdBase);
+            foreach (var kv in map)
+                if (kv.Key >= 0 && kv.Value?.rendszam != null)
+                    plates.Add(new save_rendszam { id = RecordIdBase + (uint)kv.Key, S = kv.Value.rendszam.S });
+        }
+
+        /// Into the save being written (a copy of savedatascript.s.data, made before the mods' last changes reach it).
+        [HarmonyLib.HarmonyPatch(typeof(savedatascript), nameof(savedatascript.SaveToData))]
+        private static class KeepRecords
+        {
+            [HarmonyLib.HarmonyPrefix]
+            private static void Prefix(savedata _data)
+            {
+                var from = savedatascript.s != null ? savedatascript.s.data : null;
+                if (from == null || _data?.itemData?.rendszam == null || !_records.TryGetValue(from, out var map) || map.Count == 0) return;
+                try { WriteRecords(map, _data.itemData.rendszam); }
+                catch (System.Exception e) { Diagnostics.QuietErrors.Once("LoaderCompat.KeepRecords", e); }
+            }
+        }
 
         /// Any record or placed item with this id: the beta keeps far items as records in data.itemData.items.
         public static bool RecordIdUsed(object records, int id)
         {
             Calls++;
+            if (records is Dictionary<int, SaveRecord> own && own.ContainsKey(id)) return true;
             var s = savedatascript.s;
             if (s == null) return false;
             uint key = unchecked((uint)id);
             if (s.items != null && s.items.ContainsKey(key)) return true;
-            var data = records as savedata ?? s.data;
+            var data = s.data;
             return data != null && data.itemData != null && savedatascript.IndexOfID(data.itemData.items, key, out _);
         }
 
@@ -60,6 +117,19 @@ namespace TLDRevamp
 
         /// GetComponent&lt;T&gt;() of a type the beta doesn't have (partscript): there is none.
         public static Component NoComponent(object owner) { Calls++; return null; }
+
+        // ------------------------------------------------------------------ the main menu
+
+        /// mainmenuscript.mainmenu's screens (menuhandler.s here), active while open: mods hide their own menu buttons then
+        /// (Achievements, M-ultiTool, World Tweaker). The beta's settings and save screens switch their own object on.
+        public static GameObject MenuSettingsScreen(menuhandler m) { Calls++; return settingsscript.s != null ? settingsscript.s.gameObject : null; }
+        public static GameObject MenuSaveScreen(menuhandler m)
+        {
+            Calls++;
+            var save = m != null && m.saveScreen != null ? m.saveScreen : savedatascript.s != null ? savedatascript.s.saveScreen : null;
+            return save != null ? save.gameObject : null;
+        }
+        public static Transform MenuCanvas(menuhandler m) { Calls++; return m != null && m.canv != null ? m.canv.transform : null; }
 
         // ------------------------------------------------------------------ attaching
 

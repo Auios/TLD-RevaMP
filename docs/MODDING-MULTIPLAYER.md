@@ -286,12 +286,21 @@ game method's return of the other integer sign is retargeted as fields are (save
 attachablescript.Refresh() does nothing; usablescript.Refresh(slide, x, y) passes the usable's own turn state to the
 beta's, layerScript.FStart() passes the collider's item, and GameObject.Find("Main") gets the object mainscript is on
 (the beta's has another name). A mod's own Harmony.PatchAll() is all or none: one patch that fails on the beta
-undoes the rest and the mod goes on (Ask Jimmy's stopped its OnLoad half patched). A rewritten mod loads from bytes and has no Assembly.Location: its Location
+undoes the rest and the mod goes on (Ask Jimmy's stopped its OnLoad half patched). save_prefab, the public game's far
+item record, is LoaderCompat.SaveRecord: the records a mod keeps of its own in savedata.farStuff/nearStuff (M-'s and
+RUNDEN's settings and progress, a string in rendszam.S under the hash of the mod's ID) are saved with the game as plate
+strings (itemData.rendszam) under ids from 2^31 up; the game's own far items aren't records on the beta. A mod's own
+field of another game type the beta dropped is an object, so its class loads (More UFOs' sandstorm UFO kept the menu's
+temporaryTurnOffGeneration, and More UFOs' list of its UFO types took the whole mod down). The main menu
+(mainmenuscript.mainmenu) is menuhandler.s, its SettingsScreenObj/SaveScreenObj the beta's settings and save screens
+(active while open) and its Canvas the menu's. A DLL's module initializer runs before its types are checked, as it would
+before the mod's first code: Costura-built mods (Achievements, Better Radio, The Long Who, World Tweaker, M-ultiTool)
+load the libraries they carry inside there. A rewritten mod loads from bytes and has no Assembly.Location: its Location
 calls get the DLL it came from (mods find their assets next to it). The beta's item database has empty slots the public
 game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
 Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL
-logs which ones it used. Unchanged DLLs still load from their files. The old world generator and save records have no
-aliases. The existing seed/load/napszak/loaded/multi/world/mainWorld fields are host snapshots; writing those does not write beta
+logs which ones it used. Unchanged DLLs still load from their files. The old world generator has no aliases, and a
+SaveRecord holds a mod's own data only: savedatascript.SpawnItem(save_prefab) and a record's transform aren't mapped. The existing seed/load/napszak/loaded/multi/world/mainWorld fields are host snapshots; writing those does not write beta
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,
 UseHarmony (all of a
 mod's patches or none: a patch naming what the beta lacks would throw inside the game's own method), Events,

@@ -64,7 +64,7 @@ namespace TLDRevamp
                     // before 2026-11-11 the whole DLL was skipped, and a type whose check threw stopped every mod after it
                     // (Backpack Mod: "Could not load type of field 'Amt.ModItemsSpawner:_building'" - no Loader mod loaded).
                     Type[] types; int broken = 0;
-                    try { types = LoadMod(dll).GetTypes(); }
+                    try { types = Initialized(LoadMod(dll), dll).GetTypes(); }
                     catch (ReflectionTypeLoadException e)
                     {
                         types = Array.FindAll(e.Types ?? new Type[0], x => x != null);
@@ -146,6 +146,15 @@ namespace TLDRevamp
                 new[] { ModsDir, BepInEx.Paths.ManagedPath, BepInEx.Paths.BepInExAssemblyDirectory, Path.GetDirectoryName(typeof(ModHost).Assembly.Location) },
                 m => Plugin.Log.LogInfo("ModHost: " + m), CompatHelpers());
             if (string.IsNullOrEmpty(asm.Location)) Retargeted++;
+            return asm;
+        }
+        /// The DLL's module initializer first. Mods built with Costura carry their libraries inside (Newtonsoft.Json, NLayer:
+        /// M-'s Achievements, Better Radio, The Long Who, World Tweaker, M-ultiTool) and hook the resolver there; the type
+        /// check below otherwise found their types unloadable before any of the mod's code ran, and they stayed so.
+        private static Assembly Initialized(Assembly asm, string dll)
+        {
+            try { System.Runtime.CompilerServices.RuntimeHelpers.RunModuleConstructor(asm.ManifestModule.ModuleHandle); }
+            catch (Exception e) { Plugin.Log.LogWarning("ModHost: " + Path.GetFileName(dll) + ": its module initializer: " + (e.InnerException ?? e).Message); }
             return asm;
         }
         private static Type Loader;

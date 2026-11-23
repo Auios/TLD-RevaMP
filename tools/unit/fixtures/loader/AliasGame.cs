@@ -111,6 +111,10 @@ public class menuhandler   // test stub, not game code
     public mapSettingScript currentMainMap;
 #endif
 }
+#if PUBLIC_GAME
+// the public game's main menu; the beta's is menuhandler
+public class mainmenuscript { public static mainmenuscript mainmenu; public UnityEngine.GameObject SettingsScreenObj, SaveScreenObj; }
+#endif
 
 // The world generator's scattered prefabs: the public game's chain of four types, the beta's map and its generators.
 #if PUBLIC_GAME
@@ -188,8 +192,15 @@ public class partslotscript { public partscript part; }
 public class attachablescript { public tosaveitemscript tosave; public partslotscript slot; }
 public class partslotscript { public attachablescript Part; public attachablescript part() => Part; }
 #endif
+public class save_rendszam { public uint id; public string S; }
 #if PUBLIC_GAME
-public class save_prefab { }
+public class save_prefab
+{
+    public save_rendszam rendszam; public int categoryID;
+    public save_prefab(int category, int id, double x, double y, double z, float rx, float ry, float rz) { categoryID = category; }
+}
+// the menu's switch for the world's spawners (More UFOs' sandstorm UFO keeps one); the beta has none
+public class temporaryTurnOffGeneration { }
 #endif
 public class savedata
 {

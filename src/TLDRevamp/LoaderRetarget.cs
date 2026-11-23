@@ -21,6 +21,7 @@ namespace TLDRevamp
             new[] { "carscript", "lampak", "System.Int32", "carscript", "lightUsable.currentTurnState" },
             new[] { "carscript", "KmhObj", "UnityEngine.GameObject", "carscript", "debugCanvas" },
             new[] { "menuhandler", "DFMS", "DataFromMenuScript", "DataFromMenuScript", "s" },
+            new[] { "menuhandler", "mainmenu", "menuhandler", "menuhandler", "s" },
             new[] { "mainscript", "DFMS", "DataFromMenuScript", "DataFromMenuScript", "s" },
             new[] { "mainscript", "SettingObj", "settingsscript", "settingsscript", "s" },
             new[] { "menuhandler", "Settings", "settingsscript", "settingsscript", "s" },
@@ -61,6 +62,8 @@ namespace TLDRevamp
             new[] { "ObjClass", "objGenScript/prefabClass" },
             // attach targets (hitches, plates, trunk mounts) are slots on the beta (partslotscript.attachTarget)
             new[] { "attachTargetscript", "partslotscript" },
+            // the main menu (mainmenuscript.mainmenu): menuhandler.s on the beta, its screens from LoaderCompat (CompatFields)
+            new[] { "mainmenuscript", "menuhandler" },
         };
 
         // Fields that became methods: old owner, old field, field type, beta method (no parameters, returns the field type)
@@ -128,6 +131,9 @@ namespace TLDRevamp
             new[] { "tankcapscript", "TOpen", "UnityEngine.Transform", "GetCapOpen", "SetCapOpen" },
             new[] { "tankcapscript", "TClosed", "UnityEngine.Transform", "GetCapClosed", "SetCapClosed" },
             new[] { "carscript", "driverSeat", "seatscript", "DriverSeat", "" },
+            new[] { "menuhandler", "SettingsScreenObj", "UnityEngine.GameObject", "MenuSettingsScreen", "" },
+            new[] { "menuhandler", "SaveScreenObj", "UnityEngine.GameObject", "MenuSaveScreen", "" },
+            new[] { "menuhandler", "Canvas", "UnityEngine.Transform", "MenuCanvas", "" },
             new[] { "carscript", "ISwitches", "usablescript[]", "Switches", "" },
             new[] { "pickupable", "slots", "System.Collections.Generic.List`1<partslotscript>", "PickupSlots", "" },
             new[] { "tankcapscript", "GOpen", "System.Collections.Generic.List`1<UnityEngine.GameObject>", "GetCapGOpen", "SetCapGOpen" },
@@ -168,6 +174,8 @@ namespace TLDRevamp
             yield return "GameObject.Find(\"Main\") -> LoaderCompat.FindMain";
             yield return "Harmony.PatchAll() -> LoaderCompat.PatchAll (all of them or none)";
             yield return "Dictionary<Int32,save_prefab>.ContainsKey -> LoaderCompat.RecordIdUsed; GetComponent<a type the beta lacks>() -> LoaderCompat.NoComponent";
+            yield return "type save_prefab -> LoaderCompat.SaveRecord (a mod's own records, kept in the save as plate strings)";
+            yield return "a mod's own field of another game type the beta dropped -> Object (its class loads)";
             yield return "any other field the beta dropped (of a type it has) -> kept per object for the mod: LoaderCompat.Kept/Keep";
         }
 
@@ -272,6 +280,37 @@ namespace TLDRevamp
                 ins.OpCode = OpCodes.Call;
                 ins.Operand = adapter;
             }
+            // save_prefab, the public game's record of a far item: the beta has none. The M_ mods and RUNDEN's keep their own
+            // data in one (a string in a fake plate record, rendszam.S, under farStuff[hash of the mod's ID]); they get the
+            // helper's stand-in, SaveRecord, and farStuff/nearStuff answer a dictionary of those that LoaderCompat keeps in
+            // the save. Last: the instructions above still saw the dropped type (its ContainsKey -> RecordIdUsed).
+            var record = compat?.GetNestedType("SaveRecord");
+            if (record != null)
+            {
+                var to = mod.ImportReference(record);
+                foreach (var tr in new List<TypeReference>(mod.GetTypeReferences()))
+                {
+                    if (tr.DeclaringType != null || tr.Namespace != "" || tr.Name != "save_prefab" || !Missing(game, gameName, tr)) continue;
+                    tr.DeclaringType = to.DeclaringType; tr.Name = to.Name;
+                    changes.Add("type save_prefab -> " + compat.Name + "." + record.Name);
+                }
+            }
+            // A mod's own field of another game type the beta dropped (More UFOs' sandstorm UFO keeps the menu's
+            // temporaryTurnOffGeneration): its class couldn't load, nor any type naming it, and More UFOs' list of its UFO
+            // types took the whole mod down. As an object the field holds what it held; code using it stops when it runs.
+            if (compat != null)
+            {
+                var types = new List<TypeDefinition>();
+                foreach (var t in mod.Types) AllTypes(t, types);
+                foreach (var t in types)
+                    foreach (var f in t.Fields)
+                    {
+                        if (!Missing(game, gameName, f.FieldType)) continue;
+                        string was = f.FieldType.Name;
+                        f.FieldType = mod.TypeSystem.Object;
+                        changes.Add(t.FullName + "." + f.Name + " " + was + " -> Object (the beta has no " + was + ")");
+                    }
+            }
             return changes;
         }
 
@@ -371,6 +410,12 @@ namespace TLDRevamp
         /// A type of the game's the beta doesn't have (save_prefab, partscript).
         private static bool Missing(Assembly game, string gameName, TypeReference tr) =>
             tr != null && !(tr is TypeSpecification) && tr.Scope is AssemblyNameReference scope && scope.Name == gameName && GameType(game, gameName, tr) == null;
+
+        private static void AllTypes(TypeDefinition type, List<TypeDefinition> types)
+        {
+            types.Add(type);
+            foreach (var t in type.NestedTypes) AllTypes(t, types);
+        }
 
         private static void Collect(TypeDefinition type, List<MethodDefinition> methods)
         {

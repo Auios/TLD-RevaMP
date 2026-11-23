@@ -395,7 +395,8 @@ namespace TLDRevamp
         /// Colliders within `radius` of the player, grouped by root object (obstacle identification).
         public static string Near(float radius)
         {
-            var p = mainscript.s.player;
+            var p = mainscript.s != null ? mainscript.s.player : null;
+            if (p == null) return "{\"error\":\"no player\"}";
             var at = p.transform.position;
             var groups = new Dictionary<Transform, (int n, float d, Vector3 pos, bool rb, bool trig)>();
             foreach (var c in Physics.OverlapSphere(at, radius, ~0, QueryTriggerInteraction.Ignore))
