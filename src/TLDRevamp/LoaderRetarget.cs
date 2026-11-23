@@ -108,6 +108,8 @@ namespace TLDRevamp
             new[] { "tankcapscript", "TCap", "UnityEngine.Transform", "GetCapT", "SetCapT" },
             new[] { "tankcapscript", "TOpen", "UnityEngine.Transform", "GetCapOpen", "SetCapOpen" },
             new[] { "tankcapscript", "TClosed", "UnityEngine.Transform", "GetCapClosed", "SetCapClosed" },
+            new[] { "carscript", "driverSeat", "seatscript", "DriverSeat", "" },
+            new[] { "carscript", "ISwitches", "usablescript[]", "Switches", "" },
         };
         // old owner, method, old parameter list, helper (the instance first, then the arguments)
         private static readonly string[][] CompatMethods =

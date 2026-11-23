@@ -115,6 +115,20 @@ namespace TLDRevamp
         public static void SetCapClosed(tankcapscript c, Transform v) => CapSet(c, 2, v);
         public static void UpdCap(tankcapscript c, bool sound) { Calls++; }
 
+        // ------------------------------------------------------------------ cars
+
+        /// carscript.driverSeat: the beta marks the seat itself (driverSeat0).
+        public static seatscript DriverSeat(carscript c)
+        {
+            Calls++;
+            var seats = c != null && c.tosave != null ? c.tosave.seats : null;
+            if (seats != null) foreach (var s in seats) if (s != null && s.driverSeat0) return s;
+            return null;
+        }
+
+        /// carscript.ISwitches: the car's switches, the usables the beta lists on its tosaveitemscript (a copy).
+        public static usablescript[] Switches(carscript c) => c != null && c.tosave != null && c.tosave.usables != null ? c.tosave.usables.ToArray() : null;
+
         // ------------------------------------------------------------------ buildings
 
         /// buildingscript.itemsSpawned (buildingscript is the beta's poiScript): the place has started, which is when the
