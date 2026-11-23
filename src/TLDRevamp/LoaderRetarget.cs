@@ -104,6 +104,7 @@ namespace TLDRevamp
             new[] { "attachablescript", "targetTosave", "tosaveitemscript", "TargetTosave", "" },
             new[] { "attachablescript", "C", "System.Collections.Generic.List`1<UnityEngine.Collider>", "GetC", "SetC" },
             new[] { "poiScript", "itemsSpawned", "System.Boolean", "ItemsSpawned", "" },
+            new[] { "partslotscript", "part", "attachablescript", "", "SetSlotPart" },   // reads: part() (Getters)
         };
         // old owner, method, old parameter list, helper (the instance first, then the arguments)
         private static readonly string[][] CompatMethods =

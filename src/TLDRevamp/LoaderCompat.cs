@@ -88,6 +88,15 @@ namespace TLDRevamp
         }
         public static void SetC(attachablescript a, List<Collider> v) { Calls++; if (a != null && _c != null && _c.FieldType == typeof(Collider[])) _c.SetValue(a, v != null ? v.ToArray() : null); }
 
+        /// partslotscript.part = a: the public game's slot held one part; the beta's keeps a list (part() is its first).
+        public static void SetSlotPart(partslotscript s, attachablescript a)
+        {
+            Calls++;
+            if (s == null) return;
+            if (s.parts == null) s.parts = new List<attachablescript>(); else s.parts.Clear();
+            if (a != null) s.AddPart(a);
+        }
+
         // ------------------------------------------------------------------ buildings
 
         /// buildingscript.itemsSpawned (buildingscript is the beta's poiScript): the place has started, which is when the

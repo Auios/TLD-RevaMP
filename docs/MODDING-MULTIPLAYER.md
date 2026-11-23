@@ -261,7 +261,8 @@ both SwitchState overloads (null sender; the no-argument call advances the light
 (zero direction, preserving amount and show). What the public game's save and attach code was, TLDRevamp.LoaderCompat
 answers from the beta's (config Mods.LoaderCompat): the spawner many workshop mods share (the first id free in
 savedatascript.toSaveStuff and the records' nearStuff/farStuff, then tosaveitemscript.FStart(int)), removeFromMemory
-(kept where the mod put it), pickupable.attach/cols/cols2 and attachablescript.targetTosave/C/Attach(Transform,RaycastHit);
+(kept where the mod put it), pickupable.attach/cols/cols2, attachablescript.targetTosave/C/Attach(Transform,RaycastHit) and a store into
+partslotscript.part (the slot's list then holds that part alone);
 GetComponent of another type the beta dropped is none. The public game's parts are the beta's attachablescript: the
 type partscript is renamed in the mod (its fields, locals and GetComponent<partscript> too), partscript.tosaveitem/p
 -> attachablescript.tosave/tosave.P, tosaveitemscript.part and pickupable.part -> the item's attachablescript,
