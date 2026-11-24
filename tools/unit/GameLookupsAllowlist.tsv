@@ -163,3 +163,16 @@ src/TLDRevamp/LoaderRetarget.cs	GameLookups.RuntimeField(owner, old.Name, Bindin
 src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("AssemblyLocation", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
 src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod(mr.Parameters.Count == 0 ? "PatchAll" : "PatchAllFrom", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
 src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("FindMain", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderCompat.cs	HarmonyLib.AccessTools.TypeByName(name)	A type name a loader mod asks HarmonyX for (remembered per name); names come from mod code, not a fixed game member.
+src/TLDRevamp/LoaderCompat.cs	harmony.GetType().GetMethod("CreateClassProcessor", new[] { typeof(System.Type) })	HarmonyX's own API on a mod's Harmony instance (PatchAll class by class); not game code.
+src/TLDRevamp/LoaderCompat.cs	.GetType().GetMethod("Patch", System.Type.EmptyTypes)	HarmonyX's own API on a mod's Harmony instance (PatchAll class by class); not game code.
+src/TLDRevamp/LoaderCompat.cs	HarmonyLib.AccessTools.Field(typeof(ParticleSystem.CollisionModule), "m_ParticleSystem")	Unity engine internal (a particle module's owner); not game code. Null-checked: the fix is skipped without it.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod(mr.Parameters.Count == 1 ? "GetMethod" : "GetMethodFlags", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("Invoke", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("TypeByName", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderRetarget.cs	type.GetMethod(name, flags)	Member names come from external mod IL (Type.GetMethod calls in a mod), resolved loosely; no fixed source target.
+src/TLDRevamp/ModHost.Game.cs	asm.GetType("Amt.CustomSaveItem", false)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	.GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	.GetField("properties")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	.FieldType.GetProperty("Name")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	typeof(ModHost).GetMethod(nameof(AmtTemplateDestroyed), BindingFlags.NonPublic | BindingFlags.Static)	Our patch/helper method ModHost.AmtTemplateDestroyed; not game code.
