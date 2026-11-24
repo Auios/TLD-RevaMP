@@ -286,62 +286,66 @@ type partscript is renamed in the mod (its fields, locals and GetComponent<parts
 partslotscript.part -> part(); arrays the beta keeps as lists (tosaveitemscript.partslotscripts, partconditions,
 tanks, usables, tankcapscripts, physlocks -> physLocks, colors, door_rots) read as a copy and store as a new list.
 Of the workshop's 202 mods (2026-11-23), 41 named partscript. Buildings are the beta's points of interest:
-buildingscript -> poiScript, itemdatabase.buildings -> pois, itemsSpawned -> the place has started (the Advanced
-Modding Toolkit puts its mods' items into buildings then); doublecoord -> UnityEngine.Vector3d. The world generator's
+buildingscript -> poiScript, itemdatabase.buildings -> pois, itemsSpawned -> the place has started (a mod
+puts its items into buildings then); doublecoord -> UnityEngine.Vector3d. The world generator's
 scattered prefabs (TerrainGenerator.TG.manager.settings.objGeneration.objTypes[i].prefab, and
 TerrainGenerationSettings.staticReference): each step is the current map (menuhandler.s.currentMainMap), objTypes
 its objGenScripts' prefabs (the same prefab objects), ObjClass -> objGenScript/prefabClass; the desert, mountain and
 road generators have no aliases. Attach targets (hitches, plates, trunk mounts) are slots on the beta:
 attachTargetscript -> partslotscript, its target/attachs -> T/parts, attachablescript.target -> slot and
 tosaveitemscript.attachTargets -> partslotscripts. TerrainGenerator.roads -> the map's roadGens. Any other field the
-beta dropped, of a type it has (attachablescript.lockRotation in the Advanced Modding Toolkit's item setup), is kept per
+beta dropped, of a type it has (attachablescript.lockRotation in a mod's item setup), is kept per
 object for the mod alone (LoaderCompat.Kept/Keep) so the method naming it runs; the DLL's log line lists each one. A
 game method's return of the other integer sign is retargeted as fields are (savedatascript.GetNewKey), and
 attachablescript.Refresh() does nothing; usablescript.Refresh(slide, x, y) passes the usable's own turn state to the
 beta's, layerScript.FStart() passes the collider's item, and GameObject.Find("Main") gets the object mainscript is on
 (the beta's has another name). A mod's own Harmony.PatchAll() is all or none: one patch that fails on the beta
-undoes the rest and the mod goes on (Ask Jimmy's stopped its OnLoad half patched). save_prefab, the public game's far
-item record, is LoaderCompat.SaveRecord: the records a mod keeps of its own in savedata.farStuff/nearStuff (M-'s and
-RUNDEN's settings and progress, a string in rendszam.S under the hash of the mod's ID) are saved with the game as plate
+undoes the rest and the mod goes on (a mod stopped its OnLoad half patched). save_prefab, the public game's far
+item record, is LoaderCompat.SaveRecord: the records a mod keeps of its own in savedata.farStuff/nearStuff (mods'
+settings and progress, a string in rendszam.S under the hash of the mod's ID) are saved with the game as plate
 strings (itemData.rendszam) under ids from 2^31 up; the game's own far items aren't records on the beta. A mod's own
-field of another game type the beta dropped is an object, so its class loads (More UFOs' sandstorm UFO kept the menu's
-temporaryTurnOffGeneration, and More UFOs' list of its UFO types took the whole mod down). Every other dropped game
-type is LoaderCompat.Gone, a component nothing in the world has: only code using its own members stops (KARL's dbLoad
-stopped at a search for the public game's dig holes, its car with it). The road buildings' generator
+field of another game type the beta dropped is an object, so its class loads (a field of the menu's
+temporaryTurnOffGeneration took the class down, and with a list of such classes the whole mod). Every other dropped game
+type is LoaderCompat.Gone, a component nothing in the world has: only code using its own members stops (a dbLoad
+stopped at a search for the public game's dig holes, and everything after it). The road buildings' generator
 (roadBuildingGeneration) is LoaderCompat.RoadBuildings: equal to null in Unity's sense, with no parent (the beta's
 points of interest are roots of their own) and the current map's placed points of interest as placedBuildings.
 inputscript.forward read as a bool is the beta's float above zero, partslotscript.Craft(part, bool) the beta's
 Craft(part), and Type.GetMethod(name) that the beta's overloads make ambiguous (TextMeshPro's SetText) gets the one
 with the fewest parameters, a string first, optional ones hardly counting; MethodBase.Invoke fills in the optional
-arguments a call leaves out (RUNDEN AI's slider text). Harmony's PatchAll called by reflection (Long Haul Overhaul's
+arguments a call leaves out (a slider's text). Harmony's PatchAll called by reflection (a mod carrying its
 own Harmony) patches class by class and leaves out a class whose target the beta dropped (mainscript.PauseRBs), where
-PatchAll stopped there with the rest unpatched. mountStuff.Lock(item, bool) is the beta's Store (AMT's saved items in
+PatchAll stopped there with the rest unpatched. mountStuff.Lock(item, bool) is the beta's Store (saved items in
 their mounts); attachablescript.Load(pos) attaches to targetTosave at that place on it and pointLocalPos is where the
-attach point sits on its target (M-ultiTool's swap of an item for another); savedatascript.properties is the save
-data's (Achievements' distance driven). A SaveRecord's meter (RUNDEN's save helper in Company Cruiser keeps its numbers
+attach point sits on its target (swapping an item for another); savedatascript.properties is the save
+data's (the distance driven). A SaveRecord's meter (a save helper keeps its numbers
 in one) is saved in its plate string after the plate text, and a new plate string is empty, not null, as the public
-game's was (Rundens Wheel Position Editor read null as its saved XML). A destroyed tumbleweed spawner leaves the map's
-list before RestartMap numbers them and before each Update (No_TumbleWeeds destroys them; the beta's map threw on the
+game's was (a mod read null as its saved XML). A destroyed tumbleweed spawner leaves the map's
+list before RestartMap numbers them and before each Update (a mod that destroys them: the beta's map threw on the
 destroyed one and the world never loaded). The main menu
 (mainmenuscript.mainmenu) is menuhandler.s, its SettingsScreenObj/SaveScreenObj the beta's settings and save screens
 (active while open) and its Canvas the menu's. A DLL's module initializer runs before its types are checked, as it would
-before the mod's first code: Costura-built mods (Achievements, Better Radio, The Long Who, World Tweaker, M-ultiTool)
+before the mod's first code: Costura-built mods
 load the libraries they carry inside there. A rewritten mod loads from bytes and has no Assembly.Location: its Location
 calls get the DLL it came from (mods find their assets next to it). The beta's item database has empty slots the public
-game's hadn't: during the mods' DbLoad and OnLoad each holds a placeholder, emptied again afterwards (issue 44: dingus,
-Nitrous, Attach Everything; M-ultiTool's vehicle list in OnLoad). The public game ran DbLoad in the world; the beta's
-item database is up in the menu, where ModHost runs it, with no player yet: a mod whose DbLoad throws there (Radiation
-and The Long Who use the player) runs it again once the world is up, before its OnLoad, unless the scene load's new
-item database already ran it there. OnMenuLoad comes before the first DbLoad, as under TLD Loader, which calls it when it
-makes the mod (World Tweaker's DbLoad uses what its OnMenuLoad made). The beta keeps more of tosaveitemscript's arrays as
-lists (randomScales, randoms; World Tweaker's items set them), and a field the beta dropped along with its type
-(interiorLights) is kept for the mod as an object. Advanced Modding Toolkit's item templates, which have no name, save
-nothing when the old item database goes with a scene load (the beta makes a new one each time; AMT threw there once per
-item). A copy of a tank cap that had started (AMT's helicopter clones one) starts as its own: Unity copies the beta's
+game's hadn't: during the mods' DbLoad and OnLoad each holds a placeholder, emptied again afterwards (issue 44;
+a vehicle list built in OnLoad). The public game ran DbLoad in the world: the beta has
+an item database in the menu too, and ModHost leaves that one alone (it goes with the menu scene; what a mod made there
+lived in the menu and read the missing player every frame). The world's database gets it, maybe before the
+player is up: a mod whose DbLoad throws then (one that uses the player) runs it again once the world is
+up, before its OnLoad. OnMenuLoad comes before the first DbLoad, as under TLD Loader, which calls it when it
+makes the mod (a DbLoad can use what OnMenuLoad made). The mods' OnGUI and Config() run in an IMGUI pass of
+their own with the layout pass on (RevaMP's overlay skips it): a mod's GUILayout threw "Getting control 0's position"
+without it. typeof() of a renamed type in an attribute is renamed too ([HarmonyPatch(typeof(buildingscript),
+"SpawnStuff")]: the type didn't load, and the mod's PatchAll stopped with none of its patches). The beta keeps more of tosaveitemscript's arrays as
+lists (randomScales, randoms), and a field the beta dropped along with its type
+(interiorLights) is kept for the mod as an object. A modding toolkit's item templates, which have no name, save
+nothing when the old item database goes with a scene load (the beta makes a new one each time; it threw there once per
+item). A copy of a tank cap that had started (a mod's vehicle clones one) starts as its own: Unity copies the beta's
 started flag but not the particle module, and its Update threw every frame. A mod's AccessTools.TypeByName is remembered,
-a miss too until another assembly loads (Road Save Guard looks for seven absent mods every frame; each miss searched every
-loaded type and logged a warning, and the game slowed to a crawl). A mod that uses another mod's types (Police Mod and
-RUNDEN AI) gets that DLL from the mods folder, loaded once: a rewritten mod loads from bytes, where the runtime finds no
+a miss too until another assembly loads (a mod that looks for other, absent mods every frame: each miss searched every
+loaded type and logged a warning, and the game slowed to a crawl). A mod that uses another mod's types (one mod built
+on another) gets that DLL from the mods folder, loaded once: a rewritten mod loads from bytes, where the runtime finds no
 other mod by name, and the DLLs load in name order. tosaveitemscript.Claim(b), the public game's multiplayer claim, does nothing. `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator has no aliases, and a
 SaveRecord holds a mod's own data only: savedatascript.SpawnItem(save_prefab) and a record's transform aren't mapped. The existing seed/load/napszak/loaded/multi/world/mainWorld fields are host snapshots; writing those does not write beta

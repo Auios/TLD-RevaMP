@@ -186,6 +186,7 @@ namespace TLDRevamp
             foreach (var a in Fields) yield return a[0] + "." + a[1] + " -> " + a[3] + "." + a[4] + " (read/write/address)";
             foreach (var a in Methods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> " + a[0] + "." + a[1] + "(" + a[3] + ") [" + a[4] + "]";
             foreach (var a in Types) yield return "type " + a[0] + " -> " + a[1];
+            yield return "typeof(an old type) in an attribute ([HarmonyPatch(typeof(buildingscript), ...)]) -> the same type as above";
             foreach (var a in Getters) yield return a[0] + "." + a[1] + " -> " + a[0] + "." + a[3] + "()";
             foreach (var a in Lists) yield return a[0] + "." + a[1] + " " + a[2] + "[] -> " + a[0] + "." + a[3] + " List<" + a[2] + ">";
             foreach (var a in Setters)
@@ -230,6 +231,7 @@ namespace TLDRevamp
                     else { tr.Namespace = dot < 0 ? "" : a[1].Substring(0, dot); tr.Name = a[1].Substring(dot + 1); }
                     changes.Add("type " + a[0] + " -> " + a[1]);
                 }
+            AttributeTypes(mod, game, gameName, changes);
             foreach (var mr in mod.GetMemberReferences())
             {
                 if (!(mr is FieldReference fr)) continue;
@@ -520,6 +522,82 @@ namespace TLDRevamp
         /// A type of the game's the beta doesn't have (save_prefab, partscript).
         private static bool Missing(Assembly game, string gameName, TypeReference tr) =>
             tr != null && !(tr is TypeSpecification) && tr.Scope is AssemblyNameReference scope && scope.Name == gameName && GameType(game, gameName, tr) == null;
+
+        /// typeof(X) in an attribute ([HarmonyPatch(typeof(buildingscript), "SpawnStuff")]) is a name in the attribute's
+        /// blob, not one of the module's type references: the renames above missed it, the type didn't load, and the
+        /// mod's PatchAll stopped there with none of its patches (The Long Who). The same renames, there too. Only an
+        /// attribute whose blob names an old type is read (an attribute that can't be read keeps its blob).
+        private static void AttributeTypes(ModuleDefinition mod, Assembly game, string gameName, List<string> changes)
+        {
+            var renames = new Dictionary<string, string>();
+            foreach (var a in Types)
+                if (GameLookups.RuntimeType(game, a[0], false) == null && GameLookups.RuntimeType(game, a[1].Replace('/', '+'), false) != null) renames[a[0]] = a[1];
+            if (renames.Count == 0) return;
+            var owners = new List<Mono.Cecil.ICustomAttributeProvider> { mod.Assembly, mod };
+            var types = new List<TypeDefinition>();
+            foreach (var t in mod.Types) AllTypes(t, types);
+            foreach (var t in types)
+            {
+                owners.Add(t);
+                foreach (var m in t.Methods) { owners.Add(m); owners.Add(m.MethodReturnType); foreach (var pa in m.Parameters) owners.Add(pa); }
+                foreach (var f in t.Fields) owners.Add(f);
+                foreach (var pr in t.Properties) owners.Add(pr);
+                foreach (var e in t.Events) owners.Add(e);
+            }
+            TypeReference Map(TypeReference tr)
+            {
+                if (tr == null || tr.DeclaringType != null || tr.Namespace != "" || !(tr.Scope is AssemblyNameReference scope) || scope.Name != gameName
+                    || !renames.TryGetValue(tr.Name, out var to)) return null;
+                int dot = to.LastIndexOf('.'), nest = to.IndexOf('/');
+                if (nest > 0) return new TypeReference("", to.Substring(nest + 1), mod, tr.Scope) { DeclaringType = new TypeReference("", to.Substring(0, nest), mod, tr.Scope) };
+                return new TypeReference(dot < 0 ? "" : to.Substring(0, dot), to.Substring(dot + 1), mod, tr.Scope);
+            }
+            object MapValue(object v, ref bool hit)
+            {
+                if (v is TypeReference tr) { var n = Map(tr); if (n != null) { hit = true; return n; } }
+                else if (v is CustomAttributeArgument[] arr)
+                    for (int i = 0; i < arr.Length; i++) { object nv = MapValue(arr[i].Value, ref hit); if (!ReferenceEquals(nv, arr[i].Value)) arr[i] = new CustomAttributeArgument(arr[i].Type, nv); }
+                else if (v is CustomAttributeArgument boxed) { object nv = MapValue(boxed.Value, ref hit); if (!ReferenceEquals(nv, boxed.Value)) return new CustomAttributeArgument(boxed.Type, nv); }
+                return v;
+            }
+            foreach (var owner in owners)
+            {
+                if (owner == null || !owner.HasCustomAttributes) continue;
+                foreach (var ca in owner.CustomAttributes)
+                {
+                    byte[] blob;
+                    try { blob = ca.GetBlob(); } catch { continue; }
+                    if (blob == null) continue;
+                    string text = System.Text.Encoding.UTF8.GetString(blob);
+                    bool named = false;
+                    foreach (var old in renames.Keys) if (text.Contains(old)) { named = true; break; }
+                    if (!named) continue;
+                    bool hit = false;
+                    try
+                    {
+                        for (int i = 0; i < ca.ConstructorArguments.Count; i++)
+                        {
+                            var arg = ca.ConstructorArguments[i];
+                            object nv = MapValue(arg.Value, ref hit);
+                            if (!ReferenceEquals(nv, arg.Value)) ca.ConstructorArguments[i] = new CustomAttributeArgument(arg.Type, nv);
+                        }
+                        foreach (var list in new[] { ca.Fields, ca.Properties })
+                            for (int i = 0; i < list.Count; i++)
+                            {
+                                var na = list[i];
+                                object nv = MapValue(na.Argument.Value, ref hit);
+                                if (!ReferenceEquals(nv, na.Argument.Value)) list[i] = new Mono.Cecil.CustomAttributeNamedArgument(na.Name, new CustomAttributeArgument(na.Argument.Type, nv));
+                            }
+                    }
+                    catch (Exception) { continue; }   // an attribute type Cecil can't read: its blob stays
+                    if (hit)
+                    {
+                        string line = "typeof() in " + ca.AttributeType.Name + " -> the beta's type";
+                        if (!changes.Contains(line)) changes.Add(line);
+                    }
+                }
+            }
+        }
 
         private static void AllTypes(TypeDefinition type, List<TypeDefinition> types)
         {

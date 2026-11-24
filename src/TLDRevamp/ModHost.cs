@@ -275,6 +275,8 @@ namespace TLDRevamp
         public static bool DbLoadAgainInWorld = true;
         /// OnMenuLoad (once) before the first DbLoad, as under TLD Loader. A/B: false = before 2026-11-24.
         public static bool OnMenuLoadBeforeDbLoad = true;
+        /// DbLoad for the menu's item database too. A/B: true = before 2026-11-24.
+        public static bool DbLoadInMenu = false;
         public static int DbLoadsInWorld;
         public static int EmptySlotsFilled;
         static partial void FillHoles();
@@ -284,10 +286,16 @@ namespace TLDRevamp
         {
             if (Mods.Count == 0) return;
             PublicNames();
-            // DbLoad: once per item database (a new one comes with each scene load), before a world can place items —
-            // the database is up in the menu already. Mods change the game's item prefabs or add their own there. The
-            // order is the mods' IDs (ordinal), the same on every machine: what one mod does can depend on another's.
-            if (itemdatabase.s != null && itemdatabase.s != _dbFor)
+            // DbLoad: once per item database (a new one comes with each scene load), before a world can place items.
+            // Mods change the game's item prefabs or add their own there. The order is the mods' IDs (ordinal), the same
+            // on every machine: what one mod does can depend on another's.
+            // Not the menu's: the beta has one there, the public game didn't, and it goes with the menu scene. TLD Loader
+            // ran DbLoad in the world only; what a mod made there lived in the menu (CIT's gauge read the missing player
+            // every frame). Left unmarked: a database still up when the game scene is (a scene change) gets it then.
+            // A/B: DbLoadInMenu = true is before 2026-11-24.
+            bool menuDb = !DbLoadInMenu && (mainscript.s == null || mainscript.s.player == null)
+                          && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != menuhandler.sceneName;
+            if (itemdatabase.s != null && itemdatabase.s != _dbFor && !menuDb)
             {
                 _dbFor = itemdatabase.s;
                 DbLoadRuns++;
@@ -414,6 +422,8 @@ namespace TLDRevamp
 
         /// As TLDLoader: FixedUpdate once the mods' OnLoad ran in a world, OnGUI then too or in the menu for a LoadInMenu mod.
         public static void FixedTick() { if (!ModsLoaded()) return; foreach (var l in Mods) Call(l, l.FixedUpdate, "FixedUpdate"); }
+        /// The mods' OnGUI and Config() in their own IMGUI pass with layout (ModGuiRunner). A/B: false = before 2026-11-24.
+        public static bool GuiOwnPass = true;
         public static void Gui() { bool loaded = ModsLoaded(); foreach (var l in Mods) if (loaded || l.Menu) Call(l, l.OnGUI, "OnGUI"); }
         private static bool ModsLoaded() => _worldUp && _gameLoadedCalled;
 

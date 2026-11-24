@@ -49,6 +49,8 @@ public static class AliasMod
     /// A field the beta dropped along with its type (World Tweaker's interiorLights), stored and read back.
     public static int Lights(tosaveitemscript t) { t.holes = new System.Collections.Generic.List<digholescript2>(); t.holes.Add(null); return t.holes.Count; }
     /// An array the beta keeps as a list (World Tweaker's items set an empty one).
+    [TypeNote(typeof(partscript))]   // as [HarmonyPatch(typeof(buildingscript), "SpawnStuff")] (The Long Who)
+    public static System.Type Noted() => ((TypeNoteAttribute)typeof(AliasMod).GetMethod("Noted").GetCustomAttributes(typeof(TypeNoteAttribute), false)[0]).Type;
     public static int Scales(tosaveitemscript t) { t.randomScales = new randomScaleScript[] { new randomScaleScript(), new randomScaleScript() }; return t.randomScales.Length; }
 
     /// A game method whose return changed sign (savedatascript.GetNewKey: int there, uint here).
@@ -159,3 +161,6 @@ public static class UfoMod
     public static readonly System.Type[] Types = { typeof(Sandstorms) };
     public class Sandstorms { public temporaryTurnOffGeneration Temp; public int Speed = 3; }
 }
+
+[System.AttributeUsage(System.AttributeTargets.All)]
+public class TypeNoteAttribute : System.Attribute { public System.Type Type; public TypeNoteAttribute(System.Type type) { Type = type; } }

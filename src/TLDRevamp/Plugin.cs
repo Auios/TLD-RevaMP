@@ -235,6 +235,7 @@ namespace TLDRevamp
             var go = new GameObject("TLDRevampRunner") { hideFlags = HideFlags.HideAndDontSave };
             DontDestroyOnLoad(go);
             go.AddComponent<Runner>().useGUILayout = false; // overlay uses no GUILayout: skip IMGUI's layout pass
+            go.AddComponent<ModGuiRunner>();   // the Loader mods' OnGUI and Config() with it: they use GUILayout
             go.AddComponent<Net.HandItemRender>();
             go.AddComponent<VR.Native.VrNativeRunner>();   // native VR: the hand laser after the game's own frame
             ModHost.Retarget = Config.Bind("Mods", "RetargetLoaderMods", true,
@@ -298,6 +299,24 @@ namespace TLDRevamp
 
         private void OnDisable() => Log.LogWarning("BepInEx manager object disabled:\n" + Environment.StackTrace);
         private void OnDestroy() => Log.LogWarning("BepInEx manager object destroyed:\n" + Environment.StackTrace);
+    }
+
+    /// The Loader mods' IMGUI in a pass of its own, IMGUI's layout pass on: the Runner skips it (the overlay needs none), and
+    /// a mod's GUILayout then got no Layout event (M-ultiTool's menu threw "Getting control 0's position", CIT's gauge box
+    /// did too). A/B: ModHost.GuiOwnPass = false is before 2026-11-24 (drawn from the Runner's pass).
+    public class ModGuiRunner : MonoBehaviour
+    {
+        private void OnGUI()
+        {
+            if (ModHost.GuiOwnPass && !Net.JoinLoading.Showing) Draw();
+        }
+
+        internal static void Draw()
+        {
+            ModHost.Gui();
+            ModHost.RefreshConfigScreen();   // is a settings screen open right now?
+            ModHost.DrawConfigs();   // the Loader mods' own settings windows (IMGUI)
+        }
     }
 
     public class Runner : MonoBehaviour
@@ -377,9 +396,7 @@ namespace TLDRevamp
             Replay.ReplayViewer.Draw(); Replay.ReplayRecorder.Draw();
             ReproRecorder.Draw();
             MarkPanel.Draw();
-            ModHost.Gui();
-            ModHost.RefreshConfigScreen();   // is a settings screen open right now?
-            ModHost.DrawConfigs();   // the Loader mods' own settings windows (IMGUI)
+            if (!ModHost.GuiOwnPass) ModGuiRunner.Draw();
         }
 
         private void FixedUpdate()

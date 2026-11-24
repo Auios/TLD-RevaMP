@@ -277,6 +277,9 @@ static class LoaderRetargetTest
             int got = (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Parts").Invoke(null, new object[] { car });
             Check("parts: two parts found through part() and tosave, one slot left after the store", got == 21);
             Check("parts: the store reached the game's list", car.partslotscripts.Count == 1);
+            Check("parts: typeof(partscript) in an attribute is the beta's attachablescript (The Long Who's HarmonyPatch)",
+                  changes.Contains("typeof() in TypeNoteAttribute -> the beta's type") &&
+                  (System.Type)LoadBytes(mod).GetType("AliasMod").GetMethod("Noted").Invoke(null, null) == typeof(attachablescript));
             var world = new visszarako(); world.coord.x = 1000;
             Check("coordinates: doublecoord is the beta's UnityEngine.Vector3d (by address, another namespace)", changes.Contains("type doublecoord -> UnityEngine.Vector3d") &&
                   (double)LoadBytes(mod).GetType("AliasMod").GetMethod("GlobalX").Invoke(null, new object[] { world, 1500f }) == 500);
@@ -290,8 +293,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all fourteen fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu and a return sign are retargeted", changes.Count == 47);
-            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 120);
+            Check("all fourteen fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu, a return sign and an attribute's typeof are retargeted", changes.Count == 48);
+            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 121);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();

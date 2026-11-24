@@ -306,14 +306,20 @@ static class LoaderHostTest
               loadInMenuProp != null && (bool)loadInMenuProp.GetValue(modInstance) == false);
         recorder.GetField("LoadInMenuOverridden", BindingFlags.Public | BindingFlags.Static).SetValue(null, true);
 
-        Section("DbLoad once per item database, before the menu; the public game's names");
+        Section("DbLoad once per item database in the game scene, not the menu's; the public game's names");
         Reset();
         ModHost.Tick();
         Check("no DbLoad while there is no item database", !GetCalls().Contains("DbLoad"));
         itemdatabase.s = new itemdatabase();
         mainscript.s = new mainscript();
         var menuCalledField = typeof(ModHost).GetField("_menuCalled", BindingFlags.NonPublic | BindingFlags.Static);
-        menuCalledField.SetValue(null, false);   // a mod that has not had its OnMenuLoad yet
+        menuCalledField.SetValue(null, false);   // a mod that has not had its OnMenuLoad yet (straight into a world)
+        Reset();
+        ModHost.Tick();
+        Check("no DbLoad for the menu's item database (TLD Loader ran it in the world; CIT's gauge read the player there)",
+              UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "menu" && !GetCalls().Contains("DbLoad"));
+        menuCalledField.SetValue(null, false);
+        UnityEngine.SceneManagement.SceneManager.ActiveSceneName = "game";   // the same database, the game scene now: no player yet
         Reset();
         ModHost.Tick();
         var c0 = GetCalls();
@@ -331,7 +337,7 @@ static class LoaderHostTest
         Check("a new item database (a scene load) gets DbLoad again", GetCalls().Contains("DbLoad"));
         Check("itemdatabase.d follows the new database", ReferenceEquals(itemdatabase.d, itemdatabase.s));
 
-        Section("a DbLoad that threw in the menu runs again once the world is up (the public game ran it in the world)");
+        Section("a DbLoad that threw before the player was up runs again once the world is up (the public game ran it in the world)");
         var throwOn = recorder.GetField("ThrowOn", BindingFlags.Public | BindingFlags.Static);
         mainscript.s = new mainscript();
         itemdatabase.s = new itemdatabase();
@@ -339,7 +345,7 @@ static class LoaderHostTest
         Reset();
         ModHost.Tick();
         throwOn.SetValue(null, null);
-        Check("its dbLoad ran in the menu and threw", GetCalls().Contains("dbLoad") && !GetCalls().Contains("OnLoad"));
+        Check("its dbLoad ran before the player and threw", GetCalls().Contains("dbLoad") && !GetCalls().Contains("OnLoad"));
         mainscript.s.player = new TLDRevamp.Fixtures.Player();
         Reset();
         ModHost.Tick();
