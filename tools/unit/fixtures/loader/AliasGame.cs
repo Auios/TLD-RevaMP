@@ -200,6 +200,7 @@ public class visszarako { public UnityEngine.Vector3d coord; }
 // answers part().
 #if PUBLIC_GAME
 public class partscript { public tosaveitemscript tosaveitem; public partslotscript slot; }
+public class attachablescript { public tosaveitemscript targetTosave; public UnityEngine.Vector3 pointLocalPos; public void Load(UnityEngine.Vector3 pos) { } }
 public class partslotscript { public partscript part; public void Craft(partscript p, bool b) { } }
 #else
 public class attachablescript { public tosaveitemscript tosave; public partslotscript slot; }
@@ -209,6 +210,16 @@ public class partslotscript
     public attachablescript Crafted; public void Craft(attachablescript p) { Crafted = p; }
 }
 #endif
+// a mount for items: the public game's Lock, the beta's Store
+public class pickupable { }
+public class mountStuff
+{
+#if PUBLIC_GAME
+    public void Lock(pickupable p, bool ignoreRigidbody) { }
+#else
+    public pickupable Stored; public bool IgnoredRigidbody; public void Store(pickupable p, bool ignoreRigidbody) { Stored = p; IgnoredRigidbody = ignoreRigidbody; }
+#endif
+}
 public class save_rendszam { public uint id; public string S; }
 #if PUBLIC_GAME
 public class save_prefab
@@ -229,15 +240,21 @@ public class inputscript
     public float forward;
 #endif
 }
+public class saveproperties { public float driven; }
 public class savedata
 {
 #if PUBLIC_GAME
     public System.Collections.Generic.Dictionary<int, save_prefab> nearStuff, farStuff;
+#else
+    public saveproperties properties = new saveproperties();
 #endif
 }
 public class savedatascript
 {
     public savedata data = new savedata();
+#if PUBLIC_GAME
+    public saveproperties properties;
+#endif
 #if PUBLIC_GAME
     public int GetNewKey() => 0;
 #else

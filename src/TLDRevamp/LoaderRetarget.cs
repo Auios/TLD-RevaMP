@@ -129,7 +129,9 @@ namespace TLDRevamp
             new[] { "pickupable", "attach", "attachablescript", "GetAttach", "SetAttach" },
             new[] { "pickupable", "cols", "layerScript[]", "GetCols", "SetCols" },
             new[] { "pickupable", "cols2", "layerScript[]", "GetCols2", "SetCols2" },
-            new[] { "attachablescript", "targetTosave", "tosaveitemscript", "TargetTosave", "" },
+            new[] { "attachablescript", "targetTosave", "tosaveitemscript", "TargetTosave", "SetTargetTosave" },
+            new[] { "attachablescript", "pointLocalPos", "UnityEngine.Vector3", "PointLocalPos", "" },
+            new[] { "savedatascript", "properties", "saveproperties", "SaveProperties", "" },
             new[] { "attachablescript", "C", "System.Collections.Generic.List`1<UnityEngine.Collider>", "GetC", "SetC" },
             new[] { "poiScript", "itemsSpawned", "System.Boolean", "ItemsSpawned", "" },
             new[] { "partslotscript", "part", "attachablescript", "", "SetSlotPart" },   // reads: part() (Getters)
@@ -171,6 +173,8 @@ namespace TLDRevamp
             new[] { "attachablescript", "Refresh", "", "RefreshAttachable" },
             new[] { "usablescript", "Refresh", "System.Single,System.Single,System.Single", "RefreshUsable" },
             new[] { "layerScript", "FStart", "", "LayerFStart" },
+            new[] { "attachablescript", "Load", "UnityEngine.Vector3", "AttachableLoad" },
+            new[] { "mountStuff", "Lock", "pickupable,System.Boolean", "MountLock" },
         };
 
         public static IEnumerable<string> AliasDescriptions()
@@ -196,7 +200,8 @@ namespace TLDRevamp
             yield return "type roadBuildingScript -> LoaderCompat.RoadBuildings (no common parent; the placed points of interest)";
             yield return "a mod's own field of another game type the beta dropped -> Object (its class loads)";
             yield return "any other game type the beta dropped -> LoaderCompat.Gone (a component nothing has)";
-            yield return "Type.GetMethod(name) that the beta's overloads make ambiguous -> LoaderCompat.GetMethod (fewest parameters)";
+            yield return "Type.GetMethod(name) that the beta's overloads make ambiguous -> LoaderCompat.GetMethod (fewest parameters, optional ones hardly count)";
+            yield return "MethodBase.Invoke(obj, args) -> LoaderCompat.Invoke (optional parameters the args leave out at their defaults)";
             yield return "any other field the beta dropped (of a type it has) -> kept per object for the mod: LoaderCompat.Kept/Keep";
         }
 
@@ -389,6 +394,14 @@ namespace TLDRevamp
                 what = "Type.GetMethod -> " + compat.Name + "." + m.Name;
                 return m;
             }
+            // MethodBase.Invoke(obj, args): a method LooseMethod found can have optional parameters the args leave out
+            if (mr.Name == "Invoke" && mr.DeclaringType.FullName == "System.Reflection.MethodBase" && mr.HasThis && mr.Parameters.Count == 2)
+            {
+                var m = compat.GetMethod("Invoke", Statics);
+                if (m == null) return null;
+                what = "MethodBase.Invoke -> " + compat.Name + ".Invoke";
+                return m;
+            }
             // the mod's own Harmony.PatchAll(): on the beta it can stop at a patch naming a type the beta dropped, with the
             // patches before it applied, and abort the mod's OnLoad there (Ask Jimmy). The helper undoes them instead.
             if (mr.Name == "PatchAll" && mr.DeclaringType.FullName == "HarmonyLib.Harmony" && mr.HasThis && mr.Parameters.Count <= 1)
@@ -467,10 +480,27 @@ namespace TLDRevamp
             {
                 if (m.Name != name) continue;
                 int score = 0;
-                foreach (var p in m.GetParameters()) score += p.ParameterType == typeof(string) ? 100 : 101;
+                // an optional parameter hardly counts (TextMeshPro's SetText(string, bool = true) over SetText(StringBuilder),
+                // which RUNDEN AI's Invoke with a string can't call); the call's Invoke supplies it (LoaderCompat.Invoke)
+                foreach (var p in m.GetParameters()) score += p.IsOptional ? 1 : p.ParameterType == typeof(string) ? 100 : 102;
                 if (score < bestScore) { best = m; bestScore = score; }
             }
             return best;
+        }
+
+        /// MethodBase.Invoke(obj, args) with the optional parameters args leave out at their defaults (LooseMethod can find
+        /// SetText(string, bool = true) for a mod that invokes it with the text only).
+        public static object InvokeLoose(MethodBase m, object obj, object[] args)
+        {
+            var ps = m.GetParameters();
+            int given = args?.Length ?? 0;
+            if (given < ps.Length && ps[given].IsOptional)
+            {
+                var all = new object[ps.Length];
+                for (int i = 0; i < ps.Length; i++) all[i] = i < given ? args[i] : ps[i].DefaultValue;
+                args = all;
+            }
+            return m.Invoke(obj, args);
         }
 
         /// A type of the game's the beta doesn't have (save_prefab, partscript).

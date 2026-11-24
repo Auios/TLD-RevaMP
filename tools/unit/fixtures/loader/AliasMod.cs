@@ -126,8 +126,19 @@ public static class AliasMod
     public static void Craft(partslotscript s, partscript p) => s.Craft(p, true);
 
     /// RUNDEN's AI traffic names a text's SetText by name; the beta's text has more than one.
-    public class Texty { public void SetText(System.Text.StringBuilder b) { } public void SetText(string s) { } public void SetText(string s, bool b) { } }
+    /// (TextMeshPro's: no SetText(string) alone, one with an optional flag), and invokes it with the text only.
+    public class Texty { public string Text; public void SetText(System.Text.StringBuilder b) { Text = "builder"; } public void SetText(string s, bool b = true) { Text = s + b; } }
     public static string Ambiguous() => string.Join(",", System.Linq.Enumerable.Select(typeof(Texty).GetMethod("SetText").GetParameters(), p => p.ParameterType.Name));
+    public static string Invoked() { var t = new Texty(); typeof(Texty).GetMethod("SetText").Invoke(t, new object[] { "AI" }); return t.Text; }
+
+    /// Achievements: the distance driven in this save.
+    public static float Driven(savedatascript s) => s.properties.driven;
+
+    /// AMT: a saved item back in its mount.
+    public static void Remount(mountStuff m, pickupable p) => m.Lock(p, true);
+
+    /// M-ultiTool's swap of an item for another: what was attached to the old one goes onto the new one, where it was.
+    public static UnityEngine.Vector3 Swap(attachablescript a, tosaveitemscript to) { a.targetTosave = to; a.Load(a.pointLocalPos); return a.pointLocalPos; }
 
     public static void Calls(fpscontroller p, radioscript r, mainscript m, headlightscript h, survivalscript s)
     {

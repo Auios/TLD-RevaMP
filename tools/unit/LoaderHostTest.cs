@@ -329,6 +329,32 @@ static class LoaderHostTest
         Check("a new item database (a scene load) gets DbLoad again", GetCalls().Contains("DbLoad"));
         Check("itemdatabase.d follows the new database", ReferenceEquals(itemdatabase.d, itemdatabase.s));
 
+        Section("a DbLoad that threw in the menu runs again once the world is up (the public game ran it in the world)");
+        var throwOn = recorder.GetField("ThrowOn", BindingFlags.Public | BindingFlags.Static);
+        mainscript.s = new mainscript();
+        itemdatabase.s = new itemdatabase();
+        throwOn.SetValue(null, "dbLoad");
+        Reset();
+        ModHost.Tick();
+        throwOn.SetValue(null, null);
+        Check("its dbLoad ran in the menu and threw", GetCalls().Contains("dbLoad") && !GetCalls().Contains("OnLoad"));
+        mainscript.s.player = new TLDRevamp.Fixtures.Player();
+        Reset();
+        ModHost.Tick();
+        var w = GetCalls();
+        Check("in the world: DbLoad and dbLoad again, before OnLoad",
+              w.Contains("DbLoad") && w.Contains("dbLoad") && w.Contains("OnLoad") && w.IndexOf("dbLoad") < w.IndexOf("OnLoad"));
+        mainscript.s.player = null; ModHost.Tick();
+        mainscript.s.player = new TLDRevamp.Fixtures.Player();
+        Reset();
+        ModHost.Tick();
+        Check("only once: the next world's OnLoad comes without it", GetCalls().Contains("OnLoad") && !GetCalls().Contains("dbLoad"));
+        mainscript.s.player = null; itemdatabase.s = new itemdatabase();
+        Reset(); ModHost.Tick();
+        mainscript.s.player = new TLDRevamp.Fixtures.Player();
+        Reset(); ModHost.Tick();
+        Check("a DbLoad that did not throw is not run again in the world", GetCalls().Contains("OnLoad") && !GetCalls().Contains("dbLoad"));
+
         Console.WriteLine(failures == 0 ? "ALL PASS" : (failures + " FAILURE(S)"));
         try { Directory.Delete(tmp, true); } catch { }
         return failures == 0 ? 0 : 1;

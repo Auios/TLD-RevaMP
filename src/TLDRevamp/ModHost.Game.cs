@@ -12,7 +12,7 @@ namespace TLDRevamp
         /// The beta's item database has empty slots (items taken out of the game keep their ids); the public game's had none.
         /// Mods go through every item in DbLoad (Nitrous gives every car its nitrous system, Attach Everything makes every
         /// item attachable) and stopped at the first empty one: no nitrous spawners added, nothing attachable (issue 44).
-        /// During DbLoad each empty slot holds an inactive placeholder; afterwards the slots are empty again (also in the
+        /// During DbLoad and OnLoad each empty slot holds an inactive placeholder; afterwards the slots are empty again (also in the
         /// array a mod made by appending to it), so no item id moves. A/B: false = before 2026-11-23.
         private static GameObject _slotPlaceholder;
         private static readonly List<int> _holes = new List<int>();

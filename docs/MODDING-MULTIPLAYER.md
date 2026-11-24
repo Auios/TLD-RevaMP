@@ -298,15 +298,26 @@ stopped at a search for the public game's dig holes, its car with it). The road 
 points of interest are roots of their own) and the current map's placed points of interest as placedBuildings.
 inputscript.forward read as a bool is the beta's float above zero, partslotscript.Craft(part, bool) the beta's
 Craft(part), and Type.GetMethod(name) that the beta's overloads make ambiguous (TextMeshPro's SetText) gets the one
-with the fewest parameters, a string first. A destroyed tumbleweed spawner leaves the map's list (No_TumbleWeeds
-destroys them; the beta's map updated the destroyed one every frame and the world never loaded). The main menu
+with the fewest parameters, a string first, optional ones hardly counting; MethodBase.Invoke fills in the optional
+arguments a call leaves out (RUNDEN AI's slider text). Harmony's PatchAll called by reflection (Long Haul Overhaul's
+own Harmony) patches class by class and leaves out a class whose target the beta dropped (mainscript.PauseRBs), where
+PatchAll stopped there with the rest unpatched. mountStuff.Lock(item, bool) is the beta's Store (AMT's saved items in
+their mounts); attachablescript.Load(pos) attaches to targetTosave at that place on it and pointLocalPos is where the
+attach point sits on its target (M-ultiTool's swap of an item for another); savedatascript.properties is the save
+data's (Achievements' distance driven). A SaveRecord's meter (RUNDEN's save helper in Company Cruiser keeps its numbers
+in one) is saved in its plate string after the plate text, and a new plate string is empty, not null, as the public
+game's was (Rundens Wheel Position Editor read null as its saved XML). A destroyed tumbleweed spawner leaves the map's
+list before RestartMap numbers them and before each Update (No_TumbleWeeds destroys them; the beta's map threw on the
+destroyed one and the world never loaded). The main menu
 (mainmenuscript.mainmenu) is menuhandler.s, its SettingsScreenObj/SaveScreenObj the beta's settings and save screens
 (active while open) and its Canvas the menu's. A DLL's module initializer runs before its types are checked, as it would
 before the mod's first code: Costura-built mods (Achievements, Better Radio, The Long Who, World Tweaker, M-ultiTool)
 load the libraries they carry inside there. A rewritten mod loads from bytes and has no Assembly.Location: its Location
 calls get the DLL it came from (mods find their assets next to it). The beta's item database has empty slots the public
-game's hadn't: during the mods' DbLoad each holds a placeholder, emptied again afterwards (issue 44: dingus, Nitrous,
-Attach Everything). `mods aliases` lists their mappings even in the menu; each changed DLL
+game's hadn't: during the mods' DbLoad and OnLoad each holds a placeholder, emptied again afterwards (issue 44: dingus,
+Nitrous, Attach Everything; M-ultiTool's vehicle list in OnLoad). The public game ran DbLoad in the world; the beta's
+item database is up in the menu, where ModHost runs it, with no player yet: a mod whose DbLoad throws there (Radiation
+and The Long Who use the player) runs it again once the world is up, before its OnLoad. `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator has no aliases, and a
 SaveRecord holds a mod's own data only: savedatascript.SpawnItem(save_prefab) and a record's transform aren't mapped. The existing seed/load/napszak/loaded/multi/world/mainWorld fields are host snapshots; writing those does not write beta
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,

@@ -39,6 +39,7 @@ namespace TLDRevamp
         {
             public int categoryID, id;
             public save_rendszam rendszam;
+            public save_meterscript meter;   // RUNDEN's save helper (Company Cruiser) keeps its numbers in one
             public SaveRecord(int category, int id, double x, double y, double z, float rx, float ry, float rz) { categoryID = category; this.id = id; }
         }
 
@@ -65,8 +66,46 @@ namespace TLDRevamp
             var map = new Dictionary<int, SaveRecord>();
             if (plates != null)
                 foreach (var plate in plates)
-                    if (plate != null && plate.id >= RecordIdBase) map[(int)(plate.id - RecordIdBase)] = new SaveRecord(0, 0, 0, 0, 0, 0, 0, 0) { rendszam = plate };
+                    if (plate != null && plate.id >= RecordIdBase)
+                    {
+                        var r = new SaveRecord(0, 0, 0, 0, 0, 0, 0, 0) { rendszam = plate };
+                        int cut = plate.S != null ? plate.S.IndexOf(MeterMark) : -1;
+                        if (cut >= 0)
+                        {
+                            r.meter = ReadMeter(plate.S.Substring(cut + 1));
+                            r.rendszam = new save_rendszam { id = plate.id, S = plate.S.Substring(0, cut) };
+                        }
+                        map[(int)(plate.id - RecordIdBase)] = r;
+                    }
             return map;
+        }
+
+        /// A record's meter goes into its plate string after this mark: its readings (mutatok), then its dials
+        /// (szamlapok), each "name\tvalue" on a line, the two lists apart by an empty line.
+        private const char MeterMark = '\u0001';
+        private static string WriteMeter(save_meterscript m)
+        {
+            var b = new System.Text.StringBuilder();
+            void List(save_meterscript.save_meter[] ms)
+            {
+                if (ms != null) foreach (var x in ms) if (x != null) b.Append(x.tipus).Append('\t').Append(x.value.ToString("R", System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
+            }
+            List(m.mutatok); b.Append('\n'); List(m.szamlapok);
+            return b.ToString();
+        }
+        private static save_meterscript ReadMeter(string text)
+        {
+            var lists = new[] { new List<save_meterscript.save_meter>(), new List<save_meterscript.save_meter>() };
+            int which = 0;
+            foreach (var line in text.Split('\n'))
+            {
+                if (line.Length == 0) { if (which == 0) which = 1; continue; }
+                int tab = line.LastIndexOf('\t');
+                if (tab < 0) continue;
+                float.TryParse(line.Substring(tab + 1), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v);
+                lists[which].Add(new save_meterscript.save_meter { tipus = line.Substring(0, tab), value = v });
+            }
+            return new save_meterscript { mutatok = lists[0].ToArray(), szamlapok = lists[1].ToArray() };
         }
 
         /// The records as they are now, one plate string each, in place of the ones there.
@@ -74,8 +113,21 @@ namespace TLDRevamp
         {
             plates.RemoveAll(p => p != null && p.id >= RecordIdBase);
             foreach (var kv in map)
-                if (kv.Key >= 0 && kv.Value?.rendszam != null)
-                    plates.Add(new save_rendszam { id = RecordIdBase + (uint)kv.Key, S = kv.Value.rendszam.S });
+                if (kv.Key >= 0 && (kv.Value?.rendszam != null || kv.Value?.meter != null))
+                    plates.Add(new save_rendszam
+                    {
+                        id = RecordIdBase + (uint)kv.Key,
+                        S = (kv.Value.rendszam?.S ?? "") + (kv.Value.meter != null ? MeterMark + WriteMeter(kv.Value.meter) : "")
+                    });
+        }
+
+        /// A new save_rendszam's string is empty, as the public game's was; the beta's is null. Rundens Wheel Position Editor
+        /// makes its record's and reads it back as its saved XML: "" meant none yet, null threw (StringReader).
+        [HarmonyLib.HarmonyPatch(typeof(save_rendszam), HarmonyLib.MethodType.Constructor, new System.Type[0])]
+        private static class EmptyPlateString
+        {
+            [HarmonyLib.HarmonyPostfix]
+            private static void Postfix(save_rendszam __instance) { if (__instance.S == null) __instance.S = ""; }
         }
 
         /// Into the save being written (a copy of savedatascript.s.data, made before the mods' last changes reach it).
@@ -107,6 +159,9 @@ namespace TLDRevamp
 
         /// tosaveitemscript.FStart(int): the beta's takes a uint.
         public static void FStart(tosaveitemscript t, int id) { Calls++; if (t != null) t.FStart(unchecked((uint)id)); }
+
+        /// savedatascript.properties: the save's (its date, seed, the distance driven) are the data's on the beta.
+        public static saveproperties SaveProperties(savedatascript s) => s != null && s.data != null ? s.data.properties : null;
 
         /// tosaveitemscript.removeFromMemory: the public game's "not an item of its own" for display copies of a game prefab
         /// (Nitrous' gauge face is a compass inside the bottle). One never started isn't saved on the beta either, but the
@@ -146,7 +201,44 @@ namespace TLDRevamp
         public static void SetCols2(pickupable p, layerScript[] v) { Calls++; if (p != null) p.cols2 = v != null ? new List<layerScript>(v) : null; }
 
         /// attachablescript.targetTosave: what it is attached to.
-        public static tosaveitemscript TargetTosave(attachablescript a) => a != null ? a.AttachedToTosave() : null;
+        public static tosaveitemscript TargetTosave(attachablescript a)
+        {
+            if (a == null) return null;
+            var t = a.AttachedToTosave();
+            return t != null ? t : _loadTargets.TryGetValue(a, out var box) ? box.T : null;
+        }
+        /// attachablescript.targetTosave = t: what its next Load(pos) attaches it to (M-ultiTool's swap of an item for another).
+        private sealed class TargetBox { public tosaveitemscript T; }
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<attachablescript, TargetBox> _loadTargets =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<attachablescript, TargetBox>();
+        public static void SetTargetTosave(attachablescript a, tosaveitemscript t)
+        {
+            Calls++;
+            if (a == null) return;
+            _loadTargets.Remove(a);
+            _loadTargets.Add(a, new TargetBox { T = t });
+        }
+
+        /// attachablescript.pointLocalPos: where it is attached, in its target's space. Detach destroys the point at the end
+        /// of the frame, so it is still there for the read right after one.
+        public static Vector3 PointLocalPos(attachablescript a)
+        {
+            if (a == null || a.point == null) return Vector3.zero;
+            var t = a.point.GetComponentInParent<tosaveitemscript>();
+            return t != null ? t.transform.InverseTransformPoint(a.point.position) : a.point.localPosition;
+        }
+
+        /// attachablescript.Load(localPos): attached to its target (targetTosave) at that place, as a save load did.
+        public static void AttachableLoad(attachablescript a, Vector3 localPos)
+        {
+            Calls++;
+            var t = TargetTosave(a);
+            if (t == null) return;
+            a.Attach(a.NewPoint(t.transform, t.transform.TransformPoint(localPos), a.transform.rotation));
+        }
+
+        /// mountStuff.Lock(item, ignoreRigidbody): the beta's Store (AMT's saved items put back in their mounts).
+        public static void MountLock(mountStuff m, pickupable p, bool ignoreRigidbody) { Calls++; if (m != null) m.Store(p, ignoreRigidbody); }
 
         /// attachablescript.C: the item's own colliders, a public list there, a private array here.
         private static readonly System.Reflection.FieldInfo _c = GameLookups.Field(typeof(attachablescript), "C");
@@ -338,6 +430,43 @@ namespace TLDRevamp
             LoaderRetarget.LooseMethod(t, name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
         public static System.Reflection.MethodInfo GetMethodFlags(System.Type t, string name, System.Reflection.BindingFlags flags) =>
             LoaderRetarget.LooseMethod(t, name, flags);
+        /// MethodBase.Invoke(obj, args), with the optional parameters the args leave out at their defaults.
+        public static object Invoke(System.Reflection.MethodBase m, object obj, object[] args)
+        {
+            if (m != null && obj != null && m.Name == "PatchAll" && m.DeclaringType?.Name == "Harmony" && args?.Length == 1 && args[0] is System.Reflection.Assembly a &&
+                PatchEachClass(obj, a)) return null;
+            return LoaderRetarget.InvokeLoose(m, obj, args);
+        }
+
+        /// Harmony's PatchAll(assembly) called by reflection (Long Haul Overhaul's own copy of Harmony): each patch class on
+        /// its own, as PatchAll does, but one whose target the beta dropped (mainscript.PauseRBs, setcenterofmass.Pause)
+        /// is left out. PatchAll stopped there: the classes after it (Long Haul's wheels, sandstorm, pouring) never applied.
+        public static int PatchClassesSkipped;
+        private static bool PatchEachClass(object harmony, System.Reflection.Assembly a)
+        {
+            var create = harmony.GetType().GetMethod("CreateClassProcessor", new[] { typeof(System.Type) });
+            if (create == null) return false;
+            Calls++;
+            System.Type[] types;
+            try { types = a.GetTypes(); }
+            catch (System.Reflection.ReflectionTypeLoadException e) { types = System.Array.FindAll(e.Types, t => t != null); }
+            var skipped = new List<string>();
+            foreach (var t in types)
+            {
+                try
+                {
+                    var processor = create.Invoke(harmony, new object[] { t });
+                    processor?.GetType().GetMethod("Patch", System.Type.EmptyTypes)?.Invoke(processor, null);
+                }
+                catch (System.Exception e) { skipped.Add(t.Name + " (" + ((e.InnerException ?? e).InnerException ?? e.InnerException ?? e).Message + ")"); }
+            }
+            if (skipped.Count > 0)
+            {
+                PatchClassesSkipped += skipped.Count;
+                Plugin.Log.LogWarning("ModHost: " + a.GetName().Name + ": " + skipped.Count + " of its Harmony patch classes left out, their targets not on the beta: " + string.Join("; ", skipped));
+            }
+            return true;
+        }
 
         /// No_TumbleWeeds destroys the tumbleweed spawners (thumbleweedMain) it finds, as on the public game, where nothing
         /// else held them. The beta's map keeps them in a list and updates each every frame: the destroyed one threw there,
@@ -346,12 +475,19 @@ namespace TLDRevamp
         private static class DropDestroyedTumbleweeds
         {
             [HarmonyLib.HarmonyPrefix]
-            private static void Prefix(mapSettingScript __instance)
+            internal static void Prefix(mapSettingScript __instance)
             {
                 var list = __instance.thumbleweeds;
                 if (list == null) return;
                 for (int i = list.Count - 1; i >= 0; i--) if (list[i] == null) list.RemoveAt(i);
             }
+        }
+        /// RestartMap numbers them first, at world load: the destroyed one threw there, before the sky was set up.
+        [HarmonyLib.HarmonyPatch(typeof(mapSettingScript), nameof(mapSettingScript.RestartMap))]
+        private static class DropDestroyedTumbleweedsAtRestart
+        {
+            [HarmonyLib.HarmonyPrefix]
+            private static void Prefix(mapSettingScript __instance) => DropDestroyedTumbleweeds.Prefix(__instance);
         }
 
         // ------------------------------------------------------------------ buildings

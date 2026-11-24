@@ -190,7 +190,23 @@ static class LoaderRetargetTest
                   (bool)asm.GetMethod("Forward").Invoke(null, new object[] { new inputscript { forward = 0.5f } }) &&
                   !(bool)asm.GetMethod("Forward").Invoke(null, new object[] { new inputscript() }));
             Check("compat: an ambiguous GetMethod gets the fewest parameters, a string first (the real LooseMethod)",
-                  changes.Contains("Type.GetMethod -> TestCompat.GetMethod") && (string)asm.GetMethod("Ambiguous").Invoke(null, null) == "String");
+                  changes.Contains("Type.GetMethod -> TestCompat.GetMethod") && (string)asm.GetMethod("Ambiguous").Invoke(null, null) == "String,Boolean");
+            Check("compat: Invoke with the optional parameter left out gets its default (RUNDEN's AI traffic's slider text)",
+                  changes.Contains("MethodBase.Invoke -> TestCompat.Invoke") && (string)asm.GetMethod("Invoked").Invoke(null, null) == "AITrue");
+            var save = new savedatascript(); save.data.properties.driven = 5001f;
+            Check("compat: savedatascript.properties is the save data's (Achievements' distance driven)",
+                  changes.Contains("savedatascript.properties read -> TestCompat.SaveProperties") && (float)asm.GetMethod("Driven").Invoke(null, new object[] { save }) == 5001f);
+            var mount = new mountStuff(); var item = new pickupable();
+            asm.GetMethod("Remount").Invoke(null, new object[] { mount, item });
+            Check("compat: mountStuff.Lock is the beta's Store (AMT's saved items in their mounts)",
+                  changes.Contains("mountStuff.Lock(pickupable,System.Boolean) -> TestCompat.MountLock") && mount.Stored == item && mount.IgnoredRigidbody);
+            var onto = new tosaveitemscript();
+            var swapped = (UnityEngine.Vector3)asm.GetMethod("Swap").Invoke(null, new object[] { new attachablescript(), onto });
+            Check("compat: attachablescript.targetTosave written, pointLocalPos read and Load(pos) ask the helper (M-ultiTool's swap)",
+                  changes.Contains("attachablescript.targetTosave write -> TestCompat.SetTargetTosave") &&
+                  changes.Contains("attachablescript.pointLocalPos read -> TestCompat.PointLocalPos") &&
+                  changes.Contains("attachablescript.Load(UnityEngine.Vector3) -> TestCompat.AttachableLoad") &&
+                  TestCompat.Target == onto && TestCompat.LoadedAt.x == 7 && swapped.x == 7);
         }
     }
 
@@ -255,7 +271,7 @@ static class LoaderRetargetTest
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
             Check("all twelve fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu and a return sign are retargeted", changes.Count == 45);
-            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 111);
+            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 116);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -355,6 +371,13 @@ public static class TestCompat
     }
     public class Gone { }
     public static bool InputForward(inputscript i) => i.forward > 0f;
+    public static saveproperties SaveProperties(savedatascript s) => s.data.properties;
+    public static object Invoke(System.Reflection.MethodBase m, object obj, object[] args) => LoaderRetarget.InvokeLoose(m, obj, args);
+    public static void MountLock(mountStuff m, pickupable p, bool ignoreRigidbody) => m.Store(p, ignoreRigidbody);
+    public static tosaveitemscript Target; public static UnityEngine.Vector3 LoadedAt;
+    public static void SetTargetTosave(attachablescript a, tosaveitemscript t) => Target = t;
+    public static UnityEngine.Vector3 PointLocalPos(attachablescript a) => new UnityEngine.Vector3 { x = 7 };
+    public static void AttachableLoad(attachablescript a, UnityEngine.Vector3 pos) => LoadedAt = pos;
     public static System.Reflection.MethodInfo GetMethod(System.Type t, string name) =>
         LoaderRetarget.LooseMethod(t, name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
     public static System.Reflection.MethodInfo GetMethodFlags(System.Type t, string name, System.Reflection.BindingFlags flags) => LoaderRetarget.LooseMethod(t, name, flags);

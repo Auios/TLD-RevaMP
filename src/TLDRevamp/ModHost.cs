@@ -21,6 +21,7 @@ namespace TLDRevamp
             public object Mod; public string Id, Name, Version, File, Hash;   // Hash: SHA-256 of the DLL (the join check)
             public MethodInfo OnMenuLoad, OnLoad, OnUnload, Config, Update, FixedUpdate, OnGUI;   // null: not overridden
             public MethodInfo DbLoad, DbLoadOld;   // with LoadInDB: DbLoad and the older dbLoad, both as TLDLoader calls them
+            public bool DbLoadInWorld;   // its DbLoad threw in the menu: again when the world is up
             public string LastError;
             public bool Menu;   // LoadInMenu: its Update and OnGUI run in the menu too
             public int BrokenTypes;   // types in its DLL that failed to load on the beta (UseHarmony is not applied then)
@@ -223,22 +224,26 @@ namespace TLDRevamp
             catch { return null; }
         }
 
-        private static void Call(Loaded l, MethodInfo m, string what)
+        private static bool Call(Loaded l, MethodInfo m, string what)
         {
-            if (m == null) return;
-            try { m.Invoke(l.Mod, null); }
+            if (m == null) return true;
+            try { m.Invoke(l.Mod, null); return true; }
             catch (Exception e)
             {
                 var inner = e.InnerException ?? e;
                 string err = what + ": " + inner.Message;
                 // once, not per frame; the stack says which line of the mod (the error alone doesn't)
                 if (err != l.LastError) { l.LastError = err; Plugin.Log.LogError("ModHost: " + l.Id + " " + err + "\n" + inner.StackTrace); }
+                return false;
             }
         }
 
         /// Per frame (Runner.Update): menu/game transitions, then the mods' own Update.
         /// The beta's item database has empty slots: filled for the mods' DbLoad (ModHost.Game.cs). A/B: false = before 2026-11-23.
         public static bool FillEmptySlots = true;
+        /// A mod's DbLoad that threw in the menu runs again when the world is up, before its OnLoad. A/B: false = before 2026-11-24.
+        public static bool DbLoadAgainInWorld = true;
+        public static int DbLoadsInWorld;
         public static int EmptySlotsFilled;
         static partial void FillHoles();
         static partial void RestoreHoles();
@@ -257,7 +262,14 @@ namespace TLDRevamp
                 var order = new List<Loaded>(Mods);
                 order.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
                 if (FillEmptySlots) FillHoles();
-                try { foreach (var l in order) { Call(l, l.DbLoad, "DbLoad"); Call(l, l.DbLoadOld, "dbLoad"); } }
+                // the public game ran DbLoad in the world, the player there: a mod that uses it (Radiation, The Long Who) threw
+                // here in the menu, the rest of its DbLoad not done. Before 2026-11-24 it stayed that way.
+                bool noWorld = mainscript.s == null || mainscript.s.player == null;
+                try
+                {
+                    foreach (var l in order)
+                        l.DbLoadInWorld = !(Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad")) && noWorld && DbLoadAgainInWorld;
+                }
                 finally { if (FillEmptySlots) RestoreHoles(); }
             }
             // The world's own signal is the PLAYER, not the scene name: the game loads
@@ -304,7 +316,21 @@ namespace TLDRevamp
                 if (!_menuCalled) { _menuCalled = true; foreach (var l in Mods) Call(l, l.OnMenuLoad, "OnMenuLoad"); }
                 _gameLoadedCalled = true;
                 _unloadCalled = false;
-                foreach (var l in Mods) Call(l, l.OnLoad, "OnLoad");
+                // the empty slots filled here too: mods go through the items in OnLoad as well (M-ultiTool's vehicle list
+                // stopped at the first one, and the rest of its OnLoad with it)
+                if (FillEmptySlots) FillHoles();
+                try
+                {
+                    foreach (var l in Mods)
+                        if (l.DbLoadInWorld)
+                        {
+                            l.DbLoadInWorld = false; DbLoadsInWorld++; l.LastError = null;   // a second failure is logged too
+                            bool ok = Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad");
+                            Plugin.Log.LogInfo("ModHost: " + l.Id + " DbLoad again in the world" + (ok ? "" : ": it threw again"));
+                        }
+                    foreach (var l in Mods) Call(l, l.OnLoad, "OnLoad");
+                }
+                finally { if (FillEmptySlots) RestoreHoles(); }
             }
             // TLDLoader runs a mod's Update in a world only, unless it asked for the menu (LoadInMenu): mods read
             // mainscript.M.player there with no null check (FastPedal, Fugitive). Before 2026-11-23 every mod's ran in the menu.
