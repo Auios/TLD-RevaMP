@@ -46,6 +46,11 @@ public static class AliasMod
 
     /// A field the beta dropped, stored and read back (tosaveitemscript.category).
     public static int Category(tosaveitemscript t) { t.category = 7; return t.category; }
+    /// TLD Loader 3.0.3's registry: a registered item's category and id read, formatted through the
+    /// field's address (ToString on it), and written.
+    public static string Registered(tosaveitemscript t) => t.category + ":" + t.id + ":" + t.category.ToString() + ":" + t.id.ToString();
+    public static void Refile(tosaveitemscript t, int category, int id) { t.category = category; t.id = id; }
+    public static int Id(tosaveitemscript t) => t.id;
     /// A field the beta dropped along with its type (one mod's interiorLights), stored and read back.
     public static int Lights(tosaveitemscript t) { t.holes = new System.Collections.Generic.List<digholescript2>(); t.holes.Add(null); return t.holes.Count; }
     /// An array the beta keeps as a list (one mod's items set an empty one).

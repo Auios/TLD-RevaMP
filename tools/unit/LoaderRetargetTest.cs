@@ -61,6 +61,7 @@ static class LoaderRetargetTest
     {
         Aliases();
         Compat();
+        Registry();
         Parts();
         Generator();
         var gameAsm = typeof(Saved).Assembly;
@@ -230,6 +231,39 @@ static class LoaderRetargetTest
         }
     }
 
+    /// TLD Loader 3.0.3's registry: on the beta a registered item's tosaveitemscript.id is its place in the item table
+    /// (what the save keeps), and there is no category; the mod reads and writes its own numbers through the helper
+    /// (RegistryCompat: as TLDRevamp.LoaderCompat with one mod's items 3 and 4 at places 20000 and 20001).
+    static void Registry()
+    {
+        string dll = Path.Combine(Path.GetDirectoryName(typeof(LoaderRetargetTest).Assembly.Location), "AliasMod.dll");
+        using (var mod = ModuleDefinition.ReadModule(dll))
+        {
+            var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly, typeof(TestCompat));
+            Check("registry: a helper without the registry's members leaves tosaveitemscript.id alone (the beta has it)",
+                  !changes.Exists(c => c.StartsWith("tosaveitemscript.id ")));
+        }
+        using (var mod = ModuleDefinition.ReadModule(dll))
+        {
+            var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly, typeof(RegistryCompat));
+            Check("registry: id and category read, written and their addresses taken go to the helper",
+                  System.Linq.Enumerable.All(new[] { "tosaveitemscript.id read -> RegistryCompat.ItemId", "tosaveitemscript.id write -> RegistryCompat.SetItemId",
+                          "tosaveitemscript.id address -> RegistryCompat.ItemIdRef", "tosaveitemscript.category read -> RegistryCompat.ItemCategory",
+                          "tosaveitemscript.category write -> RegistryCompat.SetItemCategory", "tosaveitemscript.category address -> RegistryCompat.ItemCategoryRef" }, x => changes.Contains(x)));
+            var asm = LoadBytes(mod).GetType("AliasMod");
+            var t = new tosaveitemscript { id = 20000 };
+            Check("registry: a registered item reads as its mod's category and its own id, formatted too (99:3)",
+                  (string)asm.GetMethod("Registered").Invoke(null, new object[] { t }) == "99:3:99:3" && (int)asm.GetMethod("Id").Invoke(null, new object[] { t }) == 3);
+            Check("registry: a game item reads as it is (category 0, id 116)",
+                  (string)asm.GetMethod("Registered").Invoke(null, new object[] { new tosaveitemscript { id = 116 } }) == "0:116:0:116");
+            asm.GetMethod("Refile").Invoke(null, new object[] { t, 99, 4 });
+            Check("registry: the mod's own id written goes to that item's place (4 -> 20001)", t.id == 20001);
+            var g = new tosaveitemscript { id = 116 };
+            asm.GetMethod("Refile").Invoke(null, new object[] { g, 0, 117 });
+            Check("registry: a game item's id written as it is", g.id == 117);
+        }
+    }
+
     /// TerrainGenerator.TG...objTypes: a static of a type the beta lacks (the map from menuhandler.s), three steps that are
     /// the map itself, and the nested prefabClass for ObjClass.
     static void Generator()
@@ -294,7 +328,7 @@ static class LoaderRetargetTest
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
             Check("all fourteen fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu, a return sign and an attribute's typeof are retargeted", changes.Count == 48);
-            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 121);
+            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 124);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -420,4 +454,19 @@ public static class TestCompat
         foreach (var g in m.objGens) foreach (var c in g.categories) all.AddRange(c.prefabs);
         return all.ToArray();
     }
+}
+
+/// TLDRevamp.LoaderCompat's registry members over a made-up registry: category 99's items 3 and 4 at places 20000, 20001.
+public static class RegistryCompat
+{
+    static bool Key(int slot, out int category, out int id) { category = 99; id = slot - 19997; return slot == 20000 || slot == 20001; }
+    static int Slot(int category, int id) => category == 99 && (id == 3 || id == 4) ? 19997 + id : -1;
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<tosaveitemscript, object> Categories = new System.Runtime.CompilerServices.ConditionalWeakTable<tosaveitemscript, object>();
+    public static int ItemId(tosaveitemscript t) => Key(t.id, out _, out int id) ? id : t.id;
+    public static void SetItemId(tosaveitemscript t, int id) { int s = Slot(ItemCategory(t), id); t.id = s >= 0 ? s : id; }
+    public static int ItemCategory(tosaveitemscript t) => Key(t.id, out int c, out _) ? c : Categories.TryGetValue(t, out var v) ? (int)v : 0;
+    public static void SetItemCategory(tosaveitemscript t, int category) { Categories.AddOrUpdate(t, category); int s = Slot(category, ItemId(t)); if (s >= 0) t.id = s; }
+    static int _copy;
+    public static ref int ItemIdRef(tosaveitemscript t) { _copy = ItemId(t); return ref _copy; }
+    public static ref int ItemCategoryRef(tosaveitemscript t) { _copy = ItemCategory(t); return ref _copy; }
 }

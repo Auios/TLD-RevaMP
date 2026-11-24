@@ -540,5 +540,47 @@ namespace TLDRevamp
 
         /// attachablescript.Attach(Transform, RaycastHit): attached where the ray hit, as the beta's Attach(RaycastHit).
         public static void Attach(attachablescript a, Transform target, RaycastHit hit) { Calls++; if (a != null && hit.collider != null) a.Attach(hit); }
+
+        // ------------------------------------------------------------------ TLD Loader 3.0.3's item registry
+
+        /// A registered item (TLDLoader.ItemSlots in the stub, bound by ModHost): the category and the mod's own id at a
+        /// place of the item table, and back. Unbound (no stub): no registered items.
+        public delegate bool SlotKeyLookup(int slot, out int category, out int id);
+        public static SlotKeyLookup SlotKey;
+        public static System.Func<int, int, int> SlotOf;
+
+        /// tosaveitemscript.id as a mod reads it: a registered item's own number in its mod (the beta's id is its place in
+        /// the item table, which the save and the game use); every other item's id as it is.
+        public static int ItemId(tosaveitemscript t)
+        {
+            int v = t.id;
+            return SlotKey != null && SlotKey(v, out _, out int id) ? id : v;
+        }
+        /// A mod's id written to an item of a registered category: that item's place; anything else as it is.
+        public static void SetItemId(tosaveitemscript t, int id)
+        {
+            Calls++;
+            int category = ItemCategory(t);
+            int slot = category != 0 && SlotOf != null ? SlotOf(category, id) : -1;
+            t.id = slot >= 0 ? slot : id;
+        }
+        /// tosaveitemscript.category (the beta has none): a registered item's mod's; any other item's what a mod stored on it.
+        public static int ItemCategory(tosaveitemscript t)
+        {
+            int v = t.id;
+            return SlotKey != null && SlotKey(v, out int category, out _) ? category : Kept<int>(t, CategoryKey);
+        }
+        public static void SetItemCategory(tosaveitemscript t, int category)
+        {
+            if (t == null) throw new System.NullReferenceException();
+            Keep(t, CategoryKey, category);
+            int slot = SlotOf != null ? SlotOf(category, ItemId(t)) : -1;
+            if (slot >= 0) t.id = slot;
+        }
+        private const string CategoryKey = "tosaveitemscript.category";   // KeptAdapter's name for it
+        /// The field's address (`t.category.ToString()`): a copy's; a write through it changes nothing.
+        public static ref int ItemIdRef(tosaveitemscript t) { _refCopy = ItemId(t); return ref _refCopy; }
+        public static ref int ItemCategoryRef(tosaveitemscript t) { _refCopy = ItemCategory(t); return ref _refCopy; }
+        [System.ThreadStatic] private static int _refCopy;
     }
 }

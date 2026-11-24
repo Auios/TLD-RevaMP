@@ -337,6 +337,12 @@ static class LoaderHostTest
         ModHost.Tick();
         Check("a new item database (a scene load) gets DbLoad again", GetCalls().Contains("DbLoad"));
         Check("itemdatabase.d follows the new database", ReferenceEquals(itemdatabase.d, itemdatabase.s));
+        var before = (List<int>)recorder.GetField("RegisteredBefore").GetValue(null);
+        var places = (List<int>)recorder.GetField("Places").GetValue(null);
+        Check("TLD Loader 3.0.3's registry is empty again for each new item database (" + string.Join(",", before) + ")",
+              before.Count == 2 && before.All(n => n == 0));
+        Check("and the mod's item gets the same place each time, in the registry's range (" + string.Join(",", places) + ")",
+              places.Count == 2 && places[0] == places[1] && places[0] >= 16384 && places[0] < 32768);
 
         Section("a DbLoad that threw before the player was up runs again once the world is up (the public game ran it in the world)");
         var throwOn = recorder.GetField("ThrowOn", BindingFlags.Public | BindingFlags.Static);
@@ -353,6 +359,8 @@ static class LoaderHostTest
         var w = GetCalls();
         Check("in the world: DbLoad and dbLoad again, before OnLoad",
               w.Contains("DbLoad") && w.Contains("dbLoad") && w.Contains("OnLoad") && w.IndexOf("dbLoad") < w.IndexOf("OnLoad"));
+        Check("the same database: what its first DbLoad registered is still there for the second",
+              before.Count >= 2 && before[before.Count - 1] == 1 && places[places.Count - 1] == places[0]);
         mainscript.s.player = null; ModHost.Tick();
         mainscript.s.player = new TLDRevamp.Fixtures.Player();
         Reset();

@@ -13,4 +13,8 @@
     <Compile Remove="$(MSBuildThisFileDirectory)../../TestCrashGuard.cs" />
     <ProjectReference Include="../../../../src/TLDLoaderShim/TLDLoaderShim.csproj" AdditionalProperties="ImportDirectoryBuildTargets=false" />
   </ItemGroup>
+  <!-- the stub's ModLoader is a MonoBehaviour when it is built with Unity (TLD_UNITY: lib/ there, as in every real build) -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)../../../../lib/UnityEngine.AssetBundleModule.dll')">
+    <Reference Include="$(MSBuildThisFileDirectory)../../../../lib/UnityEngine.CoreModule.dll" Private="false" />
+  </ItemGroup>
 </Project>

@@ -142,10 +142,88 @@ static class LoaderFeaturesTest
             var odd = Activator.CreateInstance(storeType, path);
             var a2 = new object[] { "ok", null };
             Check("a damaged file: bad lines skipped, good ones read", (bool)storeType.GetMethod("TryGet").Invoke(odd, a2) && (int)a2[1] == 7);
+
+            Section("TLD Loader 3.0.3's item registry: the places in the beta's item table (TLDLoader.ItemSlots)");
+            Registry(loader.Assembly, Path.Combine(here, "TLDLoader.dll"));
         }
         catch (Exception e) { Check("no exception: " + e, false); }
         return Done(tmp);
     }
+
+    /// A mod's registered items get places in the beta's item table: what the save keeps (tosaveitemscript.id) and what
+    /// the game spawns from (itemdatabase.Item). The same registrations must get the same places in every session and on
+    /// every machine, two items that hash alike must both get one, and a mod reads its own numbers back from a place.
+    static void Registry(Assembly stub, string stubFile)
+    {
+        var slots = stub.GetType("TLDLoader.ItemSlots");
+        var assign = slots.GetMethod("Assign"); var find = slots.GetMethod("Find"); var tryKey = slots.GetMethod("TryKey");
+        var hash = slots.GetMethod("Hash"); var clear = slots.GetMethod("Clear");
+        int first = (int)slots.GetField("First").GetValue(null), count = (int)slots.GetField("Count").GetValue(null);
+        int Assign(int c, int i) => (int)assign.Invoke(null, new object[] { c, i });
+        int Find(int c, int i) => (int)find.Invoke(null, new object[] { c, i });
+        int Hash(int c, int i) => (int)hash.Invoke(null, new object[] { c, i });
+        (bool, int, int) Key(int slot) { var a = new object[] { slot, 0, 0 }; bool ok = (bool)tryKey.Invoke(null, a); return (ok, (int)a[1], (int)a[2]); }
+        void Clear() => clear.Invoke(null, null);
+
+        Check("the places start above the beta's own items (up to 9400 in 2026-11)", first > 9400 && count > 0);
+        int modA = Fnv1("example.items.a"), modB = Fnv1("example.items.b");
+        Clear();
+        int a = Assign(modA, 1), b = Assign(modA, 2), c = Assign(modB, 1);
+        Check("each item a place of its own, in the range", a != b && b != c && a != c && new[] { a, b, c }.All(x => x >= first && x < first + count));
+        Check("a place is the hash's when nothing was there", a == first + Hash(modA, 1));
+        Check("asking again gives the same place", Assign(modA, 1) == a && Find(modA, 2) == b);
+        Check("an item never registered has none", Find(modA, 3) == -1);
+        var k = Key(b);
+        Check("the place gives the mod's category and its own id back", k.Item1 && k.Item2 == modA && k.Item3 == 2);
+        int empty = Enumerable.Range(first, 4).First(x2 => x2 != a && x2 != b && x2 != c);
+        Check("a place nothing registered gives nothing, nor a game item's id", !Key(empty).Item1 && !Key(116).Item1);
+        Check("a negative category comes back as it was", Key(Assign(-5, 7)).Item2 == -5 && Key(Find(-5, 7)).Item3 == 7);
+        Clear();
+        Check("a new item database: nothing registered", Find(modA, 1) == -1 && !Key(a).Item1);
+        int c2 = Assign(modB, 1), a2 = Assign(modA, 1), b2 = Assign(modA, 2);
+        Check("the same items get the same places in another session, whatever order they come in", a2 == a && b2 == b && c2 == c);
+        Check("the hash is a fixed function (another machine: the same places)", Hash(0, 0) == (int)(Fnv1aZeroes() % (uint)count));
+        // two items with the same hash: the second takes the next free place
+        Clear();
+        int x = 1, y = 2;
+        var seen = new Dictionary<int, int>();
+        for (int i = 1; i < 200000; i++) { int h = Hash(modB, i); if (seen.TryGetValue(h, out int j)) { x = j; y = i; break; } seen[h] = i; }
+        int px = Assign(modB, x), py = Assign(modB, y);
+        Check("two items whose hashes collide (" + x + ", " + y + ") both get a place, the second the next one", Hash(modB, x) == Hash(modB, y) && px != py && py == first + (px - first + 1) % count);
+        Clear();
+
+        // the members mods built on TLD Loader 3.0.3 bind to, as they reference them (a missing one is a
+        // MissingMethodException when the mod's method runs: before 2026-11-24, get_Instance, and nothing was registered)
+        using var m = Mono.Cecil.ModuleDefinition.ReadModule(stubFile);
+        if (!m.AssemblyReferences.Any(r => r.Name == "UnityEngine.CoreModule")) { Console.WriteLine("SKIP the registry's members: the stub was built without Unity (no lib/)"); return; }
+        var have = new HashSet<string>(m.Types.SelectMany(t => t.Methods.Select(x2 => x2.FullName).Concat(t.Fields.Select(f => f.FullName))));
+        foreach (var want in new[]
+        {
+            "TLDLoader.ModLoader TLDLoader.ModLoader::get_Instance()",
+            "TLDLoader.ItemDatabase TLDLoader.ModLoader::get_Database()",
+            "System.Boolean TLDLoader.ModLoader::dbmodsloaded",
+            "TLDLoader.ItemRegistrationBuilder TLDLoader.Mod::RegisterItem(UnityEngine.GameObject,System.Int32,System.String)",
+            "TLDLoader.ItemRegistrationBuilder TLDLoader.Mod::RegisterItem(UnityEngine.GameObject,System.Int32)",
+            "UnityEngine.GameObject TLDLoader.Mod::GetItem(System.Int32)",
+            "System.Int32 TLDLoader.Mod::get_Category()",
+            "System.Void TLDLoader.ItemRegistrationBuilder::Register()",
+            "TLDLoader.ItemRegistrationBuilder TLDLoader.ItemRegistrationBuilder::WithRigidbody(System.Single,System.Single,System.Single)",
+            "TLDLoader.ItemRegistrationBuilder TLDLoader.ItemRegistrationBuilder::AsPickupable(TLDLoader.PickupableOptions)",
+            "TLDLoader.ItemRegistrationBuilder TLDLoader.ItemRegistrationBuilder::AsTank(mainscript/fluidcontainer,System.Boolean,System.Boolean)",
+            "System.Void TLDLoader.PickupableOptions::.ctor()",
+            "System.Void TLDLoader.PickupableOptions::set_Attachable(System.Boolean)",
+            "System.Void TLDLoader.PickupableOptions::set_CanEquip(System.Boolean)",
+            "System.Void TLDLoader.PickupableOptions::set_CanInventory(System.Boolean)",
+            "UnityEngine.GameObject TLDLoader.ItemDatabase::GetById(System.Int32,System.Int32)",
+        })
+            Check("the stub has " + want, have.Contains(want));
+        var ml = m.Types.First(t => t.FullName == "TLDLoader.ModLoader");
+        Check("ModLoader is the loader's component, as in 3.0.3 (mods cast Instance to a Unity object), and not static",
+              ml.BaseType?.FullName == "UnityEngine.MonoBehaviour" && !(ml.IsAbstract && ml.IsSealed));
+    }
+
+    /// FNV-1a of eight zero bytes: the hash of (0, 0) as TLDLoader.ItemSlots computes it, worked out here on its own.
+    static uint Fnv1aZeroes() { unchecked { uint h = 2166136261; for (int i = 0; i < 8; i++) { h ^= 0; h *= 16777619; } return h; } }
 
     static int Fnv1(string s) { unchecked { int h = -2128831035; foreach (char c in s) { h ^= c; h *= 16777619; } return h; } }
 

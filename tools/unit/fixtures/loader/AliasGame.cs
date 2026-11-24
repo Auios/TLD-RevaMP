@@ -175,6 +175,7 @@ public class survivalscript
 // The old save ids the TLD Workshop's spawners use (issue 44), and what the beta has instead.
 public class tosaveitemscript   // test stub, not game code
 {
+    public int id;   // both: the public game's item number; the beta's, its place in the item table
 #if PUBLIC_GAME
     public bool removeFromMemory;
     public void FStart(int key) { }

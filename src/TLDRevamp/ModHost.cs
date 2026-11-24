@@ -58,6 +58,7 @@ namespace TLDRevamp
                 var gameLog = BepInEx.Logging.Logger.CreateLogSource("TLD Loader mods");
                 Loader.GetField("Echo")?.SetValue(null, (Action<string, int>)((m, lv) => { if (lv == 2) gameLog.LogError(m); else if (lv == 1) gameLog.LogWarning(m); else gameLog.LogInfo(m); }));
                 MakeLoadingPanel();
+                MakeLoaderObject(stub);
                 BindEvents(stub);
                 _modFiles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var dll in dlls)
@@ -215,6 +216,7 @@ namespace TLDRevamp
 
         // the game-only parts (ModHost.Game.cs; not in the unit test's build): the loading panel and TLD Loader's events
         static partial void MakeLoadingPanel();
+        static partial void MakeLoaderObject(Assembly stub);   // ModHost.Game.cs: ModLoader.Instance, the item registry
         static partial void BindEvents(Assembly stub);
         static partial void PatchModSafely(Loaded l);
         static partial void KnownModFixes(Assembly asm);
@@ -282,6 +284,14 @@ namespace TLDRevamp
         static partial void FillHoles();
         static partial void RestoreHoles();
 
+        /// The stub's ModLoader.HostDbLoad: the mods' DbLoad starts (fresh: for a new item database) or has ended. TLD Loader
+        /// 3.0.3 takes RegisterItem only in between, and mods ask it (its dbmodsloaded) whether they are in DbLoad.
+        private static void DbLoadMark(bool starting, bool fresh)
+        {
+            try { Loader?.GetMethod("HostDbLoad", BindingFlags.NonPublic | BindingFlags.Static)?.Invoke(null, new object[] { starting, fresh }); }
+            catch (Exception e) { Plugin.Log.LogWarning("ModHost: TLD Loader's DbLoad mark: " + (e.InnerException ?? e).Message); }
+        }
+
         public static void Tick()
         {
             if (Mods.Count == 0) return;
@@ -309,11 +319,14 @@ namespace TLDRevamp
                 // the public game ran DbLoad in the world, the player there: a mod that uses it threw
                 // here in the menu, the rest of its DbLoad not done. Before 2026-11-24 it stayed that way.
                 bool noWorld = mainscript.s == null || mainscript.s.player == null;
+                DbLoadMark(true, true);   // a new database: TLD Loader 3.0.3's registry starts empty, its items come again
                 try
                 {
                     foreach (var l in order)
                     {
                         bool ok = Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad");
+                        // a registered item makes the table longer (TLDLoader.ItemSlots): the next mods see no empty slots there either
+                        if (FillEmptySlots) FillHoles();
                         l.DbLoadInWorld = !ok && noWorld && DbLoadAgainInWorld;
                         if (!ok) Plugin.Log.LogInfo("ModHost: " + l.Id + " DbLoad threw " + (noWorld ? "before the world was up: again when it is" : "with the world up"));
                         else if (l.LastError != null && l.LastError.StartsWith("DbLoad", StringComparison.OrdinalIgnoreCase))
@@ -323,7 +336,7 @@ namespace TLDRevamp
                         }
                     }
                 }
-                finally { if (FillEmptySlots) RestoreHoles(); }
+                finally { DbLoadMark(false, false); if (FillEmptySlots) RestoreHoles(); }
             }
             // The world's own signal is the PLAYER, not the scene name: the game loads
             // scenes for a restart and for a new game, and the active scene is briefly
@@ -378,7 +391,11 @@ namespace TLDRevamp
                         if (l.DbLoadInWorld)
                         {
                             l.DbLoadInWorld = false; DbLoadsInWorld++; l.LastError = null;   // a second failure is logged too
-                            bool ok = Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad");
+                            DbLoadMark(true, false);
+                            bool ok;
+                            try { ok = Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad"); }
+                            finally { DbLoadMark(false, false); }
+                            if (FillEmptySlots) FillHoles();
                             Plugin.Log.LogInfo("ModHost: " + l.Id + " DbLoad again in the world" + (ok ? "" : ": it threw again"));
                             if (ok) l.LastError = null;
                         }

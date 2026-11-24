@@ -17,10 +17,12 @@ namespace TLDRevamp
         private static GameObject _slotPlaceholder;
         private static readonly List<int> _holes = new List<int>();
         static partial void CompatType(ref Type type) { type = typeof(LoaderCompat); }
+        /// Again after each mod's DbLoad (a registered item can make the table longer): only the slots still empty; the ones
+        /// filled before stay in the list for RestoreHoles.
         static partial void FillHoles()
         {
             var db = itemdatabase.s;
-            var holes = _holes; holes.Clear();
+            var holes = _holes;
             if (db == null || db.items == null) return;
             for (int i = 0; i < db.items.Length; i++)
                 if (db.items[i] == null)
@@ -56,6 +58,22 @@ namespace TLDRevamp
         }
 
         static partial void BindEvents(Assembly stub) => Events.Bind(stub);
+
+        /// TLD Loader 3.0.3's ModLoader.Instance (its object, coroutines run on it) and item registry; LoaderCompat answers the
+        /// mods' tosaveitemscript.id/category from the registry's places (TLDLoader.ItemSlots).
+        static partial void MakeLoaderObject(Assembly stub)
+        {
+            try
+            {
+                Loader?.GetMethod("HostMakeInstance", BindingFlags.NonPublic | BindingFlags.Static)?.Invoke(null, null);
+                var slots = stub.GetType("TLDLoader.ItemSlots");
+                var key = slots?.GetMethod("TryKey", BindingFlags.Public | BindingFlags.Static);
+                var find = slots?.GetMethod("Find", BindingFlags.Public | BindingFlags.Static);
+                if (key != null) LoaderCompat.SlotKey = (LoaderCompat.SlotKeyLookup)Delegate.CreateDelegate(typeof(LoaderCompat.SlotKeyLookup), key);
+                if (find != null) LoaderCompat.SlotOf = (Func<int, int, int>)Delegate.CreateDelegate(typeof(Func<int, int, int>), find);
+            }
+            catch (Exception e) { Plugin.Log.LogWarning("ModHost: TLD Loader's object and item registry: " + (e.InnerException ?? e).Message); }
+        }
 
         /// A/B (bridge `set`): false = before 2026-11-11 (mainscript.M.seed/load/napszak exist but stay 0/false/null).
         public static bool GameAliasesOn = true;

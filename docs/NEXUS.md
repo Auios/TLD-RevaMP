@@ -90,7 +90,8 @@ the beta's state. TLD Loader's helpers work
 too: SettingAPI settings (read at start, drawn in the Revamp tab), ModLoader.LoadedMods,
 isOnMainMenu, Keybind, the Logger (UseLogger: a log file per mod in
 BepInEx\TLDLoaderMods\Logs), UseHarmony patches (all of a mod's or none, when one
-would not work on the beta), and its game events (sitting, saving, loading, pausing). Not yet: TLD Loader's own item registration (RegisterItem). A mod
+would not work on the beta), and its game events (sitting, saving, loading, pausing). Its item registry works too
+(RegisterItem): registered items spawn, save and load like the game's own. A mod
 with one part that can't load on the beta still runs its other parts. There must be no
 other mod loader installed at the same time.
 

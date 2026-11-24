@@ -25,7 +25,11 @@ public class RecorderMod : Mod
         if (ThrowOn == what) throw new System.Exception("the " + what + " call failed on purpose");
     }
 
-    public override void DbLoad() { Record("DbLoad"); }
+    /// Per DbLoad: how many items the registry had already (TLDLoader.ItemSlots: none for a new item database), and the
+    /// place its item 1 got.
+    public static readonly List<int> RegisteredBefore = new List<int>(), Places = new List<int>();
+
+    public override void DbLoad() { RegisteredBefore.Add(ItemSlots.Assigned); Places.Add(ItemSlots.Assign(Category, 1)); Record("DbLoad"); }
     public override void dbLoad() { Record("dbLoad"); }
     public override void OnMenuLoad() { Record("OnMenuLoad"); }
     public override void OnLoad() { Record("OnLoad"); }

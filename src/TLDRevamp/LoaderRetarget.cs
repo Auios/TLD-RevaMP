@@ -159,6 +159,14 @@ namespace TLDRevamp
             new[] { "mapSettingScript", "RoadBuildingScript", "roadBuildingScript", "RoadBuildingGeneration", "" },
             // the forward key held: a float on the beta (a sandstorm mod read a bool)
             new[] { "inputscript", "forward", "System.Boolean", "InputForward", "" },
+            // TLD Loader 3.0.3's item registry: a registered item's mod and its own id (the beta's id is its item table place)
+            new[] { "tosaveitemscript", "category", "System.Int32", "ItemCategory", "SetItemCategory" },
+        };
+        // Fields the beta has as the mod knows them that a helper answers all the same (CompatFields' columns): a registered
+        // item's tosaveitemscript.id is its place in the beta's item table; the mod reads and writes its own number.
+        private static readonly string[][] Rerouted =
+        {
+            new[] { "tosaveitemscript", "id", "System.Int32", "ItemId", "SetItemId" },
         };
         // Game types the beta dropped that a helper type stands in for (a nested type of the helper of that name). Every
         // other dropped one becomes the helper's Gone.
@@ -197,6 +205,8 @@ namespace TLDRevamp
             yield return "same-name game methods whose return is the other integer sign (savedatascript.GetNewKey Int32 -> UInt32)";
             yield return "Assembly.Location -> the rewritten mod's own DLL (LoaderCompat.AssemblyLocation)";
             foreach (var a in CompatFields) yield return a[0] + "." + a[1] + " -> LoaderCompat." + a[3] + (a[4].Length > 0 ? "/" + a[4] : "");
+            foreach (var a in Rerouted) yield return a[0] + "." + a[1] + " (the beta has it) -> LoaderCompat." + a[3] + "/" + a[4];
+            yield return "the address of a field above (t.category.ToString()) -> LoaderCompat.<getter>Ref, a copy's";
             foreach (var a in CompatMethods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> LoaderCompat." + a[3];
             yield return "GameObject.Find(\"Main\") -> LoaderCompat.FindMain";
             yield return "Harmony.PatchAll() -> LoaderCompat.PatchAll (all of them or none)";
@@ -364,21 +374,23 @@ namespace TLDRevamp
         {
             what = null;
             const BindingFlags Statics = BindingFlags.Public | BindingFlags.Static;
-            if (ins.Operand is FieldReference fr && (ins.OpCode == OpCodes.Ldfld || ins.OpCode == OpCodes.Stfld))
+            if (ins.Operand is FieldReference fr && (ins.OpCode == OpCodes.Ldfld || ins.OpCode == OpCodes.Stfld || ins.OpCode == OpCodes.Ldflda))
             {
                 var owner = GameType(game, gameName, fr.DeclaringType);
                 if (owner == null) return null;
-                // the game has it as the mod knows it: nothing to do. The same name with another type is not it (pickupable.cols
-                // is a List here, attachablescript.C a private Collider[]): the mod's access stopped its whole method
+                // the game has it as the mod knows it: nothing to do (unless Rerouted). The same name with another type is not
+                // it (pickupable.cols is a List here, attachablescript.C a private Collider[]): the mod's access stopped its
+                // whole method
                 var has = GameLookups.RuntimeField(owner, fr.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-                if (has != null && CecilName(has.FieldType) == fr.FieldType.FullName) return null;
-                foreach (var a in CompatFields)
+                bool same = has != null && CecilName(has.FieldType) == fr.FieldType.FullName;
+                foreach (var a in same ? Rerouted : CompatFields)
                 {
                     if (fr.DeclaringType.FullName != a[0] || fr.Name != a[1] || fr.FieldType.FullName != a[2]) continue;
-                    string name = ins.OpCode == OpCodes.Ldfld ? a[3] : a[4];
+                    // an address (a value type's own method on it): the getter's Ref twin, a copy's address, where there is one
+                    string name = ins.OpCode == OpCodes.Ldfld ? a[3] : ins.OpCode == OpCodes.Stfld ? a[4] : a[3].Length > 0 ? a[3] + "Ref" : "";
                     var m = name.Length > 0 ? compat.GetMethod(name, Statics) : null;
                     if (m == null) return null;
-                    what = a[0] + "." + a[1] + (ins.OpCode == OpCodes.Ldfld ? " read" : " write") + " -> " + compat.Name + "." + name;
+                    what = a[0] + "." + a[1] + (ins.OpCode == OpCodes.Ldfld ? " read" : ins.OpCode == OpCodes.Stfld ? " write" : " address") + " -> " + compat.Name + "." + name;
                     return m;
                 }
                 return null;

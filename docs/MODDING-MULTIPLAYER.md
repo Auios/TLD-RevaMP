@@ -352,8 +352,17 @@ SaveRecord holds a mod's own data only: savedatascript.SpawnItem(save_prefab) an
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,
 UseHarmony (all of a
 mod's patches or none: a patch naming what the beta lacks would throw inside the game's own method), Events,
-GameUtil, CopyComponent; not its item registration, which builds on the public game's item
-categories). DbLoad runs
+GameUtil, CopyComponent), and TLD Loader 3.0.3's item registry (for mods that register items through it): ModLoader.Instance (the loader's
+component; its dbmodsloaded is false only during DbLoad) and Database, Mod.RegisterItem(prefab, id).Register() with
+WithRigidbody/AsPickupable/AsTank/AsExplodable/AsBreakable, Mod.GetItem, and inventory pictures kept in Loader/Cache next
+to the mods. The public game knew an item by a category and an id; the beta knows it by its place in
+itemdatabase.items alone (a save keeps tosaveitemscript.id, and the item comes back from itemdatabase.Item). A registered
+item gets a place from 16384 up, by a hash of its mod's category and its id, the next free one on a collision
+(TLDLoader.ItemSlots), and its tosaveitemscript.id is that place: the game saves, loads and spawns it as its own. The mod
+reads and writes its own numbers: its tosaveitemscript.id and .category go to LoaderCompat.ItemId/ItemCategory (the beta
+has no category; for other items they are as before). The registry is emptied for each new item database and the mods
+register again, in the same order, to the same places. Not there: WithCondition, AsPart, SpawnAt and SpawnInBox (no
+known mod calls them) and 3.0.3's patches of the public game's lookups by category. DbLoad runs
 for every mod with LoadInDB once per item database, in the order of the mods' IDs, so every machine changes and adds
 items the same way. That holds only when every player has the same TLD Loader mods: a host refuses a joiner whose mods differ by
 ID, version or DLL (SHA-256), and says what to install or remove (`Net/LoaderModCheck.cs`, config

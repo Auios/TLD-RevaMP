@@ -16,6 +16,10 @@
     <ProjectReference Include="fixtures/loader/RecorderMod.csproj" ReferenceOutputAssembly="false" OutputItemType="LoaderFixture" AdditionalProperties="ImportDirectoryBuildTargets=false" />
     <Compile Include="../../src/TLDRevamp/DevHooks.cs" />
   </ItemGroup>
+  <!-- the stub built with Unity (lib/ there) has ModLoader as a MonoBehaviour: its type loads only next to Unity's core DLL -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)../../lib/UnityEngine.AssetBundleModule.dll')">
+    <LoaderFixture Include="$(MSBuildThisFileDirectory)../../lib/UnityEngine.CoreModule.dll" />
+  </ItemGroup>
   <Target Name="CopyLoaderFixtures" AfterTargets="Build">
     <Copy SourceFiles="@(LoaderFixture)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
   </Target>

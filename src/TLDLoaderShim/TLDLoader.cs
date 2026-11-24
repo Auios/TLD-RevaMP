@@ -9,12 +9,12 @@ using UnityEngine;
 // Enough of TLDLoader's API for TLDLoader mods to run under BepInEx on the beta (where TLDLoader itself doesn't work):
 // the Mod base class and its lifecycle, its logger, the config and assets folders, LoadAssets (asset bundles,
 // textures, OBJ meshes), and its helpers (LoaderSettings.cs: SettingAPI; LoaderLogging.cs: Logger; LoaderExtras.cs:
-// Keybind, Events, GameUtil, ComponentExtensions). TLDRevamp's ModHost finds the mods, creates them and calls their
+// Keybind, Events, GameUtil, ComponentExtensions; LoaderItems.cs: TLD Loader 3.0.3's item registry). TLDRevamp's ModHost finds the mods, creates them and calls their
 // lifecycle: Config once at load, UseHarmony patches, DbLoad/dbLoad once the item database exists (mods with LoadInDB),
 // OnMenuLoad once in the menu (before the first OnLoad if the menu was skipped), OnLoad once a game is loaded; Update,
 // FixedUpdate and OnGUI in the world (Update and OnGUI in the menu too with LoadInMenu).
 // The API is TLD Loader's, member for member as the workshop's mods call it (2026-11-11: every TLDLoader member the
-// 224 workshop DLLs reference, except item registration); the behaviour was checked against TLD Loader's, the code is
+// 224 workshop DLLs reference; the item registry since 2026-11-24); the behaviour was checked against TLD Loader's, the code is
 // RevaMP's own.
 namespace TLDLoader
 {
@@ -92,6 +92,20 @@ namespace TLDLoader
         }
 #endif
 
+#if TLD_UNITY
+        /// TLD Loader 3.0.3's item registry (LoaderItems.cs): one of the mod's own items, `id` its number in the mod's
+        /// category. Only inside DbLoad, then `.Register()`.
+        public ItemRegistrationBuilder RegisterItem(GameObject prefab, int id, string name = null) => new ItemRegistrationBuilder(this, prefab, id, name);
+        public ItemRegistrationBuilder RegisterItem(GameObject prefab, int id) => new ItemRegistrationBuilder(this, prefab, id);
+        /// The prefab the mod registered under this id (null: none).
+        public GameObject GetItem(int id) => ModLoader.Database?.GetById(Category, id);
+
+        public void StartCoroutine(System.Collections.IEnumerator routine) => ModLoader.Instance.StartCoroutine(routine);
+        public void StopCoroutine(string routine) => ModLoader.Instance.StopCoroutine(routine);
+        public void StopCoroutine(System.Collections.IEnumerator routine) => ModLoader.Instance.StopCoroutine(routine);
+        public void StopCoroutine(Coroutine routine) => ModLoader.Instance.StopCoroutine(routine);
+#endif
+
         public virtual void DbLoad() { }
         public virtual void dbLoad() { }   // TLDLoader's older name: both are called
         public virtual void OnMenuLoad() { }
@@ -103,8 +117,24 @@ namespace TLDLoader
         public virtual void OnGUI() { }
     }
 
-    public static class ModLoader
+    /// Static in TLD Loader 1.x; 3.0.3 made it the loader's own component (ModLoader.Instance), which mods built on it
+    /// read: a class, not a static class, keeps both kinds of mod binding (a static member is called the same way).
+#if TLD_UNITY
+    public class ModLoader : MonoBehaviour
+#else
+    public class ModLoader
+#endif
     {
+#if TLD_UNITY
+        /// The loader's object (the host makes it once Unity runs); mods run coroutines on it.
+        public static ModLoader Instance { get; private set; }
+        /// TLD Loader 3.0.3's item registry: the items mods registered in DbLoad.
+        public static ItemDatabase Database { get; private set; }
+#endif
+        /// True once the mods' DbLoad has run (false again while it runs for a new item database): 3.0.3 refuses RegisterItem
+        /// then, and mods read it (by reflection) to tell.
+        internal bool dbmodsloaded;
+
         /// Set by the host: BepInEx/config/TLDLoaderMods.
         public static string ConfigRoot = "";
         /// Set by the host: the folder the mods are loaded from (BepInEx/TLDLoaderMods); their assets are in its Assets/<ID>.
@@ -139,9 +169,40 @@ namespace TLDLoader
         public static Action<string, int> Echo;
 
         // ---- the host's side (TLDRevamp's ModHost calls these by reflection)
-        internal static void HostAdd(Mod mod) { if (!LoadedMods.Contains(mod)) LoadedMods.Add(mod); }
+        internal static void HostAdd(Mod mod)
+        {
+            if (!LoadedMods.Contains(mod)) LoadedMods.Add(mod);
+#if TLD_UNITY
+            if (Database != null && !Database.Categories.Contains(mod.Category)) Database.Categories.Add(mod.Category);
+#endif
+        }
+        /// The mods' DbLoad starts (`fresh`: for a new item database: what they registered for the last one is gone) or
+        /// has ended.
+        internal static void HostDbLoad(bool starting, bool fresh)
+        {
+            if (fresh) ItemSlots.Clear();
+#if TLD_UNITY
+            if (fresh) Database?.ResetDatabase();
+            if (Instance != null) Instance.dbmodsloaded = !starting;
+#endif
+        }
+#if TLD_UNITY
+        /// Once Unity runs: the loader's object, kept across scenes, and the item registry.
+        internal static void HostMakeInstance()
+        {
+            if (Instance != null) return;
+            var go = new GameObject("TLDLoader (RevaMP)");
+            DontDestroyOnLoad(go);
+            Instance = go.AddComponent<ModLoader>();
+            Database = new ItemDatabase();
+            foreach (var m in LoadedMods) if (!Database.Categories.Contains(m.Category)) Database.Categories.Add(m.Category);
+        }
+#endif
         internal static void HostScene(bool inWorld) { isOnMainMenu = !inWorld; CurrentGameScene = inWorld ? CurrentScene.Game : CurrentScene.MainMenu; }
         internal static void HostConfigPass(Mod mod, bool drawing) => mod.isConfigLoaded = drawing;
+
+        /// TLD Loader 3.0.3's folder of its own files next to the mods (its inventory pictures: Cache/<category>_<id>.png).
+        public static string LoaderFolder => Path.Combine(ModsFolder, "Loader");
 
         internal static int Fnv1(string s)
         {
