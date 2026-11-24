@@ -85,6 +85,9 @@ namespace TLDRevamp
             new[] { "tosaveitemscript", "colors", "colorscript", "colors" },
             new[] { "tosaveitemscript", "door_rots", "door_rot", "door_rots" },
             new[] { "tosaveitemscript", "attachTargets", "partslotscript", "partslotscripts" },
+            // World Tweaker's own items set every one of these
+            new[] { "tosaveitemscript", "randomScales", "randomScaleScript", "randomScales" },
+            new[] { "tosaveitemscript", "randoms", "randomTypeSelector", "randoms" },
         };
 
         private static readonly string[][] Setters =
@@ -644,7 +647,8 @@ namespace TLDRevamp
 
         /// The last resort for a field the beta dropped and nothing above maps (attachablescript.lockRotation, an AMT item's
         /// setup): its value kept per object for the mod alone (compat's Kept/Keep), so the method that names it runs. A
-        /// field whose own type the beta dropped stays as it is.
+        /// field whose own type the beta dropped too is kept as an object (World Tweaker's tosaveitemscript.interiorLights, a
+        /// List of the dropped interiorLightScript); before 2026-11-24 it stayed as it was and the method naming it threw.
         private static MethodDefinition KeptAdapter(ModuleDefinition mod, Assembly game, string gameName, Type compat, Instruction ins, out string description)
         {
             description = null;
@@ -653,21 +657,23 @@ namespace TLDRevamp
             if (old == null || (!store && ins.OpCode != OpCodes.Ldfld && ins.OpCode != OpCodes.Ldsfld)) return null;
             var owner = GameType(game, gameName, old.DeclaringType);
             if (owner == null || GameLookups.RuntimeField(owner, old.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static) != null) return null;
-            if (FieldTypeMissing(game, gameName, old.FieldType)) return null;
+            bool typeGone = FieldTypeMissing(game, gameName, old.FieldType);
+            if (typeGone && old.FieldType.IsValueType) return null;
+            var type = typeGone ? mod.TypeSystem.Object : old.FieldType;
             var helper = compat.GetMethod(store ? "Keep" : "Kept", BindingFlags.Public | BindingFlags.Static);
             if (helper == null || !helper.IsGenericMethodDefinition) return null;
             var generic = new GenericInstanceMethod(mod.ImportReference(helper));
-            generic.GenericArguments.Add(old.FieldType);
-            var m = NewAdapter(mod, old.DeclaringType, store ? mod.TypeSystem.Void : old.FieldType);
+            generic.GenericArguments.Add(type);
+            var m = NewAdapter(mod, old.DeclaringType, store ? mod.TypeSystem.Void : type);
             if (statics) m.Parameters.Clear();
-            if (store) m.Parameters.Add(new ParameterDefinition(old.FieldType));
+            if (store) m.Parameters.Add(new ParameterDefinition(type));
             var il = m.Body.GetILProcessor();
             if (statics) il.Emit(OpCodes.Ldnull); else il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldstr, old.DeclaringType.FullName + "." + old.Name);
             if (store) il.Emit(OpCodes.Ldarg, m.Parameters[m.Parameters.Count - 1]);
             il.Emit(OpCodes.Call, generic);
             il.Emit(OpCodes.Ret);
-            description = old.DeclaringType.FullName + "." + old.Name + " kept for the mod (the beta has none)";
+            description = old.DeclaringType.FullName + "." + old.Name + " kept for the mod (the beta has none" + (typeGone ? ", nor its type" : "") + ")";
             return m;
         }
 

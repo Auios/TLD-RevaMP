@@ -180,14 +180,18 @@ public class tosaveitemscript   // test stub, not game code
     public void FStart(int key) { }
     public partslotscript[] partslotscripts;
     public int category;   // nothing on the beta: kept for the mod
+    public System.Collections.Generic.List<digholescript2> holes;   // the field and its type: nothing on the beta (World Tweaker's interiorLights)
+    public randomScaleScript[] randomScales;   // the beta's is a list
     public void Claim(bool b) { }   // the public game's multiplayer claim; the beta has none
 #else
     public uint Started; public bool dontUnparent;
     public void FStart(uint key) { Started = key; }
     public System.Collections.Generic.List<partslotscript> partslotscripts = new System.Collections.Generic.List<partslotscript>();
     public attachablescript attachable;
+    public System.Collections.Generic.List<randomScaleScript> randomScales;
 #endif
 }
+public class randomScaleScript { }
 
 // The world offset's coordinate: the public game's doublecoord, the beta's UnityEngine.Vector3d (another namespace).
 #if PUBLIC_GAME

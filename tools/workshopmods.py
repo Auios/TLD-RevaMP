@@ -230,11 +230,11 @@ def main():
     mods = ONLY or sorted(p.name for p in MODS.iterdir() if p.is_dir() and p.name != "_deps")
     LM.mkdir(parents=True, exist_ok=True)
     if ASIDE.exists(): sys.exit(f"{ASIDE} is still there from an earlier run: put it back by hand first")
-    ASIDE.mkdir()
-    for p in LM.iterdir():
-        if p.name != "Logs": shutil.move(str(p), ASIDE / p.name)
-    with game.ProtectedSession():
+    with game.ProtectedSession():   # can refuse to start: set the mods aside only once it has
+        ASIDE.mkdir()
         try:
+            for p in LM.iterdir():
+                if p.name != "Logs": shutil.move(str(p), ASIDE / p.name)
             if SETTINGS.exists():
                 SETTINGS_KEPT = SETTINGS.read_bytes()
                 if b'"BAutoShift": false' in SETTINGS_KEPT: sys.exit(f"{SETTINGS} has auto shift off: the drive needs it on")

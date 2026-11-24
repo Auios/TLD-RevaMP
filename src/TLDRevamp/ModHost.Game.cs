@@ -180,6 +180,43 @@ namespace TLDRevamp
 
         public static int HarmonyModsPatched, HarmonyClassesPatched, HarmonyModsRefused;
 
+        /// Advanced Modding Toolkit (the library most workshop item mods use) saves a despawned item in CustomSaveItem.OnDestroy
+        /// by looking its name up; the items it builds into the item database have no name (only spawned copies get one). The
+        /// public game kept its database until quit; the beta makes a new one per scene load, so entering a world threw
+        /// ArgumentNullException once per AMT item (Stencils x8). Nameless ones are skipped: AMT threw there and saved nothing.
+        /// A/B: false = before 2026-11-24.
+        public static bool AmtTemplatesQuiet = true;
+        public static int AmtTemplatesSkipped;
+        private static PropertyInfo _amtName;
+        private static FieldInfo _amtProperties;
+        static partial void KnownModFixes(Assembly asm)
+        {
+            var t = asm.GetType("Amt.CustomSaveItem", false);
+            var destroy = t?.GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var props = t?.GetField("properties");
+            var name = props?.FieldType.GetProperty("Name");
+            if (destroy == null || name == null) return;
+            _amtProperties = props; _amtName = name;
+            try
+            {
+                new HarmonyLib.Harmony(Plugin.Guid + ".amt").Patch(destroy, prefix: new HarmonyLib.HarmonyMethod(typeof(ModHost).GetMethod(nameof(AmtTemplateDestroyed), BindingFlags.NonPublic | BindingFlags.Static)));
+                Plugin.Log.LogInfo("ModHost: " + asm.GetName().Name + ": AMT item templates destroyed with the old item database are not saved");
+            }
+            catch (Exception e) { Plugin.Log.LogWarning("ModHost: " + asm.GetName().Name + ": AMT OnDestroy guard: " + e.Message); }
+        }
+        private static bool AmtTemplateDestroyed(object __instance)
+        {
+            if (!AmtTemplatesQuiet) return true;
+            try
+            {
+                var p = _amtProperties.GetValue(__instance);
+                if (p != null && _amtName.GetValue(p, null) != null) return true;
+            }
+            catch { return true; }
+            AmtTemplatesSkipped++;
+            return false;
+        }
+
         private static void Refuse(Loaded l, string why)
         {
             HarmonyModsRefused++;

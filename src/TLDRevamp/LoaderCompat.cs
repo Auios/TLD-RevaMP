@@ -494,6 +494,26 @@ namespace TLDRevamp
             private static void Prefix(mapSettingScript __instance) => DropDestroyedTumbleweeds.Prefix(__instance);
         }
 
+        /// A copy of a tank cap that had started (AMT's helicopter clones the car06 cap it made in DbLoad) has the beta's
+        /// started flag set, its particle module not (Unity copies the one, not the other): FStart skipped, the cap's Update
+        /// threw every frame ("Do not create your own module instances", Little Bird x2807). Such a copy starts as its own.
+        /// A/B: false = before 2026-11-24.
+        public static bool RestartCopiedTankCaps = true;
+        public static int TankCapsRestarted;
+        [HarmonyLib.HarmonyPatch(typeof(tankcapscript), "Start")]
+        private static class RestartCopiedTankCap
+        {
+            private static readonly System.Reflection.FieldInfo Owner = HarmonyLib.AccessTools.Field(typeof(ParticleSystem.CollisionModule), "m_ParticleSystem");
+            [HarmonyLib.HarmonyPrefix]
+            private static void Prefix(tankcapscript __instance)
+            {
+                if (!RestartCopiedTankCaps || !__instance.started || __instance.ps == null || Owner == null) return;
+                if (ReferenceEquals(Owner.GetValue(__instance.psc), __instance.ps)) return;   // started here (FStart before Start)
+                __instance.started = false;
+                TankCapsRestarted++;
+            }
+        }
+
         // ------------------------------------------------------------------ buildings
 
         /// buildingscript.itemsSpawned (buildingscript is the beta's poiScript): the place has started, which is when the

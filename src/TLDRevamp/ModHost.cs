@@ -156,6 +156,7 @@ namespace TLDRevamp
         {
             try { System.Runtime.CompilerServices.RuntimeHelpers.RunModuleConstructor(asm.ManifestModule.ModuleHandle); }
             catch (Exception e) { Plugin.Log.LogWarning("ModHost: " + Path.GetFileName(dll) + ": its module initializer: " + (e.InnerException ?? e).Message); }
+            KnownModFixes(asm);
             return asm;
         }
         private static Type Loader;
@@ -188,6 +189,7 @@ namespace TLDRevamp
         static partial void MakeLoadingPanel();
         static partial void BindEvents(Assembly stub);
         static partial void PatchModSafely(Loaded l);
+        static partial void KnownModFixes(Assembly asm);
         static partial void GameAliases(bool worldUp);
 
         /// Was the world now up loaded from a save? The game's own flag (DataFromMenuScript.load) is set when a save is
@@ -243,6 +245,8 @@ namespace TLDRevamp
         public static bool FillEmptySlots = true;
         /// A mod's DbLoad that threw in the menu runs again when the world is up, before its OnLoad. A/B: false = before 2026-11-24.
         public static bool DbLoadAgainInWorld = true;
+        /// OnMenuLoad (once) before the first DbLoad, as under TLD Loader. A/B: false = before 2026-11-24.
+        public static bool OnMenuLoadBeforeDbLoad = true;
         public static int DbLoadsInWorld;
         public static int EmptySlotsFilled;
         static partial void FillHoles();
@@ -259,6 +263,10 @@ namespace TLDRevamp
             {
                 _dbFor = itemdatabase.s;
                 DbLoadRuns++;
+                // TLD Loader had called OnMenuLoad when it made the mod, long before the public game's item database (in the
+                // world) existed: a mod sets up there what its DbLoad uses (World Tweaker's PrefabManager). The beta's
+                // database is up with the menu; before 2026-11-24 the first DbLoad came first and threw.
+                if (OnMenuLoadBeforeDbLoad && !_menuCalled) { _menuCalled = true; foreach (var l in Mods) Call(l, l.OnMenuLoad, "OnMenuLoad"); }
                 var order = new List<Loaded>(Mods);
                 order.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
                 if (FillEmptySlots) FillHoles();

@@ -46,6 +46,10 @@ public static class AliasMod
 
     /// A field the beta dropped, stored and read back (tosaveitemscript.category).
     public static int Category(tosaveitemscript t) { t.category = 7; return t.category; }
+    /// A field the beta dropped along with its type (World Tweaker's interiorLights), stored and read back.
+    public static int Lights(tosaveitemscript t) { t.holes = new System.Collections.Generic.List<digholescript2>(); t.holes.Add(null); return t.holes.Count; }
+    /// An array the beta keeps as a list (World Tweaker's items set an empty one).
+    public static int Scales(tosaveitemscript t) { t.randomScales = new randomScaleScript[] { new randomScaleScript(), new randomScaleScript() }; return t.randomScales.Length; }
 
     /// A game method whose return changed sign (savedatascript.GetNewKey: int there, uint here).
     public static int NewKey(savedatascript s) => s.GetNewKey();

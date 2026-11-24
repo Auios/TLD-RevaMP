@@ -312,12 +312,14 @@ static class LoaderHostTest
         Check("no DbLoad while there is no item database", !GetCalls().Contains("DbLoad"));
         itemdatabase.s = new itemdatabase();
         mainscript.s = new mainscript();
+        var menuCalledField = typeof(ModHost).GetField("_menuCalled", BindingFlags.NonPublic | BindingFlags.Static);
+        menuCalledField.SetValue(null, false);   // a mod that has not had its OnMenuLoad yet
         Reset();
         ModHost.Tick();
         var c0 = GetCalls();
         Check("DbLoad and the older dbLoad are called once the item database exists (LoadInDB)", c0.Contains("DbLoad") && c0.Contains("dbLoad"));
-        Check("DbLoad comes before dbLoad, and both before any OnMenuLoad of that tick",
-              c0.IndexOf("DbLoad") < c0.IndexOf("dbLoad") && (c0.IndexOf("OnMenuLoad") < 0 || c0.IndexOf("dbLoad") < c0.IndexOf("OnMenuLoad")));
+        Check("OnMenuLoad first, once (TLD Loader calls it when it makes the mod; World Tweaker's DbLoad uses what it made), then DbLoad, then dbLoad",
+              c0.Count(x => x == "OnMenuLoad") == 1 && c0.IndexOf("OnMenuLoad") < c0.IndexOf("DbLoad") && c0.IndexOf("DbLoad") < c0.IndexOf("dbLoad"));
         Check("mainscript.M points at mainscript.s for the mods", ReferenceEquals(mainscript.M, mainscript.s));
         Check("itemdatabase.d points at itemdatabase.s for the mods", ReferenceEquals(itemdatabase.d, itemdatabase.s));
         Reset();

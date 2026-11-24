@@ -152,6 +152,12 @@ static class LoaderRetargetTest
             Check("compat: a field the beta dropped is kept for the mod (tosaveitemscript.category: 7)",
                   changes.Contains("tosaveitemscript.category kept for the mod (the beta has none)") &&
                   (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Category").Invoke(null, new object[] { new tosaveitemscript() }) == 7);
+            var ts = new tosaveitemscript();
+            Check("compat: a field the beta dropped with its type is kept as an object (World Tweaker's interiorLights)",
+                  changes.Contains("tosaveitemscript.holes kept for the mod (the beta has none, nor its type)") &&
+                  (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Lights").Invoke(null, new object[] { ts }) == 1);
+            Check("compat: an array the beta keeps as a list (tosaveitemscript.randomScales)",
+                  (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Scales").Invoke(null, new object[] { ts }) == 2 && ts.randomScales.Count == 2);
             var asm = LoadBytes(mod).GetType("AliasMod");
             Check("compat: GameObject.Find(\"Main\") gets mainscript's object", changes.Contains("GameObject.Find(\"Main\") -> TestCompat.FindMain") &&
                   ((UnityEngine.GameObject)asm.GetMethod("Main").Invoke(null, null)).Name == "the main object");
@@ -271,8 +277,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all twelve fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu and a return sign are retargeted", changes.Count == 45);
-            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 117);
+            Check("all fourteen fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu and a return sign are retargeted", changes.Count == 47);
+            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 119);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();

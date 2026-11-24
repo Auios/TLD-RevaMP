@@ -318,7 +318,13 @@ game's hadn't: during the mods' DbLoad and OnLoad each holds a placeholder, empt
 Nitrous, Attach Everything; M-ultiTool's vehicle list in OnLoad). The public game ran DbLoad in the world; the beta's
 item database is up in the menu, where ModHost runs it, with no player yet: a mod whose DbLoad throws there (Radiation
 and The Long Who use the player) runs it again once the world is up, before its OnLoad, unless the scene load's new
-item database already ran it there. tosaveitemscript.Claim(b), the public game's multiplayer claim, does nothing. `mods aliases` lists their mappings even in the menu; each changed DLL
+item database already ran it there. OnMenuLoad comes before the first DbLoad, as under TLD Loader, which calls it when it
+makes the mod (World Tweaker's DbLoad uses what its OnMenuLoad made). The beta keeps more of tosaveitemscript's arrays as
+lists (randomScales, randoms; World Tweaker's items set them), and a field the beta dropped along with its type
+(interiorLights) is kept for the mod as an object. Advanced Modding Toolkit's item templates, which have no name, save
+nothing when the old item database goes with a scene load (the beta makes a new one each time; AMT threw there once per
+item). A copy of a tank cap that had started (AMT's helicopter clones one) starts as its own: Unity copies the beta's
+started flag but not the particle module, and its Update threw every frame. tosaveitemscript.Claim(b), the public game's multiplayer claim, does nothing. `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator has no aliases, and a
 SaveRecord holds a mod's own data only: savedatascript.SpawnItem(save_prefab) and a record's transform aren't mapped. The existing seed/load/napszak/loaded/multi/world/mainWorld fields are host snapshots; writing those does not write beta
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,
