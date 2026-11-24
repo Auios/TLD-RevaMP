@@ -85,7 +85,7 @@ namespace TLDRevamp
             new[] { "tosaveitemscript", "colors", "colorscript", "colors" },
             new[] { "tosaveitemscript", "door_rots", "door_rot", "door_rots" },
             new[] { "tosaveitemscript", "attachTargets", "partslotscript", "partslotscripts" },
-            // World Tweaker's own items set every one of these
+            // one mod's own items set every one of these
             new[] { "tosaveitemscript", "randomScales", "randomScaleScript", "randomScales" },
             new[] { "tosaveitemscript", "randoms", "randomTypeSelector", "randoms" },
         };
@@ -113,9 +113,9 @@ namespace TLDRevamp
             new[] { "survivalscript", "Damage", "System.Single,System.Boolean", "System.Single,UnityEngine.Vector3,System.Boolean", "1,zero,2" },
             new[] { "survivalscript", "DamageInstant", "System.Single,System.Boolean", "System.Single,UnityEngine.Vector3,System.Boolean", "1,zero,2" },
             new[] { "pickupable", "Drop", "System.Boolean", "", "" },
-            // the beta's Craft has no second argument (RUNDEN's car battery)
+            // the beta's Craft has no second argument (a car battery mod)
             new[] { "partslotscript", "Craft", "attachablescript,System.Boolean", "attachablescript", "1" },
-            // the beta's spawns return what they made (SpawnerTLD's calls expect nothing back: the adapter drops it); the
+            // the beta's spawns return what they made (a spawner mod's calls expect nothing back: the adapter drops it); the
             // painted one has a paint flag the public game's always did
             new[] { "mainscript", "Spawn", "UnityEngine.GameObject,System.Int32", "UnityEngine.GameObject,System.Int32", "1,2" },
             new[] { "mainscript", "Spawn", "UnityEngine.GameObject,UnityEngine.Color,System.Int32,System.Int32", "UnityEngine.GameObject,UnityEngine.Color,System.Int32,System.Int32,System.Boolean", "1,2,3,4,true" },
@@ -157,7 +157,7 @@ namespace TLDRevamp
             // the generator of the buildings along the road: the helper's stand-in, RoadBuildings (StandIns)
             new[] { "mapSettingScript", "roadBuildingGeneration", "roadBuildingScript", "RoadBuildingGeneration", "" },
             new[] { "mapSettingScript", "RoadBuildingScript", "roadBuildingScript", "RoadBuildingGeneration", "" },
-            // the forward key held: a float on the beta (Stronger Sandstorms read a bool)
+            // the forward key held: a float on the beta (a sandstorm mod read a bool)
             new[] { "inputscript", "forward", "System.Boolean", "InputForward", "" },
         };
         // Game types the beta dropped that a helper type stands in for (a nested type of the helper of that name). Every
@@ -313,7 +313,7 @@ namespace TLDRevamp
                 ins.OpCode = OpCodes.Call;
                 ins.Operand = adapter;
             }
-            // save_prefab, the public game's record of a far item: the beta has none. The M_ mods and RUNDEN's keep their own
+            // save_prefab, the public game's record of a far item: the beta has none. Many workshop mods keep their own
             // data in one (a string in a fake plate record, rendszam.S, under farStuff[hash of the mod's ID]); they get the
             // helper's stand-in, SaveRecord, and farStuff/nearStuff answer a dictionary of those that LoaderCompat keeps in
             // the save. roadBuildingScript likewise (StandIns). Last: the instructions above still saw the dropped types
@@ -327,8 +327,8 @@ namespace TLDRevamp
                         Rename(mod, tr, to);
                         changes.Add("type " + a[0] + " -> " + compat.Name + "." + to.Name);
                     }
-            // A mod's own field of another game type the beta dropped (More UFOs' sandstorm UFO keeps the menu's
-            // temporaryTurnOffGeneration): its class couldn't load, nor any type naming it, and More UFOs' list of its UFO
+            // A mod's own field of another game type the beta dropped (a UFO mod's sandstorm UFO keeps the menu's
+            // temporaryTurnOffGeneration): its class couldn't load, nor any type naming it, and the mod's list of its UFO
             // types took the whole mod down. As an object the field holds what it held; code using it stops when it runs.
             if (compat != null)
             {
@@ -343,8 +343,8 @@ namespace TLDRevamp
                         changes.Add(t.FullName + "." + f.Name + " " + was + " -> Object (the beta has no " + was + ")");
                     }
             }
-            // Every other game type the beta dropped (KARL's digholescript2, flashlightscript): the helper's Gone, a component
-            // nothing in the world has. A method naming the type stopped at its first call, KARL's whole dbLoad with its car;
+            // Every other game type the beta dropped (digholescript2, flashlightscript): the helper's Gone, a component
+            // nothing in the world has. A method naming the type stopped at its first call, one mod's whole dbLoad with its car;
             // now only code using the type's own members stops, and finding one finds none. Structs stay as they were.
             var gone = compat?.GetNestedType("Gone");
             if (gone != null)
@@ -410,7 +410,7 @@ namespace TLDRevamp
                 return m;
             }
             // the mod's own Harmony.PatchAll(): on the beta it can stop at a patch naming a type the beta dropped, with the
-            // patches before it applied, and abort the mod's OnLoad there (Ask Jimmy). The helper undoes them instead.
+            // patches before it applied, and abort the mod's OnLoad there. The helper undoes them instead.
             if (mr.Name == "PatchAll" && mr.DeclaringType.FullName == "HarmonyLib.Harmony" && mr.HasThis && mr.Parameters.Count <= 1)
             {
                 var m = compat.GetMethod(mr.Parameters.Count == 0 ? "PatchAll" : "PatchAllFrom", Statics);
@@ -418,7 +418,7 @@ namespace TLDRevamp
                 what = "Harmony.PatchAll -> " + compat.Name + "." + m.Name;
                 return m;
             }
-            // AccessTools.TypeByName(name): remembered, a miss too (Road Save Guard looks for seven absent mods every frame)
+            // AccessTools.TypeByName(name): remembered, a miss too (a mod that looks for seven absent mods every frame)
             if (mr.Name == "TypeByName" && mr.DeclaringType.FullName == "HarmonyLib.AccessTools" && !mr.HasThis && mr.Parameters.Count == 1 &&
                 mr.Parameters[0].ParameterType.MetadataType == MetadataType.String)
             {
@@ -486,7 +486,7 @@ namespace TLDRevamp
         }
 
         /// Type.GetMethod(name) where the beta's types have overloads the public game's didn't (TextMeshPro's SetText, which
-        /// RUNDEN's AI traffic looks up on the settings menu's sliders): the one with the fewest parameters, string ones first.
+        /// an AI traffic mod looks up on the settings menu's sliders): the one with the fewest parameters, string ones first.
         public static MethodInfo LooseMethod(Type type, string name, BindingFlags flags)
         {
             try { return type.GetMethod(name, flags); }
@@ -497,7 +497,7 @@ namespace TLDRevamp
                 if (m.Name != name) continue;
                 int score = 0;
                 // an optional parameter hardly counts (TextMeshPro's SetText(string, bool = true) over SetText(StringBuilder),
-                // which RUNDEN AI's Invoke with a string can't call); the call's Invoke supplies it (LoaderCompat.Invoke)
+                // which that mod's Invoke with a string can't call); the call's Invoke supplies it (LoaderCompat.Invoke)
                 foreach (var p in m.GetParameters()) score += p.IsOptional ? 1 : p.ParameterType == typeof(string) ? 100 : 102;
                 if (score < bestScore) { best = m; bestScore = score; }
             }
@@ -525,7 +525,7 @@ namespace TLDRevamp
 
         /// typeof(X) in an attribute ([HarmonyPatch(typeof(buildingscript), "SpawnStuff")]) is a name in the attribute's
         /// blob, not one of the module's type references: the renames above missed it, the type didn't load, and the
-        /// mod's PatchAll stopped there with none of its patches (The Long Who). The same renames, there too. Only an
+        /// mod's PatchAll stopped there with none of its patches. The same renames, there too. Only an
         /// attribute whose blob names an old type is read (an attribute that can't be read keeps its blob).
         private static void AttributeTypes(ModuleDefinition mod, Assembly game, string gameName, List<string> changes)
         {
@@ -733,9 +733,9 @@ namespace TLDRevamp
             return null;
         }
 
-        /// The last resort for a field the beta dropped and nothing above maps (attachablescript.lockRotation, an AMT item's
+        /// The last resort for a field the beta dropped and nothing above maps (attachablescript.lockRotation, an item mod's
         /// setup): its value kept per object for the mod alone (compat's Kept/Keep), so the method that names it runs. A
-        /// field whose own type the beta dropped too is kept as an object (World Tweaker's tosaveitemscript.interiorLights, a
+        /// field whose own type the beta dropped too is kept as an object (one mod's tosaveitemscript.interiorLights, a
         /// List of the dropped interiorLightScript); before 2026-11-24 it stayed as it was and the method naming it threw.
         private static MethodDefinition KeptAdapter(ModuleDefinition mod, Assembly game, string gameName, Type compat, Instruction ins, out string description)
         {
@@ -862,7 +862,7 @@ namespace TLDRevamp
         }
 
         /// The DLL each rewritten mod came from: loaded from bytes, its Assembly.Location is empty, and mods find their
-        /// assets next to it (the Advanced Modding Toolkit's icons and bundles). Their Location calls ask here (compat's
+        /// assets next to it (a modding toolkit's icons and bundles). Their Location calls ask here (compat's
         /// AssemblyLocation); a mod whose only change would be that loads from its file as before.
         public static readonly Dictionary<Assembly, string> Origins = new Dictionary<Assembly, string>();
         private const string LocationChange = "Assembly.Location -> the mod's own DLL";

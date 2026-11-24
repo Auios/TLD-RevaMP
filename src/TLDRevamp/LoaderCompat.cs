@@ -6,11 +6,11 @@ namespace TLDRevamp
     /// What TLD Loader mods use of the public game's save and attach code that the beta changed or dropped. LoaderRetarget
     /// points the mod's own instructions here (by name: it stays free of the game's types); nothing in the game changes.
     ///
-    /// The spawner most of RUNDEN's and M_'s workshop mods share (issue 44: dingus' cat, Nitrous' bottle): pick the first
+    /// The spawner many workshop mods share (issue 44: a pet mod's cat, a nitrous mod's bottle): pick the first
     /// free save id with `!savedatascript.d.toSaveStuff.ContainsKey(i) && !data.farStuff.ContainsKey(i) &&
     /// !data.nearStuff.ContainsKey(i)`, instantiate, `tosaveitemscript.FStart(i)`. On the beta those fields and the type
     /// save_prefab are gone: the whole method stopped at its first call, so nothing was made, and the spawn menu's holder
-    /// (the dingus cat model with its collider switched off) stayed in the air where it was spawned.
+    /// (the pet mod's cat model with its collider switched off) stayed in the air where it was spawned.
     public static class LoaderCompat
     {
         public static long Calls;
@@ -32,14 +32,14 @@ namespace TLDRevamp
             return _toSave;
         }
 
-        /// save_prefab, the public game's record of a far item, as the mods use it (LoaderRetarget points the type here): the
-        /// M_ mods and RUNDEN's keep their settings and progress in one, a string in a fake plate record,
+        /// save_prefab, the public game's record of a far item, as the mods use it (LoaderRetarget points the type here): many
+        /// workshop mods keep their settings and progress in one, a string in a fake plate record,
         /// `farStuff.Add(Mathf.Abs(ID.GetHashCode()), new save_prefab(plate, ...) { rendszam = new save_rendszam { S = json } })`.
         public class SaveRecord
         {
             public int categoryID, id;
             public save_rendszam rendszam;
-            public save_meterscript meter;   // RUNDEN's save helper (Company Cruiser) keeps its numbers in one
+            public save_meterscript meter;   // one author's save helper (in a car mod) keeps its numbers in one
             public SaveRecord(int category, int id, double x, double y, double z, float rx, float ry, float rz) { categoryID = category; this.id = id; }
         }
 
@@ -121,7 +121,7 @@ namespace TLDRevamp
                     });
         }
 
-        /// A new save_rendszam's string is empty, as the public game's was; the beta's is null. Rundens Wheel Position Editor
+        /// A new save_rendszam's string is empty, as the public game's was; the beta's is null. A wheel position mod
         /// makes its record's and reads it back as its saved XML: "" meant none yet, null threw (StringReader).
         [HarmonyLib.HarmonyPatch(typeof(save_rendszam), HarmonyLib.MethodType.Constructor, new System.Type[0])]
         private static class EmptyPlateString
@@ -164,7 +164,7 @@ namespace TLDRevamp
         public static saveproperties SaveProperties(savedatascript s) => s != null && s.data != null ? s.data.properties : null;
 
         /// tosaveitemscript.removeFromMemory: the public game's "not an item of its own" for display copies of a game prefab
-        /// (Nitrous' gauge face is a compass inside the bottle). One never started isn't saved on the beta either, but the
+        /// (a nitrous mod's gauge face is a compass inside the bottle). One never started isn't saved on the beta either, but the
         /// beta takes every item out of its parent the frame after it starts (NextFrameUnparent): the compass fell out and
         /// the gauge, its own colliders already removed, fell through the world. Kept where the mod put it.
         public static bool GetRemoveFromMemory(tosaveitemscript t) => t != null && t.dontUnparent;
@@ -176,7 +176,7 @@ namespace TLDRevamp
         // ------------------------------------------------------------------ the main menu
 
         /// mainmenuscript.mainmenu's screens (menuhandler.s here), active while open: mods hide their own menu buttons then
-        /// (Achievements, M-ultiTool, World Tweaker). The beta's settings and save screens switch their own object on.
+        /// (three of the workshop's mods). The beta's settings and save screens switch their own object on.
         public static GameObject MenuSettingsScreen(menuhandler m) { Calls++; return settingsscript.s != null ? settingsscript.s.gameObject : null; }
         public static GameObject MenuSaveScreen(menuhandler m)
         {
@@ -207,7 +207,7 @@ namespace TLDRevamp
             var t = a.AttachedToTosave();
             return t != null ? t : _loadTargets.TryGetValue(a, out var box) ? box.T : null;
         }
-        /// attachablescript.targetTosave = t: what its next Load(pos) attaches it to (M-ultiTool's swap of an item for another).
+        /// attachablescript.targetTosave = t: what its next Load(pos) attaches it to (a tool mod's swap of an item for another).
         private sealed class TargetBox { public tosaveitemscript T; }
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<attachablescript, TargetBox> _loadTargets =
             new System.Runtime.CompilerServices.ConditionalWeakTable<attachablescript, TargetBox>();
@@ -237,11 +237,11 @@ namespace TLDRevamp
             a.Attach(a.NewPoint(t.transform, t.transform.TransformPoint(localPos), a.transform.rotation));
         }
 
-        /// tosaveitemscript.Claim(b): the public game's multiplayer claim on an item; the beta has none (M-ultiTool claims
+        /// tosaveitemscript.Claim(b): the public game's multiplayer claim on an item; the beta has none (a tool mod claims
         /// the part it swapped in). Nothing to do.
         public static void Claim(tosaveitemscript t, bool b) { Calls++; }
 
-        /// mountStuff.Lock(item, ignoreRigidbody): the beta's Store (AMT's saved items put back in their mounts).
+        /// mountStuff.Lock(item, ignoreRigidbody): the beta's Store (a modding toolkit's saved items put back in their mounts).
         public static void MountLock(mountStuff m, pickupable p, bool ignoreRigidbody) { Calls++; if (m != null) m.Store(p, ignoreRigidbody); }
 
         /// attachablescript.C: the item's own colliders, a public list there, a private array here.
@@ -322,7 +322,7 @@ namespace TLDRevamp
         // ------------------------------------------------------------------ fuel caps
 
         /// tankcapscript.TCap/TOpen/TClosed and UpdCap(bool): the public game moved the cap between two transforms; the
-        /// beta's cap turns by its usable between closedRot and openRot. Engine mods (DIESEL_V8ENGINE and nine more) set
+        /// beta's cap turns by its usable between closedRot and openRot. Engine mods (ten in the workshop) set
         /// these in the middle of the method that builds the whole engine, which stopped at them: kept here for the mod to
         /// read back, the beta's own cap left as it is.
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<tankcapscript, Transform[]> _caps =
@@ -385,10 +385,10 @@ namespace TLDRevamp
 
         /// roadBuildingScript, the public game's generator of the buildings along the road
         /// (TerrainGenerationSettings.roadBuildingGeneration): the beta places them as points of interest, each a root of its
-        /// own. Made without its native half, it equals null in Unity's sense, so mods that test it first skip it (Killenger's
-        /// Autopilot and Road Rage); parent is null (M-ultiTool places a building at the root, as the beta does, and RUNDEN's AI
-        /// traffic finds no building under it); placedBuildings is the current map's placed points of interest (Stronger
-        /// Sandstorms starts its storms at one).
+        /// own. Made without its native half, it equals null in Unity's sense, so mods that test it first skip it (two
+        /// driving mods); parent is null (a tool mod places a building at the root, as the beta does, and an AI traffic
+        /// mod finds no building under it); placedBuildings is the current map's placed points of interest (a sandstorm
+        /// mod starts its storms at one).
         public class RoadBuildings : MonoBehaviour
         {
             public Transform parent;
@@ -405,7 +405,7 @@ namespace TLDRevamp
                 _roadBuildings = (RoadBuildings)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(RoadBuildings));
                 _roadBuildings.placedBuildings = new Dictionary<int, GameObject>();
             }
-            // RUNDEN's AI asks per car while it drives: the list is made again at most once a second
+            // an AI traffic mod asks per car while it drives: the list is made again at most once a second
             if (Time.unscaledTime - _roadBuildingsAt < 1f) return _roadBuildings;
             _roadBuildingsAt = Time.unscaledTime;
             var placed = _roadBuildings.placedBuildings;
@@ -422,7 +422,7 @@ namespace TLDRevamp
 
         // ------------------------------------------------------------------ what the beta dropped
 
-        /// A game type the beta has no counterpart for (KARL's digholescript2, flashlightscript): nothing in the world has
+        /// A game type the beta has no counterpart for (digholescript2, flashlightscript): nothing in the world has
         /// one, so finding one finds none.
         public class Gone : MonoBehaviour { }
 
@@ -460,9 +460,9 @@ namespace TLDRevamp
         private static readonly Dictionary<string, System.Type> _typesByName = new Dictionary<string, System.Type>();
         private static bool _typesWatched;
 
-        /// Harmony's PatchAll(assembly) called by reflection (Long Haul Overhaul's own copy of Harmony): each patch class on
+        /// Harmony's PatchAll(assembly) called by reflection (a mod with its own copy of Harmony): each patch class on
         /// its own, as PatchAll does, but one whose target the beta dropped (mainscript.PauseRBs, setcenterofmass.Pause)
-        /// is left out. PatchAll stopped there: the classes after it (Long Haul's wheels, sandstorm, pouring) never applied.
+        /// is left out. PatchAll stopped there: the classes after it (that mod's wheels, sandstorm, pouring) never applied.
         public static int PatchClassesSkipped;
         private static bool PatchEachClass(object harmony, System.Reflection.Assembly a)
         {
@@ -490,7 +490,7 @@ namespace TLDRevamp
             return true;
         }
 
-        /// No_TumbleWeeds destroys the tumbleweed spawners (thumbleweedMain) it finds, as on the public game, where nothing
+        /// A tumbleweed mod destroys the tumbleweed spawners (thumbleweedMain) it finds, as on the public game, where nothing
         /// else held them. The beta's map keeps them in a list and updates each every frame: the destroyed one threw there,
         /// the rest of the map's Update never ran and the world never finished loading. Destroyed ones leave the list.
         [HarmonyLib.HarmonyPatch(typeof(mapSettingScript), "Update")]
@@ -512,9 +512,9 @@ namespace TLDRevamp
             private static void Prefix(mapSettingScript __instance) => DropDestroyedTumbleweeds.Prefix(__instance);
         }
 
-        /// A copy of a tank cap that had started (AMT's helicopter clones the car06 cap it made in DbLoad) has the beta's
+        /// A copy of a tank cap that had started (a helicopter mod clones the car06 cap it made in DbLoad) has the beta's
         /// started flag set, its particle module not (Unity copies the one, not the other): FStart skipped, the cap's Update
-        /// threw every frame ("Do not create your own module instances", Little Bird x2807). Such a copy starts as its own.
+        /// threw every frame ("Do not create your own module instances", x2807 in one run). Such a copy starts as its own.
         /// A/B: false = before 2026-11-24.
         public static bool RestartCopiedTankCaps = true;
         public static int TankCapsRestarted;
@@ -535,7 +535,7 @@ namespace TLDRevamp
         // ------------------------------------------------------------------ buildings
 
         /// buildingscript.itemsSpawned (buildingscript is the beta's poiScript): the place has started, which is when the
-        /// beta spawns its items. The Advanced Modding Toolkit puts its mods' items into a building when this turns true.
+        /// beta spawns its items. A modding toolkit puts its mods' items into a building when this turns true.
         public static bool ItemsSpawned(poiScript p) => p != null && p.started;
 
         /// attachablescript.Attach(Transform, RaycastHit): attached where the ray hit, as the beta's Attach(RaycastHit).

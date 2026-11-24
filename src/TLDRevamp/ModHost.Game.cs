@@ -10,8 +10,8 @@ namespace TLDRevamp
     public static partial class ModHost
     {
         /// The beta's item database has empty slots (items taken out of the game keep their ids); the public game's had none.
-        /// Mods go through every item in DbLoad (Nitrous gives every car its nitrous system, Attach Everything makes every
-        /// item attachable) and stopped at the first empty one: no nitrous spawners added, nothing attachable (issue 44).
+        /// Mods go through every item in DbLoad (one gives every car a nitrous system, another makes every item
+        /// attachable) and stopped at the first empty one: no nitrous spawners added, nothing attachable (issue 44).
         /// During DbLoad and OnLoad each empty slot holds an inactive placeholder; afterwards the slots are empty again (also in the
         /// array a mod made by appending to it), so no item id moves. A/B: false = before 2026-11-23.
         private static GameObject _slotPlaceholder;
@@ -142,10 +142,10 @@ namespace TLDRevamp
         /// UseHarmony, safely: all of a mod's patches or none. TLD Loader runs PatchAll on the mod's assembly; on the beta a
         /// mod written for the public game breaks the game itself that way:
         /// - a patch whose code names a class that can't load here throws inside the game's own method on every call
-        ///   (Car Batteries: ~9,600 exceptions in carscript.Electronics/LEDUPD, enginescript.Update,
+        ///   (a car battery mod: ~9,600 exceptions in carscript.Electronics/LEDUPD, enginescript.Update,
         ///   headlightscript.RefreshLights in one test run);
         /// - PatchAll stops at the first patch whose target is gone and leaves the ones before it applied; patching the rest
-        ///   class by class instead (tried 2026-11-11) applied a set its author never ran together and World Tweaker's hung
+        ///   class by class instead (tried 2026-11-11) applied a set its author never ran together and one mod's set hung
         ///   the game at start-up, every time.
         /// So nothing is applied until every patch class passes: its methods compile (a missing type or member fails here,
         /// not inside the game) and its target, where the attributes name one, exists on the beta. One failure: none applied,
@@ -180,10 +180,10 @@ namespace TLDRevamp
 
         public static int HarmonyModsPatched, HarmonyClassesPatched, HarmonyModsRefused;
 
-        /// Advanced Modding Toolkit (the library most workshop item mods use) saves a despawned item in CustomSaveItem.OnDestroy
+        /// A modding toolkit (the library most workshop item mods use) saves a despawned item in CustomSaveItem.OnDestroy
         /// by looking its name up; the items it builds into the item database have no name (only spawned copies get one). The
         /// public game kept its database until quit; the beta makes a new one per scene load, so entering a world threw
-        /// ArgumentNullException once per AMT item (Stencils x8). Nameless ones are skipped: AMT threw there and saved nothing.
+        /// ArgumentNullException once per toolkit item (x8 in one mod). Nameless ones are skipped: it threw there and saved nothing.
         /// A/B: false = before 2026-11-24.
         public static bool AmtTemplatesQuiet = true;
         public static int AmtTemplatesSkipped;
@@ -200,9 +200,9 @@ namespace TLDRevamp
             try
             {
                 new HarmonyLib.Harmony(Plugin.Guid + ".amt").Patch(destroy, prefix: new HarmonyLib.HarmonyMethod(typeof(ModHost).GetMethod(nameof(AmtTemplateDestroyed), BindingFlags.NonPublic | BindingFlags.Static)));
-                Plugin.Log.LogInfo("ModHost: " + asm.GetName().Name + ": AMT item templates destroyed with the old item database are not saved");
+                Plugin.Log.LogInfo("ModHost: " + asm.GetName().Name + ": a modding toolkit's item templates destroyed with the old item database are not saved");
             }
-            catch (Exception e) { Plugin.Log.LogWarning("ModHost: " + asm.GetName().Name + ": AMT OnDestroy guard: " + e.Message); }
+            catch (Exception e) { Plugin.Log.LogWarning("ModHost: " + asm.GetName().Name + ": item template OnDestroy guard: " + e.Message); }
         }
         private static bool AmtTemplateDestroyed(object __instance)
         {

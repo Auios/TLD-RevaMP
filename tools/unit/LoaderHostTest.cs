@@ -157,7 +157,7 @@ static class LoaderHostTest
         SetMenu(false);                      // as a mod without LoadInMenu
         Reset();
         ModHost.Tick(); ModHost.Gui();
-        Check("without LoadInMenu, Update and OnGUI don't run in the menu (FastPedal reads mainscript.M.player there)",
+        Check("without LoadInMenu, Update and OnGUI don't run in the menu (mods read mainscript.M.player there)",
               !GetCalls().Contains("Update") && !GetCalls().Contains("OnGUI"));
         mainscript.s = new mainscript { player = new TLDRevamp.Fixtures.Player() };
         ModHost.Tick();
@@ -213,8 +213,8 @@ static class LoaderHostTest
         Section("the real third-party mod loads under the same host");
         // The fixture above is a mod built against THIS tree's shim, so it cannot
         // catch a case where the real TLDLoader API differs from the stub.  The
-        // repository's real third-party mod (thirdparty/TLDLoaderMods/
-        // Killenger_Autopilot.dll) is loaded here the same way the host loads it
+        // repository's real third-party mod (an autopilot DLL in
+        // thirdparty/TLDLoaderMods/) is loaded here the same way the host loads it
         // in the game: its own DLL, plus the game's assemblies for its references.
         string realMod = Path.Combine(root, "thirdparty/TLDLoaderMods/Killenger_Autopilot.dll");
         if (File.Exists(realMod))
@@ -316,7 +316,7 @@ static class LoaderHostTest
         menuCalledField.SetValue(null, false);   // a mod that has not had its OnMenuLoad yet (straight into a world)
         Reset();
         ModHost.Tick();
-        Check("no DbLoad for the menu's item database (TLD Loader ran it in the world; CIT's gauge read the player there)",
+        Check("no DbLoad for the menu's item database (TLD Loader ran it in the world; a gauge mod read the player there)",
               UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "menu" && !GetCalls().Contains("DbLoad"));
         menuCalledField.SetValue(null, false);
         UnityEngine.SceneManagement.SceneManager.ActiveSceneName = "game";   // the same database, the game scene now: no player yet
@@ -324,7 +324,7 @@ static class LoaderHostTest
         ModHost.Tick();
         var c0 = GetCalls();
         Check("DbLoad and the older dbLoad are called once the item database exists (LoadInDB)", c0.Contains("DbLoad") && c0.Contains("dbLoad"));
-        Check("OnMenuLoad first, once (TLD Loader calls it when it makes the mod; World Tweaker's DbLoad uses what it made), then DbLoad, then dbLoad",
+        Check("OnMenuLoad first, once (TLD Loader calls it when it makes the mod; a mod's DbLoad uses what it made), then DbLoad, then dbLoad",
               c0.Count(x => x == "OnMenuLoad") == 1 && c0.IndexOf("OnMenuLoad") < c0.IndexOf("DbLoad") && c0.IndexOf("DbLoad") < c0.IndexOf("dbLoad"));
         Check("mainscript.M points at mainscript.s for the mods", ReferenceEquals(mainscript.M, mainscript.s));
         Check("itemdatabase.d points at itemdatabase.s for the mods", ReferenceEquals(itemdatabase.d, itemdatabase.s));

@@ -54,7 +54,7 @@ static class LoaderFeaturesTest
             try { modType.Assembly.GetTypes(); } catch (ReflectionTypeLoadException) { threw = true; }
             Check("(the fixture's DLL really has a type that fails to load)", threw);
 
-            Check("a reference to a DLL in the mods folder gets that DLL, the one already loaded (Police Mod's RUNDEN AI)",
+            Check("a reference to a DLL in the mods folder gets that DLL, the one already loaded (one mod's field of another mod's type)",
                   ModHost.ModAssemblyFor("FeaturesMod, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null") == modType.Assembly);
             Check("one that isn't there gets nothing from the host", ModHost.ModAssemblyFor("MissingDep") == null);
 

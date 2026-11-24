@@ -7,7 +7,7 @@ using UnityEngine;
 namespace TLDRevamp.Net
 {
     /// Cars' tunings (CarTuning) kept with the world: the game's save has no place for them, so a tuned car came back
-    /// stock after every load - also in single player, where the tuners' own saving (Runden's Suspension Tuner) needs the
+    /// stock after every load - also in single player, where the tuners' own saving (a suspension tuner's) needs the
     /// public game's old save classes and does nothing on the beta. Next to the save, as `.players` and `.leases` are:
     /// `<save>.tune`, written with every save of the world by the machine whose world it is (single player or the host,
     /// never a joiner), rotated with the autosaves, read once per world.

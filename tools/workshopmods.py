@@ -81,7 +81,7 @@ def place(mod):
     return sorted(str(p.relative_to(LM)) for p in LM.rglob("*") if p.is_file() and "Logs" not in p.parts)[:40]
 
 # The game's own settings as they were when the sweep started, put back before every launch: a mod's change to them is
-# saved by the game and stayed for every mod after it (RUNDEN's automatic gearbox turns the game's auto shift off, and
+# saved by the game and stayed for every mod after it (an automatic gearbox mod turns the game's auto shift off, and
 # every later drive sat in neutral at 0 m/s).
 SETTINGS = game.DOCS / "settings.tldc"
 SETTINGS_KEPT = None

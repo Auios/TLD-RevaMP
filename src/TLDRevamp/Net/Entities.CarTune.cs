@@ -7,7 +7,7 @@ namespace TLDRevamp.Net
 {
     /// A car's tuning (CarTuning: final drive, gear ratios, wheel positions, suspension travel, which wheels drive and
     /// steer) is in no save record: the game never changes it, so the record never needed it. A mod that tunes a car
-    /// (Runden's Suspension Tuner, EngineTuner, M-ultiTool) did it on one machine only: the owner drove the tuned car,
+    /// (a suspension or engine tuner mod, a tool mod) did it on one machine only: the owner drove the tuned car,
     /// everyone else saw its wheels where the prefab has them, and whoever drove it next drove it stock.
     ///
     /// Now the owner looks at its cars every CarTuneEveryS. A car whose tuning changed (or that differs from its prefab

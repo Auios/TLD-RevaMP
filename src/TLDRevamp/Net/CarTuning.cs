@@ -6,8 +6,8 @@ namespace TLDRevamp.Net
     /// writes again, so only a mod (or a player through one) changes them while the game runs: the final drive, the gear
     /// ratios, where each wheel sits (its collider's local position and center), how far its suspension travels, and
     /// which wheels drive, steer, steer the other way, only brake, or take the handbrake. Of the TLD Workshop's DLLs
-    /// (2026-11-11, metadata only) 23 write some of these: car mods once, the tuners (Runden's Suspension Tuner,
-    /// EngineTuner, M-ultiTool) while a player drives.
+    /// (2026-11-11, metadata only) 23 write some of these: car mods once, the tuners (suspension and engine
+    /// tuner mods, a tool mod) while a player drives.
     ///
     /// Not here, because the game derives them itself: a wheel's radius, mass and grip (wheelscript.WheelSize, from its tyre
     /// part, which the save records carry) and its spring (set while the car is picked up).

@@ -68,7 +68,7 @@ namespace TLDRevamp
                 {
                     // A DLL whose types partly fail to load (one names a game type the beta lacks) still offers the rest:
                     // before 2026-11-11 the whole DLL was skipped, and a type whose check threw stopped every mod after it
-                    // (Backpack Mod: "Could not load type of field 'Amt.ModItemsSpawner:_building'" - no Loader mod loaded).
+                    // (an item mod: "Could not load type of field" for its spawner's building - no Loader mod loaded).
                     Type[] types; int broken = 0;
                     try { types = ModAssembly(dll).GetTypes(); }
                     catch (ReflectionTypeLoadException e)
@@ -139,7 +139,7 @@ namespace TLDRevamp
         /// as it is, without LoaderRetarget's integer-sign fixes or public-name adapters.
         public static bool Retarget = true;
         /// A/B (config Mods.LoaderCompat, read before the mods load): false = before 2026-11-23, no LoaderCompat helpers for
-        /// the public game's save ids and attach members (issue 44: dingus, Nitrous, Attach Everything).
+        /// the public game's save ids and attach members (issue 44).
         public static bool Compat = true;
         public static int Retargeted;
         static partial void CompatType(ref Type type);   // ModHost.Game.cs: LoaderCompat
@@ -154,10 +154,10 @@ namespace TLDRevamp
             if (string.IsNullOrEmpty(asm.Location)) Retargeted++;
             return asm;
         }
-        /// Mods that use another mod's types (Police Mod's field of a RUNDEN AI type): a rewritten mod loads from bytes, and
-        /// the runtime finds neither a mod loaded that way nor one not loaded yet (the DLLs load in name order, Police Mod
+        /// Mods that use another mod's types (one mod's field of an AI mod's type): a rewritten mod loads from bytes, and
+        /// the runtime finds neither a mod loaded that way nor one not loaded yet (the DLLs load in name order, that mod
         /// first). A reference to another DLL in the mods folder gets that DLL, loaded once, here or in the loop.
-        /// Before 2026-11-24 Police Mod's mod type failed to load.
+        /// Before 2026-11-24 that mod's mod type failed to load.
         private static Dictionary<string, string> _modFiles;   // assembly name -> DLL
         private static readonly Dictionary<string, Assembly> _modAssemblies = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
         internal static Assembly ModAssemblyFor(string name)
@@ -178,7 +178,7 @@ namespace TLDRevamp
             }
         }
         /// The DLL's module initializer first. Mods built with Costura carry their libraries inside (Newtonsoft.Json, NLayer:
-        /// M-'s Achievements, Better Radio, The Long Who, World Tweaker, M-ultiTool) and hook the resolver there; the type
+        /// five of the workshop's mods) and hook the resolver there; the type
         /// check below otherwise found their types unloadable before any of the mod's code ran, and they stayed so.
         private static Assembly Initialized(Assembly asm, string dll)
         {
@@ -290,7 +290,7 @@ namespace TLDRevamp
             // Mods change the game's item prefabs or add their own there. The order is the mods' IDs (ordinal), the same
             // on every machine: what one mod does can depend on another's.
             // Not the menu's: the beta has one there, the public game didn't, and it goes with the menu scene. TLD Loader
-            // ran DbLoad in the world only; what a mod made there lived in the menu (CIT's gauge read the missing player
+            // ran DbLoad in the world only; what a mod made there lived in the menu (a gauge mod read the missing player
             // every frame). Left unmarked: a database still up when the game scene is (a scene change) gets it then.
             // A/B: DbLoadInMenu = true is before 2026-11-24.
             bool menuDb = !DbLoadInMenu && (mainscript.s == null || mainscript.s.player == null)
@@ -300,13 +300,13 @@ namespace TLDRevamp
                 _dbFor = itemdatabase.s;
                 DbLoadRuns++;
                 // TLD Loader had called OnMenuLoad when it made the mod, long before the public game's item database (in the
-                // world) existed: a mod sets up there what its DbLoad uses (World Tweaker's PrefabManager). The beta's
+                // world) existed: a mod sets up there what its DbLoad uses (one mod's prefab manager). The beta's
                 // database is up with the menu; before 2026-11-24 the first DbLoad came first and threw.
                 if (OnMenuLoadBeforeDbLoad && !_menuCalled) { _menuCalled = true; foreach (var l in Mods) Call(l, l.OnMenuLoad, "OnMenuLoad"); }
                 var order = new List<Loaded>(Mods);
                 order.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
                 if (FillEmptySlots) FillHoles();
-                // the public game ran DbLoad in the world, the player there: a mod that uses it (Radiation, The Long Who) threw
+                // the public game ran DbLoad in the world, the player there: a mod that uses it threw
                 // here in the menu, the rest of its DbLoad not done. Before 2026-11-24 it stayed that way.
                 bool noWorld = mainscript.s == null || mainscript.s.player == null;
                 try
@@ -369,7 +369,7 @@ namespace TLDRevamp
                 if (!_menuCalled) { _menuCalled = true; foreach (var l in Mods) Call(l, l.OnMenuLoad, "OnMenuLoad"); }
                 _gameLoadedCalled = true;
                 _unloadCalled = false;
-                // the empty slots filled here too: mods go through the items in OnLoad as well (M-ultiTool's vehicle list
+                // the empty slots filled here too: mods go through the items in OnLoad as well (a tool mod's vehicle list
                 // stopped at the first one, and the rest of its OnLoad with it)
                 if (FillEmptySlots) FillHoles();
                 try
@@ -387,7 +387,7 @@ namespace TLDRevamp
                 finally { if (FillEmptySlots) RestoreHoles(); }
             }
             // TLDLoader runs a mod's Update in a world only, unless it asked for the menu (LoadInMenu): mods read
-            // mainscript.M.player there with no null check (FastPedal, Fugitive). Before 2026-11-23 every mod's ran in the menu.
+            // mainscript.M.player there with no null check. Before 2026-11-23 every mod's ran in the menu.
             foreach (var l in Mods) if (worldUp || l.Menu) Call(l, l.Update, "Update");
             DevHooks.ModsTick?.Invoke();
         }

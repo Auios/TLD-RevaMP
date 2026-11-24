@@ -180,7 +180,7 @@ public class tosaveitemscript   // test stub, not game code
     public void FStart(int key) { }
     public partslotscript[] partslotscripts;
     public int category;   // nothing on the beta: kept for the mod
-    public System.Collections.Generic.List<digholescript2> holes;   // the field and its type: nothing on the beta (World Tweaker's interiorLights)
+    public System.Collections.Generic.List<digholescript2> holes;   // the field and its type: nothing on the beta (one mod's interiorLights)
     public randomScaleScript[] randomScales;   // the beta's is a list
     public void Claim(bool b) { }   // the public game's multiplayer claim; the beta has none
 #else
@@ -232,9 +232,9 @@ public class save_prefab
     public save_rendszam rendszam; public int categoryID;
     public save_prefab(int category, int id, double x, double y, double z, float rx, float ry, float rz) { categoryID = category; }
 }
-// the menu's switch for the world's spawners (More UFOs' sandstorm UFO keeps one); the beta has none
+// the menu's switch for the world's spawners (a UFO mod's sandstorm UFO keeps one); the beta has none
 public class temporaryTurnOffGeneration { }
-// a hole dug in the ground (KARL's wells look for them); the beta has none
+// a hole dug in the ground (a mod's wells look for them); the beta has none
 public class digholescript2 { public int depth; }
 #endif
 public class inputscript

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Does a hitched trailer jump or come off when a save loads? (Long Haul Overhaul's load stabiliser is for that bug.)
+"""Does a hitched trailer jump or come off when a save loads? (a trailer mod's load stabiliser is for that bug.)
 Single player on this machine, the player's saves protected (ProtectedSession restores the autosave slots): a car01
 and the game's trailer hitched to it on a road, the game's own AutoSave, then that save loaded LOADS times; after each
 load, where the car and the trailer are against where they were saved, and whether the trailer is still hitched.

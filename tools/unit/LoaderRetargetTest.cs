@@ -111,7 +111,7 @@ static class LoaderRetargetTest
 
     /// The old save ids through a helper type (as TLDRevamp.LoaderCompat; TestCompat below): the spawner finds the first
     /// free id among the placed items and the records, and starts the item with it. Without the helpers the method stops
-    /// at its first instruction, as the dingus and Nitrous spawners did on the beta (issue 44).
+    /// at its first instruction, as the workshop mods' spawners did on the beta (issue 44).
     static void Compat()
     {
         string dll = Path.Combine(Path.GetDirectoryName(typeof(LoaderRetargetTest).Assembly.Location), "AliasMod.dll");
@@ -128,7 +128,7 @@ static class LoaderRetargetTest
             threw = false;
             try { LoadBytes(mod).GetType("AliasMod").GetMethod("Holes").Invoke(null, new object[] { new object[0] }); }
             catch (TargetInvocationException e) { threw = e.InnerException is TypeLoadException; }
-            Check("compat: without the helpers a method naming a dropped type stops (before: KARL's dbLoad)", threw);
+            Check("compat: without the helpers a method naming a dropped type stops (before: a car mod's dbLoad)", threw);
             threw = false;
             try { LoadBytes(mod).GetType("AliasMod").GetMethod("Ambiguous").Invoke(null, null); }
             catch (TargetInvocationException e) { threw = e.InnerException is AmbiguousMatchException; }
@@ -153,13 +153,13 @@ static class LoaderRetargetTest
                   changes.Contains("tosaveitemscript.category kept for the mod (the beta has none)") &&
                   (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Category").Invoke(null, new object[] { new tosaveitemscript() }) == 7);
             var ts = new tosaveitemscript();
-            Check("compat: a field the beta dropped with its type is kept as an object (World Tweaker's interiorLights)",
+            Check("compat: a field the beta dropped with its type is kept as an object (a mod's interiorLights)",
                   changes.Contains("tosaveitemscript.holes kept for the mod (the beta has none, nor its type)") &&
                   (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Lights").Invoke(null, new object[] { ts }) == 1);
             Check("compat: an array the beta keeps as a list (tosaveitemscript.randomScales)",
                   (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Scales").Invoke(null, new object[] { ts }) == 2 && ts.randomScales.Count == 2);
             {
-                // a mod's AccessTools.TypeByName (Road Save Guard asks every frame for mods that aren't there)
+                // a mod's AccessTools.TypeByName (one mod asks every frame for mods that aren't there)
                 var m = ModuleDefinition.CreateModule("TypeByNameMod", ModuleKind.Dll);
                 var harmony = new AssemblyNameReference("0Harmony", new Version(2, 0)); m.AssemblyReferences.Add(harmony);
                 var tbn = new MethodReference("TypeByName", m.ImportReference(typeof(Type)), new TypeReference("HarmonyLib", "AccessTools", m, harmony));
@@ -185,23 +185,23 @@ static class LoaderRetargetTest
             string first = (string)asm.GetMethod("Record").Invoke(null, new object[] { s2, "{\"rads\":3}" });
             string again = (string)asm.GetMethod("Record").Invoke(null, new object[] { s2, null });
             Check("compat: save_prefab is the helper's SaveRecord", changes.Contains("type save_prefab -> TestCompat.SaveRecord"));
-            Check("compat: a mod's own record (M-'s save template) is made once and read back",
+            Check("compat: a mod's own record (a save template several mods share) is made once and read back",
                   first == "{\"rads\":3}" && again == first && TestCompat.Records.Count == 1 && TestCompat.Records[12345].categoryID == 3);
             menuhandler.s = new menuhandler();
             Check("compat: the main menu is menuhandler.s, its screens from the helper (mainmenuscript.mainmenu.SettingsScreenObj)",
                   changes.Contains("type mainmenuscript -> menuhandler") && changes.Contains("menuhandler.mainmenu -> menuhandler.s") &&
                   (string)asm.GetMethod("MenuScreens").Invoke(null, null) == "settings,save");
             var ufo = LoadBytes(mod).GetType("UfoMod+Sandstorms");
-            Check("compat: a mod's field of a dropped game type is an object, and its class loads (More UFOs)",
+            Check("compat: a mod's field of a dropped game type is an object, and its class loads (a UFO mod)",
                   changes.Contains("UfoMod/Sandstorms.Temp temporaryTurnOffGeneration -> Object (the beta has no temporaryTurnOffGeneration)") &&
                   ufo.GetField("Temp").FieldType == typeof(object) && ((System.Type[])LoadBytes(mod).GetType("UfoMod").GetField("Types").GetValue(null)).Length == 1 &&
                   (int)ufo.GetField("Speed").GetValue(System.Activator.CreateInstance(ufo)) == 3);
             menuhandler.s.currentMainMap = new mapSettingScript();
-            Check("compat: the road buildings are the helper's stand-in: no parent, the placed buildings (RUNDEN's AI, Stronger Sandstorms)",
+            Check("compat: the road buildings are the helper's stand-in: no parent, the placed buildings (an AI traffic mod, a sandstorm mod)",
                   changes.Contains("type roadBuildingScript -> TestCompat.RoadBuildings") &&
                   changes.Contains("mapSettingScript.roadBuildingGeneration read -> TestCompat.RoadBuildingGeneration") &&
                   (string)asm.GetMethod("RoadBuildings").Invoke(null, new object[] { new UnityEngine.Transform() }) == "False,2" && TestCompat.RoadBuildingsMap == menuhandler.s.currentMainMap);
-            Check("compat: another dropped game type is the helper's Gone, and a method naming it runs (KARL's wells: none found)",
+            Check("compat: another dropped game type is the helper's Gone, and a method naming it runs (a mod's wells: none found)",
                   changes.Contains("type digholescript2 -> TestCompat.Gone (the beta has none)") &&
                   (int)asm.GetMethod("Holes").Invoke(null, new object[] { new object[] { new object(), "x" } }) == 1);
             Check("compat: inputscript.forward as a bool asks the helper (the beta's is a float)",
@@ -210,18 +210,18 @@ static class LoaderRetargetTest
                   !(bool)asm.GetMethod("Forward").Invoke(null, new object[] { new inputscript() }));
             Check("compat: an ambiguous GetMethod gets the fewest parameters, a string first (the real LooseMethod)",
                   changes.Contains("Type.GetMethod -> TestCompat.GetMethod") && (string)asm.GetMethod("Ambiguous").Invoke(null, null) == "String,Boolean");
-            Check("compat: Invoke with the optional parameter left out gets its default (RUNDEN's AI traffic's slider text)",
+            Check("compat: Invoke with the optional parameter left out gets its default (an AI traffic mod's slider text)",
                   changes.Contains("MethodBase.Invoke -> TestCompat.Invoke") && (string)asm.GetMethod("Invoked").Invoke(null, null) == "AITrue");
             var save = new savedatascript(); save.data.properties.driven = 5001f;
-            Check("compat: savedatascript.properties is the save data's (Achievements' distance driven)",
+            Check("compat: savedatascript.properties is the save data's (an achievements mod's distance driven)",
                   changes.Contains("savedatascript.properties read -> TestCompat.SaveProperties") && (float)asm.GetMethod("Driven").Invoke(null, new object[] { save }) == 5001f);
             var mount = new mountStuff(); var item = new pickupable();
             asm.GetMethod("Remount").Invoke(null, new object[] { mount, item });
-            Check("compat: mountStuff.Lock is the beta's Store (AMT's saved items in their mounts)",
+            Check("compat: mountStuff.Lock is the beta's Store (a modding toolkit's saved items in their mounts)",
                   changes.Contains("mountStuff.Lock(pickupable,System.Boolean) -> TestCompat.MountLock") && mount.Stored == item && mount.IgnoredRigidbody);
             var onto = new tosaveitemscript();
             var swapped = (UnityEngine.Vector3)asm.GetMethod("Swap").Invoke(null, new object[] { new attachablescript(), onto });
-            Check("compat: attachablescript.targetTosave written, pointLocalPos read and Load(pos) ask the helper (M-ultiTool's swap)",
+            Check("compat: attachablescript.targetTosave written, pointLocalPos read and Load(pos) ask the helper (a tool mod's swap)",
                   changes.Contains("attachablescript.targetTosave write -> TestCompat.SetTargetTosave") &&
                   changes.Contains("attachablescript.pointLocalPos read -> TestCompat.PointLocalPos") &&
                   changes.Contains("attachablescript.Load(UnityEngine.Vector3) -> TestCompat.AttachableLoad") &&
@@ -277,7 +277,7 @@ static class LoaderRetargetTest
             int got = (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Parts").Invoke(null, new object[] { car });
             Check("parts: two parts found through part() and tosave, one slot left after the store", got == 21);
             Check("parts: the store reached the game's list", car.partslotscripts.Count == 1);
-            Check("parts: typeof(partscript) in an attribute is the beta's attachablescript (The Long Who's HarmonyPatch)",
+            Check("parts: typeof(partscript) in an attribute is the beta's attachablescript (a mod's HarmonyPatch)",
                   changes.Contains("typeof() in TypeNoteAttribute -> the beta's type") &&
                   (System.Type)LoadBytes(mod).GetType("AliasMod").GetMethod("Noted").Invoke(null, null) == typeof(attachablescript));
             var world = new visszarako(); world.coord.x = 1000;

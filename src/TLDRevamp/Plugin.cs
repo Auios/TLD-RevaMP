@@ -241,7 +241,7 @@ namespace TLDRevamp
             ModHost.Retarget = Config.Bind("Mods", "RetargetLoaderMods", true,
                 "Point TLD Loader mods' public-game names at the beta's live fields and small method adapters, including integer-sign changes (idInSave). The bridge's mods aliases lists the mappings. Off: load mods unchanged.").Value;
             ModHost.Compat = Config.Bind("Mods", "LoaderCompat", true,
-                "Answer what TLD Loader mods use of the public game's save ids and attach code (the spawner many workshop mods share: dingus, Nitrous; Attach Everything) from the beta's own, and give the mods' DbLoad an item database without empty slots. Off: those calls fail as before.").Value;
+                "Answer what TLD Loader mods use of the public game's save ids and attach code (the spawner many workshop mods share) from the beta's own, and give the mods' DbLoad an item database without empty slots. Off: those calls fail as before.").Value;
             ModHost.FillEmptySlots = ModHost.Compat;
             ModHost.MustMatch = Config.Bind("Mods", "LoaderModsMustMatch", true,
                 "When you host: refuse players whose TLD Loader mods (BepInEx/TLDLoaderMods) differ from yours (mod ID, version or DLL). Items those mods add reach other players as game items only when everyone has the same mods. Off: they join anyway, and what those mods add may be missing or wrong for them.").Value;
@@ -302,7 +302,7 @@ namespace TLDRevamp
     }
 
     /// The Loader mods' IMGUI in a pass of its own, IMGUI's layout pass on: the Runner skips it (the overlay needs none), and
-    /// a mod's GUILayout then got no Layout event (M-ultiTool's menu threw "Getting control 0's position", CIT's gauge box
+    /// a mod's GUILayout then got no Layout event (a tool mod's menu threw "Getting control 0's position", a gauge mod's box
     /// did too). A/B: ModHost.GuiOwnPass = false is before 2026-11-24 (drawn from the Runner's pass).
     public class ModGuiRunner : MonoBehaviour
     {
