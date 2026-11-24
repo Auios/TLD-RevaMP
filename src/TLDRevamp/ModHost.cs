@@ -59,13 +59,18 @@ namespace TLDRevamp
                 Loader.GetField("Echo")?.SetValue(null, (Action<string, int>)((m, lv) => { if (lv == 2) gameLog.LogError(m); else if (lv == 1) gameLog.LogWarning(m); else gameLog.LogInfo(m); }));
                 MakeLoadingPanel();
                 BindEvents(stub);
+                _modFiles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var dll in dlls)
+                    try { _modFiles[AssemblyName.GetAssemblyName(dll).Name] = dll; }
+                    catch (Exception e) { Plugin.Log.LogWarning("ModHost: " + Path.GetFileName(dll) + ": no assembly name: " + e.Message); }
+                AppDomain.CurrentDomain.AssemblyResolve += (s, e) => ModAssemblyFor(e.Name);
                 foreach (var dll in dlls)
                 {
                     // A DLL whose types partly fail to load (one names a game type the beta lacks) still offers the rest:
                     // before 2026-11-11 the whole DLL was skipped, and a type whose check threw stopped every mod after it
                     // (Backpack Mod: "Could not load type of field 'Amt.ModItemsSpawner:_building'" - no Loader mod loaded).
                     Type[] types; int broken = 0;
-                    try { types = Initialized(LoadMod(dll), dll).GetTypes(); }
+                    try { types = ModAssembly(dll).GetTypes(); }
                     catch (ReflectionTypeLoadException e)
                     {
                         types = Array.FindAll(e.Types ?? new Type[0], x => x != null);
@@ -148,6 +153,29 @@ namespace TLDRevamp
                 m => Plugin.Log.LogInfo("ModHost: " + m), CompatHelpers());
             if (string.IsNullOrEmpty(asm.Location)) Retargeted++;
             return asm;
+        }
+        /// Mods that use another mod's types (Police Mod's field of a RUNDEN AI type): a rewritten mod loads from bytes, and
+        /// the runtime finds neither a mod loaded that way nor one not loaded yet (the DLLs load in name order, Police Mod
+        /// first). A reference to another DLL in the mods folder gets that DLL, loaded once, here or in the loop.
+        /// Before 2026-11-24 Police Mod's mod type failed to load.
+        private static Dictionary<string, string> _modFiles;   // assembly name -> DLL
+        private static readonly Dictionary<string, Assembly> _modAssemblies = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
+        internal static Assembly ModAssemblyFor(string name)
+        {
+            if (_modFiles == null || string.IsNullOrEmpty(name)) return null;
+            string simple;
+            try { simple = new AssemblyName(name).Name; } catch { return null; }
+            return _modFiles.TryGetValue(simple, out var dll) ? ModAssembly(dll) : null;
+        }
+        private static Assembly ModAssembly(string dll)
+        {
+            lock (_modAssemblies)
+            {
+                if (_modAssemblies.TryGetValue(dll, out var known)) return known;   // null while it loads: a cycle gets nothing
+                _modAssemblies[dll] = null;
+                try { var asm = Initialized(LoadMod(dll), dll); _modAssemblies[dll] = asm; return asm; }
+                catch { _modAssemblies.Remove(dll); throw; }
+            }
         }
         /// The DLL's module initializer first. Mods built with Costura carry their libraries inside (Newtonsoft.Json, NLayer:
         /// M-'s Achievements, Better Radio, The Long Who, World Tweaker, M-ultiTool) and hook the resolver there; the type
