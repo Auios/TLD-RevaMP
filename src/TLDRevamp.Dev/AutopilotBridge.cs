@@ -5,9 +5,9 @@ using UnityEngine;
 
 namespace TLDRevamp
 {
-    /// Test tooling: Killenger's Autopilot (beta port, loaded by ModHost — never in the public release) made aware of other
-    /// players. The port exposes TLDAutopilot.Plugin.Game.Traffic; this fills it in by reflection (no compile-time link
-    /// either way): the owner's velocity for display copies of other players' cars, other players on foot as pedestrians,
+    /// Test tooling: a local autopilot test mod (loaded by ModHost; private, never in the repository or a release) made
+    /// aware of other players. It exposes a Traffic class (its Game namespace) with hooks; this fills them in by
+    /// reflection (no compile-time link either way): the owner's velocity for display copies of other players' cars, other players on foot as pedestrians,
     /// and keep-right (home lane +1.8 m) while in a session. Outside a session the hooks return nothing and the lane
     /// setting goes back to the autopilot's own.
     public static class AutopilotBridge
@@ -19,13 +19,24 @@ namespace TLDRevamp
         private static bool _wasInSession;
         public static string Info = "no autopilot";
 
+        /// The autopilot's hook class: a static Traffic in a Game namespace with the VelocityOf hook.
+        private static Type TrafficIn(Assembly asm)
+        {
+            Type[] types;
+            try { types = asm.GetTypes(); } catch (ReflectionTypeLoadException e) { types = e.Types; } catch { return null; }
+            foreach (var t in types)
+                if (t != null && t.Name == "Traffic" && t.Namespace != null && t.Namespace.EndsWith(".Game", StringComparison.Ordinal)
+                    && t.GetField("VelocityOf", BindingFlags.Public | BindingFlags.Static) != null) return t;
+            return null;
+        }
+
         public static void Install()
         {
             try
             {
                 foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    _traffic = asm.GetType("TLDAutopilot.Plugin.Game.Traffic");
+                    _traffic = TrafficIn(asm);
                     if (_traffic != null) break;
                 }
                 if (_traffic == null) return;

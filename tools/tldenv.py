@@ -90,6 +90,18 @@ def lan_ip():
     finally: s.close()
 
 
+# A local autopilot test mod (private test tooling: never in the repo or a release): the namespace its bridge members
+# are under (its Host.Session/Settings/Ap), from tools.env. Empty: the tests that drive with it can't run here.
+AUTOPILOT = os.environ.get("TLD_AUTOPILOT", "")
+
+
+def need_autopilot():
+    """The autopilot test mod's member prefix ("<namespace>.Host."), or exit with how to set it."""
+    if not AUTOPILOT:
+        sys.exit("this test drives with a local autopilot test mod: set TLD_AUTOPILOT=<its namespace> (tools/local.env, see tools/README.md)")
+    return AUTOPILOT + ".Host."
+
+
 def need_second():
     """The second machine's user@host, or exit with how to set it."""
     if not SECOND:

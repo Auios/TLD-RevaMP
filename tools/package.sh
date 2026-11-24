@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Player release zip: BepInEx 5 (unmodified, from this machine's game install) + the mod + INSTALL.txt.
-# Never includes: TLDRevamp.Dev.dll, configs, logs, caches, third-party TLDLoader mods (Killenger's autopilot is test tooling), saves.
+# Never includes: TLDRevamp.Dev.dll, configs, logs, caches, third-party TLDLoader mods (a local autopilot test mod is private test tooling), saves.
 #   tools/package.sh  ->  dist/TLD-RevaMP-<version>.zip
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

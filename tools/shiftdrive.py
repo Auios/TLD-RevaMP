@@ -13,7 +13,7 @@ Verdicts:
   - nobody died, both drove ≥ 70 % of the distance at the target speed
   --passenger: the laptop rides in the host's car instead (one driver): its world shifts while the copy it sits in
                moves — it must stay seated, on the copy's seat, the copy on the host's track
-  --insane: Killenger's Autopilot (test tooling port) drives instead of the test driver, in its INSANE mode (250 km/h
+  --insane: a local autopilot test mod (private test tooling, TLD_AUTOPILOT) drives instead of the test driver, in its INSANE mode (250 km/h
             target, rocks driven over, the shoulder used) — the hardest normal driving the copies will see. Needs the
             game's automatic gearbox: switched on for the test, the player's setting put back after.
             The autopilot parks by design where the road is too cluttered to plan through (buildings: "road blocked",
@@ -65,7 +65,7 @@ def cross_track(p, track):
         if best is None or d < best: best = d
     return best
 
-AP = "TLDAutopilot.Plugin.Host."
+AP = game.tldenv.need_autopilot() if AP_MODE else ""   # a local autopilot test mod's members
 def autopilot_on(s, who):
     """the way a player does it: drive off a few metres (our driver: auto gearbox, holding throttle starts the engine),
     then engage the autopilot rolling forward, in insane mode (engaging at a standstill it refused: 'rolling backwards')"""

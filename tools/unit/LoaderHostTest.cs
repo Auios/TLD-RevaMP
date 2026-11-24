@@ -216,8 +216,9 @@ static class LoaderHostTest
         // repository's real third-party mod (an autopilot DLL in
         // thirdparty/TLDLoaderMods/) is loaded here the same way the host loads it
         // in the game: its own DLL, plus the game's assemblies for its references.
-        string realMod = Path.Combine(root, "thirdparty/TLDLoaderMods/Killenger_Autopilot.dll");
-        if (File.Exists(realMod))
+        string thirdParty = Path.Combine(root, "thirdparty/TLDLoaderMods");
+        string realMod = Directory.Exists(thirdParty) ? Directory.GetFiles(thirdParty, "*.dll").OrderBy(f => f, StringComparer.Ordinal).FirstOrDefault() : null;
+        if (realMod != null && File.Exists(realMod))
         {
             string libDir = Path.Combine(root, "lib");
             // the game's assemblies the mod references, so its types load

@@ -109,11 +109,10 @@ src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeMethod(Road, "FSta
 src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeMethod(Buildings, "FStart", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, Type.EmptyTypes)	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
 src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeMethod(Generator, "GetTerrainHeightWorld", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, new[] { typeof(Vector2), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) })	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
 src/TLDRevamp/WorldGen/Old2023/OldBuild.cs	GameLookups.RuntimeField(t, name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)	Optional historical game assembly, rehosted as Assembly-CSharp-2023; not in lib/. OldBuild.Probe validates it at runtime and the registry records its members.
-src/TLDRevamp.Dev/AutopilotBridge.cs	asm.GetType("TLDAutopilot.Plugin.Game.Traffic")	Optional TLDAutopilot mod API; not game code.
-src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField("VelocityOf")	Optional TLDAutopilot mod API; not game code.
-src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField("Pedestrians")	Optional TLDAutopilot mod API; not game code.
-src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField("HomeLaneOffsetM")	Optional TLDAutopilot mod API; not game code.
-src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField(n)	Optional TLDAutopilot mod API; not game code.
+src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField("VelocityOf")	Optional local autopilot test mod API; not game code.
+src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField("Pedestrians")	Optional local autopilot test mod API; not game code.
+src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField("HomeLaneOffsetM")	Optional local autopilot test mod API; not game code.
+src/TLDRevamp.Dev/AutopilotBridge.cs	_traffic.GetField(n)	Optional local autopilot test mod API; not game code.
 src/TLDRevamp.Dev/DebugBridge.cs	GameLookups.RuntimeType(typeof(mainscript).Assembly, arg.Trim())	Arbitrary bridge user path, including game, own and mod types; game resolutions are recorded at runtime.
 src/TLDRevamp.Dev/LoaderScan.cs	mod.GetMethod(lifecycle, lifecycleFlags, null, Type.EmptyTypes, null)	External loader mod lifecycle and ID getters, unknown until a mod is scanned.
 src/TLDRevamp.Dev/LoaderScan.cs	t.GetProperty(prop, BindingFlags.Public | BindingFlags.Instance)	External loader mod lifecycle and ID getters, unknown until a mod is scanned.
@@ -176,3 +175,4 @@ src/TLDRevamp/ModHost.Game.cs	.GetMethod("OnDestroy", BindingFlags.Instance | Bi
 src/TLDRevamp/ModHost.Game.cs	.GetField("properties")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
 src/TLDRevamp/ModHost.Game.cs	.FieldType.GetProperty("Name")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
 src/TLDRevamp/ModHost.Game.cs	typeof(ModHost).GetMethod(nameof(AmtTemplateDestroyed), BindingFlags.NonPublic | BindingFlags.Static)	Our patch/helper method ModHost.AmtTemplateDestroyed; not game code.
+src/TLDRevamp.Dev/AutopilotBridge.cs	t.GetField("VelocityOf", BindingFlags.Public | BindingFlags.Static)	Optional local autopilot test mod API; not game code.

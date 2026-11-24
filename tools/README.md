@@ -354,8 +354,9 @@ synthetic headers; tests also create report zips and corrupt inputs in temporary
 - `TLD_TEST_MODS=CarTrailer,HeadUnit` also builds and deploys the example mods from a TLD-Mods checkout (`TLD_MODS_DIR`,
   default: `TLD-Mods` next to this repository; ApiProbe from `src/Mods`); tests otherwise remove them from the game.
 - `TLD_PLUGIN_DLL=/path/to/TLDRevamp.dll` deploys another build (an A/B against an older version built elsewhere).
-- A few driving tests (`twocars.py`, `shiftdrive.py --insane`, `autopilotprobe.py`) use Killenger's TLDAutopilot, a
-  third-party mod that is not in this repository: put its DLL in `thirdparty/TLDLoaderMods/` (gitignored).
+- A few driving tests (`twocars.py`, `shiftdrive.py --insane`, `autopilotprobe.py`, `pedestrians.py`) drive with a
+  local autopilot test mod that is not part of this repository: its DLL goes in `thirdparty/TLDLoaderMods/`
+  (gitignored) and `TLD_AUTOPILOT` names its namespace. Without it those tests stop and say so.
 - `gamediff.py` tells you what changed after a game update. It decompiles the game's DLL into `TLD_CACHE` (never the
   repo) and lists the changed methods the mod patches or calls. See [docs/CONTRIBUTING.md](../docs/CONTRIBUTING.md)
   for decompiling the game to read its code.

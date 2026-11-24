@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """H4 (bench/CORE-CHECKLIST.md): the autopilot sees other players on foot. Two machines over the relay; the laptop's
-car01 driven by Killenger's Autopilot (the beta port in the laptop's BepInEx/TLDLoaderMods: test tooling only), the
+car01 driven by a local autopilot test mod (in the laptop's BepInEx/TLDLoaderMods: private test tooling), the
 host standing on foot in the car's lane ahead. Twice: NEW (AutopilotBridge.SeePlayers on) and OLD (off: the autopilot
 is told of no players).
   A  NEW: the autopilot is told of the host (Traffic.PedestriansAdded rises) and treats them as it treats a creature:
@@ -14,6 +14,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
 from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
 from roadkit import until, tp, clear_road, car_ready, g, road_at
+AP = game.tldenv.need_autopilot()   # a local autopilot test mod's members (TLD_AUTOPILOT)
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
 RELAY, AHEAD = arg("--relay", "iad"), arg("--ahead", 220.0, float)
@@ -49,7 +50,7 @@ def run(h, L, label, see):
     L("set mainscript.s.crsrLocked True")
     p0 = L("traffic").get("pedestrians") or 0
     for k in range(3):   # run 1, OLD: "Autopilot: rolling backwards" (parked on a slope): brake, then again
-        r = L("call TLDAutopilot.Plugin.Host.Session.Toggle"); print(f"  {label}: autopilot:", r, flush=True)
+        r = L(f"call {AP}Session.Toggle"); print(f"  {label}: autopilot:", r, flush=True)
         if "ENGAGED" in str(r): break
         L("brakecar"); L("handbrake on"); time.sleep(2); L("handbrake off")
     t0, rows, passed, dmin = time.time(), [], False, 1e9
@@ -63,7 +64,7 @@ def run(h, L, label, see):
         rows.append((round(time.time() - t0, 1), round(d, 1), round(v, 1), round(dmin, 1)))
         if dmin < 12 and d > dmin + 5: passed = True; break   # it came close and went on by (the road bends: no "ahead" axis)
         if v < 3 and d < 60 and time.time() - t0 > 8: time.sleep(3); rows.append(("rest", round(math.hypot(pos(L)[0] - hx, pos(L)[1] - hz), 1), round(kmh(L), 1), None)); break
-    try: L("call TLDAutopilot.Plugin.Host.Session.Toggle")
+    try: L(f"call {AP}Session.Toggle")
     except Exception: pass
     L("brakecar"); time.sleep(1)
     ped = L("traffic")

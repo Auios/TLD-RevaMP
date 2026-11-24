@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Two machines, two cars, each driven by its own player's autopilot (Killenger's Autopilot, beta port — test tooling,
+"""Two machines, two cars, each driven by its own player's autopilot (a local autopilot test mod — private test tooling,
 never in the public release; made traffic-aware by TLD Revamp's AutopilotBridge).
   A following : the laptop's car starts 40 m ahead at 45 km/h, the desktop's behind at 80 → the desktop follows at a safe
                 gap (no collision, the traffic layer reports following, speed converges on the leader's)
@@ -18,6 +18,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game, seeded
 from bench import Bridge
 from mplib import Agent, ensure_both, DESKTOP_IP
+AP = game.tldenv.need_autopilot()   # a local autopilot test mod's members (TLD_AUTOPILOT)
 from roadkit import CAR01, until, g, road_at, clear_road, seat_idx, car_ready
 
 ONLY = set(sys.argv[sys.argv.index("--only") + 1].split(",")) if "--only" in sys.argv else None
@@ -39,19 +40,19 @@ def engage(side, kmh, who):
     our driver writes the game's input every frame, which the autopilot would take as a manual override"""
     side("autodrive on 12")   # starts the engine (auto gearbox), releases the handbrake, pulls away
     rolling = until(lambda: abs(float(g(side, "mainscript.s.player.Car.speed") or 0)) > 10, 20, 0.25)
-    r = side("call TLDAutopilot.Plugin.Host.Session.Toggle")["value"]
+    r = side(f"call {AP}Session.Toggle")["value"]
     side("autodrive off")
     if not rolling: print(f"  {who}: never got rolling ({g(side, 'mainscript.s.player.Car.speed')} km/h)", flush=True)
     # engaging re-reads the autopilot's settings file (ApplyConfig): the test's speed and mode go in after it
     # CRAZY mode (the user's call: these beta roads are very curvy, the normal mode is too timid on them); its cruise is
     # CrazyTargetKmh — following still caps it (the external cap joins the governor's Sim cap, which applies in every mode)
-    side("set TLDAutopilot.Plugin.Host.Settings.Mode Crazy")
-    side(f"set TLDAutopilot.Plugin.Host.Settings.CrazyTargetKmh {kmh}"); side(f"set TLDAutopilot.Plugin.Host.Settings.TargetKmh {kmh}")
-    print(f"  {who} autopilot at {g(side, 'TLDAutopilot.Plugin.Host.Settings.CrazyTargetKmh')} km/h, mode {g(side, 'TLDAutopilot.Plugin.Host.Settings.Mode')}:", r, flush=True)
+    side(f"set {AP}Settings.Mode Crazy")
+    side(f"set {AP}Settings.CrazyTargetKmh {kmh}"); side(f"set {AP}Settings.TargetKmh {kmh}")
+    print(f"  {who} autopilot at {g(side, AP + 'Settings.CrazyTargetKmh')} km/h, mode {g(side, AP + 'Settings.Mode')}:", r, flush=True)
     return "ENGAGED" in str(r)
 
 def disengage(side):
-    if g(side, "TLDAutopilot.Plugin.Host.Ap.State") not in ("Off", None): side("call TLDAutopilot.Plugin.Host.Session.Toggle")
+    if g(side, f"{AP}Ap.State") not in ("Off", None): side(f"call {AP}Session.Toggle")
     side("autodrive off")   # our test driver too (it releases the parking brake while it drives)
     side("brakecar"); side("handbrake on")
 
@@ -316,7 +317,7 @@ try:
                     lp = time.monotonic()
                     wheel_sample(wheels, ((b, L, net_b, "desktop's car"), (L, b, net_l, "laptop's car")))
                     vb.append(owned_speed(b, net_b) * 3.6); vl.append(owned_speed(L, net_l) * 3.6)
-                    print(f"  t={lp - t:4.1f}s gap {gaps[-1]:5.1f} m  desktop {vb[-1]:4.0f} km/h ({g(b, 'TLDAutopilot.Plugin.Host.Ap.State')})  laptop {vl[-1]:4.0f} km/h ({g(L, 'TLDAutopilot.Plugin.Host.Ap.State')})  {b('traffic').get('last', '')}", flush=True)
+                    print(f"  t={lp - t:4.1f}s gap {gaps[-1]:5.1f} m  desktop {vb[-1]:4.0f} km/h ({g(b, AP + 'Ap.State')})  laptop {vl[-1]:4.0f} km/h ({g(L, AP + 'Ap.State')})  {b('traffic').get('last', '')}", flush=True)
             t1 = b("traffic"); rep1 = b("mp entities")["partsReported"] + L("mp entities")["partsReported"]
             tail_b = sum(vb[-10:]) / max(1, len(vb[-10:])); tail_l = sum(vl[-10:]) / max(1, len(vl[-10:]))
             ok = eng and okb and okl and gaps and min(gaps) > 8 and t1["followed"] > t0["followed"] and rep1 == rep0 and abs(tail_b - tail_l) < 12
@@ -330,7 +331,7 @@ try:
                 el0 = track.last(L).get(net_l); dirv = el0["vel"] if el0 else [0, 0, 0]
                 dl = math.hypot(dirv[0], dirv[2]) or 1; D = (dirv[0] / dl, dirv[2] / dl)
                 print(f"  A2: the leader brakes at {owned_speed(L, net_l) * 3.6:.0f} km/h, gap {gaps[-1]:.1f} m", flush=True)
-                L("call TLDAutopilot.Plugin.Host.Session.Toggle"); L("autodrive on 0"); tb = time.monotonic()
+                L(f"call {AP}Session.Toggle"); L("autodrive on 0"); tb = time.monotonic()
                 gaps2, parked, t_leader_stop, stopped_b, parked_b = [], False, None, False, False
                 while time.monotonic() - tb < 25:
                     tn = pace(tn); track.sample()
@@ -346,7 +347,7 @@ try:
                     # other's car away (REST and SEAT then read unloaded copies). Its driver stops, as a player would.
                     # (gently, as the leader: a full brake + handbrake at 62 km/h cost it 3 parts)
                     if parked and time.monotonic() - t_leader_stop > 4 and not stopped_b:
-                        if g(b, "TLDAutopilot.Plugin.Host.Ap.State") not in ("Off", None): b("call TLDAutopilot.Plugin.Host.Session.Toggle")
+                        if g(b, f"{AP}Ap.State") not in ("Off", None): b(f"call {AP}Session.Toggle")
                         b("autodrive on 0"); stopped_b = True; print(f"  A2: the follower's driver slows it from {owned_speed(b, net_b) * 3.6:.0f} km/h", flush=True)
                     if stopped_b and not parked_b and owned_speed(b, net_b) < 3.0:
                         b("autodrive off"); b("brakecar"); b("handbrake on"); parked_b = True
@@ -358,7 +359,7 @@ try:
                 backsteps = [along[i] - along[i + 1] for i in range(len(along) - 1) if along[i] - along[i + 1] > 0.05]
                 rep2 = b("mp entities")["partsReported"] + L("mp entities")["partsReported"]
                 ok2 = parked and gaps2 and min(gaps2) > 2.0 and rep2 == rep1 and overshoot < 0.3 and not backsteps
-                verdict("A2 EMERGENCY BRAKE", ok2, f"leader parked {parked}; closest true gap {min(gaps2) if gaps2 else float('nan'):.1f} m; follower state {g(b, 'TLDAutopilot.Plugin.Host.Ap.State')}; "
+                verdict("A2 EMERGENCY BRAKE", ok2, f"leader parked {parked}; closest true gap {min(gaps2) if gaps2 else float('nan'):.1f} m; follower state {g(b, AP + 'Ap.State')}; "
                         f"leader's copy on the desktop went {overshoot:+.2f} m past where it really stopped, stepped back {len(backsteps)}x (max {max(backsteps, default=0):.2f} m); parts lost {rep2 - rep1}")
 
             ds, ns = report(track, [(L, b, net_l, "laptop's car as seen on the desktop"), (b, L, net_b, "desktop's car as seen on the laptop")],
@@ -402,7 +403,7 @@ try:
                 if time.monotonic() - lp >= 0.5:
                     lp = time.monotonic()
                     if d < 150: wheel_sample(wheels, ((b, L, net_b, "desktop's car"), (L, b, net_l, "laptop's car")))   # copies within 150 m (both loaded)
-                    sb, sl = g(b, "TLDAutopilot.Plugin.Host.Ap.State"), g(L, "TLDAutopilot.Plugin.Host.Ap.State"); states |= {sb, sl}
+                    sb, sl = g(b, f"{AP}Ap.State"), g(L, f"{AP}Ap.State"); states |= {sb, sl}
                     print(f"  t={lp - t:4.1f}s distance {d:6.1f} m  desktop {sb}  laptop {sl}", flush=True)
                 if dmin < 60 and d > dmin + 40: passed = True; break
             # how close the pass was in truth (each car from its owner, aligned in time) vs how close it looked on each screen

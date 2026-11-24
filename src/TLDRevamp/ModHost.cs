@@ -130,7 +130,7 @@ namespace TLDRevamp
                     }
                 }
                 Info = Mods.Count + " mod(s)";
-                DevHooks.ModsLoaded?.Invoke();   // test tooling: the autopilot port made aware of other players
+                DevHooks.ModsLoaded?.Invoke();   // test tooling: a local autopilot test mod made aware of other players
             }
             catch (Exception e) { Info = "failed: " + e.Message; Plugin.Log.LogError("ModHost: " + e); }
         }
