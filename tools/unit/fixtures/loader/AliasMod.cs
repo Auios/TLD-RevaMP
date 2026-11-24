@@ -138,7 +138,7 @@ public static class AliasMod
     public static void Remount(mountStuff m, pickupable p) => m.Lock(p, true);
 
     /// M-ultiTool's swap of an item for another: what was attached to the old one goes onto the new one, where it was.
-    public static UnityEngine.Vector3 Swap(attachablescript a, tosaveitemscript to) { a.targetTosave = to; a.Load(a.pointLocalPos); return a.pointLocalPos; }
+    public static UnityEngine.Vector3 Swap(attachablescript a, tosaveitemscript to) { a.targetTosave = to; a.Load(a.pointLocalPos); to.Claim(false); return a.pointLocalPos; }
 
     public static void Calls(fpscontroller p, radioscript r, mainscript m, headlightscript h, survivalscript s)
     {

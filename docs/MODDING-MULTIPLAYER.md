@@ -317,7 +317,8 @@ calls get the DLL it came from (mods find their assets next to it). The beta's i
 game's hadn't: during the mods' DbLoad and OnLoad each holds a placeholder, emptied again afterwards (issue 44: dingus,
 Nitrous, Attach Everything; M-ultiTool's vehicle list in OnLoad). The public game ran DbLoad in the world; the beta's
 item database is up in the menu, where ModHost runs it, with no player yet: a mod whose DbLoad throws there (Radiation
-and The Long Who use the player) runs it again once the world is up, before its OnLoad. `mods aliases` lists their mappings even in the menu; each changed DLL
+and The Long Who use the player) runs it again once the world is up, before its OnLoad, unless the scene load's new
+item database already ran it there. tosaveitemscript.Claim(b), the public game's multiplayer claim, does nothing. `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator has no aliases, and a
 SaveRecord holds a mod's own data only: savedatascript.SpawnItem(save_prefab) and a record's transform aren't mapped. The existing seed/load/napszak/loaded/multi/world/mainWorld fields are host snapshots; writing those does not write beta
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,

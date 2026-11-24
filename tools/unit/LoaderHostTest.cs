@@ -354,6 +354,17 @@ static class LoaderHostTest
         mainscript.s.player = new TLDRevamp.Fixtures.Player();
         Reset(); ModHost.Tick();
         Check("a DbLoad that did not throw is not run again in the world", GetCalls().Contains("OnLoad") && !GetCalls().Contains("dbLoad"));
+        Func<string> LastError = () =>
+        {
+            foreach (var l in (System.Collections.IEnumerable)typeof(ModHost).GetField("Mods", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null))
+                return (string)l.GetType().GetField("LastError").GetValue(l);
+            return null;
+        };
+        mainscript.s.player = null; ModHost.Tick();
+        throwOn.SetValue(null, "dbLoad"); itemdatabase.s = new itemdatabase(); ModHost.Tick(); throwOn.SetValue(null, null);
+        bool erred = LastError() != null && LastError().StartsWith("dbLoad");
+        itemdatabase.s = new itemdatabase(); ModHost.Tick();
+        Check("a DbLoad error is over once DbLoad runs for the next database (the scene load's)", erred && LastError() == null);
 
         Console.WriteLine(failures == 0 ? "ALL PASS" : (failures + " FAILURE(S)"));
         try { Directory.Delete(tmp, true); } catch { }

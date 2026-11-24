@@ -175,6 +175,7 @@ namespace TLDRevamp
             new[] { "layerScript", "FStart", "", "LayerFStart" },
             new[] { "attachablescript", "Load", "UnityEngine.Vector3", "AttachableLoad" },
             new[] { "mountStuff", "Lock", "pickupable,System.Boolean", "MountLock" },
+            new[] { "tosaveitemscript", "Claim", "System.Boolean", "Claim" },
         };
 
         public static IEnumerable<string> AliasDescriptions()

@@ -237,6 +237,10 @@ namespace TLDRevamp
             a.Attach(a.NewPoint(t.transform, t.transform.TransformPoint(localPos), a.transform.rotation));
         }
 
+        /// tosaveitemscript.Claim(b): the public game's multiplayer claim on an item; the beta has none (M-ultiTool claims
+        /// the part it swapped in). Nothing to do.
+        public static void Claim(tosaveitemscript t, bool b) { Calls++; }
+
         /// mountStuff.Lock(item, ignoreRigidbody): the beta's Store (AMT's saved items put back in their mounts).
         public static void MountLock(mountStuff m, pickupable p, bool ignoreRigidbody) { Calls++; if (m != null) m.Store(p, ignoreRigidbody); }
 

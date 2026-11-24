@@ -268,7 +268,16 @@ namespace TLDRevamp
                 try
                 {
                     foreach (var l in order)
-                        l.DbLoadInWorld = !(Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad")) && noWorld && DbLoadAgainInWorld;
+                    {
+                        bool ok = Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad");
+                        l.DbLoadInWorld = !ok && noWorld && DbLoadAgainInWorld;
+                        if (!ok) Plugin.Log.LogInfo("ModHost: " + l.Id + " DbLoad threw " + (noWorld ? "before the world was up: again when it is" : "with the world up"));
+                        else if (l.LastError != null && l.LastError.StartsWith("DbLoad", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Plugin.Log.LogInfo("ModHost: " + l.Id + " DbLoad ran this time (" + l.LastError + " before)");
+                            l.LastError = null;   // the error the status shows is over
+                        }
+                    }
                 }
                 finally { if (FillEmptySlots) RestoreHoles(); }
             }
@@ -327,6 +336,7 @@ namespace TLDRevamp
                             l.DbLoadInWorld = false; DbLoadsInWorld++; l.LastError = null;   // a second failure is logged too
                             bool ok = Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad");
                             Plugin.Log.LogInfo("ModHost: " + l.Id + " DbLoad again in the world" + (ok ? "" : ": it threw again"));
+                            if (ok) l.LastError = null;
                         }
                     foreach (var l in Mods) Call(l, l.OnLoad, "OnLoad");
                 }

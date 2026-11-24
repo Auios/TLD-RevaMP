@@ -206,6 +206,7 @@ static class LoaderRetargetTest
                   changes.Contains("attachablescript.targetTosave write -> TestCompat.SetTargetTosave") &&
                   changes.Contains("attachablescript.pointLocalPos read -> TestCompat.PointLocalPos") &&
                   changes.Contains("attachablescript.Load(UnityEngine.Vector3) -> TestCompat.AttachableLoad") &&
+                  changes.Contains("tosaveitemscript.Claim(System.Boolean) -> TestCompat.Claim") && TestCompat.Claimed == onto &&
                   TestCompat.Target == onto && TestCompat.LoadedAt.x == 7 && swapped.x == 7);
         }
     }
@@ -271,7 +272,7 @@ static class LoaderRetargetTest
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
             Check("all twelve fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu and a return sign are retargeted", changes.Count == 45);
-            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 116);
+            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 117);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -378,6 +379,7 @@ public static class TestCompat
     public static void SetTargetTosave(attachablescript a, tosaveitemscript t) => Target = t;
     public static UnityEngine.Vector3 PointLocalPos(attachablescript a) => new UnityEngine.Vector3 { x = 7 };
     public static void AttachableLoad(attachablescript a, UnityEngine.Vector3 pos) => LoadedAt = pos;
+    public static tosaveitemscript Claimed; public static void Claim(tosaveitemscript t, bool b) => Claimed = t;
     public static System.Reflection.MethodInfo GetMethod(System.Type t, string name) =>
         LoaderRetarget.LooseMethod(t, name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
     public static System.Reflection.MethodInfo GetMethodFlags(System.Type t, string name, System.Reflection.BindingFlags flags) => LoaderRetarget.LooseMethod(t, name, flags);

@@ -180,6 +180,7 @@ public class tosaveitemscript   // test stub, not game code
     public void FStart(int key) { }
     public partslotscript[] partslotscripts;
     public int category;   // nothing on the beta: kept for the mod
+    public void Claim(bool b) { }   // the public game's multiplayer claim; the beta has none
 #else
     public uint Started; public bool dontUnparent;
     public void FStart(uint key) { Started = key; }
