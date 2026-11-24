@@ -50,8 +50,11 @@ static partial class EntitySplitTest
         Check(!EntityDoors.RestoreAttachFrame(d.At, new[] { 99 }, default) && EntityAttachments.AttachPosesBad == bad + 1, "bad frame path increments original counter");
         var oldPoint = d.At.point; d.At.point = new Transform();
         EntityDoors.KeepDoorAttach(401, new[] { 0 }, new Vector3(.25f, -.5f, .75f), new Vector3(2, 3, 4), Quaternion.identity, oldPoint);
+        bool parentAtAttach = d.At.parentAtAttach;
         d.Entity.Proxy = true; d.Entity.HandDraw.Source = new object(); EntityDoors.RestoreStoredDoorAttaches();
-        Check(d.At.point.parent == null && stored.Count == 1, "hand managed attachment waits for release");
+        Check(d.At.point.parent == d.Frame && stored.Count == 1, "an attached copy restores at once, even mid hand glide (its attach places it, not the hand)");
+        d.At.point = new Transform(); d.At.parentAtAttach = parentAtAttach;
+        EntityDoors.KeepDoorAttach(401, new[] { 0 }, new Vector3(.25f, -.5f, .75f), new Vector3(2, 3, 4), Quaternion.identity, oldPoint);
         d.Entity.HandDraw.Reset(); d.Entity.Proxy = false; Entities._applyingAttach = true; EntityDoors.RestoreStoredDoorAttaches();
         Check(d.At.point.parent == d.Frame && d.At.parentAtAttach && d.At.transform.position == d.Frame.position + d.Frame.rotation * new Vector3(2, 3, 4) && Entities._applyingAttach, "restore rebuilds moving frame pose and preserves incoming attach guard"); Entities._applyingAttach = false;
         var bound = d.At.point; EntityDoors.BindStoredDoorAttach(401, bound);

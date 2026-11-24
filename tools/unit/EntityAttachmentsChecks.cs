@@ -33,8 +33,15 @@ static partial class EntitySplitTest
             var w = new NetWriter(); EntityAttachments.WriteAttachPose(w, at); return w.Buf.Take(w.Len).ToArray();
         }
         rows.Add("no-frame|" + Convert.ToHexString(Pose()));
-        var frame = new Transform { position = new Vector3(10, 20, 30) };
-        at.point = new Transform(); at.point.SetParent(frame, true); at.transform.position = new Vector3(11.25f, 17.5f, 33.75f);
+        // the frame is what the attach record names (the item it is on), not the collider the point hangs under: a copy
+        // makes its point anew, under another collider or the item itself
+        var target = new tosaveitemscript(); var frame = target.transform; frame.position = new Vector3(10, 20, 30);
+        var collider = new Transform { position = new Vector3(10.5f, 19f, 30.25f) }; collider.SetParent(frame, true);
+        at.Target = target;
+        at.point = new Transform(); at.point.SetParent(collider, true); at.transform.position = new Vector3(11.25f, 17.5f, 33.75f);
+        Check(EntityAttachments.AttachFrame(at) == frame, "attach frame is the record's item, not the point's collider");
+        at.Target = null; Check(EntityAttachments.AttachFrame(at) == at.point, "attach frame on the ground is the point itself");
+        at.Target = target;
         at.transform.rotation = Quaternion.identity;
         byte[] pose = Pose(); rows.Add("parent-frame|" + Convert.ToHexString(pose));
         at.slot = new partslotscript(); rows.Add("slot|" + Convert.ToHexString(Pose())); at.slot = null;

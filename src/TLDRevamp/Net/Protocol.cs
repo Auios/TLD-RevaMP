@@ -9,11 +9,12 @@ namespace TLDRevamp.Net
     {
         public const byte LiveUsable = 93;   // unreliable item: net, epoch, item, usable, seq/stamp, u16 values; net=0: WritePoi + seq/stamp (building)
         public const byte JoinLoading = 110; // reliable: phase 0 + varuint count + u32 net ids; phase 1 = initial records sent
-        public const ushort Version = 62; // what each number changed, and when it changes: docs/PROTOCOL.md
+        public const ushort Version = 63; // what each number changed, and when it changes: docs/PROTOCOL.md
         public const byte ModsNeeded = 81; // reliable s?c: host name, required identities, problem lines (ModsNeeded.Write)
         public const byte SessionSettings = 111; // reliable, server to clients: one validated full settings snapshot
 
         // 62: ModsNeeded replaces host mod file transfers; installs use the live catalog.
+        // 63: an attach pose is relative to what the attach record names (EntityAttachments.AttachFrame), not the point's parent.
 
         // Reports: reliable, throttled. 60 host ask = str note, f64 momentSt.
         // 94 client consent = u8 share (0/1); defaults off until announced after Ready.

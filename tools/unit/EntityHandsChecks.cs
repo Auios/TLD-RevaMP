@@ -224,6 +224,8 @@ Entities.TestEpoch = true;
         EntityHands.TakeHandPose(e, new Vector3d(4, 0, 0), Quaternion.identity);
         Check(e.HandOwner == 2 && e.HandEpoch == 7 && e.HandPose && e.HandDraw.HasShown, "hand receive seeds draw and records owner epoch");
         Check(EntityHands.ItemHand(e) != null && EntityHands.HandManaged(e), "valid remote hand owns drawing");
+        var heldAttach = e.Root.attachable; e.Root.attachable = new attachablescript { tosave = e.Root, attached = true };
+        Check(!EntityHands.HandManaged(e), "an attached copy is placed by its attach, not the hand"); e.Root.attachable = heldAttach;
         e.Epoch++; Check(EntityHands.ItemHand(e) == null, "old epoch hand refused"); e.Epoch--;
         e.OwnerId++; Check(EntityHands.ItemHand(e) == null, "old owner hand refused"); e.OwnerId--;
         e.WornBy = 2; Check(EntityHands.ItemHand(e) == null, "worn item yields hand"); e.WornBy = -1;

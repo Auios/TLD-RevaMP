@@ -17,6 +17,10 @@ change, before this rule.
 
 ## History
 
+## 63
+
+- an attach pose (and the place repair's glued poses) is relative to what the attach record names: the item it is on, or the building; a door, hood or lid it hangs on; on the ground the point itself. It was the point's parent, which a copy makes anew under another collider (`EntityAttachments.AttachFrame`)
+
 ## 62
 
 Released in v0.69.2; unchanged in v0.69.3.

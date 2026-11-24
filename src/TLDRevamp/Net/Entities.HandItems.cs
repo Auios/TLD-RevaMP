@@ -35,7 +35,11 @@ namespace TLDRevamp.Net
 
         // The ordinary transform/body movers yield until the release glide ends. Never put a hand pose into Ip:
         // its world/car samples keep running for drops, server records and machines without the holder model.
-        internal static bool HandManaged(Ent e) => e.Proxy && (ItemHand(e) != null || e.HandDraw.Source != null || e.HandDraw.Blending(Time.timeAsDouble));
+        // Attached (glued, or in a slot): its attach places it. The hand pose or a release glide still running moved a copy
+        // glued straight from its owner's hands for one more frame, and the item kept that as its pose on its point: 2-56 mm,
+        // up to 0.7 m in that frame (MountAnything two-game tests, 2026-11-24).
+        internal static bool HandManaged(Ent e) => e.Proxy && !AttachedNow(e) && (ItemHand(e) != null || e.HandDraw.Source != null || e.HandDraw.Blending(Time.timeAsDouble));
+        private static bool AttachedNow(Ent e) => e.Root != null && e.Root.attachable != null && e.Root.attachable.attached;
 
         internal static void TakeHandPose(Ent e, Vector3d global, Quaternion globalRot)
         {

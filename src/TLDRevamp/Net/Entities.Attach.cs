@@ -271,6 +271,7 @@ namespace TLDRevamp.Net
             if (hasPose && EntityDoors.RestoreAttachFrame(at, framePath, pointLp)) EntityAttachments.ApplyAttachPose(pe, at, poseLp, poseLq);
             if (pe.Proxy) { ApplyProxyBodies(pe); pe.Ip = new PoseInterpolator(); }
             if (pe.Held) ShowHeld(pe, false);   // bolted on: no more states come — its copy collides again
+            pe.HandDraw.Reset();   // no release glide from the hands afterwards: the attach placed it
             if (pe.Stored) ShowStored(pe, false);
             AttachesApplied++;
             SessionLog.Event("attach-applied", partNet, parentNet, item: parentIdx, slot: index, to: MyId, epoch: pe.Epoch);
@@ -412,7 +413,22 @@ namespace TLDRevamp.Net
             }
         }
 
-        internal static Transform AttachFrame(attachablescript at) => at.point == null ? null : at.point.parent != null ? at.point.parent : at.point;
+        /// What an attached object's pose is relative to, the same object on every machine: a door, hood or lid its
+        /// point hangs on (the path to it goes along: the object rides that part), else what the game's attach record
+        /// names (the item it is on, or the building), else the point itself (on the ground). Not the point's parent: a
+        /// copy makes its point anew from the record, under the collider of the record's index or under the item itself,
+        /// while the attacher's hangs under the collider it aimed at. Glued items sat 2-85 mm off on the other machine,
+        /// a sponge on a house 610 mm, and the place repair kept them there (MountAnything two-game tests, 2026-11-24).
+        internal static Transform AttachFrame(attachablescript at)
+        {
+            if (at.point == null) return null;
+            var parent = at.point.parent;
+            if (parent != null && EntityDoors.DoorAttachFrame(parent)) return parent;
+            var it = at.AttachedToTosave();
+            if (it != null) return it.transform;
+            var poi = at.AttachedToPOI();
+            return poi != null ? poi.transform : at.point;
+        }
 
         internal static void WriteAttachPose(NetWriter w, attachablescript at)
         {
