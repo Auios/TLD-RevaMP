@@ -199,6 +199,7 @@ namespace TLDRevamp
             foreach (var a in CompatMethods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> LoaderCompat." + a[3];
             yield return "GameObject.Find(\"Main\") -> LoaderCompat.FindMain";
             yield return "Harmony.PatchAll() -> LoaderCompat.PatchAll (all of them or none)";
+            yield return "AccessTools.TypeByName(name) -> LoaderCompat.TypeByName (remembered, a miss until another assembly loads)";
             yield return "Dictionary<Int32,save_prefab>.ContainsKey -> LoaderCompat.RecordIdUsed; GetComponent<a type the beta lacks>() -> LoaderCompat.NoComponent";
             yield return "type save_prefab -> LoaderCompat.SaveRecord (a mod's own records, kept in the save as plate strings)";
             yield return "type roadBuildingScript -> LoaderCompat.RoadBuildings (no common parent; the placed points of interest)";
@@ -413,6 +414,15 @@ namespace TLDRevamp
                 var m = compat.GetMethod(mr.Parameters.Count == 0 ? "PatchAll" : "PatchAllFrom", Statics);
                 if (m == null) return null;
                 what = "Harmony.PatchAll -> " + compat.Name + "." + m.Name;
+                return m;
+            }
+            // AccessTools.TypeByName(name): remembered, a miss too (Road Save Guard looks for seven absent mods every frame)
+            if (mr.Name == "TypeByName" && mr.DeclaringType.FullName == "HarmonyLib.AccessTools" && !mr.HasThis && mr.Parameters.Count == 1 &&
+                mr.Parameters[0].ParameterType.MetadataType == MetadataType.String)
+            {
+                var m = compat.GetMethod("TypeByName", Statics);
+                if (m == null) return null;
+                what = "AccessTools.TypeByName -> " + compat.Name + ".TypeByName";
                 return m;
             }
             // GameObject.Find("Main"): the public game's mainscript object; the beta's world has another object by that name

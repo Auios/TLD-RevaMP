@@ -158,6 +158,19 @@ static class LoaderRetargetTest
                   (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Lights").Invoke(null, new object[] { ts }) == 1);
             Check("compat: an array the beta keeps as a list (tosaveitemscript.randomScales)",
                   (int)LoadBytes(mod).GetType("AliasMod").GetMethod("Scales").Invoke(null, new object[] { ts }) == 2 && ts.randomScales.Count == 2);
+            {
+                // a mod's AccessTools.TypeByName (Road Save Guard asks every frame for mods that aren't there)
+                var m = ModuleDefinition.CreateModule("TypeByNameMod", ModuleKind.Dll);
+                var harmony = new AssemblyNameReference("0Harmony", new Version(2, 0)); m.AssemblyReferences.Add(harmony);
+                var tbn = new MethodReference("TypeByName", m.ImportReference(typeof(Type)), new TypeReference("HarmonyLib", "AccessTools", m, harmony));
+                tbn.Parameters.Add(new ParameterDefinition(m.TypeSystem.String));
+                var holder = new TypeDefinition("", "Finder", TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed, m.TypeSystem.Object); m.Types.Add(holder);
+                var find = new MethodDefinition("Find", MethodAttributes.Public | MethodAttributes.Static, m.ImportReference(typeof(Type))); holder.Methods.Add(find);
+                var fil = find.Body.GetILProcessor(); fil.Emit(OpCodes.Ldstr, "System.String"); fil.Emit(OpCodes.Call, tbn); fil.Emit(OpCodes.Ret);
+                var tc = LoaderRetarget.Apply(m, typeof(mainscript).Assembly, typeof(TestCompat));
+                Check("compat: AccessTools.TypeByName asks the helper (remembered there)", tc.Contains("AccessTools.TypeByName -> TestCompat.TypeByName") &&
+                      (Type)LoadBytes(m).GetType("Finder").GetMethod("Find").Invoke(null, null) == typeof(string) && TestCompat.TypeByNameCalls == 1);
+            }
             var asm = LoadBytes(mod).GetType("AliasMod");
             Check("compat: GameObject.Find(\"Main\") gets mainscript's object", changes.Contains("GameObject.Find(\"Main\") -> TestCompat.FindMain") &&
                   ((UnityEngine.GameObject)asm.GetMethod("Main").Invoke(null, null)).Name == "the main object");
@@ -278,7 +291,7 @@ static class LoaderRetargetTest
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
             Check("all fourteen fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu and a return sign are retargeted", changes.Count == 47);
-            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 119);
+            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 120);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -394,6 +407,8 @@ public static class TestCompat
     public static void RefreshUsable(usablescript u, float slide, float x, float y) => u.Refresh(slide, x, y, u.currentTurnState);
     public static void LayerFStart(layerScript l) => l.FStart("the item", 0);
     static readonly System.Collections.Generic.Dictionary<string, object> KeptValues = new System.Collections.Generic.Dictionary<string, object>();
+    public static int TypeByNameCalls;
+    public static Type TypeByName(string name) { TypeByNameCalls++; return Type.GetType(name); }
     public static T Kept<T>(object owner, string field) => KeptValues.TryGetValue(field, out var v) ? (T)v : default(T);
     public static void Keep<T>(object owner, string field, T value) => KeptValues[field] = value;
     public static objGenScript.prefabClass[] ObjTypes(mapSettingScript m)

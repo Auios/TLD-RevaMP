@@ -324,7 +324,9 @@ lists (randomScales, randoms; World Tweaker's items set them), and a field the b
 (interiorLights) is kept for the mod as an object. Advanced Modding Toolkit's item templates, which have no name, save
 nothing when the old item database goes with a scene load (the beta makes a new one each time; AMT threw there once per
 item). A copy of a tank cap that had started (AMT's helicopter clones one) starts as its own: Unity copies the beta's
-started flag but not the particle module, and its Update threw every frame. tosaveitemscript.Claim(b), the public game's multiplayer claim, does nothing. `mods aliases` lists their mappings even in the menu; each changed DLL
+started flag but not the particle module, and its Update threw every frame. A mod's AccessTools.TypeByName is remembered,
+a miss too until another assembly loads (Road Save Guard looks for seven absent mods every frame; each miss searched every
+loaded type and logged a warning, and the game slowed to a crawl). tosaveitemscript.Claim(b), the public game's multiplayer claim, does nothing. `mods aliases` lists their mappings even in the menu; each changed DLL
 logs which ones it used. Unchanged DLLs still load from their files. The old world generator has no aliases, and a
 SaveRecord holds a mod's own data only: savedatascript.SpawnItem(save_prefab) and a record's transform aren't mapped. The existing seed/load/napszak/loaded/multi/world/mainWorld fields are host snapshots; writing those does not write beta
 state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,

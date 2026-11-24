@@ -442,6 +442,24 @@ namespace TLDRevamp
             return LoaderRetarget.InvokeLoose(m, obj, args);
         }
 
+        /// HarmonyLib.AccessTools.TypeByName in a mod: the same answer, remembered; a miss until another assembly loads. Road
+        /// Save Guard looks for seven other mods every frame: each miss searched every loaded type and HarmonyX logged a
+        /// warning for it, and the game slowed until the test car stood still.
+        public static System.Type TypeByName(string name)
+        {
+            if (name == null) return HarmonyLib.AccessTools.TypeByName(name);
+            lock (_typesByName)
+            {
+                if (!_typesWatched) { _typesWatched = true; System.AppDomain.CurrentDomain.AssemblyLoad += (s, e) => { lock (_typesByName) _typesByName.Clear(); }; }
+                if (_typesByName.TryGetValue(name, out var known)) return known;
+            }
+            var t = HarmonyLib.AccessTools.TypeByName(name);
+            lock (_typesByName) _typesByName[name] = t;
+            return t;
+        }
+        private static readonly Dictionary<string, System.Type> _typesByName = new Dictionary<string, System.Type>();
+        private static bool _typesWatched;
+
         /// Harmony's PatchAll(assembly) called by reflection (Long Haul Overhaul's own copy of Harmony): each patch class on
         /// its own, as PatchAll does, but one whose target the beta dropped (mainscript.PauseRBs, setcenterofmass.Pause)
         /// is left out. PatchAll stopped there: the classes after it (Long Haul's wheels, sandstorm, pouring) never applied.
