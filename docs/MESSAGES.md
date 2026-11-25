@@ -140,7 +140,7 @@ breakables, trailers or mod objects.
 | 112 | WorldBreak | both | state | `ServerWorldBreaksTo` for later players; `WorldBreakTick` when near | Kept for the session, 4096 at most. A piece that never appears here is looked for less and less often. |
 | 113 | CarTune | both | stream | `SendTuneTo` for later players; `CarTuneTick` applies it again when the car is placed anew; the owner sends a tuned car again every `CarTuneResendS` | Only from the car's owner; the server keeps the latest per car. Unreadable or out of range: refused, not passed on. |
 | 114 | ModEdited | both | stream | `OwnerTick` sends the whole record after `EditChain.MaxChainEdits` edits or on a `ModResync`; `SendAdd` gives later copies the edits since the record | Only for types with `ReplayEdits`. A copy that misses one, refuses it or comes to another record hash waits for the whole record and asks for it. A gap at the host asks the owner. |
-| 115 | ModResync | both | ask | - | A copy's ask: the owner sends its record, or the host its history when the owner has no copy loaded; one per object every `ResyncAskGapS`, only for an object the asker has. A new owner's ask: the host's history, then a ResyncDone. Lost: asked again after `ResyncRetryS`. |
+| 115 | ModResync | both | ask | - | A copy's ask: the owner sends its record, or the host its history when the owner has no copy loaded; only for an object the asker has, asks to the owner merge into one record. A new owner's ask: the host's history, then a ResyncDone. Lost: asked again after `ResyncRetryS`. |
 
 ## Not settled by the code
 

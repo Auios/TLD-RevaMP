@@ -61,8 +61,6 @@ namespace TLDRevamp.Net
         /// Copies' replays that came to another record than the owner's, per type: past MismatchWarnAt the log says so once.
         private static readonly Dictionary<string, int> MismatchByType = new Dictionary<string, int>();
         public static int MismatchWarnAt = 5;
-        /// The host answers a copy's ask for one object at most this often.
-        public static float ResyncAskGapS = 0.5f;
         /// A copy waiting for a whole record asks its owner again after this long.
         public static float ResyncRetryS = 3f;
         /// The far store's margin: a copy goes when its player is this many times ViewRange away (it came at ViewRange).
@@ -695,7 +693,6 @@ namespace TLDRevamp.Net
             // replayed edits: the latest version and the stored record's, and the edits between them (ModEdited as sent)
             // for later copies
             public uint Seq, RecordSeq;
-            public float AskAt = -100f;   // the last copy's ask answered
             public readonly List<byte[]> Kept = new List<byte[]>(); public int KeptBytes;
         }
 
@@ -828,10 +825,10 @@ namespace TLDRevamp.Net
                     if (r.Bad || !Server.TryGetValue(id, out var so) || !so.Type.ReplayEdits) { ResyncsRefused++; return; }
                     // the owner catching up (it just became the owner): the record and the edits since it, then the end
                     if (from == so.Owner) { SendHistory(from, so, true); return; }
-                    // a copy that missed one or came to another record: only for an object it has, one ask per object at
-                    // a time; the owner sends its record, or, with no copy of its own loaded, the host the history it keeps
-                    if (!ShownTo(from).Contains(id) || Time.realtimeSinceStartup - so.AskAt < ResyncAskGapS) { ResyncsRefused++; return; }
-                    so.AskAt = Time.realtimeSinceStartup;
+                    // a copy that missed one or came to another record, for an object it has: the owner sends its record
+                    // (asks merge there: one record per RecordMinInterval), or, with no copy of its own loaded, the host
+                    // the history it keeps
+                    if (!ShownTo(from).Contains(id)) { ResyncsRefused++; return; }
                     if (ShownTo(so.Owner).Contains(id)) AskOwner(so, from);
                     else SendHistory(from, so, false);
                     break;
