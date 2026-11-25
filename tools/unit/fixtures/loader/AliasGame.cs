@@ -201,6 +201,19 @@ public class visszarako { public doublecoord coord; }
 #else
 public class visszarako { public UnityEngine.Vector3d coord; }
 #endif
+// a building along the road: the public game's buildingscript (its place, its kind, started with the kind) and the
+// beta's poiScript (a place id and a generator id, started with both); the ground lined up to it, with a flag or none
+#if PUBLIC_GAME
+public class buildingscript { public doublecoord pos; public int tipus; public void FStart(int kind) { } }
+public class terrainHeightAlignToBuildingScript { public void FStart(bool b) { } }
+#else
+public class poiScript
+{
+    public UnityEngine.Vector3d posID; public int poigenid; public bool started;
+    public void FStart(int id, UnityEngine.Vector3d pos) { started = true; poigenid = id; posID = pos; }
+}
+public class terrainHeightAlignToBuildingScript { public int Started; public void FStart() { Started++; } }
+#endif
 
 // The public game's parts (partscript, its slot's part field) and the beta's: parts are attachablescripts, the slot
 // answers part().

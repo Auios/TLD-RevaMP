@@ -34,6 +34,9 @@ namespace TLDRevamp
             new[] { "tosaveitemscript", "part", "attachablescript", "tosaveitemscript", "attachable" },
             new[] { "pickupable", "part", "attachablescript", "pickupable", "tosave.attachable" },
             new[] { "itemdatabase", "buildings", "UnityEngine.GameObject[]", "itemdatabase", "pois" },
+            // a building's place and kind (buildingscript, now poiScript): the beta's place id and generator id
+            new[] { "poiScript", "pos", "UnityEngine.Vector3d", "poiScript", "posID" },
+            new[] { "poiScript", "tipus", "System.Int32", "poiScript", "poigenid" },
             new[] { "mapSettingScript", "TG", "mapSettingScript", "menuhandler", "s.currentMainMap" },
             new[] { "mapSettingScript", "staticReference", "mapSettingScript", "menuhandler", "s.currentMainMap" },
             new[] { "mainscript", "terrainGenerationSettings", "mapSettingScript", "menuhandler", "s.currentMainMap" },
@@ -115,6 +118,8 @@ namespace TLDRevamp
             new[] { "pickupable", "Drop", "System.Boolean", "", "" },
             // the beta's Craft has no second argument (a car battery mod)
             new[] { "partslotscript", "Craft", "attachablescript,System.Boolean", "attachablescript", "1" },
+            // the beta lines the ground up to a building by itself (no flag)
+            new[] { "terrainHeightAlignToBuildingScript", "FStart", "System.Boolean", "", "" },
             // the beta's spawns return what they made (a spawner mod's calls expect nothing back: the adapter drops it); the
             // painted one has a paint flag the public game's always did
             new[] { "mainscript", "Spawn", "UnityEngine.GameObject,System.Int32", "UnityEngine.GameObject,System.Int32", "1,2" },
@@ -154,6 +159,8 @@ namespace TLDRevamp
             new[] { "mapSettingScript", "generator", "mapSettingScript", "Map", "" },
             new[] { "mapSettingScript", "objGeneration", "mapSettingScript", "Map", "" },
             new[] { "mapSettingScript", "objTypes", "objGenScript/prefabClass[]", "ObjTypes", "" },
+            // the main road in driving order: markers on the beta's road pieces
+            new[] { "roadGenScript", "roadList", "roadscript[]", "RoadList", "" },
             // the generator of the buildings along the road: the helper's stand-in, RoadBuildings (StandIns)
             new[] { "mapSettingScript", "roadBuildingGeneration", "roadBuildingScript", "RoadBuildingGeneration", "" },
             new[] { "mapSettingScript", "RoadBuildingScript", "roadBuildingScript", "RoadBuildingGeneration", "" },
@@ -187,6 +194,7 @@ namespace TLDRevamp
             new[] { "attachablescript", "Load", "UnityEngine.Vector3", "AttachableLoad" },
             new[] { "mountStuff", "Lock", "pickupable,System.Boolean", "MountLock" },
             new[] { "tosaveitemscript", "Claim", "System.Boolean", "Claim" },
+            new[] { "poiScript", "FStart", "System.Int32", "PoiFStart" },
         };
 
         public static IEnumerable<string> AliasDescriptions()
@@ -194,7 +202,7 @@ namespace TLDRevamp
             foreach (var a in Fields) yield return a[0] + "." + a[1] + " -> " + a[3] + "." + a[4] + " (read/write/address)";
             foreach (var a in Methods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> " + a[0] + "." + a[1] + "(" + a[3] + ") [" + a[4] + "]";
             foreach (var a in Types) yield return "type " + a[0] + " -> " + a[1];
-            yield return "typeof(an old type) in an attribute ([HarmonyPatch(typeof(buildingscript), ...)]) -> the same type as above";
+            yield return "typeof(an old type) in an attribute (a Harmony patch's target type, buildingscript) -> the same type as above";
             foreach (var a in Getters) yield return a[0] + "." + a[1] + " -> " + a[0] + "." + a[3] + "()";
             foreach (var a in Lists) yield return a[0] + "." + a[1] + " " + a[2] + "[] -> " + a[0] + "." + a[3] + " List<" + a[2] + ">";
             foreach (var a in Setters)
@@ -535,7 +543,7 @@ namespace TLDRevamp
         private static bool Missing(Assembly game, string gameName, TypeReference tr) =>
             tr != null && !(tr is TypeSpecification) && tr.Scope is AssemblyNameReference scope && scope.Name == gameName && GameType(game, gameName, tr) == null;
 
-        /// typeof(X) in an attribute ([HarmonyPatch(typeof(buildingscript), "SpawnStuff")]) is a name in the attribute's
+        /// typeof(X) in an attribute (a Harmony patch naming buildingscript's SpawnStuff) is a name in the attribute's
         /// blob, not one of the module's type references: the renames above missed it, the type didn't load, and the
         /// mod's PatchAll stopped there with none of its patches. The same renames, there too. Only an
         /// attribute whose blob names an old type is read (an attribute that can't be read keeps its blob).

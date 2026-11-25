@@ -9,7 +9,7 @@ BepInEx/TLDLoaderMods (with the workshop's dependency for it), a new game, then
   reload  the world saved and loaded again: errors, and which spawned items came back;
 then Player.log's exceptions that a run without mods doesn't have. One JSON line per mod in --out; a mod already
 there is skipped (the run resumes). The mods' files come from --mods (the workshop's DLLs, downloaded beforehand).
-  tools/workshopmods.py --mods <folder> --out <results.jsonl> [--only a.dll,b.dll] [--baseline] [--no-build]"""
+  tools/workshopmods.py --mods <folder> --out <results.jsonl> [--only a.dll,b.dll] [--logs <folder>] [--baseline] [--no-build]"""
 import sys, time, json, re, math, shutil, pathlib, collections
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game, tldenv
@@ -20,6 +20,7 @@ def arg(name, default=None): return sys.argv[sys.argv.index(name) + 1] if name i
 MODS = pathlib.Path(arg("--mods"))
 OUT = pathlib.Path(arg("--out"))
 ONLY = [x for x in arg("--only", "").split(",") if x]
+LOGS = pathlib.Path(arg("--logs")) if "--logs" in sys.argv else None   # keep each mod's Player.log here
 PROBE = pathlib.Path(arg("--probe")) if "--probe" in sys.argv else None   # a test mod: WsProbe.Probe.SpawnAmt / Report
 G = pathlib.Path(tldenv.GAME_DIR); LM = G / "BepInEx/TLDLoaderMods"; ASIDE = G / "BepInEx/TLDLoaderMods.aside"
 SEED = 20261123
@@ -201,14 +202,18 @@ def run_mod(mod, base):
         newest = max(game.SAVES.glob("TLDsaveData_autosave*.tlds"), key=lambda p: p.stat().st_mtime)
         b = game.loadsave(newest.name[len("TLDsaveData_"):-len(".tlds")])
         n3, _ = errcount(b); r["errors_reload"] = n3
-        back = []
+        back = []; near = {}; back_as = {}
         for row in r["items"]:
             if not row.get("found"): continue
             b(f"tpground {row['where'][0]} {row['where'][1]}"); time.sleep(3)
             if row.get("became"): there = any(x["save"] == row["save"] for x in b("findgo * 30")["found"])
             else: there = bool(b(f"findgo {row['name'].lower()} 30")["found"])
-            if there: back.append(row["name"])
-        r["reload"] = {"ok": True, "items_back": back}
+            if there: back.append(row["name"]); continue
+            found = b("findgo * 30")["found"]
+            same = [x["name"] for x in found if row.get("save") and x["save"] == row["save"]]
+            if same: back_as[row["name"]] = same[0]   # its save id came back under another name (the base prefab of a car, or another item)
+            else: near[row["name"]] = [(x["name"], x["save"]) for x in found][:12]   # what is there instead
+        r["reload"] = {"ok": True, "items_back": back, "back_as": back_as, "near": near}
     except BaseException as ex:
         if isinstance(ex, KeyboardInterrupt): raise
         r["reload"] = {"ok": False, "error": str(ex)[:300]}
@@ -255,6 +260,10 @@ def main():
                 try: game.quit_game()
                 except Exception as ex: r["quit"] = str(ex)[:200]
                 exc = exceptions()
+                if LOGS:   # the whole Player.log (exceptions() keeps only each one's first frame)
+                    LOGS.mkdir(parents=True, exist_ok=True)
+                    try: shutil.copyfile(tldenv.PLAYER_LOG, LOGS / (mod + ".log"))
+                    except OSError: pass
                 r["modlog"] = modlog()
                 r["exceptions"] = {k: v for k, v in exc.items() if k not in base["exceptions"]}
                 r["category"] = META.get("category", {}).get(mod); r["version"] = META.get("version", {}).get(mod)

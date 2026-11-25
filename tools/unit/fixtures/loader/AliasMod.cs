@@ -54,7 +54,7 @@ public static class AliasMod
     /// A field the beta dropped along with its type (one mod's interiorLights), stored and read back.
     public static int Lights(tosaveitemscript t) { t.holes = new System.Collections.Generic.List<digholescript2>(); t.holes.Add(null); return t.holes.Count; }
     /// An array the beta keeps as a list (one mod's items set an empty one).
-    [TypeNote(typeof(partscript))]   // as [HarmonyPatch(typeof(buildingscript), "SpawnStuff")] (in one mod)
+    [TypeNote(typeof(partscript))]   // as a Harmony patch on buildingscript's SpawnStuff (in one mod)
     public static System.Type Noted() => ((TypeNoteAttribute)typeof(AliasMod).GetMethod("Noted").GetCustomAttributes(typeof(TypeNoteAttribute), false)[0]).Type;
     public static int Scales(tosaveitemscript t) { t.randomScales = new randomScaleScript[] { new randomScaleScript(), new randomScaleScript() }; return t.randomScales.Length; }
 
@@ -132,6 +132,16 @@ public static class AliasMod
 
     /// A spawner mod: a spawn, plain and painted (the beta's return what they made).
     public static void Spawns(mainscript m, UnityEngine.GameObject g) { m.Spawn(g, -1); m.Spawn(g, new UnityEngine.Color(), 0, -1); }
+
+    /// A building mod: a copy takes the place of a building on its own place, started with the building's kind.
+    public static double Building(buildingscript b, buildingscript copy, terrainHeightAlignToBuildingScript ground)
+    {
+        b.pos.x = 5;
+        copy.pos = b.pos;
+        copy.FStart(b.tipus);
+        ground.FStart(false);
+        return copy.pos.x + b.tipus;
+    }
 
     /// A car battery mod: the battery into its slot.
     public static void Craft(partslotscript s, partscript p) => s.Craft(p, true);

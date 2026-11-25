@@ -220,6 +220,11 @@ static class LoaderRetargetTest
             asm.GetMethod("Remount").Invoke(null, new object[] { mount, item });
             Check("compat: mountStuff.Lock is the beta's Store (a modding toolkit's saved items in their mounts)",
                   changes.Contains("mountStuff.Lock(pickupable,System.Boolean) -> TestCompat.MountLock") && mount.Stored == item && mount.IgnoredRigidbody);
+            var building = new poiScript { poigenid = 7 }; var copy = new poiScript(); var ground = new terrainHeightAlignToBuildingScript();
+            var placed = (double)asm.GetMethod("Building").Invoke(null, new object[] { building, copy, ground });
+            Check("buildings: pos and tipus are the beta's posID and poigenid, FStart(kind) starts with the place (a building mod)",
+                  changes.Contains("poiScript.FStart(System.Int32) -> TestCompat.PoiFStart") && building.posID.x == 5 &&
+                  copy.started && copy.poigenid == 7 && copy.posID.x == 5 && ground.Started == 1 && placed == 12);
             var onto = new tosaveitemscript();
             var swapped = (UnityEngine.Vector3)asm.GetMethod("Swap").Invoke(null, new object[] { new attachablescript(), onto });
             Check("compat: attachablescript.targetTosave written, pointLocalPos read and Load(pos) ask the helper (a tool mod's swap)",
@@ -327,8 +332,8 @@ static class LoaderRetargetTest
         using (var mod = ModuleDefinition.ReadModule(dll))
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
-            Check("all fourteen fields, seventeen method shapes, the five part redirects, the coordinate type, the generator chain and its static map, the main menu, a return sign and an attribute's typeof are retargeted", changes.Count == 48);
-            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 124);
+            Check("all sixteen fields, eighteen method shapes, a building's start, the five part redirects, the coordinate type, the generator chain and its static map, the main menu, a return sign and an attribute's typeof are retargeted", changes.Count == 52);
+            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 129);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -443,6 +448,7 @@ public static class TestCompat
     public static UnityEngine.GameObject FindMain(string name) => new UnityEngine.GameObject { Name = "the main object" };
     public static void RefreshUsable(usablescript u, float slide, float x, float y) => u.Refresh(slide, x, y, u.currentTurnState);
     public static void LayerFStart(layerScript l) => l.FStart("the item", 0);
+    public static void PoiFStart(poiScript p, int kind) => p.FStart(kind, p.posID);
     static readonly System.Collections.Generic.Dictionary<string, object> KeptValues = new System.Collections.Generic.Dictionary<string, object>();
     public static int TypeByNameCalls;
     public static Type TypeByName(string name) { TypeByNameCalls++; return Type.GetType(name); }

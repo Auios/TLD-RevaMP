@@ -45,6 +45,24 @@ namespace TLDRevamp
             holes.Clear();
         }
 
+        static partial void ItemCount(ref int count) { var db = itemdatabase.s; count = db != null && db.items != null ? db.items.Length : 0; }
+        /// The items a mod's DbLoad appended (places from `from` on): each its place as its tosaveitemscript.id. A game
+        /// prefab a mod lists again, or one it lists twice, keeps the id of its first place.
+        static partial void NumberAppended(int from)
+        {
+            var db = itemdatabase.s;
+            if (db == null || db.items == null || from >= db.items.Length) return;
+            var earlier = new HashSet<GameObject>();
+            for (int i = 0; i < from; i++) if (db.items[i] != null) earlier.Add(db.items[i]);
+            for (int i = from; i < db.items.Length; i++)
+            {
+                var go = db.items[i];
+                if (go == null || ReferenceEquals(go, _slotPlaceholder) || !earlier.Add(go)) continue;
+                var t = go.GetComponent<tosaveitemscript>();
+                if (t == null || t.id == i) continue;
+                t.id = i; AppendedItemsNumbered++;
+            }
+        }
 
         /// TLD Loader's loading panel (ModLoader.loading): an inactive object, so a mod's `loading.activeSelf` is false.
         static partial void MakeLoadingPanel()

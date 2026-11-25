@@ -350,12 +350,18 @@ namespace TLDRevamp
 
         // ------------------------------------------------------------------ cars
 
-        /// carscript.driverSeat: the beta marks the seat itself (driverSeat0).
+        /// carscript.driverSeat: the seat a mod set as the driver's, else the one the beta marks itself (driverSeat0): from
+        /// the car's save list, or its children when that list is empty yet (a car a mod just spawned). Before 2026-11-25
+        /// a seat a mod set was kept but never read back (an AI traffic mod's cars stopped in their setup).
         public static seatscript DriverSeat(carscript c)
         {
             Calls++;
-            var seats = c != null && c.tosave != null ? c.tosave.seats : null;
+            if (c == null) return null;
+            seatscript set = Kept<seatscript>(c, "carscript.driverSeat");
+            if (set != null) return set;
+            var seats = c.tosave != null ? c.tosave.seats : null;
             if (seats != null) foreach (var s in seats) if (s != null && s.driverSeat0) return s;
+            foreach (var s in c.GetComponentsInChildren<seatscript>(true)) if (s.driverSeat0) return s;
             return null;
         }
 
@@ -379,6 +385,76 @@ namespace TLDRevamp
                         foreach (var c in g.categories)
                             if (c != null && c.prefabs != null) foreach (var p in c.prefabs) if (p != null && p.prefab != null) all.Add(p);
             return all.ToArray();
+        }
+
+        // ------------------------------------------------------------------ the road
+
+        /// roadGenScript.roadList, the public game's main road as one array in driving order (the beta has none): the
+        /// road pieces the beta has placed, in order (each one's next, as the beta finds it: GetNextRoad), the longest run.
+        /// Each entry is a hidden marker on its piece (inactive, so nothing of roadscript runs on it), at the piece's start
+        /// and facing the next one: an AI traffic mod drives from entry to entry and checks it passed one by its forward,
+        /// and the beta's pieces keep their prefab's rotation. A marker stays with its piece (world shifts, despawn), so
+        /// an entry a mod holds is still in the next list. Rebuilt at most once a second. A/B: false = before 2026-11-25
+        /// (no list at all: the mod threw every frame; an empty one gives its own steering without roads).
+        public static bool RoadListStandIn = true;
+        public static int RoadListsBuilt;
+        private static readonly Dictionary<roadGenScript, KeyValuePair<float, roadscript[]>> _roadLists = new Dictionary<roadGenScript, KeyValuePair<float, roadscript[]>>();
+        private static readonly Dictionary<roadscript, roadscript> _roadMarkers = new Dictionary<roadscript, roadscript>();
+        public static roadscript[] RoadList(roadGenScript g)
+        {
+            Calls++;
+            if (g == null) throw new System.NullReferenceException();
+            if (!RoadListStandIn || g.parent == null) return new roadscript[0];
+            if (_roadLists.TryGetValue(g, out var cached) && Time.time - cached.Key < 1f && Time.time >= cached.Key) return cached.Value;
+            var pieces = new List<roadscript>();
+            for (int i = 0; i < g.parent.childCount; i++)
+            {
+                var r = g.parent.GetChild(i).GetComponent<roadscript>();
+                if (r != null && r.gameObject.activeInHierarchy) pieces.Add(r);
+            }
+            var all = new HashSet<roadscript>(pieces);
+            var next = new Dictionary<roadscript, roadscript>(); var hasPrevious = new HashSet<roadscript>();
+            foreach (var r in pieces)
+            {
+                roadscript n = null;
+                try { n = r.GetNextRoad(); } catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("LoaderCompat.RoadList", quietError); }
+                if (n != null && n != r && all.Contains(n)) { next[r] = n; hasPrevious.Add(n); }
+            }
+            List<roadscript> best = null;
+            foreach (var r in pieces)
+            {
+                if (hasPrevious.Contains(r) || !next.ContainsKey(r)) continue;
+                var run = new List<roadscript>(); var seen = new HashSet<roadscript>();
+                for (var at = r; at != null && seen.Add(at); next.TryGetValue(at, out at)) run.Add(at);
+                if (best == null || run.Count > best.Count) best = run;
+            }
+            var list = new roadscript[best != null ? best.Count : 0];
+            for (int i = 0; i < list.Length; i++)
+            {
+                var piece = best[i];
+                if (!_roadMarkers.TryGetValue(piece, out var marker) || marker == null)
+                {
+                    var go = new GameObject("(road list marker)");
+                    go.SetActive(false);
+                    go.transform.SetParent(piece.transform, false);
+                    marker = go.AddComponent<roadscript>();
+                    _roadMarkers[piece] = marker;
+                }
+                Vector3 from = piece.transform.position;
+                Vector3 to = i + 1 < list.Length ? best[i + 1].transform.position : from + (i > 0 ? from - best[i - 1].transform.position : piece.transform.forward);
+                marker.transform.position = from;
+                if (to - from != Vector3.zero) marker.transform.rotation = Quaternion.LookRotation(to - from);
+                list[i] = marker;
+            }
+            if (_roadMarkers.Count > 4 * list.Length + 64)   // pieces gone with their markers
+            {
+                var gone = new List<roadscript>();
+                foreach (var kv in _roadMarkers) if (kv.Key == null || kv.Value == null) gone.Add(kv.Key);
+                foreach (var k in gone) _roadMarkers.Remove(k);
+            }
+            _roadLists[g] = new KeyValuePair<float, roadscript[]>(Time.time, list);
+            RoadListsBuilt++;
+            return list;
         }
 
         // ------------------------------------------------------------------ the buildings along the road
@@ -512,6 +588,40 @@ namespace TLDRevamp
             private static void Prefix(mapSettingScript __instance) => DropDestroyedTumbleweeds.Prefix(__instance);
         }
 
+        /// A light a mod destroyed under a headlight (an AI traffic mod puts a jack-o'-lantern in each driver's seat and
+        /// destroys its Light; the beta's lantern has a headlightscript, the public game's had none): RefreshLights threw on
+        /// it every frame (x8198 in one run). When it throws, the destroyed lights leave its lists (with their colour and
+        /// dither at the same place) and the error is dropped; nothing runs when it doesn't throw. A/B: false = before 2026-11-25.
+        public static bool DropDestroyedHeadlights = true;
+        public static int HeadlightsDropped;
+        [HarmonyLib.HarmonyPatch(typeof(headlightscript), nameof(headlightscript.RefreshLights))]
+        private static class DropDestroyedHeadlight
+        {
+            [HarmonyLib.HarmonyFinalizer]
+            private static System.Exception Finalizer(headlightscript __instance, System.Exception __exception)
+            {
+                if (!DropDestroyedHeadlights || !(__exception is System.NullReferenceException) || __instance == null || __instance.states == null) return __exception;
+                int dropped = 0;
+                foreach (var state in __instance.states)
+                {
+                    if (state == null || state.lights == null) continue;
+                    foreach (var l in state.lights)
+                    {
+                        if (l == null || l.L == null) continue;
+                        for (int i = l.L.Count - 1; i >= 0; i--)
+                        {
+                            if (l.L[i] != null) continue;
+                            l.L.RemoveAt(i); dropped++;
+                            if (l.defLColors != null && i < l.defLColors.Count) l.defLColors.RemoveAt(i);
+                            if (l.dithers != null && i < l.dithers.Count) l.dithers.RemoveAt(i);
+                        }
+                    }
+                }
+                HeadlightsDropped += dropped;
+                return dropped > 0 ? null : __exception;
+            }
+        }
+
         /// A copy of a tank cap that had started (a helicopter mod clones the car06 cap it made in DbLoad) has the beta's
         /// started flag set, its particle module not (Unity copies the one, not the other): FStart skipped, the cap's Update
         /// threw every frame ("Do not create your own module instances", x2807 in one run). Such a copy starts as its own.
@@ -537,6 +647,9 @@ namespace TLDRevamp
         /// buildingscript.itemsSpawned (buildingscript is the beta's poiScript): the place has started, which is when the
         /// beta spawns its items. A modding toolkit puts its mods' items into a building when this turns true.
         public static bool ItemsSpawned(poiScript p) => p != null && p.started;
+        /// buildingscript.FStart(kind) (a building a mod placed itself): the beta's start with that generator id and the
+        /// place id the building has (the mod writes its pos, which is the beta's posID, first).
+        public static void PoiFStart(poiScript p, int kind) { Calls++; if (p == null) throw new System.NullReferenceException(); p.FStart(kind, p.posID); }
 
         /// attachablescript.Attach(Transform, RaycastHit): attached where the ray hit, as the beta's Attach(RaycastHit).
         public static void Attach(attachablescript a, Transform target, RaycastHit hit) { Calls++; if (a != null && hit.collider != null) a.Attach(hit); }
