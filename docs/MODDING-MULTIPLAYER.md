@@ -219,6 +219,15 @@ Callbacks a mod can implement, all optional:
   game logic that changes state.
 - **Edit requested** (another player used the object): the owner decides and applies; the result travels as an
   edit record. Gives the mod a single place to validate input.
+- **Replayed edits** (API 6, `SharedType.ReplayEdits`): an accepted edit normally sends the whole record to
+  everyone. A type whose record is large and whose edits are small and frequent (a long queue beside a search bar
+  being typed into) can turn this on: the owner sends the edit itself, and every copy runs the same `OnEdit` on its
+  own copy. `OnEdit` must then change only what `Write` writes, the same way on every machine from the record, the
+  edit, `fromPlayer` and `MpApi.SessionTime` (it holds the owner's time of the edit while `OnEdit` runs): no random
+  values, no owner-only work (removing, events, sounds, other objects), no settings of this machine. Each copy checks
+  its record against a hash of the owner's and asks for the whole record when it differs, so a mistake costs
+  traffic, not a wrong copy. The whole record still goes every 64 edits, after a change the owner made itself
+  (`RecordChanged`), and when ownership moves. A mod that overrides `ReplayEdits` needs TLD Revamp with API 6.
 - **Placed / stored**: the object came into view on this machine or went into the far store.
 - **Player joined / left**: for mods with session-wide state.
 

@@ -72,7 +72,18 @@ namespace TLDRevamp.Multiplayer
 
         /// Owner only: another player (or this one) asked for a change. Check it, apply it, return true. The session then
         /// sends the new record to everyone. Return false to refuse it. fromPlayer: the player id (0 = the host).
+        /// With ReplayEdits it also runs on every copy, for edits the owner accepted.
         public virtual bool OnEdit(SharedObject obj, RecordReader edit, int fromPlayer) => false;
+
+        /// Edits replayed on copies (API 6): an accepted edit goes to every copy as the edit itself, not as the whole
+        /// record, and each copy runs OnEdit on its own copy. For types whose record is large and whose edits are small
+        /// and frequent (a long queue and a search bar typed into). Turn it on only when OnEdit changes nothing but
+        /// what Write writes, and the same way on every machine from the record, the edit, fromPlayer and
+        /// MpApi.SessionTime (while OnEdit runs it holds the owner's time of the edit, on the owner and on every copy):
+        /// no random values, no owner-only work (Remove, events, sounds, other objects), no this-machine settings.
+        /// A copy checks its result against a hash of the owner's record and asks for the whole record when it
+        /// differs, so a mistake costs traffic, never a wrong copy.
+        public virtual bool ReplayEdits => false;
 
         /// This machine became the owner (mine = true: start the logic and physics) or stopped being it (stop them).
         public virtual void OnOwnerChanged(SharedObject obj, bool mine) { }

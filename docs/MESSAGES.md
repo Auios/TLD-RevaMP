@@ -139,6 +139,8 @@ breakables, trailers or mod objects.
 | 111 | SessionSettings | s>c | session | - | Refused unless it carries this host's token. Sent again at Ready. |
 | 112 | WorldBreak | both | state | `ServerWorldBreaksTo` for later players; `WorldBreakTick` when near | Kept for the session, 4096 at most. A piece that never appears here is looked for less and less often. |
 | 113 | CarTune | both | stream | `SendTuneTo` for later players; `CarTuneTick` applies it again when the car is placed anew; the owner sends a tuned car again every `CarTuneResendS` | Only from the car's owner; the server keeps the latest per car. Unreadable or out of range: refused, not passed on. |
+| 114 | ModEdited | both | stream | `OwnerTick` sends the whole record after `EditChain.MaxChainEdits` edits or on a `ModResync`; `SendAdd` gives later copies the edits since the record | Only for types with `ReplayEdits`. A copy that misses one, refuses it or comes to another record hash waits for the whole record and asks for it. A gap at the host asks the owner. |
+| 115 | ModResync | both | ask | - | Lost: the waiting copy asks again after `ResyncRetryS`. |
 
 ## Not settled by the code
 

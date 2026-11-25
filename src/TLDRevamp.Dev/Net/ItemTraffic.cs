@@ -149,9 +149,13 @@ namespace TLDRevamp.Net
                 case Entities.ShotFx:
                     Shot(r, bytes, up); return;
                 case ModObjects.ModAdd:
-                    mod = true; net = r.U32(); r.Var(); r.Skip(4); r.Str(); r.Skip(42); r.Bytes(); r.Bytes(); break;
+                    mod = true; net = r.U32(); r.Var(); r.Skip(4); r.Str(); r.Skip(42); r.Bytes(); r.Bytes(); r.Skip(4); break;
                 case ModObjects.ModRecord:
-                    mod = true; net = r.U32(); r.Skip(44); r.Bytes(); break;
+                    mod = true; net = r.U32(); r.Skip(44); r.Bytes(); r.Skip(4); break;
+                case ModObjects.ModEdited:
+                    mod = true; net = r.U32(); r.Skip(8); r.Var(); r.Skip(16); r.Bytes(); break;
+                case ModObjects.ModResync:
+                    mod = true; net = r.U32(); if (fromServer) r.Var(); break;
                 case ModObjects.ModEdit:
                     mod = true; net = r.U32(); if (fromServer) r.Var(); r.Bytes(); break;
                 case ModObjects.ModOwner:

@@ -13,7 +13,9 @@ namespace TLDRevamp.Net
     ///    joiners) and sends it to everyone, who build the object through the mod's factory.
     ///  - One owner per object, with an epoch (as Entities): records and poses from an older owner are ignored. The
     ///    owner's machine runs the object; copies are kinematic. A player who leaves hands their objects to the host.
-    ///  - Edits go to the owner, who decides (SharedType.OnEdit); an accepted edit sends a new record to everyone.
+    ///  - Edits go to the owner, who decides (SharedType.OnEdit); an accepted edit sends a new record to everyone, or,
+    ///    for a type that replays its edits (SharedType.ReplayEdits), the edit itself: every copy runs the same OnEdit
+    ///    and checks its result against the owner's (EditChain). The host keeps those edits for later copies.
     ///  - Poses (SharedType.SyncPose): the owner sends them while the object moves; copies play them back through a
     ///    PoseInterpolator, like car copies.
     ///  - State records (SharedType.HasState): the owner sends small state when it changes, at most StateHz; the host
@@ -31,8 +33,8 @@ namespace TLDRevamp.Net
         // client → server, server → client (one id per direction where the layout is the same)
         public const byte ModShare = 70;      // c→s: u32 tag, str key, u8 ver, pos, rot, bytes record
         public const byte ModAssigned = 71;   // s→c: u32 tag, u32 id, u32 epoch
-        public const byte ModAdd = 72;        // s→c: u32 id, varint owner, u32 epoch, str key, u8 ver, pos, rot, bytes record
-        public const byte ModRecord = 73;     // c→s / s→c: u32 id, u32 epoch, pos, rot, bytes record
+        public const byte ModAdd = 72;        // s→c: u32 id, varint owner, u32 epoch, str key, u8 ver, u8 flags, pos, rot, bytes record, bytes state, u32 seq
+        public const byte ModRecord = 73;     // c→s / s→c: u32 id, u32 epoch, pos, rot, bytes record, u32 seq
         public const byte ModEdit = 74;       // c→s: u32 id, bytes edit.  s→owner: u32 id, varint from, bytes edit
         public const byte ModOwner = 75;      // s→c: u32 id, varint owner, u32 epoch
         public const byte ModRemove = 76;     // c→s / s→c: u32 id
@@ -44,13 +46,19 @@ namespace TLDRevamp.Net
         public const byte ModState = 87;      // c→s / s→c: u32 id, u32 epoch, bytes state
         public const byte ModStore = 88;      // s→c: u32 id (the copy here goes into the far store)
         public const byte ModSetting = 89;    // s→c: varint n, n × (str key, str value)
+        // API 6: replayed edits (EditChain)
+        public const byte ModEdited = 114;    // owner→s / s→c: u32 id, u32 epoch, u32 seq, varint from, f64 time, u64 hash, bytes edit
+        public const byte ModResync = 115;    // c→s: u32 id.  s→owner: u32 id, varint from (0: the host's own ask)
 
-        public static bool IsModMessage(byte t) => t >= ModShare && t <= ModClock || t >= ModState && t <= ModSetting;
+        public static bool IsModMessage(byte t) => t >= ModShare && t <= ModClock || t >= ModState && t <= ModSetting || t == ModEdited || t == ModResync;
         public static int MaxObjectsPerPlayer = 1000;
         public static float RecordMinInterval = 0.2f;   // the owner merges record changes to at most 5 a second per object
         public static float PoseKeepAliveS = 2f;
         public static long Shared, Added, AddMissingType, AddFailed, Records, Edits, EditsRefused, Poses, Events, Dropped, OwnerChanges, Removes;
         public static long States, StatesIn, Placed, StoredHere, StoresSent, PlacesSent, SettingsIn, SettingsSent, StatesForwarded, StatesHeld;
+        public static long EditsForwarded, EditsReplayed, ReplayRefused, ReplayMismatch, ReplayGaps, ResyncsAsked, ResyncsServed, KeptSent, KeptDropped;
+        /// A copy waiting for a whole record asks its owner again after this long.
+        public static float ResyncRetryS = 3f;
         /// The far store's margin: a copy goes when its player is this many times ViewRange away (it came at ViewRange).
         public static float StoreMargin = 1.25f;
         public static float InterestInterval = 0.5f, SettingsInterval = 1f;
@@ -66,7 +74,9 @@ namespace TLDRevamp.Net
         public bool InSession => Entities.InSession;
         public bool IsHost => Entities.IsHost;
         public int MyPlayerId => Entities.MyId < 0 ? 0 : Entities.MyId;
-        public double SessionTime => ClockTime;
+        public double SessionTime => double.IsNaN(_editTime) ? ClockTime : _editTime;
+        // while OnEdit runs: the owner's time of the edit, the same on every machine that replays it
+        private static double _editTime = double.NaN;
         internal static double ClockTime => Time.realtimeSinceStartupAsDouble + (Mp.Client != null ? _clockOffset : 0.0);
         internal static void ResetClock(double offset = 0)
         {
@@ -100,8 +110,7 @@ namespace TLDRevamp.Net
             if (w.Length > so.Type.MaxEditBytes) { Drop($"edit on {so} is {w.Length} bytes (max {so.Type.MaxEditBytes})"); return false; }
             if (so.IsMine || !InSession)
             {
-                bool ok = ApplyEdit(so, new RecordReader(w.Buf, 0, w.Length), MyPlayerId);
-                return ok;
+                return ApplyEdit(so, w.Buf, w.Length, MyPlayerId);
             }
             if (so.Id == 0) return false;
             W.Reset(); W.U8(ModEdit); W.U32(so.Id); WriteBytes(W, w.Buf, w.Length);
@@ -148,6 +157,7 @@ namespace TLDRevamp.Net
             public Vector3d SentPos; public Quaternion SentRot = Quaternion.identity; public bool HasSent;
             public Vector3d PrevPos; public bool HasPrev;
             public float StateAcc; public byte[] LastState;
+            public int ChainEdits, ChainBytes, RecordBytes;   // the owner's edits forwarded since its last whole record
         }
 
         private static readonly Dictionary<SharedObject, Local> Locals = new Dictionary<SharedObject, Local>();
@@ -169,6 +179,8 @@ namespace TLDRevamp.Net
             if (!WriteRecord(so, out var rec)) return;
             so.LocalTag = ++_tag;
             so.Owner = I.MyPlayerId;
+            so.Seq = 0; so.Behind = false;   // the host starts the record at version 0
+            var lo = L(so); lo.ChainEdits = 0; lo.ChainBytes = 0; lo.RecordBytes = rec.Length;
             PendingByTag[so.LocalTag] = so;
             var t = so.GameObject.transform;
             W.Reset(); W.U8(ModShare); W.U32(so.LocalTag); W.Str(so.Type.Key); W.U8(so.Type.Version);
@@ -189,13 +201,53 @@ namespace TLDRevamp.Net
             return true;
         }
 
-        private static bool ApplyEdit(SharedObject so, RecordReader r, int from)
+        /// The owner applies an edit (or this machine alone): accepted, it goes to the copies as a new record or, for a
+        /// type that replays its edits, as the edit itself (Forward).
+        private static bool ApplyEdit(SharedObject so, byte[] edit, int len, int from)
         {
-            bool ok;
-            try { ok = so.Type.OnEdit(so, r, from); }
-            catch (Exception e) { Drop($"{so.Type.Key}.OnEdit threw: {e}"); ok = false; }
-            if (ok) { Edits++; so.RecordDirty = true; } else EditsRefused++;
-            return ok;
+            double t = ClockTime;
+            if (!RunEdit(so, edit, len, from, t)) { EditsRefused++; return false; }
+            Edits++;
+            if (!Forward(so, edit, len, from, t)) so.RecordDirty = true;
+            return true;
+        }
+
+        /// The type's OnEdit, with MpApi.SessionTime held at the edit's time `t` (the owner's, on every machine).
+        private static bool RunEdit(SharedObject so, byte[] edit, int len, int from, double t)
+        {
+            _editTime = t;
+            try { return so.Type.OnEdit(so, new RecordReader(edit, 0, len), from); }
+            catch (Exception e) { Drop($"{so.Type.Key}.OnEdit threw: {e}"); return false; }
+            finally { _editTime = double.NaN; }
+        }
+
+        /// The owner: an accepted edit to every copy as the edit itself, with the record's next version and a hash of
+        /// the record it gave. False: the whole record goes instead (not a replaying type, not shared yet, a change of
+        /// the owner's own still unsent, or enough edits since the last whole record: EditChain.Forward).
+        private static bool Forward(SharedObject so, byte[] edit, int len, int from, double t)
+        {
+            if (!so.Type.ReplayEdits || !InSessionNow || !_started || so.Id == 0 || !so.IsMine || so.Removed || so.RecordDirty || so.GameObject == null) return false;
+            var l = L(so);
+            if (!EditChain.Forward(l.ChainEdits, l.ChainBytes, len, l.RecordBytes)) return false;
+            if (!WriteRecord(so, out var rec)) return false;
+            so.Seq++;
+            l.ChainEdits++; l.ChainBytes += len;
+            W.Reset(); W.U8(ModEdited); W.U32(so.Id); W.U32(so.Epoch); W.U32(so.Seq); W.VarU32((uint)Math.Max(0, from)); W.F64(t);
+            W.U64(EditChain.Hash(rec, rec.Length)); WriteBytes(W, edit, len);
+            ToServer(W, true);
+            EditsForwarded++;
+            return true;
+        }
+
+        private static bool InSessionNow => Entities.InSession;
+
+        /// A copy that can't follow the edits (a gap, a refusal, another result) waits for the whole record; CopyTick asks
+        /// the owner for it, now and again every ResyncRetryS until it comes (not from here: this can run inside the
+        /// host's own relay, which is still writing W).
+        private static void Behind(SharedObject so, string why)
+        {
+            if (!so.Behind && ResyncsAsked < 20) Plugin.Log.LogInfo($"mods: {so}: {why}; waiting for the whole record");
+            so.Behind = true; so.ResyncAskedAt = -100f;
         }
 
         private static void RemoveHere(SharedObject so)
@@ -242,7 +294,8 @@ namespace TLDRevamp.Net
                 if (WriteRecord(so, out var rec))
                 {
                     var tr = so.GameObject.transform;
-                    W.Reset(); W.U8(ModRecord); W.U32(so.Id); W.U32(so.Epoch); WriteWorldPose(W, tr.position, tr.rotation); WriteBytes(W, rec, rec.Length);
+                    so.Seq++; l.ChainEdits = 0; l.ChainBytes = 0; l.RecordBytes = rec.Length;
+                    W.Reset(); W.U8(ModRecord); W.U32(so.Id); W.U32(so.Epoch); WriteWorldPose(W, tr.position, tr.rotation); WriteBytes(W, rec, rec.Length); W.U32(so.Seq);
                     ToServer(W, true);
                     Records++;
                 }
@@ -289,6 +342,11 @@ namespace TLDRevamp.Net
 
         private static void CopyTick(SharedObject so)
         {
+            if (so.Behind && Time.realtimeSinceStartup - so.ResyncAskedAt >= ResyncRetryS)
+            {
+                so.ResyncAskedAt = Time.realtimeSinceStartup; ResyncsAsked++;
+                W.Reset(); W.U8(ModResync); W.U32(so.Id); ToServer(W, true);
+            }
             if (!so.Type.SyncPose || so.GameObject.transform.parent != null) return;
             var l = L(so);
             if (l.Ip == null || !l.Ip.Ready) return;
@@ -319,7 +377,7 @@ namespace TLDRevamp.Net
                 if (wasHost)
                 {
                     bool wasCopy = so.Owner != 0;
-                    so.Id = 0; so.Epoch = 0; so.Owner = 0; so.RecordDirty = false;
+                    so.Id = 0; so.Epoch = 0; so.Owner = 0; so.RecordDirty = false; so.Seq = 0; so.Behind = false;
                     if (wasCopy && so.GameObject != null) { MakeOwned(so); Notify(so, true); }
                 }
                 else RemoveHere(so);
@@ -381,6 +439,7 @@ namespace TLDRevamp.Net
                     ReadWorldPose(r, out var pos, out var rot);
                     var rec = ReadBytes(r, 1 << 20);
                     var state = ReadBytes(r, 1 << 16);
+                    uint seq = r.U32();
                     if (r.Bad || rec == null) return;
                     if (MpApi.Find(id) != null) return;
                     if (!MpApi.Types.TryGetValue(key, out var st) || st.Version != ver)
@@ -395,7 +454,7 @@ namespace TLDRevamp.Net
                     if (go == null) { AddFailed++; if (AddFailed <= 20) Plugin.Log.LogWarning($"mods: object {id} ({key}): the mod made nothing from its record"); return; }
                     if (go.transform.parent == null && go.GetComponent<visszarako>() == null)
                         go.AddComponent<visszarako>().rb = go.GetComponent<Rigidbody>() != null;   // moves with this machine's floating origin
-                    var so = new SharedObject { Id = id, Type = st, GameObject = go, Owner = owner, Epoch = epoch };
+                    var so = new SharedObject { Id = id, Type = st, GameObject = go, Owner = owner, Epoch = epoch, Seq = seq };
                     MpApi.Local.Add(so);
                     Added++;
                     if (state.Length > 0 && st.HasState)
@@ -418,10 +477,12 @@ namespace TLDRevamp.Net
                     uint id = r.U32(), epoch = r.U32();
                     ReadWorldPose(r, out var pos, out var rot);
                     var rec = ReadBytes(r, 1 << 20);
+                    uint seq = r.U32();
                     var so = MpApi.Find(id);
                     if (r.Bad || so == null || so.IsMine || epoch < so.Epoch || so.GameObject == null) return;
                     try { so.Type.Read(so.GameObject, new RecordReader(rec)); }
                     catch (Exception e) { Drop($"{so.Type.Key}.Read threw: {e}"); }
+                    so.Seq = seq; so.Behind = false;   // a whole record: the edits after it follow from here
                     if (!so.Type.SyncPose && so.GameObject.transform.parent == null) so.GameObject.transform.SetPositionAndRotation(pos, rot);
                     break;
                 }
@@ -431,7 +492,36 @@ namespace TLDRevamp.Net
                     var so = MpApi.Find(id);
                     if (r.Bad || so == null || !so.IsMine) { EditsRefused++; return; }
                     if (edit.Length > so.Type.MaxEditBytes) { EditsRefused++; return; }
-                    ApplyEdit(so, new RecordReader(edit), from);
+                    ApplyEdit(so, edit, edit.Length, from);
+                    break;
+                }
+                case ModEdited:
+                {
+                    // an edit the owner accepted: this copy runs the same OnEdit and must come to the owner's record. An
+                    // owner gets one only as history: the edits kept since the record it was given with the object (it
+                    // became the owner on arriving near it); its own never come back to it.
+                    uint id = r.U32(); r.U32(); uint seq = r.U32(); int from = (int)r.VarU32(); double t = r.F64(); ulong hash = r.U64();
+                    var edit = ReadBytes(r, 1 << 16);
+                    var so = MpApi.Find(id);
+                    if (r.Bad || so == null || so.Removed || so.GameObject == null || so.Behind && !so.IsMine) return;
+                    var step = EditChain.Next(so.Seq, seq);
+                    if (step == EditChain.Step.Old) return;
+                    string bad = null;
+                    if (step == EditChain.Step.Gap) { ReplayGaps++; bad = $"edit {seq} after {so.Seq}"; }
+                    else if (!so.Type.ReplayEdits || edit.Length > so.Type.MaxEditBytes || !RunEdit(so, edit, edit.Length, from, t)) { ReplayRefused++; bad = $"edit {seq} refused here"; }
+                    else if (!WriteRecord(so, out var rec) || EditChain.Hash(rec, rec.Length) != hash) { ReplayMismatch++; bad = $"edit {seq} gave another record than the owner's"; }
+                    if (bad == null) { so.Seq = seq; EditsReplayed++; }
+                    else if (so.IsMine) so.RecordDirty = true;   // the owner's record is the truth: everyone gets it
+                    else Behind(so, bad);
+                    break;
+                }
+                case ModResync:
+                {
+                    // a copy (or the host) needs the whole record: it goes to everyone with the next OwnerTick
+                    uint id = r.U32(); r.VarU32();
+                    var so = MpApi.Find(id);
+                    if (r.Bad || so == null || !so.IsMine || so.Removed) return;
+                    so.RecordDirty = true; ResyncsServed++;
                     break;
                 }
                 case ModOwner:
@@ -442,7 +532,12 @@ namespace TLDRevamp.Net
                     bool wasMine = so.IsMine;
                     so.Owner = owner; so.Epoch = epoch; OwnerChanges++;
                     bool mine = so.IsMine;
-                    if (mine && !wasMine) { MakeOwned(so); Notify(so, true); }
+                    if (mine && !wasMine)
+                    {
+                        MakeOwned(so); Notify(so, true);
+                        // edits of the last owner may still be on their way here: this machine's record goes to everyone
+                        if (so.Type.ReplayEdits) { so.RecordDirty = true; so.Behind = false; }
+                    }
                     else if (!mine && wasMine) { MakeCopy(so); Notify(so, false); }
                     break;
                 }
@@ -536,6 +631,10 @@ namespace TLDRevamp.Net
             public Vector3d Pos; public Quaternion Rot = Quaternion.identity; public byte[] Record;
             public byte[] State; public int StateSeq;
             public SharedType Type;
+            // replayed edits: the latest version and the stored record's, and the edits between them (ModEdited as sent)
+            // for later copies
+            public uint Seq, RecordSeq;
+            public readonly List<byte[]> Kept = new List<byte[]>(); public int KeptBytes;
         }
 
         private sealed class Budget
@@ -612,7 +711,7 @@ namespace TLDRevamp.Net
                     {
                         if (pl == from) continue;
                         if (st.ViewRange > 0f && !(PosOf(_where, pl, out var pp) && Dist2(pp, so.Pos) < (double)st.ViewRange * st.ViewRange)) continue;
-                        WriteAdd(W, so, false); SendTo(pl, W, true); Sent(pl, so);
+                        SendAdd(pl, so, false);
                     }
                     break;
                 }
@@ -621,10 +720,12 @@ namespace TLDRevamp.Net
                     uint id = r.U32(), epoch = r.U32();
                     ReadGlobalPose(r, out var pos, out var rot);
                     var rec = ReadBytes(r, 1 << 20);
+                    uint seq = r.U32();
                     if (r.Bad || !Server.TryGetValue(id, out var so) || so.Owner != from || epoch != so.Epoch) return;
                     if (!MpApi.Types.TryGetValue(so.Key, out var st) || rec.Length > st.MaxRecordBytes || !FinitePose(pos, rot)) { Drop($"player {from}: bad record for {so.Key}#{id}"); return; }
                     so.Record = rec; so.Pos = pos; so.Rot = rot;
-                    W.Reset(); W.U8(ModRecord); W.U32(id); W.U32(epoch); WriteGlobalPose(W, pos, rot); WriteBytes(W, rec, rec.Length);
+                    so.Seq = so.RecordSeq = seq; so.Kept.Clear(); so.KeptBytes = 0;
+                    W.Reset(); W.U8(ModRecord); W.U32(id); W.U32(epoch); WriteGlobalPose(W, pos, rot); WriteBytes(W, rec, rec.Length); W.U32(seq);
                     SendShown(so.Id, W, true, from);
                     break;
                 }
@@ -635,6 +736,30 @@ namespace TLDRevamp.Net
                     if (!MpApi.Types.TryGetValue(so.Key, out var st) || edit.Length > st.MaxEditBytes) { Drop($"player {from}: edit for {so.Key}#{id} too big"); return; }
                     W.Reset(); W.U8(ModEdit); W.U32(id); W.VarU32((uint)from); WriteBytes(W, edit, edit.Length);
                     SendTo(so.Owner, W, true);
+                    break;
+                }
+                case ModEdited:
+                {
+                    uint id = r.U32(), epoch = r.U32(), seq = r.U32(); uint asker = r.VarU32(); double t = r.F64(); ulong hash = r.U64();
+                    var edit = ReadBytes(r, 1 << 16);
+                    if (r.Bad || !Server.TryGetValue(id, out var so) || so.Owner != from || epoch != so.Epoch) return;
+                    if (!so.Type.ReplayEdits || edit.Length > so.Type.MaxEditBytes || double.IsNaN(t) || double.IsInfinity(t)) { Drop($"player {from}: bad replayed edit for {so.Key}#{id}"); return; }
+                    // one lost on the way (a budget drop): the owner sends the whole record, its edits wait for it
+                    if (seq != unchecked(so.Seq + 1)) { AskOwner(so, 0); return; }
+                    so.Seq = seq;
+                    W.Reset(); W.U8(ModEdited); W.U32(id); W.U32(epoch); W.U32(seq); W.VarU32(asker); W.F64(t); W.U64(hash); WriteBytes(W, edit, edit.Length);
+                    bool kept = EditChain.Keep(so.Kept.Count, so.KeptBytes, W.Len);
+                    if (kept) { var copy = new byte[W.Len]; Buffer.BlockCopy(W.Buf, 0, copy, 0, W.Len); so.Kept.Add(copy); so.KeptBytes += copy.Length; }
+                    SendShown(id, W, true, from);
+                    // too many to keep for later copies: a whole record ends the run
+                    if (!kept) { so.Kept.Clear(); so.KeptBytes = 0; KeptDropped++; AskOwner(so, 0); }
+                    break;
+                }
+                case ModResync:
+                {
+                    uint id = r.U32();
+                    if (r.Bad || !Server.TryGetValue(id, out var so) || so.Owner == from) return;
+                    AskOwner(so, from);
                     break;
                 }
                 case ModClaim:
@@ -711,6 +836,20 @@ namespace TLDRevamp.Net
             }
         }
 
+        /// The owner of `so` sends its whole record again (a copy asked, or a replayed edit went missing on the way).
+        private static void AskOwner(SObj so, int asker)
+        {
+            W.Reset(); W.U8(ModResync); W.U32(so.Id); W.VarU32((uint)Math.Max(0, asker));
+            SendTo(so.Owner, W, true);
+        }
+
+        /// The object to a player who hasn't it: its record, then the edits since that record (replayed edits).
+        private static void SendAdd(int player, SObj so, bool placed)
+        {
+            WriteAdd(W, so, placed); SendTo(player, W, true); Sent(player, so);
+            foreach (var k in so.Kept) { W.Reset(); W.Bytes(k, 0, k.Length); SendTo(player, W, true); KeptSent++; }
+        }
+
         private static void SetOwner(SObj so, int owner, string why)
         {
             so.Owner = owner; so.Epoch++;
@@ -726,7 +865,7 @@ namespace TLDRevamp.Net
             foreach (var so in Server.Values)
             {
                 if (so.Type.ViewRange > 0f) continue;   // by distance (ServerInterestTick), once the player's position is known
-                WriteAdd(W, so, false); SendTo(player, W, true); Sent(player, so);
+                SendAdd(player, so, false);
             }
             WriteSettings(W, true);
             if (W.Len > 2) SendTo(player, W, true);
@@ -750,6 +889,7 @@ namespace TLDRevamp.Net
             WriteGlobalPose(w, so.Pos, so.Rot); WriteBytes(w, so.Record, so.Record.Length);
             // the latest state rides along: a player who becomes the owner as it arrives starts from it, not from nothing
             if (so.State != null) WriteBytes(w, so.State, so.State.Length); else w.VarU32(0);
+            w.U32(so.RecordSeq);   // the stored record's version: the kept edits after it follow (SendAdd)
         }
 
         /// An Add went to a player: it has the object, with its latest state.
@@ -824,7 +964,7 @@ namespace TLDRevamp.Net
                         var sh = ShownTo(kv.Key);
                         double d = Dist2(kv.Value, so.Pos);
                         bool has = sh.Contains(so.Id);
-                        if (!has && d < near2) { WriteAdd(W, so, true); SendTo(kv.Key, W, true); Sent(kv.Key, so); PlacesSent++; }
+                        if (!has && d < near2) { SendAdd(kv.Key, so, true); PlacesSent++; }
                         else if (has && d > far2 && kv.Key != so.Owner)
                         {
                             W.Reset(); W.U8(ModStore); W.U32(so.Id); SendTo(kv.Key, W, true);
@@ -1054,6 +1194,7 @@ namespace TLDRevamp.Net
             sb.Append($"\"started\":{(_started ? "true" : "false")},\"mods\":{MpApi.Mods.Count},\"types\":{MpApi.Types.Count},");
             sb.Append($"\"shared\":{Shared},\"added\":{Added},\"addMissingType\":{AddMissingType},\"addFailed\":{AddFailed},\"records\":{Records},\"edits\":{Edits},\"editsRefused\":{EditsRefused},");
             sb.Append($"\"poses\":{Poses},\"events\":{Events},\"ownerChanges\":{OwnerChanges},\"removes\":{Removes},\"dropped\":{Dropped},\"lastDrop\":{Json.Str(LastDrop)},");
+            sb.Append($"\"editsForwarded\":{EditsForwarded},\"editsReplayed\":{EditsReplayed},\"replayRefused\":{ReplayRefused},\"replayMismatch\":{ReplayMismatch},\"replayGaps\":{ReplayGaps},\"resyncsAsked\":{ResyncsAsked},\"resyncsServed\":{ResyncsServed},\"keptSent\":{KeptSent},\"keptDropped\":{KeptDropped},");
             sb.Append($"\"states\":{States},\"statesIn\":{StatesIn},\"statesForwarded\":{StatesForwarded},\"statesHeld\":{StatesHeld},\"placed\":{Placed},\"storedHere\":{StoredHere},\"storesSent\":{StoresSent},\"placesSent\":{PlacesSent},\"settingsIn\":{SettingsIn},\"settingsSent\":{SettingsSent},");
             sb.Append("\"settings\":[");
             for (int i = 0; i < MpApi.Settings.Count; i++) { var st = MpApi.Settings[i]; if (i > 0) sb.Append(','); sb.Append($"{{\"key\":{Json.Str(st.Key)},\"value\":{Json.Str(st.SafeGet() ?? "")},\"fromHost\":{(st.FromHost ? "true" : "false")}}}"); }

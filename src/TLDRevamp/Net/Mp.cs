@@ -462,7 +462,7 @@ namespace TLDRevamp.Net
                 case Protocol.LiveUsable: case Entities.RabbitState: case Entities.RabbitFx: case Entities.IgnitionKey:
                 case Entities.CrashClaim: case Entities.CrashRelease: case Entities.Refetch: case Entities.HandoverState: case Entities.PoiCensus: case Entities.Worn: case Entities.MemberGone: MessageEntities(p, type, r); return;
                 case ModObjects.ModShare: case ModObjects.ModRecord: case ModObjects.ModEdit: case ModObjects.ModRemove: case ModObjects.ModPose:
-                case ModObjects.ModEvent: case ModObjects.ModClaim: case ModObjects.ModClock: case ModObjects.ModState: MessageModObjects(p, type, r); return;
+                case ModObjects.ModEvent: case ModObjects.ModClaim: case ModObjects.ModClock: case ModObjects.ModState: case ModObjects.ModEdited: case ModObjects.ModResync: MessageModObjects(p, type, r); return;
                 case Entities.LeaseReq: case Entities.LeaseDone: MessageLeases(p, type, r); return;
                 case Protocol.Chat: MessageChat(p, r); return;
                 case PlayerSave.Record: MessagePlayerSaveRecord(p, r); return;
@@ -1187,7 +1187,7 @@ namespace TLDRevamp.Net
                 case Protocol.ModsNeeded: if (MyId <= 0 && NeededMods == null) NeededMods = ModsNeeded.Read(r); break;
                 case ModObjects.ModAssigned: case ModObjects.ModAdd: case ModObjects.ModRecord: case ModObjects.ModEdit: case ModObjects.ModOwner:
                 case ModObjects.ModRemove: case ModObjects.ModPose: case ModObjects.ModEvent: case ModObjects.ModClock:
-                case ModObjects.ModState: case ModObjects.ModStore: case ModObjects.ModSetting: MessageModObjects(type, r); return;
+                case ModObjects.ModState: case ModObjects.ModStore: case ModObjects.ModSetting: case ModObjects.ModEdited: case ModObjects.ModResync: MessageModObjects(type, r); return;
                 case Protocol.PlayerLeft: MessagePlayerLeft(r); return;
                 case Protocol.OtherState: MessageOtherState(r); return;
             }

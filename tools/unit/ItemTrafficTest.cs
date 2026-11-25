@@ -264,7 +264,7 @@ namespace TLDRevamp.Net
 
     public static class ModObjects
     {
-        public const byte ModShare = 70, ModAssigned = 71, ModAdd = 72, ModRecord = 73, ModEdit = 74, ModOwner = 75, ModRemove = 76, ModPose = 77, ModEvent = 78, ModClaim = 79, ModState = 87, ModStore = 88;
+        public const byte ModShare = 70, ModAssigned = 71, ModAdd = 72, ModRecord = 73, ModEdit = 74, ModOwner = 75, ModRemove = 76, ModPose = 77, ModEvent = 78, ModClaim = 79, ModState = 87, ModStore = 88, ModEdited = 114, ModResync = 115;
     }
     public static class Mp { public static MpServer Server; }
     public sealed class MpServer { public int PlayerOfConn(uint id) => 0; }

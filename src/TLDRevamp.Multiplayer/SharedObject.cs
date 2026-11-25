@@ -27,6 +27,11 @@ namespace TLDRevamp.Multiplayer
         internal uint LocalTag;       // the creator's handle until the host assigns an id
         internal bool RecordDirty;
         internal bool Pending => Id == 0;
+        // replayed edits (SharedType.ReplayEdits): the record's version, one up for every edit or record the owner
+        // sends; a copy that missed one or got another result waits for the next whole record (Behind)
+        internal uint Seq;
+        internal bool Behind;
+        internal float ResyncAskedAt = -100f;
 
         /// Owner: the state changed in a way copies must see; a new record goes out (at most a few per second, merged).
         public void RecordChanged()

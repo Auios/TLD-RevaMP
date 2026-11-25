@@ -25,7 +25,7 @@ namespace TLDRevamp.Multiplayer
         /// Raised with each release that changes the API. Mods can check it to use newer calls. It is a constant, so a
         /// mod sees the version it was built against: to use a newer call on whatever RevaMP is installed, look the
         /// member up by reflection first (typeof(MpApi).GetMethod("SimulatedHere")).
-        public const int ApiVersion = 5;   // 5: SimulatedHere; 4: replay channels (RegisterReplayChannel); 3: custom ragdolls (RegisterRagdoll); 2: state records with interest, the far store (SharedType.HasState, ViewRange), session-wide settings
+        public const int ApiVersion = 6;   // 6: edits replayed on copies (SharedType.ReplayEdits); 5: SimulatedHere; 4: replay channels (RegisterReplayChannel); 3: custom ragdolls (RegisterRagdoll); 2: state records with interest, the far store (SharedType.HasState, ViewRange), session-wide settings
 
         /// TLD Revamp is installed and running (multiplayer may still be off).
         public static bool Available => Backend != null;
@@ -37,7 +37,8 @@ namespace TLDRevamp.Multiplayer
 
         /// The session's shared clock in seconds: the same value on every machine (within a few milliseconds), the
         /// host's clock. Outside a session, this machine's clock. For things that must happen at the same moment
-        /// everywhere: a video's position, a timer.
+        /// everywhere: a video's position, a timer. While OnEdit runs in a session it is the owner's time of that edit
+        /// (the same value on every machine that replays it, SharedType.ReplayEdits).
         public static double SessionTime => Backend != null && Backend.InSession ? Backend.SessionTime : Time.realtimeSinceStartupAsDouble;
 
         /// The players in the session, this one included.

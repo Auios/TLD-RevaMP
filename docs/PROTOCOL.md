@@ -19,6 +19,7 @@ change, before this rule.
 
 ## 63
 
+- replayed mod edits (`SharedType.ReplayEdits`, API 6): ModEdited (114) carries an edit the owner accepted to every copy, with the record's version, the edit's time and a hash of the owner's record; ModResync (115) asks the owner for the whole record. ModRecord and ModAdd end with the record's version (u32) (`Net/EditChain.cs`)
 - an attach pose (and the place repair's glued poses) is relative to what the attach record names: the item it is on, or the building; a door, hood or lid it hangs on; on the ground the point itself. It was the point's parent, which a copy makes anew under another collider (`EntityAttachments.AttachFrame`)
 
 ## 62

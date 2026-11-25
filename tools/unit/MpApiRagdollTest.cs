@@ -22,7 +22,7 @@ static class MpApiRagdollTest
 
     static int Main()
     {
-        Check("API version 5", MpApi.ApiVersion == 5);
+        Check("API version 6", MpApi.ApiVersion == 6);
         Check("starts empty without RevaMP or a session", !MpApi.Available && !MpApi.InSession && MpApi.RagdollCount == 0);
         var root = new GameObject("creature");
         var a = new GameObject("hip").transform;
