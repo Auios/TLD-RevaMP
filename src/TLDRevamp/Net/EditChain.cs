@@ -19,10 +19,13 @@ namespace TLDRevamp.Net
 
         /// The edits since the last whole record the owner forwards before it sends the whole record again: at most
         /// MaxChainEdits, and no more bytes than the record itself (at least MinChainBytes, so a small record still
-        /// takes a typed word).
-        internal const int MaxChainEdits = 64, MinChainBytes = 1024;
+        /// takes a typed word; at most MaxChainBytes, so the host can always keep them all: a new owner and a later copy
+        /// rebuild from what it keeps).
+        internal const int MaxChainEdits = 64, MinChainBytes = 1024, MaxChainBytes = 32 * 1024;
+        /// What the host adds to each kept edit at most (its ModEdited header).
+        internal const int KeptHeaderBytes = 40;
         internal static bool Forward(int chainEdits, int chainBytes, int editBytes, int recordBytes) =>
-            chainEdits < MaxChainEdits && chainBytes + editBytes <= Math.Max(MinChainBytes, recordBytes);
+            chainEdits < MaxChainEdits && chainBytes + editBytes <= Math.Min(MaxChainBytes, Math.Max(MinChainBytes, recordBytes));
 
         /// What the host keeps for later copies: past this it keeps none and asks the owner for a whole record.
         internal const int MaxKeptEdits = 128, MaxKeptBytes = 64 * 1024;

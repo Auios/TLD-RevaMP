@@ -48,7 +48,8 @@ namespace TLDRevamp.Net
         public const byte ModSetting = 89;    // s→c: varint n, n × (str key, str value)
         // API 6: replayed edits (EditChain)
         public const byte ModEdited = 114;    // owner→s / s→c: u32 id, u32 epoch, u32 seq, varint from, f64 time, u64 hash, bytes edit
-        public const byte ModResync = 115;    // c→s: u32 id.  s→owner: u32 id, varint from (0: the host's own ask)
+        public const byte ModResync = 115;    // c→s: u32 id.  s→c: u32 id, varint from, u8 kind (ResyncSend: send your record; ResyncDone: the history you asked for ends here)
+        internal static readonly byte ResyncSend = 0, ResyncDone = 1;   // ModResync kinds (not message types: no const)
 
         public static bool IsModMessage(byte t) => t >= ModShare && t <= ModClock || t >= ModState && t <= ModSetting || t == ModEdited || t == ModResync;
         public static int MaxObjectsPerPlayer = 1000;
@@ -56,7 +57,12 @@ namespace TLDRevamp.Net
         public static float PoseKeepAliveS = 2f;
         public static long Shared, Added, AddMissingType, AddFailed, Records, Edits, EditsRefused, Poses, Events, Dropped, OwnerChanges, Removes;
         public static long States, StatesIn, Placed, StoredHere, StoresSent, PlacesSent, SettingsIn, SettingsSent, StatesForwarded, StatesHeld;
-        public static long EditsForwarded, EditsReplayed, ReplayRefused, ReplayMismatch, ReplayGaps, ResyncsAsked, ResyncsServed, KeptSent, KeptDropped;
+        public static long EditsForwarded, EditsReplayed, ReplayRefused, ReplayMismatch, ReplayGaps, ResyncsAsked, ResyncsServed, KeptSent, KeptDropped, HistoriesSent, EditsHeld, ResyncsRefused;
+        /// Copies' replays that came to another record than the owner's, per type: past MismatchWarnAt the log says so once.
+        private static readonly Dictionary<string, int> MismatchByType = new Dictionary<string, int>();
+        public static int MismatchWarnAt = 5;
+        /// The host answers a copy's ask for one object at most this often.
+        public static float ResyncAskGapS = 0.5f;
         /// A copy waiting for a whole record asks its owner again after this long.
         public static float ResyncRetryS = 3f;
         /// The far store's margin: a copy goes when its player is this many times ViewRange away (it came at ViewRange).
@@ -158,6 +164,8 @@ namespace TLDRevamp.Net
             public Vector3d PrevPos; public bool HasPrev;
             public float StateAcc; public byte[] LastState;
             public int ChainEdits, ChainBytes, RecordBytes;   // the owner's edits forwarded since its last whole record
+            // edits that came to this machine as the new owner before it caught up with the host's history (Behind)
+            public readonly List<KeyValuePair<byte[], int>> Held = new List<KeyValuePair<byte[], int>>();
         }
 
         private static readonly Dictionary<SharedObject, Local> Locals = new Dictionary<SharedObject, Local>();
@@ -205,6 +213,16 @@ namespace TLDRevamp.Net
         /// type that replays its edits, as the edit itself (Forward).
         private static bool ApplyEdit(SharedObject so, byte[] edit, int len, int from)
         {
+            // a new owner still catching up with the host's history: the edit waits for it (ResyncDone), applied on
+            // the record everyone has, not on this machine's older one
+            if (so.Behind && so.IsMine && so.Type.ReplayEdits && InSessionNow)
+            {
+                var held = L(so).Held;
+                if (held.Count >= 256) { EditsRefused++; return false; }
+                var copy = new byte[len]; Buffer.BlockCopy(edit, 0, copy, 0, len);
+                held.Add(new KeyValuePair<byte[], int>(copy, from)); EditsHeld++;
+                return true;
+            }
             double t = ClockTime;
             if (!RunEdit(so, edit, len, from, t)) { EditsRefused++; return false; }
             Edits++;
@@ -215,10 +233,11 @@ namespace TLDRevamp.Net
         /// The type's OnEdit, with MpApi.SessionTime held at the edit's time `t` (the owner's, on every machine).
         private static bool RunEdit(SharedObject so, byte[] edit, int len, int from, double t)
         {
+            double before = _editTime;   // an OnEdit that edits another object runs this again inside
             _editTime = t;
             try { return so.Type.OnEdit(so, new RecordReader(edit, 0, len), from); }
             catch (Exception e) { Drop($"{so.Type.Key}.OnEdit threw: {e}"); return false; }
-            finally { _editTime = double.NaN; }
+            finally { _editTime = before; }
         }
 
         /// The owner: an accepted edit to every copy as the edit itself, with the record's next version and a hash of
@@ -226,7 +245,7 @@ namespace TLDRevamp.Net
         /// the owner's own still unsent, or enough edits since the last whole record: EditChain.Forward).
         private static bool Forward(SharedObject so, byte[] edit, int len, int from, double t)
         {
-            if (!so.Type.ReplayEdits || !InSessionNow || !_started || so.Id == 0 || !so.IsMine || so.Removed || so.RecordDirty || so.GameObject == null) return false;
+            if (!so.Type.ReplayEdits || !InSessionNow || !_started || so.Id == 0 || !so.IsMine || so.Removed || so.RecordDirty || so.Behind || so.GameObject == null) return false;
             var l = L(so);
             if (!EditChain.Forward(l.ChainEdits, l.ChainBytes, len, l.RecordBytes)) return false;
             if (!WriteRecord(so, out var rec)) return false;
@@ -248,6 +267,29 @@ namespace TLDRevamp.Net
         {
             if (!so.Behind && ResyncsAsked < 20) Plugin.Log.LogInfo($"mods: {so}: {why}; waiting for the whole record");
             so.Behind = true; so.ResyncAskedAt = -100f;
+        }
+
+        /// A new owner has the host's history (ResyncDone): it runs the object from the record everyone has, and the
+        /// edits that came meanwhile are applied now, in order. Then its record goes to everyone once: the last owner may
+        /// have applied edits of its own after it lost the object (the host refused them), and it comes back in step.
+        private static void CaughtUp(SharedObject so)
+        {
+            so.Behind = false;
+            so.RecordDirty = true;
+            if (!Locals.TryGetValue(so, out var l) || l.Held.Count == 0) return;
+            var held = l.Held.ToArray(); l.Held.Clear();
+            foreach (var h in held) ApplyEdit(so, h.Key, h.Key.Length, h.Value);
+        }
+
+        /// A copy's replay came to another record than the owner's: counted per type, and said once in the log when it
+        /// keeps happening (its OnEdit isn't deterministic, or its record changes outside OnEdit).
+        private static void Mismatched(SharedObject so)
+        {
+            ReplayMismatch++;
+            MismatchByType.TryGetValue(so.Type.Key, out int n);
+            MismatchByType[so.Type.Key] = ++n;
+            if (n == MismatchWarnAt)
+                Plugin.Log.LogWarning($"[anomaly] mods: {so.Type.Key}: {n} replayed edits came to another record than the owner's. Its OnEdit is not the same on every machine, or its record changes outside OnEdit; each such edit costs a whole record (SharedType.ReplayEdits)");
         }
 
         private static void RemoveHere(SharedObject so)
@@ -288,7 +330,17 @@ namespace TLDRevamp.Net
         private static void OwnerTick(SharedObject so, float t)
         {
             var l = L(so);
-            if (so.RecordDirty && t - l.RecordAt >= RecordMinInterval)
+            // a new owner catching up: it asks the host for the history (again every ResyncRetryS) and sends no record of
+            // its own until it has it (that would be this machine's older state, taken as the truth everywhere)
+            if (so.Behind && so.Type.ReplayEdits)
+            {
+                if (t - so.ResyncAskedAt >= ResyncRetryS)
+                {
+                    so.ResyncAskedAt = t; ResyncsAsked++;
+                    W.Reset(); W.U8(ModResync); W.U32(so.Id); ToServer(W, true);
+                }
+            }
+            else if (so.RecordDirty && t - l.RecordAt >= RecordMinInterval)
             {
                 so.RecordDirty = false; l.RecordAt = t;
                 if (WriteRecord(so, out var rec))
@@ -463,6 +515,9 @@ namespace TLDRevamp.Net
                         catch (Exception e) { Drop($"{key}.ReadState threw: {e}"); }
                         if (owner == I.MyPlayerId) L(so).LastState = state;   // the owner sends it again only when it changes
                     }
+                    // the owner by arrival (the far store): the edits kept since the record follow, then ResyncDone; until
+                    // then its edits wait (ApplyEdit) and it sends no record
+                    if (owner == I.MyPlayerId && st.ReplayEdits) { so.Behind = true; so.ResyncAskedAt = Time.realtimeSinceStartup; }
                     if (owner == I.MyPlayerId) Notify(so, true);
                     else MakeCopy(so);
                     if ((flags & AddPlaced) != 0)
@@ -479,10 +534,14 @@ namespace TLDRevamp.Net
                     var rec = ReadBytes(r, 1 << 20);
                     uint seq = r.U32();
                     var so = MpApi.Find(id);
-                    if (r.Bad || so == null || so.IsMine || epoch < so.Epoch || so.GameObject == null) return;
+                    // a copy; or a new owner catching up, for whom only the host's history comes (records of the last owner
+                    // came before its ModOwner, the host refuses later ones)
+                    bool catchingUp = so != null && so.IsMine && so.Behind;
+                    if (r.Bad || so == null || so.IsMine && !catchingUp || epoch < so.Epoch || so.GameObject == null) return;
                     try { so.Type.Read(so.GameObject, new RecordReader(rec)); }
                     catch (Exception e) { Drop($"{so.Type.Key}.Read threw: {e}"); }
-                    so.Seq = seq; so.Behind = false;   // a whole record: the edits after it follow from here
+                    so.Seq = seq;   // a whole record: the edits after it follow from here
+                    if (!catchingUp) so.Behind = false;
                     if (!so.Type.SyncPose && so.GameObject.transform.parent == null) so.GameObject.transform.SetPositionAndRotation(pos, rot);
                     break;
                 }
@@ -509,7 +568,7 @@ namespace TLDRevamp.Net
                     string bad = null;
                     if (step == EditChain.Step.Gap) { ReplayGaps++; bad = $"edit {seq} after {so.Seq}"; }
                     else if (!so.Type.ReplayEdits || edit.Length > so.Type.MaxEditBytes || !RunEdit(so, edit, edit.Length, from, t)) { ReplayRefused++; bad = $"edit {seq} refused here"; }
-                    else if (!WriteRecord(so, out var rec) || EditChain.Hash(rec, rec.Length) != hash) { ReplayMismatch++; bad = $"edit {seq} gave another record than the owner's"; }
+                    else if (!WriteRecord(so, out var rec) || EditChain.Hash(rec, rec.Length) != hash) { Mismatched(so); bad = $"edit {seq} gave another record than the owner's"; }
                     if (bad == null) { so.Seq = seq; EditsReplayed++; }
                     else if (so.IsMine) so.RecordDirty = true;   // the owner's record is the truth: everyone gets it
                     else Behind(so, bad);
@@ -517,10 +576,11 @@ namespace TLDRevamp.Net
                 }
                 case ModResync:
                 {
-                    // a copy (or the host) needs the whole record: it goes to everyone with the next OwnerTick
-                    uint id = r.U32(); r.VarU32();
+                    uint id = r.U32(); r.VarU32(); byte kind = r.U8();
                     var so = MpApi.Find(id);
-                    if (r.Bad || so == null || !so.IsMine || so.Removed) return;
+                    if (r.Bad || so == null || !so.IsMine || so.Removed || !so.Type.ReplayEdits) return;
+                    if (kind == ResyncDone) { if (so.Behind) CaughtUp(so); return; }
+                    // a copy needs the whole record: it goes to everyone with the next OwnerTick
                     so.RecordDirty = true; ResyncsServed++;
                     break;
                 }
@@ -534,9 +594,10 @@ namespace TLDRevamp.Net
                     bool mine = so.IsMine;
                     if (mine && !wasMine)
                     {
+                        // replayed edits: this machine may have missed one or come to another record (Behind), so it first takes
+                        // the host's history (OwnerTick asks), and runs the object from there
+                        if (so.Type.ReplayEdits) { so.Behind = true; so.ResyncAskedAt = -100f; }
                         MakeOwned(so); Notify(so, true);
-                        // edits of the last owner may still be on their way here: this machine's record goes to everyone
-                        if (so.Type.ReplayEdits) { so.RecordDirty = true; so.Behind = false; }
                     }
                     else if (!mine && wasMine) { MakeCopy(so); Notify(so, false); }
                     break;
@@ -634,6 +695,7 @@ namespace TLDRevamp.Net
             // replayed edits: the latest version and the stored record's, and the edits between them (ModEdited as sent)
             // for later copies
             public uint Seq, RecordSeq;
+            public float AskAt = -100f;   // the last copy's ask answered
             public readonly List<byte[]> Kept = new List<byte[]>(); public int KeptBytes;
         }
 
@@ -685,6 +747,9 @@ namespace TLDRevamp.Net
             if (type == ModPose ? !Spend(PoseBudget, from, 25f * 20f, 1000f) : type == ModState ? !Spend(StateBudget, from, 400f, 800f) : type != ModClock && !Spend(MsgBudget, from, 60f, 120f))
             {
                 Drop($"player {from}: too many mod messages, type {type} dropped");
+                // a replayed edit lost here would leave the copies behind until the next one, a lost record for good:
+                // the owner sends the whole record (again, every RecordMinInterval, until one gets through)
+                if ((type == ModEdited || type == ModRecord) && Server.TryGetValue(r.U32(), out var lost) && lost.Owner == from && lost.Type.ReplayEdits && !r.Bad) AskOwner(lost, 0);
                 return;
             }
             switch (type)
@@ -747,10 +812,12 @@ namespace TLDRevamp.Net
                     // one lost on the way (a budget drop): the owner sends the whole record, its edits wait for it
                     if (seq != unchecked(so.Seq + 1)) { AskOwner(so, 0); return; }
                     so.Seq = seq;
-                    W.Reset(); W.U8(ModEdited); W.U32(id); W.U32(epoch); W.U32(seq); W.VarU32(asker); W.F64(t); W.U64(hash); WriteBytes(W, edit, edit.Length);
-                    bool kept = EditChain.Keep(so.Kept.Count, so.KeptBytes, W.Len);
-                    if (kept) { var copy = new byte[W.Len]; Buffer.BlockCopy(W.Buf, 0, copy, 0, W.Len); so.Kept.Add(copy); so.KeptBytes += copy.Length; }
-                    SendShown(id, W, true, from);
+                    // its own writer: the host's own copy replays it inside SendShown, and a mod's OnEdit there may send
+                    var m = new NetWriter();
+                    m.U8(ModEdited); m.U32(id); m.U32(epoch); m.U32(seq); m.VarU32(asker); m.F64(t); m.U64(hash); WriteBytes(m, edit, edit.Length);
+                    bool kept = EditChain.Keep(so.Kept.Count, so.KeptBytes, m.Len);
+                    if (kept) { var copy = new byte[m.Len]; Buffer.BlockCopy(m.Buf, 0, copy, 0, m.Len); so.Kept.Add(copy); so.KeptBytes += copy.Length; }
+                    SendShown(id, m, true, from);
                     // too many to keep for later copies: a whole record ends the run
                     if (!kept) { so.Kept.Clear(); so.KeptBytes = 0; KeptDropped++; AskOwner(so, 0); }
                     break;
@@ -758,8 +825,15 @@ namespace TLDRevamp.Net
                 case ModResync:
                 {
                     uint id = r.U32();
-                    if (r.Bad || !Server.TryGetValue(id, out var so) || so.Owner == from) return;
-                    AskOwner(so, from);
+                    if (r.Bad || !Server.TryGetValue(id, out var so) || !so.Type.ReplayEdits) { ResyncsRefused++; return; }
+                    // the owner catching up (it just became the owner): the record and the edits since it, then the end
+                    if (from == so.Owner) { SendHistory(from, so, true); return; }
+                    // a copy that missed one or came to another record: only for an object it has, one ask per object at
+                    // a time; the owner sends its record, or, with no copy of its own loaded, the host the history it keeps
+                    if (!ShownTo(from).Contains(id) || Time.realtimeSinceStartup - so.AskAt < ResyncAskGapS) { ResyncsRefused++; return; }
+                    so.AskAt = Time.realtimeSinceStartup;
+                    if (ShownTo(so.Owner).Contains(id)) AskOwner(so, from);
+                    else SendHistory(from, so, false);
                     break;
                 }
                 case ModClaim:
@@ -839,15 +913,34 @@ namespace TLDRevamp.Net
         /// The owner of `so` sends its whole record again (a copy asked, or a replayed edit went missing on the way).
         private static void AskOwner(SObj so, int asker)
         {
-            W.Reset(); W.U8(ModResync); W.U32(so.Id); W.VarU32((uint)Math.Max(0, asker));
+            W.Reset(); W.U8(ModResync); W.U32(so.Id); W.VarU32((uint)Math.Max(0, asker)); W.U8(ResyncSend);
             SendTo(so.Owner, W, true);
+        }
+
+        /// The stored record and the edits kept since it, to one player (a new owner catching up, or a copy whose
+        /// owner has no copy loaded); `done`: then ResyncDone, the end of it.
+        private static void SendHistory(int player, SObj so, bool done)
+        {
+            W.Reset(); W.U8(ModRecord); W.U32(so.Id); W.U32(so.Epoch); WriteGlobalPose(W, so.Pos, so.Rot); WriteBytes(W, so.Record, so.Record.Length); W.U32(so.RecordSeq);
+            SendTo(player, W, true);
+            SendKept(player, so, done);
+            HistoriesSent++;
+        }
+
+        private static void SendKept(int player, SObj so, bool done)
+        {
+            foreach (var k in so.Kept) { W.Reset(); W.Bytes(k, 0, k.Length); SendTo(player, W, true); KeptSent++; }
+            if (!done) return;
+            W.Reset(); W.U8(ModResync); W.U32(so.Id); W.VarU32(0); W.U8(ResyncDone);
+            SendTo(player, W, true);
         }
 
         /// The object to a player who hasn't it: its record, then the edits since that record (replayed edits).
         private static void SendAdd(int player, SObj so, bool placed)
         {
             WriteAdd(W, so, placed); SendTo(player, W, true); Sent(player, so);
-            foreach (var k in so.Kept) { W.Reset(); W.Bytes(k, 0, k.Length); SendTo(player, W, true); KeptSent++; }
+            // the owner by arrival also gets the end of the history (it holds its edits until then)
+            SendKept(player, so, player == so.Owner && so.Type.ReplayEdits);
         }
 
         private static void SetOwner(SObj so, int owner, string why)
@@ -1194,7 +1287,7 @@ namespace TLDRevamp.Net
             sb.Append($"\"started\":{(_started ? "true" : "false")},\"mods\":{MpApi.Mods.Count},\"types\":{MpApi.Types.Count},");
             sb.Append($"\"shared\":{Shared},\"added\":{Added},\"addMissingType\":{AddMissingType},\"addFailed\":{AddFailed},\"records\":{Records},\"edits\":{Edits},\"editsRefused\":{EditsRefused},");
             sb.Append($"\"poses\":{Poses},\"events\":{Events},\"ownerChanges\":{OwnerChanges},\"removes\":{Removes},\"dropped\":{Dropped},\"lastDrop\":{Json.Str(LastDrop)},");
-            sb.Append($"\"editsForwarded\":{EditsForwarded},\"editsReplayed\":{EditsReplayed},\"replayRefused\":{ReplayRefused},\"replayMismatch\":{ReplayMismatch},\"replayGaps\":{ReplayGaps},\"resyncsAsked\":{ResyncsAsked},\"resyncsServed\":{ResyncsServed},\"keptSent\":{KeptSent},\"keptDropped\":{KeptDropped},");
+            sb.Append($"\"editsForwarded\":{EditsForwarded},\"editsReplayed\":{EditsReplayed},\"replayRefused\":{ReplayRefused},\"replayMismatch\":{ReplayMismatch},\"replayGaps\":{ReplayGaps},\"resyncsAsked\":{ResyncsAsked},\"resyncsServed\":{ResyncsServed},\"keptSent\":{KeptSent},\"keptDropped\":{KeptDropped},\"historiesSent\":{HistoriesSent},\"editsHeld\":{EditsHeld},\"resyncsRefused\":{ResyncsRefused},");
             sb.Append($"\"states\":{States},\"statesIn\":{StatesIn},\"statesForwarded\":{StatesForwarded},\"statesHeld\":{StatesHeld},\"placed\":{Placed},\"storedHere\":{StoredHere},\"storesSent\":{StoresSent},\"placesSent\":{PlacesSent},\"settingsIn\":{SettingsIn},\"settingsSent\":{SettingsSent},");
             sb.Append("\"settings\":[");
             for (int i = 0; i < MpApi.Settings.Count; i++) { var st = MpApi.Settings[i]; if (i > 0) sb.Append(','); sb.Append($"{{\"key\":{Json.Str(st.Key)},\"value\":{Json.Str(st.SafeGet() ?? "")},\"fromHost\":{(st.FromHost ? "true" : "false")}}}"); }

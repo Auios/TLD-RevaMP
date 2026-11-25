@@ -226,8 +226,13 @@ Callbacks a mod can implement, all optional:
   edit, `fromPlayer` and `MpApi.SessionTime` (it holds the owner's time of the edit while `OnEdit` runs): no random
   values, no owner-only work (removing, events, sounds, other objects), no settings of this machine. Each copy checks
   its record against a hash of the owner's and asks for the whole record when it differs, so a mistake costs
-  traffic, not a wrong copy. The whole record still goes every 64 edits, after a change the owner made itself
-  (`RecordChanged`), and when ownership moves. A mod that overrides `ReplayEdits` needs TLD Revamp with API 6.
+  traffic, not a wrong copy; one that keeps differing is named once in the log. The whole record still goes every 64
+  edits (or 32 KB of them) and after a change the owner made itself (`RecordChanged`). A player who becomes the owner
+  first takes the host's record and the edits since it; edits that reach it meanwhile wait and follow, and its record
+  then goes to everyone once. (An OnEdit that breaks the rule above can still lose its last edit when ownership moves
+  at that moment: every machine ends the same, on the new owner's record.) On a TLD Revamp
+  before API 6 the override is never read and the type sends whole records as before (`MpApi.ApiVersion` is a
+  constant compiled into the mod: the API it was built against, not the one installed).
 - **Placed / stored**: the object came into view on this machine or went into the far store.
 - **Player joined / left**: for mods with session-wide state.
 

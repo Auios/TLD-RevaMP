@@ -155,7 +155,7 @@ namespace TLDRevamp.Net
                 case ModObjects.ModEdited:
                     mod = true; net = r.U32(); r.Skip(8); r.Var(); r.Skip(16); r.Bytes(); break;
                 case ModObjects.ModResync:
-                    mod = true; net = r.U32(); if (fromServer) r.Var(); break;
+                    mod = true; net = r.U32(); if (fromServer) { r.Var(); r.Skip(1); } break;
                 case ModObjects.ModEdit:
                     mod = true; net = r.U32(); if (fromServer) r.Var(); r.Bytes(); break;
                 case ModObjects.ModOwner:

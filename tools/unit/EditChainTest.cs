@@ -25,6 +25,11 @@ static class EditChainTest
         Check("a large record takes up to MaxChainEdits small edits", EditChain.Forward(EditChain.MaxChainEdits - 1, 63 * 15, 15, 28000));
         Check("an edit as large as the record goes as the record", !EditChain.Forward(0, 0, 4000, 3000));
 
+        // whatever the owner forwards, the host keeps all of it (a new owner and later copies rebuild from it)
+        int ce = 0, cb = 0, kept = 0, kb = 0; bool all = true;
+        while (EditChain.Forward(ce, cb, 1000, 1 << 20)) { ce++; cb += 1000; all &= EditChain.Keep(kept, kb, 1000 + EditChain.KeptHeaderBytes); kept++; kb += 1000 + EditChain.KeptHeaderBytes; }
+        Check("the host keeps every edit the owner forwards (" + ce + " edits of 1000 B on a 1 MB record)", all && ce > 0 && cb <= EditChain.MaxChainBytes);
+
         // the host's kept edits for later copies
         Check("the host keeps edits under its caps", EditChain.Keep(0, 0, 100) && EditChain.Keep(EditChain.MaxKeptEdits - 1, 0, 100));
         Check("past the count or the bytes it keeps none", !EditChain.Keep(EditChain.MaxKeptEdits, 0, 1) && !EditChain.Keep(1, EditChain.MaxKeptBytes - 10, 11));
