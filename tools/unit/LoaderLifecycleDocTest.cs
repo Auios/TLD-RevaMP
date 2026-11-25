@@ -24,7 +24,7 @@ static class LoaderLifecycleDocTest
 
         string host = Read("src/TLDRevamp/ModHost.cs");
         string shim = Read("src/TLDLoaderShim/TLDLoader.cs");
-        string plugin = Read("src/TLDRevamp/Plugin.cs");
+        string plugin = Read("src/TLDRevamp/Plugin.cs") + Read("src/TLDRevamp/ModGuiRunner.cs");   // the mods' GUI pass has its own runner
         string docs = Read("docs/MODDING-MULTIPLAYER.md");
         string readme = Read("README.md");
 
@@ -92,7 +92,7 @@ static class LoaderLifecycleDocTest
         Check("Config is gated on the settings screen being open",
             host.Contains("ConfigScreenOpen") && Regex.IsMatch(host, @"if \(!ConfigScreenOpen\) return;"));
         Check("the settings screen state is refreshed every frame",
-            Read("src/TLDRevamp/Plugin.cs").Contains("ModHost.RefreshConfigScreen()"));
+            plugin.Contains("ModHost.RefreshConfigScreen()"));
         // Update/FixedUpdate/OnGUI: every frame / every physics step / every gui pass.
         Check("Update runs every tick", host.Contains("Call(l, l.Update, \"Update\")"));
         Check("FixedUpdate runs in the fixed tick", host.Contains("Call(l, l.FixedUpdate, \"FixedUpdate\")"));
