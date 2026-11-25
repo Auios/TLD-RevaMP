@@ -165,6 +165,7 @@ namespace TLDRevamp
             ("TLDRevamp.Fixes.Sandstorms.MinS", Kind.Config, "Other values tune min s for Sandstorms."),
             ("TLDRevamp.Fixes.Sandstorms.MissDeg", Kind.OptIn, "Other values tune miss deg for Sandstorms."),
             ("TLDRevamp.Fixes.Sandstorms.SpawnDistM", Kind.OptIn, "Other values tune spawn dist m for Sandstorms."),
+            ("TLDRevamp.Fixes.SaveListSideFiles.Enabled", Kind.Test, "false: the load screen lists RevaMP's side files (.leases/.players/.tune) as extra saves, as the game does."),
             ("TLDRevamp.Fixes.SceneryTileSync.Enabled", Kind.Config, "false: scenery keeps the original road/building snapshot from generation time."),
             ("TLDRevamp.Fixes.SleepingWheelSkip.Enabled", Kind.Config, "false: resting wheels run their visual updates every frame."),
             ("TLDRevamp.Fixes.SleepingWheelSkip.RefreshFrames", Kind.OptIn, "Other values tune refresh frames for SleepingWheelSkip."),
