@@ -69,9 +69,17 @@
       "id": "anonymoustld.mountanything",
       "name": "MountAnything",
       "author": "YujiroX2",
-      "description": "Mount any held item anywhere: on a car, the ground, a building or another item, with a placement preview.",
+      "description": "Mount any held item anywhere: on a car, the ground, a building or another item, where you hold it or with a placement preview.",
       "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/MountAnything",
       "versions": [
+        {
+          "version": "0.3.0",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/mountanything-v0.3.0/MountAnything-0.3.0.zip",
+          "file": "BepInEx/plugins/MountAnything/MountAnything.dll",
+          "sha256": "ba8a0eb7b976ca45b3b36839d16e95d9fc7e144625cb2cdd032e1bf674c2c1df",
+          "size": 52367,
+          "revamp": "0.69.3"
+        },
         {
           "version": "0.2.2",
           "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/mountanything-v0.2.2/MountAnything-0.2.2.zip",
