@@ -42,7 +42,17 @@ namespace TLDRevamp
             // a player edition ignores the config's Bridge; only an explicit -tldbridge on the command line (the test tools) starts it
             if (IsPlayerEdition && ci >= 0) BridgeEnabled = true;
             ObjectTrail.On = BridgeEnabled;
-            if (BridgeEnabled) { _bridge = new DebugBridge(BridgePort); _bridge.Start(); }
+            if (BridgeEnabled)
+            {
+                // a taken port (another game's bridge, a test machine's second Steam on 27050) leaves the bridge off, not the
+                // whole developer plugin: the exception used to end Awake here, silently in BepInEx's log
+                try { _bridge = new DebugBridge(BridgePort); _bridge.Start(); }
+                catch (System.Net.Sockets.SocketException e)
+                {
+                    Log.LogWarning($"Bridge: port {BridgePort} is taken ({e.SocketErrorCode}): bridge off. Set [Debug] BridgePort, or -tldbridge N");
+                    _bridge = null; BridgeEnabled = false; ObjectTrail.On = false;
+                }
+            }
 
             DevHooks.BridgePump = () => _bridge?.PumpMainThread();
             DevHooks.BridgeStopped = () => _bridge?.Stop();

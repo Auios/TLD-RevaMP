@@ -353,6 +353,24 @@ public sealed class Builder(Store store, Action<string> log)
 
     static string RevampCfg(string game) => Path.Combine(game, "BepInEx", "config", "tldrevamp.core.cfg");
 
+    /// <summary>The bridge port the copy's config gives (its [Debug] BridgePort), 27050 when it gives none.</summary>
+    public static int BridgePort(string game)
+    {
+        try
+        {
+            string section = "";
+            foreach (var raw in File.ReadLines(RevampCfg(game)))
+            {
+                var line = raw.Trim();
+                if (line.StartsWith('[')) { section = line; continue; }
+                if (section == "[Debug]" && line.StartsWith("BridgePort") && line.Split('=') is { Length: 2 } kv && int.TryParse(kv[1].Trim(), out int p)) return p;
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        return 27050;
+    }
+
     /// <summary>The bridge line of RevaMP's config (BepInEx/config/tldrevamp.core.cfg), keeping its line endings.</summary>
     public static void SetBridge(string game, bool on)
     {

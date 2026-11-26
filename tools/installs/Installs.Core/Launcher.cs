@@ -244,15 +244,19 @@ public static class Launcher
                 menu = menu || Fresh(PlayerLog(c), t0) is { } pl && pl.Contains("menuhandler START");   // the game's main menu
                 if (c.HasRevamp && Fresh(c.LogFile, t0) is { } bl)
                 {
-                    var m = Regex.Match(bl, @"TLD Revamp (\S+) loaded\..*?game build (\w+)\. [Bb]ridge (\w+)");
-                    if (m.Success) (loaded, build, bridgeLine) = (m.Groups[1].Value, m.Groups[2].Value, m.Groups[3].Value == "on");
+                    // since the dev split (730d713) the developer tools plugin says "Bridge on …" / "bridge off" on a line of
+                    // its own, after the plugin's "loaded" line; before, it ended that line
+                    var m = Regex.Match(bl, @"TLD Revamp (\S+) loaded\..*?game build (\w+)\.");
+                    if (m.Success) (loaded, build) = (m.Groups[1].Value, m.Groups[2].Value);
+                    var b = Regex.Match(bl, @"\b[Bb]ridge (on|off)\b");
+                    if (b.Success) bridgeLine = b.Groups[1].Value == "on";
                 }
                 bool ready = menu && (!c.HasRevamp || loaded != null);
                 if (ready && up == null) { up = DateTime.UtcNow; log("  up after " + (int)(up.Value - t0).TotalSeconds + " s"); }
                 if (up != null && (DateTime.UtcNow - up.Value).TotalSeconds >= 15)   // still in the menu a while later
                 {
                     if (!IsRunning(c)) return new(false, loaded, build, bridgeLine, false, "it closed shortly after starting");
-                    return new(true, loaded, build, bridgeLine, BridgeAnswers(), "running");
+                    return new(true, loaded, build, bridgeLine, BridgeAnswers(Builder.BridgePort(c.GameDir)), "running");
                 }
             }
             return new(false, loaded, build, bridgeLine, false, $"not up after {timeout} s");
@@ -272,12 +276,14 @@ public static class Launcher
     }
 
     /// <summary>Does a debug bridge answer on 127.0.0.1:27050 (RevaMP's test bridge, only in a test copy)?</summary>
-    public static bool BridgeAnswers()
+    /// <summary>The copy's own bridge port answers (its config's [Debug] BridgePort: another program may hold 27050, as a
+    /// test machine's second Steam does).</summary>
+    public static bool BridgeAnswers(int port = 27050)
     {
         try
         {
             using var tcp = new TcpClient();
-            if (!tcp.ConnectAsync("127.0.0.1", 27050).Wait(2000)) return false;
+            if (!tcp.ConnectAsync("127.0.0.1", port).Wait(2000)) return false;
             using var s = tcp.GetStream();
             s.ReadTimeout = 5000;
             var w = new StreamWriter(s) { NewLine = "\n" }; w.WriteLine("ping"); w.Flush();
