@@ -14,9 +14,17 @@ static class SaveListNamesTest
     /// The game's newSaveScreenScript.ReadFiles rule, for the non-autosave entries.
     static List<string> GameList(IEnumerable<string> paths) => paths
         .Where(p => p.Contains("TLDsaveData_") && p.Contains(".tlds"))
-        .Select(p => System.IO.Path.GetFileNameWithoutExtension(p).Substring("TLDsaveData_".Length))
+        .Select(p => WindowsNameWithoutExtension(p).Substring("TLDsaveData_".Length))
         .Where(n => n != "autosave1" && n != "autosave2" && n != "autosave3")
         .ToList();
+
+    /// Path.GetFileNameWithoutExtension as the game sees it (Windows, or Proton): '\' is a separator also on Linux runners.
+    static string WindowsNameWithoutExtension(string p)
+    {
+        string f = p.Substring(p.LastIndexOfAny(new[] { '/', '\\' }) + 1);
+        int dot = f.LastIndexOf('.');
+        return dot < 0 ? f : f.Substring(0, dot);
+    }
 
     static int Main()
     {

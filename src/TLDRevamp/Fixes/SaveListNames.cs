@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace TLDRevamp.Fixes
 {
@@ -13,13 +12,14 @@ namespace TLDRevamp.Fixes
     internal static class SaveListNames
     {
         internal const string Prefix = "TLDsaveData_", Format = ".tlds";
+        private static readonly char[] Separators = { '/', '\\' };
 
         /// The save's name for a file in the Saves folder, or null when the file is no save (a side file, a thumbnail, a
         /// properties file). Matches the game's own checks (ordinal Contains), plus the extension rule.
         internal static string SaveNameOf(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;
-            string file = Path.GetFileName(path);
+            string file = path.Substring(path.LastIndexOfAny(Separators) + 1);   // both kinds, whatever the OS says
             if (!file.StartsWith(Prefix, StringComparison.Ordinal) || !file.EndsWith(Format, StringComparison.Ordinal)) return null;
             if (file.Length == Prefix.Length + Format.Length) return null;   // "TLDsaveData_.tlds": no name
             return file.Substring(Prefix.Length, file.Length - Prefix.Length - Format.Length);
