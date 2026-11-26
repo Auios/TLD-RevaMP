@@ -217,6 +217,7 @@ namespace TLDRevamp
             yield return "the address of a field above (t.category.ToString()) -> LoaderCompat.<getter>Ref, a copy's";
             foreach (var a in CompatMethods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> LoaderCompat." + a[3];
             yield return "GameObject.Find(\"Main\") -> LoaderCompat.FindMain";
+            yield return "a material's mainTexture.name -> LoaderCompat.TextureName (\"\" where the beta's material has no texture)";
             yield return "Harmony.PatchAll() -> LoaderCompat.PatchAll (all of them or none)";
             yield return "AccessTools.TypeByName(name) -> LoaderCompat.TypeByName (remembered, a miss until another assembly loads)";
             yield return "Dictionary<Int32,save_prefab>.ContainsKey -> LoaderCompat.RecordIdUsed; GetComponent<a type the beta lacks>() -> LoaderCompat.NoComponent";
@@ -454,6 +455,17 @@ namespace TLDRevamp
                 var m = compat.GetMethod("FindMain", Statics);
                 if (m == null) return null;
                 what = "GameObject.Find(\"Main\") -> " + compat.Name + ".FindMain";
+                return m;
+            }
+            // material.mainTexture.name: some of the beta's materials have no texture, where a mod sorting renderers by their
+            // texture's name stopped there every frame (and left the renderers after it as they were)
+            if (mr.Name == "get_name" && mr.DeclaringType.FullName == "UnityEngine.Object" && mr.HasThis && ins.Previous != null &&
+                (ins.Previous.OpCode == OpCodes.Callvirt || ins.Previous.OpCode == OpCodes.Call) && ins.Previous.Operand is MethodReference prev &&
+                prev.Name == "get_mainTexture" && prev.DeclaringType.FullName == "UnityEngine.Material")
+            {
+                var m = compat.GetMethod("TextureName", Statics);
+                if (m == null) return null;
+                what = "Material.mainTexture.name -> " + compat.Name + ".TextureName";
                 return m;
             }
             // Dictionary<int, save_prefab>.ContainsKey: the spawner's id test on the old records

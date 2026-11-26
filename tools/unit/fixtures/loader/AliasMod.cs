@@ -66,6 +66,8 @@ public static class AliasMod
     public static UnityEngine.GameObject Main() => UnityEngine.GameObject.Find("Main");
     public static void Refresh(usablescript u) => u.Refresh(1f, 2f, 3f);
     public static void Layer(layerScript l) => l.FStart();
+    /// A renderer sorted by its texture's name (a police mod's hat); a material may have no texture.
+    public static string Texture(UnityEngine.Material m) => m.mainTexture.name;
 
     /// Where the mod's DLL is (a modding toolkit finds its assets next to it).
     public static string Where() => typeof(AliasMod).Assembly.Location;

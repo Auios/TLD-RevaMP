@@ -3,6 +3,9 @@ namespace UnityEngine
 {
     public class Transform { }
     public class GameObject { public string Name; public static GameObject Find(string name) => null; }
+    public class Object { public string name { get; set; } }
+    public class Texture : Object { }
+    public class Material { public Texture mainTexture { get; set; } }
     public struct Vector3 { public float x, y, z; }
     public struct Color { public float r, g, b, a; }
 #if !PUBLIC_GAME

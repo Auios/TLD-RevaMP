@@ -311,6 +311,9 @@ namespace TLDRevamp
         /// object named Main is something else; in the menu (no mainscript) the name is looked up as the mod asked.
         public static GameObject FindMain(string name) { Calls++; return mainscript.s != null ? mainscript.s.gameObject : GameObject.Find(name); }
 
+        /// material.mainTexture.name: "" for a material without a texture (some of the beta's have none) instead of a throw.
+        public static string TextureName(UnityEngine.Object texture) { Calls++; return texture != null ? texture.name : ""; }
+
         /// Assembly.Location: for a rewritten mod (loaded from bytes, no location) the DLL it came from.
         public static string AssemblyLocation(System.Reflection.Assembly a)
         {

@@ -175,6 +175,10 @@ static class LoaderRetargetTest
             var asm = LoadBytes(mod).GetType("AliasMod");
             Check("compat: GameObject.Find(\"Main\") gets mainscript's object", changes.Contains("GameObject.Find(\"Main\") -> TestCompat.FindMain") &&
                   ((UnityEngine.GameObject)asm.GetMethod("Main").Invoke(null, null)).Name == "the main object");
+            var tex = asm.GetMethod("Texture");
+            Check("compat: a material's mainTexture.name is the texture's, \"\" without one", changes.Contains("Material.mainTexture.name -> TestCompat.TextureName") &&
+                  (string)tex.Invoke(null, new object[] { new UnityEngine.Material { mainTexture = new UnityEngine.Texture { name = "hat_d" } } }) == "hat_d" &&
+                  (string)tex.Invoke(null, new object[] { new UnityEngine.Material() }) == "");
             var u = new usablescript { currentTurnState = 4 };
             asm.GetMethod("Refresh").Invoke(null, new object[] { u });
             Check("compat: usablescript.Refresh(slide, x, y) passes the usable's turn state (1+2+3+4)", u.Got == 10f);
@@ -333,7 +337,7 @@ static class LoaderRetargetTest
         {
             var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
             Check("all sixteen fields, eighteen method shapes, a building's start, the five part redirects, the coordinate type, the generator chain and its static map, the main menu, a return sign and an attribute's typeof are retargeted", changes.Count == 52);
-            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 129);
+            Check("aliases are listed with their beta targets (" + System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) + ")", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 130);
             var rewritten = LoadBytes(mod).GetType("AliasMod");
             var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
             var m = new mainscript(); var menu = new menuhandler();
@@ -446,6 +450,7 @@ public static class TestCompat
     public static System.Reflection.MethodInfo GetMethodFlags(System.Type t, string name, System.Reflection.BindingFlags flags) => LoaderRetarget.LooseMethod(t, name, flags);
     public static string AssemblyLocation(System.Reflection.Assembly a) => "the mod's own DLL";
     public static UnityEngine.GameObject FindMain(string name) => new UnityEngine.GameObject { Name = "the main object" };
+    public static string TextureName(UnityEngine.Object t) => t != null ? t.name : "";
     public static void RefreshUsable(usablescript u, float slide, float x, float y) => u.Refresh(slide, x, y, u.currentTurnState);
     public static void LayerFStart(layerScript l) => l.FStart("the item", 0);
     public static void PoiFStart(poiScript p, int kind) => p.FStart(kind, p.posID);
