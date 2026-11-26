@@ -13,7 +13,7 @@ No game is launched here: the tests read the source and drive the pure functions
 
   python3 -m unittest discover -s tools -p 'test_launch_policy.py' -v
 """
-import os, pathlib, re, sys, unittest, unittest.mock
+import inspect, os, pathlib, re, sys, unittest, unittest.mock
 
 TOOLS = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
@@ -156,6 +156,16 @@ class ProfileTests(unittest.TestCase):
             self.assertIn("no_initial_focus", rules)
             self.assertIn("suppress_event fullscreen maximize", rules)
             self.assertIn("float", rules)
+
+    def test_a_lua_hyprland_gets_the_same_rules_as_a_table(self):
+        # Hyprland 0.56 reads Lua: the bracket rules became a Lua syntax error and every hidden launch was refused
+        for name in ("desktop", "remote"):
+            rules = testdisplay.lua_rules(name)
+            self.assertIn('workspace = "special:tld-tests silent"', rules)
+            self.assertIn("no_initial_focus = true", rules)
+            self.assertIn('suppress_event = "fullscreen maximize"', rules)
+            self.assertIn("float = true", rules)
+        self.assertIn("hyprctl eval", inspect.getsource(testdisplay.background_command))
 
 
 class CommandGuardTests(unittest.TestCase):

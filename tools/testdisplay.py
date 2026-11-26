@@ -178,10 +178,32 @@ def headless_prefix(profile_name=None):
             "-w", str(pr["width"]), "-h", str(pr["height"]), "--"]
 
 
+def lua_rules(profile_name=None):
+    """launch_rules for a Hyprland configured in Lua (0.56 on): the same rules as exec_cmd's rule table."""
+    pr = profile(profile_name)
+    return ('{ workspace = "%s silent", float = true, size = { %d, %d }, no_initial_focus = true, '
+            'suppress_event = "fullscreen maximize" }' % (WORKSPACE, pr["width"], pr["height"]))
+
+
+def lua_dispatch(env):
+    """Hyprland 0.56 reads its config as Lua, and `hyprctl dispatch exec [rules] cmd` became a Lua call that fails
+    ("']' expected near 'special'"): every hidden launch was refused. Its version says which form it takes."""
+    try:
+        v = query("version", env)
+        parts = [int(x) for x in str(v.get("version", "")).split(".")[:2]]
+        return parts >= [0, 56]
+    except (RuntimeError, ValueError, AttributeError):
+        return False
+
+
 def background_command(command, profile_name=None, env=None):
     env = env if env is not None else hypr_env()
     preflight(env)
     assignments = " ".join(shlex.quote(k + "=" + env[k]) for k in ("XDG_RUNTIME_DIR", "HYPRLAND_INSTANCE_SIGNATURE"))
+    if lua_dispatch(env):
+        if "]==]" in command: raise RuntimeError("launch command can't be quoted for Lua; hidden launch refused")
+        lua = "hl.exec_cmd([==[" + command + "]==], " + lua_rules(profile_name) + ")"
+        return "env " + assignments + " hyprctl eval " + shlex.quote(lua)
     return "env " + assignments + " hyprctl dispatch exec " + shlex.quote(launch_rules(profile_name) + command)
 
 
