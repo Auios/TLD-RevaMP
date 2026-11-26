@@ -55,7 +55,7 @@ parts = {
          'ForgetProxyMap<T>', 'ForgetProxyMaps', 'RefreshProxyMaps'],
     'FarStore': ['KnownBy', 'RecordRootPos', 'ShareFarStore', 'AddFar', 'Offer', 'SendObject'],
     'Lifecycle': ['CameOff', 'FarOnSplit', 'DestroyMembers', 'OrphanPart', 'ServerRemoveItem', 'DestroyLocalCopy',
-                  'ApplyRemoveItem', 'ShareSpawn', 'DeleteShared', 'RequestMemberGone', 'LostPartBack', 'HangBack', 'ForgetServerNet'],
+                  'ApplyRemoveItem', 'ShareSpawn', 'DeleteShared', 'Delete', 'RequestMemberGone', 'LostPartBack', 'HangBack', 'ForgetServerNet'],
     'Leases': ['ClientWorldReload', 'AttachedToItem'],
     'LockPose': ['RebindPoseLocks'],
     'EngineBinding': ['BindProxyEngine'],

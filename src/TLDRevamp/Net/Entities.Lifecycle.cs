@@ -509,9 +509,17 @@ namespace TLDRevamp.Net
         public static string DeleteShared(uint net)
         {
             if (!ByNet.TryGetValue(net, out var e) || !Resolve(e) || e.Root == null) return "{\"error\":\"no such object here\"}";
-            RemoveRecord(e.Root.idInSave);   // a real deletion: the far-store record goes too, so OnDestroy broadcasts
-            e.Root.JustDestroy();
+            Delete(e.Root);
             return "{\"deleted\":" + net + "}";
+        }
+
+        /// A real deletion of an item this machine runs: the save/far-store record goes too, so OnDestroy broadcasts it in
+        /// a session (RemoveItem). Solo it is just gone from the world and the save.
+        internal static void Delete(tosaveitemscript item)
+        {
+            if (item == null) return;
+            RemoveRecord(item.idInSave);
+            item.JustDestroy();
         }
 
         public static long SpawnShared;
