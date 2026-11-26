@@ -3,11 +3,14 @@
 the unit put into the car's radio slot as a player would, its screen's place and buttons, presses on them along a
 ray as the crosshair does, and pictures of the screen (TheLongDrive_Data/headunit_*.png).
   TLD_TEST_MODS=CarTrailer,HeadUnit tools/headunit.py [--no-build] [--cache]
+HU_VIDEOS=id1,id2 (the two queued videos) and HU_LINK=id (the link typed in the box): YouTube asks some machines to sign
+in for some videos ("not a bot"); pick ones it serves there. A test game is muted: "its sound plays" then checks that the
+video's sound track plays into its source (Probe.Sound), as nothing reaches the output.
 --cache: only the video cache (BepInEx/cache/HeadUnit): a video's file deleted soon after nothing plays it or has it
 next, downloaded again when it comes back, and the folder empty after a restart."""
 import os
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")
-import sys, time, pathlib, math
+import sys, time, pathlib, math, re
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game, tldenv
 from bench import Bridge
@@ -16,6 +19,13 @@ from roadkit import clear_road, CAR01
 VERDICTS = []
 def verdict(name, ok, detail=""):
     VERDICTS.append((name, ok)); print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
+
+def heard(sound):
+    """A Probe.Sound line: sound came out, or (a test game is muted: AudioListener.volume 0, testdisplay.py, so
+    nothing reaches the output or a filter) the video's sound track plays into its unmuted source."""
+    m = re.search(r"peak ([\d.]+)", sound)
+    if m and float(m.group(1)) > 0.001: return True
+    return "listener 0.00" in sound and "source playing on" in sound and "enabled True target True" in sound
 
 def call(b, what):
     try: return str(b("call HeadUnit.Probe." + what)["value"])
@@ -57,6 +67,11 @@ with game.ProtectedSession():
         after = call(b, "Where")
         print(f" press {bid}:", r, "|", after.split("; buttons")[0])
         verdict(f"button {bid} works", r.startswith("pressed"), r)
+    t = call(b, "Tools"); print(" tools:", t, flush=True)
+    if "yt-dlp False" in t or "ffmpeg False" in t:   # a fresh copy: yt-dlp, Deno and ffmpeg first, as a player would
+        print(" fetches the tools:", call(b, "GetTools"), flush=True)
+        t0 = time.time()
+        while time.time() - t0 < 300 and not ("yt-dlp True" in call(b, "Tools") and "downloading False" in call(b, "Tools")): time.sleep(2)
     r = call(b, "Press video"); time.sleep(1.0)
     verdict("YOUTUBE tab opens", "mode Video" in call(b, "Video") or "tab Video" in call(b, "Video"), call(b, "Video"))
     print(" shot:", call(b, "Shot video"))
@@ -110,7 +125,7 @@ with game.ProtectedSession():
         print(f"{sum(ok for _, ok in VERDICTS)}/{len(VERDICTS)} passed"); sys.exit(0)
     snd = [call(b, "Sound") for _ in range(5) if not time.sleep(0.5)]
     print(" sound:", snd, "|", call(b, "Player"))
-    verdict("its sound plays", any(float(x.split("peak ")[1].split()[0]) > 0.001 for x in snd if "peak " in x), snd[-1])
+    verdict("its sound plays", any(heard(x) for x in snd), snd[-1])
     print(" shot:", call(b, "Shot playing"))
     call(b, "Press nav"); time.sleep(3)
     st = call(b, "Video"); print(" on NAV:", st)
@@ -175,7 +190,7 @@ with game.ProtectedSession():
     verdict("search: a tapped result is queued", n1 == n0 + 1, f"{n0} -> {n1}")
     print(" shot:", call(b, "Shot searchadded"))
     call(b, "Press done")
-    print(" link in the same box:", call(b, "Search https://www.youtube.com/watch?v=jNQXAC9IVRw"))
+    print(" link in the same box:", call(b, "Search https://www.youtube.com/watch?v=" + os.environ.get("HU_LINK", "jNQXAC9IVRw")))
     until_t = time.time()
     while time.time() - until_t < 30 and count() < n1 + 1: time.sleep(1)
     verdict("a link in the box still adds directly", count() == n1 + 1, f"{n1} -> {count()}")

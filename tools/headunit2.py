@@ -2,8 +2,10 @@
 """The Head Unit example mod with two players (desktop hosts, laptop joins over the relay): a head unit in the host's
 Car01, a video queue started by the host; the laptop, standing at the car, plays the same video at the same moment;
 the laptop presses next and back, the host follows; a song from a Spotify album added by the laptop; each player's
-own video volume, the sound playing on both. Under Steam's Proton (no H.264) the laptop converts the videos to VP8
-(Ytdlp.ToVp8): --fresh-convert turns its conversion off first, so it has to find that out again.
+own video volume, the sound playing on both; the car's edits replayed on the laptop (mod API 6), none mismatched; a
+search left by a player who leaves the session stops saying SEARCHING (45 s). Under Steam's Proton (no H.264) the
+laptop converts the videos to VP8 (Ytdlp.ToVp8): --fresh-convert turns its conversion off first, so it has to find
+that out again. HU_VIDEOS=id1,id2: the two videos (YouTube asks some machines to sign in for some of them).
   TLD_TEST_MODS=CarTrailer,HeadUnit tools/headunit2.py [--no-build] [--relay iad|off] [--fresh-convert] [--allow-nocodecs]"""
 import os
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")
@@ -32,6 +34,13 @@ def parse(st):
     if not m: return None
     return {"index": int(m.group(1)), "count": int(m.group(2)), "playing": m.group(3) == "playing",
             "pos": float(m.group(4)), "shown": m.group(5) == "ready" and m.group(6) == "PLAYING", "nocodecs": NOCODECS in st}
+
+def heard(sound):
+    """A Probe.Sound line: sound came out, or (a test game is muted: AudioListener.volume 0, testdisplay.py, so
+    nothing reaches the output or a filter) the video's sound track plays into its unmuted source."""
+    m = re.search(r"peak ([\d.]+)", sound)
+    if m and float(m.group(1)) > 0.001: return True
+    return "listener 0.00" in sound and "source playing on" in sound and "enabled True target True" in sound
 
 def both(h, L):
     a, b = call(h, "Video"), call(L, "Video")
@@ -85,10 +94,9 @@ with game.ProtectedSession():
     verdict("C. AT THE SAME MOMENT (shared position within 0.5 s)", bool(pa and pb and abs(pa["pos"] - pb["pos"]) < 0.5), f"{pa} / {pb}")
     snd = [call(h, "Sound"), call(L, "Sound")]
     for _ in range(4):
-        if all("peak 0.000" not in x for x in snd): break
+        if all(heard(x) for x in snd): break
         time.sleep(0.5); snd = [call(h, "Sound"), call(L, "Sound")]
-    peak = [float(re.search(r"peak ([\d.]+)", x).group(1)) if "peak" in x else 0.0 for x in snd]
-    verdict("C2. SOUND PLAYING ON BOTH", peak[0] > 0.001 and peak[1] > 0.001, f"host {snd[0]} / laptop {snd[1]}")
+    verdict("C2. SOUND PLAYING ON BOTH", heard(snd[0]) and heard(snd[1]), f"host {snd[0]} / laptop {snd[1]}")
     vol = lambda x: re.search(r"volume ([\d.]+)", x).group(1) if "volume" in x else "?"
     v0 = [vol(x) for x in snd]
     for _ in range(2): call(h, "Press vol+")
@@ -126,6 +134,23 @@ with game.ProtectedSession():
     a, b, pa, pb = both(h, L)
     verdict("G2. THE LAPTOP'S SEARCH RESULT IN THE SHARED QUEUE", bool(pa and pb and pa["count"] == pb["count"] == n0 + 1), f"{n0} -> {pa and pa['count']} / {pb and pb['count']}")
     verdict("H. BOTH GAMES STILL RUNNING", game.running() and "ERROR" not in call(L, "Video"), "")
+    # the car's edits replayed on the copy (RevaMP mod API 6), and a search left by a player who leaves the session
+    keys = ("editsForwarded", "editsReplayed", "replayRefused", "replayMismatch", "replayGaps", "resyncsAsked", "resyncsServed")
+    mh, mL = h("mp mods"), L("mp mods")
+    print("  replay host:  ", {k: mh.get(k) for k in keys}, flush=True)
+    print("  replay laptop:", {k: mL.get(k) for k in keys}, flush=True)
+    verdict("R. THE LAPTOP REPLAYED THE CAR'S EDITS, NONE MISMATCHED", (mL.get("editsReplayed") or 0) > 0 and (mL.get("replayMismatch") or 0) == 0,
+            f"replayed {mL.get('editsReplayed')}, mismatched {mL.get('replayMismatch')}, resyncs asked {mL.get('resyncsAsked')}")
+    print(" laptop searches, then leaves at once:", call(L, "Search lofi_hip_hop_radio"), flush=True)
+    time.sleep(1.0)
+    try: L("mp stop")
+    except Exception as e: print("  laptop stop:", e, flush=True)
+    t0 = time.time(); seen = call(h, "SearchResults")[:40]
+    print("  host right after:", seen, flush=True)
+    until(lambda: not call(h, "SearchResults").startswith("searching"), 90)
+    left = round(time.time() - t0, 1)
+    verdict("S. A SEARCH LEFT BY A PLAYER WHO LEFT STOPS SAYING SEARCHING", not call(h, "SearchResults").startswith("searching"),
+            f"host first saw '{seen}', clear after {left} s: {call(h, 'SearchResults')[:60]}")
     er = [x_("errors") for x_ in (h, L)]
     print("  errors host/laptop:", er[0].get("count"), er[1].get("count"), flush=True)
     for s_ in (h, L):
