@@ -2,14 +2,14 @@
 """The Head Unit example mod (TLD-Mods: mods/HeadUnit) in single player, on this machine: a Car01 and a head unit spawned,
 the unit put into the car's radio slot as a player would, its screen's place and buttons, presses on them along a
 ray as the crosshair does, and pictures of the screen (TheLongDrive_Data/headunit_*.png).
-  TLD_TEST_MODS=CarTrailer,HeadUnit tools/headunit.py [--no-build] [--cache | --signin]
+  TLD_TEST_MODS=CarTrailer,HeadUnit tools/headunit.py [--no-build] [--cache | --refused]
 HU_VIDEOS=id1,id2 (the two queued videos) and HU_LINK=id (the link typed in the box): YouTube asks some machines to sign
 in for some videos ("not a bot"); pick ones it serves there. A test game is muted: "its sound plays" then checks that the
 video's sound track plays into its source (Probe.Sound), as nothing reaches the output.
 --cache: only the video cache (BepInEx/cache/HeadUnit): a video's file deleted soon after nothing plays it or has it
 next, downloaded again when it comes back, and the folder empty after a restart.
---signin: YouTube's sign-in check and the player's own login for it (signin below; HU_BLOCKED: a video YouTube asks
-that for on this machine)."""
+--refused: YouTube refusing this connection ("not a bot": a VPN, mostly) said on the screen instead of UPDATE (refused
+below; HU_BLOCKED: a video YouTube refuses on this machine)."""
 import os
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")
 import sys, time, pathlib, math, re
@@ -33,91 +33,38 @@ def call(b, what):
     try: return str(b("call HeadUnit.Probe." + what)["value"])
     except Exception as e: return "ERROR " + str(e)[:300]
 
-def signin(b, vids):
-    """--signin: YouTube's "Sign in to confirm you're not a bot" (HU_BLOCKED: a video it asks that for here). SIGN IN
-    shows where the picture would be (not UPDATE); pressed, it gives yt-dlp the Firefox login used last, a made-up
-    profile beside the game copy here (never this machine's own browser); yt-dlp runs with it and the screen still
-    shows YouTube's error (a made-up login isn't accepted); a video YouTube serves still plays with it; a cookies.txt
-    is used the same way, from a copy per run. Where SIGN IN would look on this machine is printed, nothing read there."""
-    import sqlite3, shutil
+def refused(b, vids):
+    """--refused: YouTube's "Sign in to confirm you're not a bot" for this connection (HU_BLOCKED: a video it says that
+    for here; a VPN, mostly). The screen says YOUTUBE SAID NO where the picture would be, without UPDATE; a link it
+    refuses in + ADD says so in its banner, without UPDATE; a video YouTube serves still plays after."""
     blocked = os.environ.get("HU_BLOCKED", "3BFTio5296w")
-    cfg = tldenv.GAME_DIR / "BepInEx/config/HeadUnit"
-    txt, aside = cfg / "cookies.txt", cfg / "cookies.txt.aside"
-    if txt.exists(): txt.rename(aside)
-    fake = tldenv.GAME_DIR.parent / "hu-firefox"
-    shutil.rmtree(fake, ignore_errors=True)
-    prof = fake / "test1234.default-release"; prof.mkdir(parents=True)
-    db = sqlite3.connect(prof / "cookies.sqlite")
-    db.execute("CREATE TABLE moz_cookies (id INTEGER PRIMARY KEY, originAttributes TEXT NOT NULL DEFAULT '', name TEXT, value TEXT, host TEXT, path TEXT, "
-               "expiry INTEGER, lastAccessed INTEGER, creationTime INTEGER, isSecure INTEGER, isHttpOnly INTEGER, inBrowserElement INTEGER DEFAULT 0, "
-               "sameSite INTEGER DEFAULT 0, rawSameSite INTEGER DEFAULT 0, schemeMap INTEGER DEFAULT 0)")
-    db.execute("INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES ('PREF', 'hl=en', '.youtube.com', '/', 2000000000, 1, 0)")
-    db.commit(); db.close()
-    try:
-        print(" sign-in before:", call(b, "SignOut"), "|", call(b, "SignInState"))
-        look = call(b, "SignInLook"); print(" where SIGN IN would look here:", look)
-        verdict("SIGN IN finds the Linux home under Proton", "wine home True" in look, look)
-        print(" test profiles:", call(b, f"SignInRoots {fake}"))
-        logn = lambda: sum(1 for l in tldenv.LOG.read_text(errors="replace").splitlines() if f"yt-dlp {blocked}" in l)
-        print(" add the blocked one:", call(b, f"Add {blocked}"))
-        for _ in range(12):
-            st = call(b, "Video")
-            m = re.search(r"index (\d+) of (\d+)", st)
-            if not m or int(m.group(1)) == int(m.group(2)) - 1: break
-            call(b, "Press next"); time.sleep(1.5)
-        t0 = time.time()
-        while time.time() - t0 < 240 and "pane Media SignIn" not in call(b, "SignInState"): time.sleep(2)
-        st = call(b, "SignInState"); v = call(b, "Video")
-        verdict("YouTube's sign-in check: SIGN IN where the picture would be, not UPDATE", "pane Media SignIn" in st and "signed in False" in st, f"{st} | {v}")
-        print(" shot:", call(b, "Shot signin"))
-        before = logn()
-        r = call(b, "Press signin"); time.sleep(0.5)
-        flash = call(b, "Tools").split("; flash ")[-1]; st = call(b, "SignInState")
-        verdict("SIGN IN takes the Firefox login used last", r.startswith("pressed") and "signed in with Firefox" in flash and "test1234.default-release" in st, f"{r} | {flash} | {st}")
-        t0 = time.time()   # every client tried again with the login (each logs its error), the screen back on SIGN IN
-        while time.time() - t0 < 240 and not (logn() > before and "problem yt-dlp" in call(b, "Video")): time.sleep(2)
-        v = call(b, "Video"); st = call(b, "SignInState")
-        tail = [l.strip() for l in tldenv.LOG.read_text(errors="replace").splitlines() if f"yt-dlp {blocked}" in l][-2:]
-        print("  log:", tail)
-        verdict("yt-dlp ran with the login; the screen shows YouTube's error, not yt-dlp's cookie lines",
-                logn() > before and "not a bot" in v and "Extracting cookies" not in v and "pane Media SignIn" in st, f"{logn() - before} runs | {v} | {st}")
-        print(" shot:", call(b, "Shot signin_refused"))
+    print(" add the refused one:", call(b, f"Add {blocked}"))
+    for _ in range(12):
+        st = call(b, "Video")
+        m = re.search(r"index (\d+) of (\d+)", st)
+        if not m or int(m.group(1)) == int(m.group(2)) - 1: break
+        call(b, "Press next"); time.sleep(1.5)
+    t0 = time.time()
+    while time.time() - t0 < 240 and "pane Media Refused" not in call(b, "Refused"): time.sleep(2)
+    r = call(b, "Refused"); v = call(b, "Video")
+    verdict("a refused video: YOUTUBE SAID NO where the picture would be, no UPDATE", "pane Media Refused" in r and "not a bot" in v, f"{r} | {v}")
+    print(" shot:", call(b, "Shot refused"))
+    print(" a refused link in + ADD:", call(b, f"Link https://youtu.be/{blocked}"))
+    t0 = time.time()
+    while time.time() - t0 < 120 and "lookup refused True" not in call(b, "Refused"): time.sleep(2)
+    r = call(b, "Refused"); flash = call(b, "Tools").split("; flash ")[-1]
+    verdict("a refused link: the banner says so, no UPDATE", "lookup refused True" in r and "YouTube said no" in r and "YouTube said no" in flash, f"{r} | flash {flash}")
+    call(b, "Press prev"); time.sleep(1.5)
+    for _ in range(12):
+        st = call(b, "Video")
+        if "index 0 " in st: break
         call(b, "Press prev"); time.sleep(1.5)
-        for _ in range(12):
-            st = call(b, "Video")
-            if "index 0 " in st: break
-            call(b, "Press prev"); time.sleep(1.5)
-        t0 = time.time()
-        while time.time() - t0 < 180:
-            st = call(b, "Video")
-            if ("index 0 " in st and "PLAYING" in st) or "problem yt-dlp" in st: break
-            time.sleep(2)
-        verdict("a video YouTube serves still plays with the login given", "index 0 " in st and "PLAYING" in st, st)
-        print(" sign out:", call(b, "SignOut"))
-        txt.write_text("# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t2000000000\tPREF\thl=en\n")
-        txt_before = txt.read_bytes()
-        n0 = int(re.search(r"of (\d+)", call(b, "Video")).group(1))
-        print(" a link with cookies.txt:", call(b, f"Link https://youtu.be/{vids[0]}"))
-        t0 = time.time()
-        while time.time() - t0 < 90 and int(re.search(r"of (\d+)", call(b, "Video")).group(1)) < n0 + 1: time.sleep(1)
-        t0 = time.time()   # the new video is fetched ahead with the cookies too: its copy goes when that run ends
-        while time.time() - t0 < 240 and any(cfg.glob("cookies-run-*")): time.sleep(2)
-        runs = sorted(p.name for p in cfg.glob("cookies-run-*"))
-        n1 = int(re.search(r"of (\d+)", call(b, "Video")).group(1))
-        verdict("a cookies.txt works the same, from a copy per run (none left, the file not written)",
-                n1 == n0 + 1 and not runs and txt.read_bytes() == txt_before and "signed in True" in call(b, "SignInState"), f"{n0} -> {n1}, copies left {runs}")
-        print(" a link, the game closed while yt-dlp looks it up:", call(b, f"Link https://youtu.be/{blocked}"))
-        t0 = time.time()
-        while time.time() - t0 < 10 and not any(cfg.glob("cookies-run-*")): time.sleep(0.2)
-        during = sorted(p.name for p in cfg.glob("cookies-run-*"))
-        game.quit_game()
-        left = sorted(p.name for p in cfg.glob("cookies-run-*"))
-        verdict("no copy of the cookies left after the game closes mid-run", during and not left, f"during {during}, after {left}")
-    finally:
-        if game.running(): call(b, "SignOut"); call(b, "SignInRoots -")
-        if txt.exists(): txt.unlink()
-        if aside.exists(): aside.rename(txt)
-        shutil.rmtree(fake, ignore_errors=True)
+    t0 = time.time()
+    while time.time() - t0 < 180:
+        st = call(b, "Video")
+        if ("index 0 " in st and "PLAYING" in st) or "problem yt-dlp" in st: break
+        time.sleep(2)
+    verdict("a video YouTube serves still plays after", "index 0 " in st and "PLAYING" in st, st)
 
 with game.ProtectedSession():
     if "--no-build" not in sys.argv: game.build()
@@ -174,8 +121,8 @@ with game.ProtectedSession():
         time.sleep(3)
     print(" video:", st)
     verdict("first video downloads and plays", "PLAYING" in st, st)
-    if "--signin" in sys.argv:
-        signin(b, VIDS)
+    if "--refused" in sys.argv:
+        refused(b, VIDS)
         game.quit_game()
         print(f"{sum(ok for _, ok in VERDICTS)}/{len(VERDICTS)} passed"); sys.exit(0)
     if "--cache" in sys.argv:
