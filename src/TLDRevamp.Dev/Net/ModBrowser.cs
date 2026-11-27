@@ -136,6 +136,24 @@ namespace TLDRevamp.Net
                 var v = ModsScreen.ListView(search, tab, sort, scroll, ask, press);
                 return v == null ? "{\"open\":false}" : "{\"view\":" + Json.Str(v) + "}";
             }
+            if (arg.StartsWith("settings", StringComparison.Ordinal))
+            {
+                // mods settings [open=<mod id>] [press=<key>:<label>] [close]: a mod's settings card (ModsScreen.Settings.cs)
+                string press = null;
+                foreach (var p in arg.Substring(8).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (p.StartsWith("open=", StringComparison.Ordinal))
+                    {
+                        var m = ModCatalog.Current?.Mods?.Find(x => x.Id == p.Substring(5));
+                        if (m == null) return "{\"error\":\"not in the catalog\"}";
+                        ModsScreen.OpenModSettings(m);
+                    }
+                    else if (p.StartsWith("press=", StringComparison.Ordinal)) press = p.Substring(6).Replace('_', ' ');   // + is a label here (-/+)
+                    else if (p == "close") ModsScreen.CloseModSettings();
+                }
+                var v = ModsScreen.SettingsView(press);
+                return v == null ? "{\"open\":false}" : "{\"view\":" + Json.Str(v) + "}";
+            }
             if (arg.Trim() == "updates")
             {
                 var hand = new List<string>(); var ups = ModsScreen.Updates(hand); var names = new List<string>();

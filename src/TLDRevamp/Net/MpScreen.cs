@@ -4,6 +4,7 @@ using HarmonyLib;
 using Steamworks;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace TLDRevamp.Net
@@ -51,6 +52,20 @@ namespace TLDRevamp.Net
         private static TMP_InputField _settingsPassword;
         internal static TMP_InputField ObservedSettingsPassword => _settingsPassword;
         private static readonly Button[] _settingsRows = new Button[5];
+        /// What each session-settings row does, shown in the panel's note while the pointer is on the row (a player asked
+        /// what Hardcore does: the row said only "Hardcore: Off", 2026-11-27). Hardcore's is the one Settings -> Revamp
+        /// -> World shows.
+        internal static readonly string[] SettingsHelp =
+        {
+            "TPA: players can ask to teleport to each other. Click to switch it off, or to change how long a player waits between requests.",
+            "Joiner placement: where a player who joins appears, next to the host or at the world's start.",
+            "Developer commands: who may use the F1 developer menu and the game's dev mode in this session: everyone, the host only, or nobody.",
+            "Voice chat: nearby only (players hear each other from close by), or everyone hears everyone wherever they are.",
+            "Hardcore: no F1 developer menu, not even for the host. Faucets and water towers are empty. A part a crash knocks off " +
+            "can't be put back on and is gone a few seconds later. Cleaning tools clean nothing. For everyone in the session.",
+        };
+        private const string SettingsNote = "Host changes apply now. Joiners see read-only session values. Developer policy resets when the host ends.";
+        private static TextMeshProUGUI _settingsNote;
         internal static System.Collections.Generic.IReadOnlyList<Button> ObservedSettingsRows => _settingsRows;
         private static bool _settingsOpen;
         internal static bool ObservedSettingsOpen { get => _settingsOpen; set => _settingsOpen = value; }
@@ -314,6 +329,9 @@ namespace TLDRevamp.Net
                 var label = row.GetComponentInChildren<TextMeshProUGUI>(true);
                 label.enableAutoSizing = false; label.fontSize = 27f; label.alignment = TextAlignmentOptions.Center; label.text = "…";
                 _settingsRows[i] = b;
+                var hover = row.AddComponent<SettingHover>();
+                hover.Enter = () => { if (_settingsNote != null) _settingsNote.text = SettingsHelp[index]; };
+                hover.Exit = () => { if (_settingsNote != null) _settingsNote.text = SettingsNote; };
             }
 
             _settingsPassword = UnityEngine.Object.Instantiate(_input.gameObject, _settingsPanel.transform).GetComponent<TMP_InputField>();
@@ -333,9 +351,12 @@ namespace TLDRevamp.Net
             var ph = _settingsPassword.placeholder as TextMeshProUGUI;
             if (ph != null) { ph.gameObject.SetActive(true); ph.text = "Host password (blank = none)"; }
 
-            var note = NewSettingsText(_settingsPanel.transform, "Note", "Host changes apply now. Joiners see read-only session values. Developer policy resets when the host ends.", 19f, TextAlignmentOptions.Center);
+            var note = NewSettingsText(_settingsPanel.transform, "Note", SettingsNote, 19f, TextAlignmentOptions.Center);
+            note.enableAutoSizing = true; note.fontSizeMin = 15f; note.fontSizeMax = 21f;   // a row's help is up to four lines
+            note.color = new Color32(0xFF, 0xF6, 0xDC, 0xFF);   // it sits on the card's blue band: dark text didn't read there
+            _settingsNote = note;
             var nr = (RectTransform)note.transform; nr.anchorMin = nr.anchorMax = new Vector2(0.5f, 1f); nr.pivot = new Vector2(0.5f, 1f);
-            nr.anchoredPosition = new Vector2(0f, -206f - _settingsRows.Length * 82f); nr.sizeDelta = new Vector2(700f, 70f);
+            nr.anchoredPosition = new Vector2(0f, -232f - _settingsRows.Length * 82f); nr.sizeDelta = new Vector2(720f, 64f);   // all on the blue band, above Close
 
             var close = UnityEngine.Object.Instantiate(_secondary.gameObject, _settingsPanel.transform);
             close.name = "TLDRevampSessionSettingsClose";
@@ -782,6 +803,21 @@ namespace TLDRevamp.Net
             if (e.Saved != null) { if (PlayerSave.Forget(e.SteamId)) { _message = e.Name + " was forgotten."; _selAny = false; } }
             else if (e.P != null && Mp.Server.Kick(e.PlayerId)) { _message = e.Name + " was kicked."; _selAny = false; }
             Refresh();
+        }
+
+        /// Test: the pointer on session-settings row `row` (-1: off it), as SettingHover does; the note's text after.
+        internal static string HoverSettingRow(int row)
+        {
+            if (_settingsNote == null) return null;
+            _settingsNote.text = row >= 0 && row < SettingsHelp.Length ? SettingsHelp[row] : SettingsNote;
+            return _settingsNote.text;
+        }
+
+        private sealed class SettingHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+        {
+            public Action Enter, Exit;
+            public void OnPointerEnter(PointerEventData eventData) => Enter?.Invoke();
+            public void OnPointerExit(PointerEventData eventData) => Exit?.Invoke();
         }
     }
 

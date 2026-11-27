@@ -388,16 +388,20 @@ namespace TLDRevamp.Net
             var primary = NewButton(rt, s.Primary, s.PrimaryColour, 44f, () => { if (s.PrimaryDo != null) { s.PrimaryDo(); _shown = null; RefreshList(); } });
             TopRight((RectTransform)primary.transform, 24f, 18f, 310f, 84f);
             SetButton(primary, s.Primary, s.PrimaryColour, s.PrimaryOn);
-            // the small buttons under it, right to left: Remove, Enable/Disable (no Source: asked 2026-11-20)
-            float right = 24f;
+            // the small buttons under it, right to left: Remove, Enable/Disable (no Source: asked 2026-11-20), Settings (the
+            // mod's own, ModsScreen.Settings.cs: a loaded mod with any); three share the primary's width
+            bool settings = ModConfig(m.Id) != null;
+            int smalls = (s.Remove ? 1 : 0) + (s.Small != null ? 1 : 0) + (settings ? 1 : 0);
+            float right = 24f, smallW = smalls >= 3 ? 98f : 150f;
             void Small(string label, Color colour, bool on, Action act)
             {
                 var b = NewButton(rt, label, colour, 30f, () => { act(); _shown = null; RefreshList(); });
-                TopRight((RectTransform)b.transform, right, 110f, 150f, 56f); SetButton(b, label, colour, on);
-                right += 158f;
+                TopRight((RectTransform)b.transform, right, 110f, smallW, 56f); SetButton(b, label, colour, on);
+                right += smallW + 8f;
             }
             if (s.Remove) Small("Remove", ButtonRed, !ModCatalog.Busy, () => AskList("Remove " + (m.Name ?? m.Id) + " at the next start?", () => RemoveMod(m), null));
             if (s.Small != null) Small(s.Small, s.SmallColour, !ModCatalog.Busy, s.SmallDo);
+            if (settings) Small("Settings", ButtonGrey, true, () => OpenModSettings(m));
         }
 
         // ---------------------------------------------------------------- what the buttons do
