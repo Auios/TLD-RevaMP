@@ -9,6 +9,13 @@
       "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/HeadUnit",
       "versions": [
         {
+          "version": "0.4.0",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/headunit-v0.4.0/HeadUnit-0.4.0.zip",
+          "file": "BepInEx/plugins/HeadUnit/HeadUnit.dll",
+          "sha256": "dba3714050b1d3476c86af4e237eae3771c993991612f1abb1f56e5100235308",
+          "size": 76003
+        },
+        {
           "version": "0.2.1",
           "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/headunit-v0.2.1/HeadUnit-0.2.1.zip",
           "file": "BepInEx/plugins/HeadUnit/HeadUnit.dll",
@@ -138,6 +145,13 @@
       "description": "A carryable paper map with explored routes, visited places, live players, and mouse or hand controls.",
       "source": "https://github.com/Normal99/TLD-WorldMap",
       "versions": [
+        {
+          "version": "0.2.2",
+          "url": "https://github.com/Normal99/TLD-WorldMap/releases/download/v0.2.2/WorldMap-0.2.2.zip",
+          "file": "BepInEx/plugins/WorldMap/WorldMap.dll",
+          "sha256": "e357da9056777d6446871727026e59db1e614b5b55c12290ff861d01afdcc0e0",
+          "size": 23366
+        },
         {
           "version": "0.2.1",
           "url": "https://github.com/Normal99/TLD-WorldMap/releases/download/v0.2.1/WorldMap-0.2.1.zip",

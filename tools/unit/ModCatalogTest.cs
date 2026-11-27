@@ -36,13 +36,13 @@ static class ModCatalogTest
     {
         var catalog = ModCatalog.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "mods.json")));
         Check("real catalog includes World Map, Trailer Hitches, TV Browser and Road End (Rossa88 withdrawn)", catalog.Mods.Count == 9 &&
-            catalog.Mods[0].Versions[0].Version == "0.2.1" && catalog.Mods[1].Versions[0].Version == "0.1.2" &&
+            catalog.Mods[0].Versions[0].Version == "0.4.0" && catalog.Mods[1].Versions[0].Version == "0.1.2" &&
             catalog.Mods[2].Id == "anonymoustld.busgut" && catalog.Mods[3].Id == "anonymoustld.mountanything" && catalog.Mods[4].Id == "anonymoustld.terrainchoice" && catalog.Mods[5].Id == "tldrevamp.worldmap" && catalog.Mods[6].Id == "tldrevamp.trailerhitches" && catalog.Mods[7].Id == "tldrevamp.tvbrowser" && catalog.Mods[8].Id == "tldrevamp.roadend" && !catalog.Mods.Exists(m => m.Id == "anonymoustld.rossa88"));
         Check("HeadUnit valid in catalog", ModCatalog.ApprovalReason(catalog.Mods[0], catalog.Mods[0].Versions[0], 16 << 20, _ => true) == null);
         Check("CarTrailer released DLL valid in catalog", ModCatalog.ApprovalReason(catalog.Mods[1], catalog.Mods[1].Versions[0], 16 << 20, _ => true) == null);
         for (int i = 2; i < catalog.Mods.Count; i++)
             Check(catalog.Mods[i].Id + " released DLL valid in catalog", ModCatalog.ApprovalReason(catalog.Mods[i], catalog.Mods[i].Versions[0], 16 << 20, _ => true) == null);
-        Check("real catalog offers Head Unit 0.2.0 an update to 0.2.1", ModCatalog.UpdateTo(catalog.Mods[0], "0.2.0", 16 << 20, _ => true)?.Version == "0.2.1");
+        Check("real catalog offers Head Unit 0.2.0 an update to 0.4.0", ModCatalog.UpdateTo(catalog.Mods[0], "0.2.0", 16 << 20, _ => true)?.Version == "0.4.0");
         // Older versions remain installable for hosts still using them.
         foreach (var m in catalog.Mods)
             foreach (var v in m.Versions)
