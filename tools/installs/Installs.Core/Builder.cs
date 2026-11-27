@@ -245,15 +245,13 @@ public sealed class Builder(Store store, Action<string> log)
 
     /// <summary>A Proton prefix of the copy's own (its saves and settings), copied from a working one with the game's
     /// settings, saves, logs and PlayerPrefs left out: the tests' prefix (TLD_TEST_COMPAT) or the game's own Steam
-    /// prefix, whichever isn't in use (only read). A test copy uses the tests' prefix itself.</summary>
+    /// prefix, whichever isn't in use (only read).</summary>
     string MakePrefix(CopyInfo c)
     {
+        // a test copy too gets a prefix of its own (from the tests' one): removing the copy removes it, where one that ran
+        // in the tests' shared prefix left it behind (Volkan 2026-11-27: "it doesn't remove prefixes"); the test tools
+        // still pick their prefix themselves (TLD_TEST_COMPAT)
         var tests = Env.GetPath("TLD_TEST_COMPAT");
-        if (c.Kind == Kind.Test && tests != null)
-        {
-            log($"Proton prefix: the tests' own, {tests} (TLD_TEST_COMPAT)");
-            return tests;
-        }
         var dest = Path.Combine(c.Dir, "compat");
         var procs = Procs.All().ToList();
         foreach (var src in new[] { tests, Steam().Compat })
