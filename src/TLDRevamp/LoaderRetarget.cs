@@ -151,6 +151,12 @@ namespace TLDRevamp
             new[] { "menuhandler", "SaveScreenObj", "UnityEngine.GameObject", "MenuSaveScreen", "" },
             new[] { "menuhandler", "Canvas", "UnityEngine.Transform", "MenuCanvas", "" },
             new[] { "carscript", "ISwitches", "usablescript[]", "Switches", "" },
+            // an attach script's item and an item's attach script through the tosaveitemscript (Fields above), for an item
+            // whose tosave isn't set yet (a part a mod just made: its own Start threw, a car's battery never came)
+            new[] { "attachablescript", "p", "pickupable", "AttachableItem", "SetAttachableItem" },
+            new[] { "pickupable", "part", "attachablescript", "GetAttach", "SetAttach" },
+            // the auto-shift toggle a mod copies for a toggle of its own: a copy of the beta's without the game's settings on it
+            new[] { "settingsscript", "TAutoShift", "UnityEngine.UI.Toggle", "AutoShiftToggle", "" },
             new[] { "pickupable", "slots", "System.Collections.Generic.List`1<partslotscript>", "PickupSlots", "" },
             new[] { "tankcapscript", "GOpen", "System.Collections.Generic.List`1<UnityEngine.GameObject>", "GetCapGOpen", "SetCapGOpen" },
             new[] { "tankcapscript", "GClosed", "System.Collections.Generic.List`1<UnityEngine.GameObject>", "GetCapGClosed", "SetCapGClosed" },
@@ -174,6 +180,8 @@ namespace TLDRevamp
         private static readonly string[][] Rerouted =
         {
             new[] { "tosaveitemscript", "id", "System.Int32", "ItemId", "SetItemId" },
+            // an item a mod marks started so the game never saves it (AI traffic): its parts are put in first (SetStarted)
+            new[] { "tosaveitemscript", "started", "System.Boolean", "", "SetStarted" },
         };
         // Game types the beta dropped that a helper type stands in for (a nested type of the helper of that name). Every
         // other dropped one becomes the helper's Gone.
@@ -195,6 +203,8 @@ namespace TLDRevamp
             new[] { "mountStuff", "Lock", "pickupable,System.Boolean", "MountLock" },
             new[] { "tosaveitemscript", "Claim", "System.Boolean", "Claim" },
             new[] { "poiScript", "FStart", "System.Int32", "PoiFStart" },
+            // the public game's TerrainGenerator.GetTerrainHeight(at, ...) (a weather mod's lightning strikes the ground)
+            new[] { "mapSettingScript", "GetTerrainHeight", "UnityEngine.Vector2,System.Boolean,System.Boolean,System.Boolean", "TerrainHeight" },
         };
 
         public static IEnumerable<string> AliasDescriptions()
@@ -217,6 +227,7 @@ namespace TLDRevamp
             yield return "the address of a field above (t.category.ToString()) -> LoaderCompat.<getter>Ref, a copy's";
             foreach (var a in CompatMethods) yield return a[0] + "." + a[1] + "(" + a[2] + ") -> LoaderCompat." + a[3];
             yield return "GameObject.Find(\"Main\") -> LoaderCompat.FindMain";
+            yield return "AddComponent<mountStuff>() -> LoaderCompat.AddMount (the mount starts itself, as the public game's did)";
             yield return "a material's mainTexture.name -> LoaderCompat.TextureName (\"\" where the beta's material has no texture)";
             yield return "Harmony.PatchAll() -> LoaderCompat.PatchAll (all of them or none)";
             yield return "AccessTools.TypeByName(name) -> LoaderCompat.TypeByName (remembered, a miss until another assembly loads)";
@@ -475,6 +486,16 @@ namespace TLDRevamp
                 var m = compat.GetMethod("RecordIdUsed", Statics);
                 if (m == null) return null;
                 what = "Dictionary<Int32," + git.GenericArguments[1].Name + ">.ContainsKey -> " + compat.Name + ".RecordIdUsed";
+                return m;
+            }
+            // AddComponent<mountStuff>(): the public game's mount started itself (Start called FStart); the beta's waits for its
+            // item's SetID, which a mount a mod adds never gets
+            if (mr is GenericInstanceMethod add && add.Name == "AddComponent" && add.GenericArguments.Count == 1 && add.Parameters.Count == 0 && mr.HasThis &&
+                mr.DeclaringType.FullName == "UnityEngine.GameObject" && add.GenericArguments[0].FullName == "mountStuff" && GameType(game, gameName, add.GenericArguments[0]) != null)
+            {
+                var m = compat.GetMethod("AddMount", Statics);
+                if (m == null) return null;
+                what = "AddComponent<mountStuff> -> " + compat.Name + ".AddMount (it starts itself, as the public game's did)";
                 return m;
             }
             // GetComponent<T>() and its relatives with a type the beta dropped (partscript): there is none

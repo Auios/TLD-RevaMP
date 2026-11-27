@@ -2,7 +2,7 @@
 namespace UnityEngine
 {
     public class Transform { }
-    public class GameObject { public string Name; public static GameObject Find(string name) => null; }
+    public class GameObject { public string Name; public static GameObject Find(string name) => null; public T AddComponent<T>() where T : new() => new T(); }
     public class Object { public string name { get; set; } }
     public class Texture : Object { }
     public class Material { public Texture mainTexture { get; set; } }
@@ -179,6 +179,7 @@ public class survivalscript
 public class tosaveitemscript   // test stub, not game code
 {
     public int id;   // both: the public game's item number; the beta's, its place in the item table
+    public bool started;   // both: set, the item never starts (a mod's unsaved traffic)
 #if PUBLIC_GAME
     public bool removeFromMemory;
     public void FStart(int key) { }
@@ -236,6 +237,7 @@ public class partslotscript
 public class pickupable { }
 public class mountStuff
 {
+    public string StartedBy;
 #if PUBLIC_GAME
     public void Lock(pickupable p, bool ignoreRigidbody) { }
 #else

@@ -180,5 +180,7 @@ src/TLDRevamp/ModHost.Game.cs	.GetMethod("OnDestroy", BindingFlags.Instance | Bi
 src/TLDRevamp/ModHost.Game.cs	.GetField("properties")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
 src/TLDRevamp/ModHost.Game.cs	.FieldType.GetProperty("Name")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
 src/TLDRevamp/ModHost.Game.cs	typeof(ModHost).GetMethod(nameof(AmtTemplateDestroyed), BindingFlags.NonPublic | BindingFlags.Static)	Our patch/helper method ModHost.AmtTemplateDestroyed; not game code.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("TextureName", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
+src/TLDRevamp/LoaderRetarget.cs	compat.GetMethod("AddMount", Statics)	Our own LoaderCompat helper (or a test's stand-in), passed in by the caller; not game code.
 src/TLDRevamp.Dev/AutopilotBridge.cs	t.GetField("VelocityOf", BindingFlags.Public | BindingFlags.Static)	Optional local autopilot test mod API; not game code.
 src/TLDLoaderShim/LoaderItems.cs	typeof(attachablescript).GetField("C", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)	Standalone loader compatibility API: the beta's private attachablescript.C that 3.0.3's item builder fills (LoaderCompat.GetC/SetC use the same field); the stub cannot reference core's GameLookups.

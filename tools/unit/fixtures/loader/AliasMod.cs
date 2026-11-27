@@ -68,6 +68,10 @@ public static class AliasMod
     public static void Layer(layerScript l) => l.FStart();
     /// A renderer sorted by its texture's name (a police mod's hat); a material may have no texture.
     public static string Texture(UnityEngine.Material m) => m.mainTexture.name;
+    /// A car a mod keeps out of the save (AI traffic): marked started, so it never starts.
+    public static void Unsaved(tosaveitemscript t) => t.started = true;
+    /// A mount a mod adds to its own basket (the public game's started itself).
+    public static mountStuff Mount(UnityEngine.GameObject g) => g.AddComponent<mountStuff>();
 
     /// Where the mod's DLL is (a modding toolkit finds its assets next to it).
     public static string Where() => typeof(AliasMod).Assembly.Location;

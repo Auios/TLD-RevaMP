@@ -194,6 +194,50 @@ namespace TLDRevamp
         public static attachablescript GetAttach(pickupable p) { var t = SaveOf(p); return t != null ? t.attachable : null; }
         public static void SetAttach(pickupable p, attachablescript a) { Calls++; var t = SaveOf(p); if (t != null) t.attachable = a; }
 
+        /// attachablescript.p: the item, through its tosaveitemscript, which the beta sets in the attach script's FStart; a
+        /// part a mod just made (AddComponent, then its item set) has none yet, so it is found as FStart would.
+        private static tosaveitemscript SaveOf(attachablescript a) => a == null ? null : a.tosave != null ? a.tosave : a.GetComponent<tosaveitemscript>();
+        public static pickupable AttachableItem(attachablescript a) { var t = SaveOf(a); return t != null ? t.P : null; }
+        public static void SetAttachableItem(attachablescript a, pickupable p) { Calls++; var t = SaveOf(a); if (t != null) t.P = p; }
+
+        /// AddComponent<mountStuff>() in a mod: the public game's mount called its own FStart in Start; the beta's is started
+        /// by its item's SetID only, which a mount a mod adds after the item started never gets (a basket mod's mount held
+        /// nothing). Its starter calls FStart for the first frames (a no-op once started; a mod that copies a vanilla
+        /// mount's fields onto it resets that), then goes.
+        public static mountStuff AddMount(GameObject go)
+        {
+            Calls++;
+            var m = go.AddComponent<mountStuff>();
+            if (m != null) go.AddComponent<MountStarter>();
+            return m;
+        }
+        public class MountStarter : MonoBehaviour
+        {
+            private int _frames;
+            private void Update()
+            {
+                var m = GetComponent<mountStuff>();
+                if (m != null && m.col != null) { m.FStart(); if (StartedMounts.Count > 256) StartedMounts.RemoveWhere(x => x == null); StartedMounts.Add(m); }
+                if (m == null || ++_frames >= 3) Destroy(this);
+            }
+        }
+        /// The mounts a starter started. One a mod left half set up (no item to lock to: an aircraft mod's) threw in its
+        /// Update every second; it goes back to unstarted, as it was without the starter, and the error is dropped.
+        private static readonly HashSet<mountStuff> StartedMounts = new HashSet<mountStuff>();
+        public static int MountsStoppedAgain;
+        [HarmonyLib.HarmonyPatch(typeof(mountStuff), "Update")]
+        private static class MountStartedUpdate
+        {
+            [HarmonyLib.HarmonyFinalizer]
+            private static System.Exception Finalizer(mountStuff __instance, System.Exception __exception, ref bool ___started)
+            {
+                if (__exception == null || __instance == null || !StartedMounts.Remove(__instance)) return __exception;
+                ___started = false;
+                MountsStoppedAgain++;
+                return null;
+            }
+        }
+
         /// pickupable.cols / cols2: arrays there, lists here.
         public static layerScript[] GetCols(pickupable p) => p != null && p.cols != null ? p.cols.ToArray() : null;
         public static void SetCols(pickupable p, layerScript[] v) { Calls++; if (p != null) p.cols = v != null ? new List<layerScript>(v) : null; }
@@ -368,8 +412,62 @@ namespace TLDRevamp
             return null;
         }
 
-        /// carscript.ISwitches: the car's switches, the usables the beta lists on its tosaveitemscript (a copy).
-        public static usablescript[] Switches(carscript c) => c != null && c.tosave != null && c.tosave.usables != null ? c.tosave.usables.ToArray() : null;
+        /// carscript.ISwitches: the switches a mod set (the same array, so its element writes stick), else the usables the
+        /// beta lists on the car's tosaveitemscript (a copy: the beta's save indexes them). Before 2026-11-26 a mod's own
+        /// list was kept but never read back (a gearbox mod's gear handle was some other switch).
+        public static usablescript[] Switches(carscript c)
+        {
+            if (c == null) return null;
+            var set = Kept<usablescript[]>(c, "carscript.ISwitches");
+            if (set != null) return set;
+            return c.tosave != null && c.tosave.usables != null ? c.tosave.usables.ToArray() : null;
+        }
+
+        /// settingsscript.TAutoShift: the public game's auto-shift toggle, which mods copy as the template of a toggle of
+        /// their own. The beta's is the controls tab's second; a copy of it would carry the game's togglesetting, whose
+        /// references still point at the real toggles. Mods get one copy without it, its translated label or the toggle's listeners, kept
+        /// inactive under the real toggle's parent (its copies scale as the menu's), made again when the menu is.
+        public static UnityEngine.UI.Toggle AutoShiftToggle(settingsscript s)
+        {
+            Calls++;
+            var set = Kept<UnityEngine.UI.Toggle>(s, "settingsscript.TAutoShift");
+            if (set != null) return set;
+            if (_toggleTemplate != null) return _toggleTemplate;
+            var toggles = s != null && s.tabControls != null ? s.tabControls.toggles : null;
+            var real = toggles != null && toggles.Length > 1 && toggles[1] != null ? toggles[1].toggle : null;
+            if (real == null) return null;
+            var holder = new GameObject("(toggle template)");
+            holder.SetActive(false);
+            holder.transform.SetParent(real.transform.parent, false);
+            var copy = Object.Instantiate(real.gameObject, holder.transform, false);
+            foreach (var t in copy.GetComponentsInChildren<togglesetting>(true)) Object.DestroyImmediate(t);
+            foreach (var t in copy.GetComponentsInChildren<languagetext>(true)) Object.DestroyImmediate(t);   // the label is the mod's
+            _toggleTemplate = copy.GetComponent<UnityEngine.UI.Toggle>();
+            _toggleTemplate.onValueChanged = new UnityEngine.UI.Toggle.ToggleEvent();
+            // the public game's label was a UI Text, which mods set; the beta's is TextMeshPro: a hidden Text passes it on
+            var tmp = copy.GetComponentInChildren<TMPro.TMP_Text>(true);
+            if (tmp != null && copy.GetComponentInChildren<UnityEngine.UI.Text>(true) == null)
+            {
+                var label = new GameObject("(label text)", typeof(RectTransform));
+                label.transform.SetParent(tmp.transform, false);
+                var text = label.AddComponent<UnityEngine.UI.Text>();
+                text.text = tmp.text; text.color = Color.clear; text.raycastTarget = false;
+                label.AddComponent<TextToTmp>().Target = tmp;
+            }
+            return _toggleTemplate;
+        }
+        private static UnityEngine.UI.Toggle _toggleTemplate;
+        /// A mod's UI Text on a beta label: what the mod writes shows on the TextMeshPro beside it.
+        public class TextToTmp : MonoBehaviour
+        {
+            public TMPro.TMP_Text Target;
+            private UnityEngine.UI.Text _text;
+            private void LateUpdate()
+            {
+                if (_text == null) _text = GetComponent<UnityEngine.UI.Text>();
+                if (_text != null && Target != null && Target.text != _text.text) Target.text = _text.text;
+            }
+        }
 
         // ------------------------------------------------------------------ the world generator
 
@@ -503,7 +601,26 @@ namespace TLDRevamp
 
         /// A game type the beta has no counterpart for (digholescript2, flashlightscript): nothing in the world has
         /// one, so finding one finds none.
-        public class Gone : MonoBehaviour { }
+        public class Gone : MonoBehaviour
+        {
+            /// the dropped flashlightscript's switch: a mod's method that calls it loads (there is no flashlight to call it on)
+            public void TurnOff(bool off) { }
+        }
+
+        /// TerrainGenerator.GetTerrainHeight(at, ...): the ground's height under a world x/z (at.x, at.y), from the terrain
+        /// tile there; 0 where none is loaded.
+        public static float TerrainHeight(mapSettingScript m, Vector2 at, bool a, bool b, bool c)
+        {
+            Calls++;
+            foreach (var t in Terrain.activeTerrains)
+            {
+                if (t == null || t.terrainData == null) continue;
+                Vector3 o = t.transform.position, size = t.terrainData.size;
+                if (at.x < o.x || at.y < o.z || at.x > o.x + size.x || at.y > o.z + size.z) continue;
+                return t.SampleHeight(new Vector3(at.x, 0f, at.y)) + o.y;
+            }
+            return 0f;
+        }
 
         /// inputscript.forward: a float on the beta, a bool on the public game.
         public static bool InputForward(inputscript i) => i != null && i.forward > 0f;
@@ -622,6 +739,110 @@ namespace TLDRevamp
                 }
                 HeadlightsDropped += dropped;
                 return dropped > 0 ? null : __exception;
+            }
+        }
+
+        /// A car's wheel locks (the beta's: a box under each wheel collider while the car is parked) need each collider's
+        /// wheelgraphicsscript. A mod that puts more colliders in the car's wheel lists (a handbrake mod: every rear one,
+        /// a wheel's second collider too) left a null there: the car's Start threw before it let the locks go, the boxes
+        /// held the car, and the lock size threw every frame. Such a collider gets the wheel it belongs to (W or W2), or
+        /// loses its lock. Nothing changes where every collider has its wheel. A/B: false = before 2026-11-26.
+        public static bool MendWheelLocks = true;
+        public static int WheelLocksMended;
+        [HarmonyLib.HarmonyPatch(typeof(carscript), nameof(carscript.UpdWheelLockSize))]
+        private static class MendWheelLock
+        {
+            private static void Prefix(carscript __instance)
+            {
+                if (!MendWheelLocks || __instance == null || __instance.allWG == null || __instance.allWH == null || __instance.whColliders == null) return;
+                if (!__instance.allWG.Contains(null) && __instance.allWG.Count == __instance.allWH.Count) return;
+                wheelgraphicsscript[] wheels = null;
+                for (int i = __instance.allWH.Count - 1; i >= 0; i--)
+                {
+                    if (i < __instance.allWG.Count && __instance.allWG[i] != null) continue;
+                    var wh = __instance.allWH[i];
+                    wheelgraphicsscript found = null;
+                    if (wh != null)
+                    {
+                        if (wheels == null) wheels = __instance.GetComponentsInChildren<wheelgraphicsscript>(true);
+                        foreach (var w in wheels) if (w != null && (w.W == wh || w.W2 == wh)) { found = w; break; }
+                    }
+                    if (found != null && i < __instance.allWG.Count) __instance.allWG[i] = found;
+                    else
+                    {
+                        __instance.allWH.RemoveAt(i);
+                        if (i < __instance.allWG.Count) __instance.allWG.RemoveAt(i);
+                        if (i < __instance.whColliders.Count)
+                        {
+                            if (__instance.whColliders[i] != null) Object.Destroy(__instance.whColliders[i].gameObject);
+                            __instance.whColliders.RemoveAt(i);
+                        }
+                    }
+                    WheelLocksMended++;
+                }
+            }
+        }
+
+        /// tosaveitemscript.started = true from a mod, on an item the game never started: the mod's way to keep the item out
+        /// of the save (AI traffic, a mod's own cars). The public game's car prefabs came with their parts in their slots;
+        /// the beta's put them in when the car starts (FStart: the save entry, then each slot crafts the part under it), so
+        /// such a car had no engine and stood. Each slot's part is crafted here as the slot would, without a save entry for
+        /// the car or its parts, then the flag is set. Nothing changes for an item that started or a mod that clears it.
+        /// A/B: false = before 2026-11-26.
+        public static bool CraftUnstartedParts = true;
+        public static int UnstartedPartsCrafted;
+        public static void SetStarted(tosaveitemscript t, bool value)
+        {
+            Calls++;
+            if (t == null) return;
+            if (value && !t.started && CraftUnstartedParts) CraftParts(t, 0);
+            t.started = value;
+        }
+        private static void CraftParts(tosaveitemscript t, int depth)
+        {
+            if (depth > 6 || t.partslotscripts == null) return;
+            t.FInit();
+            foreach (var slot in t.partslotscripts)
+            {
+                if (slot == null || slot.hasPart()) continue;
+                try
+                {
+                    if (slot.T == null) slot.T = slot.transform;
+                    var part = slot.T.GetComponentInChildren<attachablescript>(true);
+                    if (part == null || part.slot == slot || !part.gameObject.activeSelf) continue;
+                    var save = part.tosave != null ? part.tosave : part.GetComponent<tosaveitemscript>();
+                    if (save == null) continue;
+                    save.FInit();
+                    if (save.P == null) continue;
+                    if (save.P.tosave == null) save.P.tosave = save;
+                    if (slot.pick != null && slot.pick.tosave == null) slot.pick.tosave = slot.pick.GetComponent<tosaveitemscript>();
+                    part.FStart();
+                    slot.Craft(part);
+                    save.started = true;   // its own Start would put it in the save
+                    UnstartedPartsCrafted++;
+                    CraftParts(save, depth + 1);
+                }
+                catch (System.Exception e) { Diagnostics.QuietErrors.Once("LoaderCompat.CraftParts", e); }
+            }
+        }
+
+        /// A part a mod made itself (AddComponent, its item set) and crafts into a slot before its own FStart ran: the slot's
+        /// smooth snap moves the part's T, which FStart sets, and threw (a battery mod's battery never sat in its slot, the
+        /// car never started). The part's T is its own transform, as FStart makes it. Every started part has it.
+        [HarmonyLib.HarmonyPatch(typeof(partslotscript), nameof(partslotscript.Craft))]
+        private static class CraftUnstartedPart
+        {
+            private static void Prefix(attachablescript p) { if (p != null && p.T == null) p.T = p.transform; }
+        }
+
+        /// A mount whose collider's parent is unset (a mod copied an unstarted mount's private fields onto a started one):
+        /// its freeze scan threw. The parent is the collider's, as FStart sets it. Every started mount has it already.
+        [HarmonyLib.HarmonyPatch(typeof(mountStuff), nameof(mountStuff.Scan))]
+        private static class MountScanParent
+        {
+            private static void Prefix(mountStuff __instance, ref Transform ___colParentTransform)
+            {
+                if (___colParentTransform == null && __instance != null && __instance.col != null) ___colParentTransform = __instance.col.transform.parent;
             }
         }
 
