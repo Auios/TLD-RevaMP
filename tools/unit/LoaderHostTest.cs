@@ -332,6 +332,20 @@ static class LoaderHostTest
         Reset();
         ModHost.Tick();
         Check("DbLoad is not called again for the same item database", !GetCalls().Contains("DbLoad"));
+        DataFromMenuScript.s.mainmenu = true;   // the beta: the menu in the game's own scene, with an item database of its own
+        mainscript.s.player = null;
+        itemdatabase.s = new itemdatabase();
+        Reset();
+        ModHost.Tick();
+        Check("no DbLoad for the menu's item database in the game's scene either (the game's main-menu flag)", !GetCalls().Contains("DbLoad"));
+        DataFromMenuScript.s.mainmenu = false;   // New Game: the flag goes a frame before the scene loads again
+        Reset();
+        ModHost.Tick();
+        Check("nor in the frame between New Game and the scene load (the menu's database, the flag already gone)", !GetCalls().Contains("DbLoad"));
+        itemdatabase.s = new itemdatabase();   // the scene again, with a new database
+        Reset();
+        ModHost.Tick();
+        Check("DbLoad for the new world's item database, before the player exists", GetCalls().Contains("DbLoad"));
         itemdatabase.s = new itemdatabase();
         Reset();
         ModHost.Tick();
@@ -340,9 +354,9 @@ static class LoaderHostTest
         var before = (List<int>)recorder.GetField("RegisteredBefore").GetValue(null);
         var places = (List<int>)recorder.GetField("Places").GetValue(null);
         Check("TLD Loader 3.0.3's registry is empty again for each new item database (" + string.Join(",", before) + ")",
-              before.Count == 2 && before.All(n => n == 0));
+              before.Count == 3 && before.All(n => n == 0));
         Check("and the mod's item gets the same place each time, in the registry's range (" + string.Join(",", places) + ")",
-              places.Count == 2 && places[0] == places[1] && places[0] >= 16384 && places[0] < 32768);
+              places.Count == 3 && places[0] == places[1] && places[1] == places[2] && places[0] >= 16384 && places[0] < 32768);
 
         Section("a DbLoad that threw before the player was up runs again once the world is up (the public game ran it in the world)");
         var throwOn = recorder.GetField("ThrowOn", BindingFlags.Public | BindingFlags.Static);

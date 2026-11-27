@@ -7,6 +7,7 @@ global using menuhandler = TLDRevamp.Fixtures.TestMenu;
 global using mainscript = TLDRevamp.Fixtures.TestMain;
 global using itemdatabase = TLDRevamp.Fixtures.TestDb;
 global using savedatascript = TLDRevamp.Fixtures.TestSave;
+global using DataFromMenuScript = TLDRevamp.Fixtures.TestMenuData;
 
 using System;
 using System.Collections.Generic;
@@ -64,6 +65,13 @@ namespace TLDRevamp.Fixtures
     public static class TestMenu
     {
         public const string sceneName = "game";
+    }
+
+    /// The game's own main-menu flag (its menu and world are one scene); a world unless the test sets it.
+    public class TestMenuData
+    {
+        public static TestMenuData s = new TestMenuData();
+        public bool mainmenu;
     }
 
     /// The game's player; the test creates one to make the world "up".

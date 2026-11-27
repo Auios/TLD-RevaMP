@@ -299,6 +299,17 @@ namespace TLDRevamp
             catch (Exception e) { Plugin.Log.LogWarning("ModHost: TLD Loader's DbLoad mark: " + (e.InnerException ?? e).Message); }
         }
 
+        /// The main menu: another scene than the game's (the public game had its own), or the beta's own flag. The beta's
+        /// menu and world are one scene, loaded again for each world, so before 2026-11-26 its scene name never told them
+        /// apart: DbLoad ran on the menu's item database, then on the world's, the same prefabs again (27 of 201 workshop
+        /// mods added a component twice, two of them threw). Before the flag's object exists (the first frames) it is the
+        /// menu. A/B: MenuByFlag = false is before 2026-11-26.
+        public static bool MenuByFlag = true;
+        private static object _menuDbSeen;
+        private static bool InMainMenu() =>
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != menuhandler.sceneName ||
+            MenuByFlag && (DataFromMenuScript.s == null || DataFromMenuScript.s.mainmenu);
+
         public static void Tick()
         {
             if (Mods.Count == 0) return;
@@ -310,8 +321,11 @@ namespace TLDRevamp
             // ran DbLoad in the world only; what a mod made there lived in the menu (a gauge mod read the missing player
             // every frame). Left unmarked: a database still up when the game scene is (a scene change) gets it then.
             // A/B: DbLoadInMenu = true is before 2026-11-24.
-            bool menuDb = !DbLoadInMenu && (mainscript.s == null || mainscript.s.player == null)
-                          && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != menuhandler.sceneName;
+            bool menuDb = !DbLoadInMenu && (mainscript.s == null || mainscript.s.player == null) && InMainMenu();
+            // The beta's menu database stays the menu's: its Start clears the flag a frame before the scene loads again.
+            // (The public game's menu scene left: its database, still up in the game scene, gets DbLoad there.)
+            if (menuDb && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == menuhandler.sceneName) _menuDbSeen = itemdatabase.s;
+            else if (!DbLoadInMenu && MenuByFlag && itemdatabase.s != null && ReferenceEquals(itemdatabase.s, _menuDbSeen)) menuDb = true;
             if (itemdatabase.s != null && itemdatabase.s != _dbFor && !menuDb)
             {
                 _dbFor = itemdatabase.s;
@@ -382,7 +396,7 @@ namespace TLDRevamp
             // for the menu gets its OnMenuLoad there: once, as TLD Loader calls it when it makes the mod (in the menu,
             // never again). Before 2026-11-23 each return to the menu called it again (a bundle it loads there twice).
             GameAliases(worldUp);   // ModHost.Game.cs: mainscript.M.seed/load/napszak, before the mods' OnLoad below
-            bool inMenu = !worldUp && !_gameLoadedCalled && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != menuhandler.sceneName;
+            bool inMenu = !worldUp && !_gameLoadedCalled && InMainMenu();
             if (inMenu && !_menuCalled) { _menuCalled = true; foreach (var l in Mods) Call(l, l.OnMenuLoad, "OnMenuLoad"); }
             // OnLoad once the world is actually up (the player exists), as TLDLoader calls it after the game loaded
             if (worldUp && !_gameLoadedCalled)
