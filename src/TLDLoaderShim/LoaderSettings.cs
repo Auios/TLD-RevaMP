@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Text;
 #if TLD_UNITY
 using UnityEngine;
@@ -9,46 +11,87 @@ using UnityEngine;
 
 namespace TLDLoader
 {
-    /// A mod's saved settings: one value per setting id (the title, lower case, spaces as '_', as TLD Loader names
-    /// them), in Settings.txt in the mod's config folder, one "id<TAB>kind<TAB>value" line each. Free of Unity, so the
-    /// unit test runs it.
+    /// A mod's saved settings: one value per setting id (the title, lower case, spaces as '_', as TLD Loader names them),
+    /// in Settings.json in the mod's config folder, in TLD Loader 3.0.3's own format: the same serializer
+    /// (DataContractJsonSerializer, KeyCode as a known type) over the same shape, {"settings":[{"ID":..,"Value":..}]}, so
+    /// a file either one wrote reads in the other. A player's settings from TLD Loader (its own folder, `import`) come
+    /// in the first time; so do RevaMP's older Settings.txt ("id<TAB>kind<TAB>value" lines, `legacy`). Free of Unity,
+    /// so the unit test runs it (with its own known types).
     public sealed class SettingStore
     {
-        private readonly string _path;
-        private readonly Dictionary<string, object> _values = new Dictionary<string, object>();
-        public string LastError = "";
+        [DataContract(Name = "Settings")] private sealed class Doc { [DataMember] public List<Item> settings { get; set; } }
+        [DataContract(Name = "Setting")] private sealed class Item { [DataMember] public string ID { get; set; } [DataMember] public object Value { get; set; } }
 
-        public SettingStore(string path) { _path = path; Load(); }
+        private readonly string _path;
+        private readonly Type[] _known;
+        private List<Item> _items = new List<Item>();
+        public string LastError = "";
+        /// Where the values came from: "file", "import" (TLD Loader's), "legacy" (Settings.txt) or "" (nothing saved yet).
+        public string Source = "";
+
+        public SettingStore(string path) : this(path, null, null, null) { }
+
+        public SettingStore(string path, Type[] knownTypes, string import, string legacy)
+        {
+            _path = path; _known = knownTypes ?? new Type[0];
+            if (Read(_path)) { Source = "file"; return; }
+            if (!string.IsNullOrEmpty(import) && Read(import)) { Source = "import"; Save(); return; }
+            if (!string.IsNullOrEmpty(legacy) && ReadLegacy(legacy)) { Source = "legacy"; Save(); }
+        }
 
         public static string IdOf(string title) => (title ?? "").Replace(' ', '_').ToLowerInvariant();
 
-        public bool TryGet(string title, out object value) => _values.TryGetValue(IdOf(title), out value);
+        public bool TryGet(string title, out object value)
+        {
+            var it = Find(IdOf(title));
+            value = it?.Value;
+            return it != null && it.Value != null;
+        }
 
         /// Stores the value and writes the file, only when it changed.
         public void Set(string title, object value)
         {
             string id = IdOf(title);
-            if (_values.TryGetValue(id, out var old) && Equals(old, value)) return;
-            _values[id] = value;
+            var it = Find(id);
+            if (it != null && Equals(it.Value, value)) return;
+            if (it == null) _items.Add(new Item { ID = id, Value = value }); else it.Value = value;
             Save();
         }
 
-        private void Load()
+        private Item Find(string id) { foreach (var it in _items) if (it.ID == id) return it; return null; }
+
+        private DataContractJsonSerializer Serializer() => new DataContractJsonSerializer(typeof(Doc), _known);
+
+        private bool Read(string path)
         {
             // a file written but not yet moved into place (the game closed in between) is the newest there is
-            if (!File.Exists(_path) && File.Exists(_path + ".tmp")) { try { File.Move(_path + ".tmp", _path); } catch (Exception e) { LastError = "recovering " + _path + ": " + e.Message; } }
-            if (!File.Exists(_path)) return;
+            if (path == _path && !File.Exists(path) && File.Exists(path + ".tmp")) { try { File.Move(path + ".tmp", path); } catch (Exception e) { LastError = "recovering " + path + ": " + e.Message; } }
+            if (!File.Exists(path)) return false;
             try
             {
-                foreach (var line in File.ReadAllLines(_path, Encoding.UTF8))
+                using (var f = File.OpenRead(path))
+                    if (Serializer().ReadObject(f) is Doc d && d.settings != null) { _items = d.settings.FindAll(x => x != null && x.ID != null); return true; }
+            }
+            catch (Exception e) { LastError = "reading " + path + ": " + e.Message; }
+            return false;
+        }
+
+        /// RevaMP's settings file before 2026-11-27.
+        private bool ReadLegacy(string path)
+        {
+            if (!File.Exists(path)) return false;
+            try
+            {
+                foreach (var line in File.ReadAllLines(path, Encoding.UTF8))
                 {
                     var p = line.Split('\t');
                     if (p.Length != 3) continue;
-                    object v = Parse(p[1], Unescape(p[2]));
-                    if (v != null) _values[p[0]] = v;
+                    object v = ParseLegacy(p[1], Unescape(p[2]));
+                    if (v != null && Find(p[0]) == null) _items.Add(new Item { ID = p[0], Value = v });
                 }
+                return _items.Count > 0;
             }
-            catch (Exception e) { LastError = "reading " + _path + ": " + e.Message; }
+            catch (Exception e) { LastError = "reading " + path + ": " + e.Message; return false; }
         }
 
         private void Save()
@@ -56,9 +99,7 @@ namespace TLDLoader
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_path));
-                var sb = new StringBuilder();
-                foreach (var kv in _values) sb.Append(kv.Key).Append('\t').Append(Kind(kv.Value)).Append('\t').Append(Escape(Text(kv.Value))).Append('\n');
-                File.WriteAllText(_path + ".tmp", sb.ToString(), Encoding.UTF8);
+                using (var f = File.Create(_path + ".tmp")) Serializer().WriteObject(f, new Doc { settings = _items });
                 // replaced in one step: deleting first and moving after lost the mod's settings to a crash in between
                 if (File.Exists(_path)) File.Replace(_path + ".tmp", _path, null);
                 else File.Move(_path + ".tmp", _path);
@@ -66,9 +107,7 @@ namespace TLDLoader
             catch (Exception e) { LastError = "writing " + _path + ": " + e.Message; }
         }
 
-        private static string Kind(object v) => v is bool ? "bool" : v is int ? "int" : v is float ? "float" : v is Enum ? "key" : "string";
-        private static string Text(object v) => v is float f ? f.ToString("R", CultureInfo.InvariantCulture) : v is Enum e ? Convert.ToInt32(e).ToString(CultureInfo.InvariantCulture) : Convert.ToString(v, CultureInfo.InvariantCulture);
-        private static object Parse(string kind, string s)
+        private static object ParseLegacy(string kind, string s)
         {
             var ci = CultureInfo.InvariantCulture;
             switch (kind)
@@ -79,7 +118,6 @@ namespace TLDLoader
                 default: return s;
             }
         }
-        private static string Escape(string s) => (s ?? "").Replace("\\", "\\\\").Replace("\t", "\\t").Replace("\n", "\\n").Replace("\r", "\\r");
         private static string Unescape(string s)
         {
             var sb = new StringBuilder();
@@ -105,10 +143,32 @@ namespace TLDLoader
         public SettingAPI(Mod mod)
         {
             _mod = mod;
-            _store = new SettingStore(Path.Combine(ModLoader.GetModSettingsFolder(mod), "Settings.txt"));
+            string dir = ModLoader.GetModSettingsFolder(mod);
+            _store = new SettingStore(Path.Combine(dir, "Settings.json"), new[] { typeof(KeyCode) }, TldLoaderSettings(mod), Path.Combine(dir, "Settings.txt"));
+            if (_store.Source == "import") Debug.Log("[SettingAPI] " + mod.ID + ": settings taken over from TLD Loader's folder");
+        }
+
+        /// Where TLD Loader itself keeps the mod's settings (Documents/TheLongDrive/Mods/Config/Mod Settings/<ID>): a player
+        /// who had them there keeps them.
+        private static string TldLoaderSettings(Mod mod)
+        {
+            try
+            {
+                string docs = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                return string.IsNullOrEmpty(docs) ? null : Path.Combine(Path.Combine(Path.Combine(Path.Combine(Path.Combine(Path.Combine(docs, "TheLongDrive"), "Mods"), "Config"), "Mod Settings"), mod.ID), "Settings.json");
+            }
+            catch { return null; }
         }
 
         private bool Drawing => _mod.isConfigLoaded;
+
+        // a value as saved: JSON gives a number back as whichever type holds it (an int, a decimal...)
+        private static bool Num(object v, out double d)
+        {
+            d = 0;
+            if (v == null || v is bool || v is string) return false;
+            try { d = Convert.ToDouble(v, CultureInfo.InvariantCulture); return true; } catch { return false; }
+        }
 
         public bool GUICheckbox(bool toggle, string text, int posx, int posy)
         {
@@ -132,7 +192,7 @@ namespace TLDLoader
 
         public float GUISlider(string title, float val, float valmin, float valmax, int posx, int posy, int precision = 2)
         {
-            if (_store.TryGet(title, out var v)) val = Convert.ToSingle(v, CultureInfo.InvariantCulture);
+            if (_store.TryGet(title, out var v) && Num(v, out var saved)) val = (float)saved;
             if (!Drawing) return val;
             GUI.Box(new Rect(posx - 3, posy - 10, 430f, 80f), title);
             GUI.Label(new Rect(posx + 15, posy + 40, 250f, 30f), valmin.ToString(CultureInfo.InvariantCulture));
@@ -149,7 +209,7 @@ namespace TLDLoader
 
         public KeyCode GUIKeyBinding(KeyCode key, string name, int posx, int posy)
         {
-            if (_store.TryGet(name, out var v) && v is int k) key = (KeyCode)k;
+            if (_store.TryGet(name, out var v)) { if (v is KeyCode kc) key = kc; else if (Num(v, out var n)) key = (KeyCode)(int)n; }
             if (!Drawing) return key;
             GUI.Box(new Rect(posx - 3, posy - 10, 430f, 80f), "");
             GUI.Label(new Rect(posx + 120, posy + 25, 300f, 40f), "Hold a key, then click this button");
@@ -157,7 +217,7 @@ namespace TLDLoader
                 foreach (KeyCode c in Enum.GetValues(typeof(KeyCode)))
                     if (c != KeyCode.None && c != KeyCode.Mouse0 && Input.GetKey(c)) { key = c; break; }
             GUI.Label(new Rect(posx, posy, 430f, 20f), "Key: " + name + ": " + key);
-            _store.Set(name, (int)key);   // kept as its number: a read-back int then equals it, no rewrite every frame
+            _store.Set(name, key);   // a KeyCode, as TLD Loader saves it (a known type in the file)
             return key;
         }
 
@@ -183,7 +243,7 @@ namespace TLDLoader
 
         public int GUIDropdown(string title, List<string> options, int selected, int posx, int posy)
         {
-            if (_store.TryGet(title, out var v) && v is int i) selected = i;
+            if (_store.TryGet(title, out var v) && Num(v, out var n)) selected = (int)n;
             if (!Drawing || options == null) return selected;
             GUI.Box(new Rect(posx - 3, posy - 10, 430f, 20f + options.Count * 25), title);
             for (int k = 0; k < options.Count; k++)

@@ -336,7 +336,12 @@ player is up: a mod whose DbLoad throws then (one that uses the player) runs it 
 up, before its OnLoad. OnMenuLoad comes before the first DbLoad, as under TLD Loader, which calls it when it
 makes the mod (a DbLoad can use what OnMenuLoad made). The mods' OnGUI and Config() run in an IMGUI pass of
 their own with the layout pass on (RevaMP's overlay skips it): a mod's GUILayout threw "Getting control 0's position"
-without it. typeof() of a renamed type in an attribute is renamed too ([HarmonyPatch(typeof(buildingscript),
+without it. A Loader mod's settings are where TLD Loader's mod list has them: the mods list (Installed) shows every
+Loader mod, and Settings (for a mod whose Config() has code, TLD Loader's test) opens TLD Loader's window for it, a
+draggable "Mod Config for <Name>" 500 wide and 70 % of the screen tall with a scroll view ConfigScrollHeight tall
+(2000 unless the mod says), where its Config() draws as it did there (`ModHost.Settings.cs`). SettingAPI keeps the
+values in Settings.json in TLD Loader's format, and takes a player's file from TLD Loader's own folder
+(Documents/TheLongDrive/Mods/Config/Mod Settings/<ID>) the first time. typeof() of a renamed type in an attribute is renamed too ([HarmonyPatch(typeof(buildingscript),
 "SpawnStuff")]: the type didn't load, and the mod's PatchAll stopped with none of its patches). The beta keeps more of tosaveitemscript's arrays as
 lists (randomScales, randoms), and a field the beta dropped along with its type
 (interiorLights) is kept for the mod as an object. A modding toolkit's item templates, which have no name, save

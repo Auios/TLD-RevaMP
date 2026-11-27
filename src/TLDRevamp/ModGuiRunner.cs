@@ -15,8 +15,8 @@ namespace TLDRevamp
         internal static void Draw()
         {
             ModHost.Gui();
-            ModHost.RefreshConfigScreen();   // is a settings screen open right now?
-            ModHost.DrawConfigs();   // the Loader mods' own settings windows (IMGUI)
+            if (ModHost.ConfigScreenOpen && !Net.ModsScreen.IsVisible) ModHost.CloseConfig();   // the mods list closed under it
+            ModHost.DrawConfigs();   // the open Loader mod's settings window (IMGUI, ModHost.Settings.cs)
         }
     }
 }

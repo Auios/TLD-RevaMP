@@ -70,10 +70,6 @@ namespace TLDRevamp
             ui.Tab.SetActive(open);
             if (ui.LedOn != null) ui.LedOn.SetActive(open);
             SetInfo(ui, DefaultInfo);
-            // A TLD Loader mod draws its own settings window with IMGUI in Config();
-            // the host may only call that while a settings screen is open (Unity runs
-            // the IMGUI pass several times a frame).
-            ModHost.ConfigScreenOpen = open;
         }
 
         private static void Build(settingsscript s)

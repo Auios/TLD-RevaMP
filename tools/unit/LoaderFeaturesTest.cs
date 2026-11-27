@@ -62,10 +62,14 @@ static class LoaderFeaturesTest
             var loaded = (System.Collections.IList)loader.GetProperty("LoadedMods").GetValue(null);
             Check("ModLoader.LoadedMods has the mod", loaded.Count == 1 && loaded[0].GetType() == modType);
             Check("Config() ran once at load (where SettingAPI reads the saved values)", (int)modType.GetField("ConfigCalls").GetValue(null) == 1 && ModHost.ConfigsAtLoad == 1);
-            ModHost.ConfigScreenOpen = false; ModHost.DrawConfigs();
+            ModHost.CloseConfig(); ModHost.DrawConfigs();
             Check("and not again while no settings window is open", (int)modType.GetField("ConfigCalls").GetValue(null) == 1);
-            ModHost.ConfigScreenOpen = true; ModHost.DrawConfigs(); ModHost.ConfigScreenOpen = false;
-            Check("it runs again in the settings window", (int)modType.GetField("ConfigCalls").GetValue(null) == 2);
+            var info = ModHost.LoaderMods().Find(x => x.Id == "features.mod");
+            Check("the mods list sees it, with a Settings window (its Config() has code) and its author", info != null && info.HasSettings && info.Author != null);
+            Check("its window opens", ModHost.OpenConfig(info.Id) && ModHost.ConfigScreenOpen && ModHost.ConfigOpenFor == info.Id);
+            ModHost.DrawConfigs(); ModHost.CloseConfig();
+            Check("it runs again in its settings window, and only there", (int)modType.GetField("ConfigCalls").GetValue(null) == 2 && !ModHost.ConfigScreenOpen);
+            Check("a mod that isn't there has no window", !ModHost.OpenConfig("no.such.mod"));
 
             Section("isOnMainMenu and the scene follow the world");
             ModHost.Tick();   // the menu: OnMenuLoad
@@ -118,30 +122,58 @@ static class LoaderFeaturesTest
             Look(false, false);
             Check("a joiner (the host's world, never new): true even with no load seen", Look(true, false, joiner: true));
 
-            Section("SettingStore: the settings file");
+            Section("SettingStore: the settings file, in TLD Loader 3.0.3's format");
             var storeType = Type.GetType("TLDLoader.SettingStore, TLDLoader");
-            string path = Path.Combine(tmp, "Settings.txt");
-            var store = Activator.CreateInstance(storeType, path);
+            string path = Path.Combine(tmp, "Settings.json");
+            object NewStore(string p, string import = null, string legacy = null) => Activator.CreateInstance(storeType, p, new Type[0], import, legacy);
+            var store = NewStore(path);
             var set = storeType.GetMethod("Set");
             set.Invoke(store, new object[] { "Show Gauge", true });
             set.Invoke(store, new object[] { "Max Speed", 12.5f });
             set.Invoke(store, new object[] { "Mode", 3 });
-            set.Invoke(store, new object[] { "Notes", "two\tlines\nand a \\ backslash" });
-            var again = Activator.CreateInstance(storeType, path);
-            object Get(string t) { var a = new object[] { t, null }; return (bool)storeType.GetMethod("TryGet").Invoke(again, a) ? a[1] : "<none>"; }
+            set.Invoke(store, new object[] { "Notes", "two\tlines\nand a \\ backslash \"quoted\"" });
+            object GetFrom(object st, string t) { var a = new object[] { t, null }; return (bool)storeType.GetMethod("TryGet").Invoke(st, a) ? a[1] : "<none>"; }
+            var again = NewStore(path);
+            object Get(string t) => GetFrom(again, t);
             Check("a bool comes back a bool", Get("Show Gauge") is bool b && b);
-            Check("a float comes back exactly", Get("max speed") is float f && f == 12.5f);
+            Check("a float comes back as its number", Convert.ToSingle(Get("max speed")) == 12.5f);
             Check("an int comes back an int", Get("Mode") is int i && i == 3);
-            Check("a string with tabs, newlines and backslashes comes back exactly", (string)Get("Notes") == "two\tlines\nand a \\ backslash");
-            Check("the id is the title lower case with '_' for spaces", File.ReadAllText(path).Contains("show_gauge\t"));
+            Check("a string with tabs, newlines, quotes and backslashes comes back exactly", (string)Get("Notes") == "two\tlines\nand a \\ backslash \"quoted\"");
+            string json = File.ReadAllText(path);
+            Check("TLD Loader's shape: {\"settings\":[{\"ID\":..,\"Value\":..}]}", json.StartsWith("{\"settings\":[{") && json.Contains("{\"ID\":\"show_gauge\",\"Value\":true}"));
+            Check("the id is the title lower case with '_' for spaces", json.Contains("\"ID\":\"max_speed\""));
             var written = File.GetLastWriteTimeUtc(path);
             System.Threading.Thread.Sleep(30);
             set.Invoke(again, new object[] { "Show Gauge", true });
             Check("setting the same value doesn't rewrite the file", File.GetLastWriteTimeUtc(path) == written);
-            File.WriteAllText(path, "garbage line\nshow_gauge\tbool\tnotabool\nok\tint\t7\n");
-            var odd = Activator.CreateInstance(storeType, path);
-            var a2 = new object[] { "ok", null };
-            Check("a damaged file: bad lines skipped, good ones read", (bool)storeType.GetMethod("TryGet").Invoke(odd, a2) && (int)a2[1] == 7);
+
+            // a file as TLD Loader 3.0.3 writes it (DataContractJsonSerializer over its Settings/Setting classes)
+            string theirs = Path.Combine(tmp, "theirs.json");
+            File.WriteAllText(theirs, "{\"settings\":[{\"ID\":\"enable_hud\",\"Value\":false},{\"ID\":\"volume\",\"Value\":0.75},{\"ID\":\"preset\",\"Value\":2},{\"ID\":\"name\",\"Value\":\"car\"}]}");
+            var read = NewStore(theirs);
+            Check("a TLD Loader file reads: bool, float, int and text", GetFrom(read, "Enable HUD") is bool hb && !hb && Convert.ToDouble(GetFrom(read, "Volume")) == 0.75
+                && Convert.ToInt32(GetFrom(read, "Preset")) == 2 && (string)GetFrom(read, "Name") == "car");
+
+            // a player's settings from TLD Loader's own folder, the first time; that file is never written
+            string ours = Path.Combine(tmp, "imported", "Settings.json"), theirsBefore = File.ReadAllText(theirs);
+            var imported = NewStore(ours, theirs);
+            Check("TLD Loader's settings taken over the first time", (string)storeType.GetField("Source").GetValue(imported) == "import" && File.Exists(ours)
+                && Convert.ToDouble(GetFrom(NewStore(ours), "Volume")) == 0.75);
+            Check("TLD Loader's own file left as it was", File.ReadAllText(theirs) == theirsBefore);
+            Check("once ours exists, it is ours that counts", (string)storeType.GetField("Source").GetValue(NewStore(ours, theirs)) == "file");
+
+            // RevaMP's own settings file before 2026-11-27
+            string legacyDir = Path.Combine(tmp, "legacy"); Directory.CreateDirectory(legacyDir);
+            File.WriteAllText(Path.Combine(legacyDir, "Settings.txt"), "garbage line\nshow_gauge\tbool\ttrue\nmode\tint\t7\nkey\tkey\t32\nnote\tstring\ta\\tb\n");
+            var moved = NewStore(Path.Combine(legacyDir, "Settings.json"), null, Path.Combine(legacyDir, "Settings.txt"));
+            Check("RevaMP's older Settings.txt carried over (bad lines skipped)", (string)storeType.GetField("Source").GetValue(moved) == "legacy"
+                && GetFrom(moved, "Show Gauge") is bool lb && lb && Convert.ToInt32(GetFrom(moved, "Mode")) == 7 && (string)GetFrom(moved, "Note") == "a\tb"
+                && File.Exists(Path.Combine(legacyDir, "Settings.json")));
+
+            File.WriteAllText(path, "{ not json");
+            var odd = NewStore(path);
+            Check("a damaged file: nothing read, no exception, and a change writes a good file again",
+                GetFrom(odd, "Show Gauge") is string none && none == "<none>" && ((Func<bool>)(() => { set.Invoke(odd, new object[] { "x", 1 }); return File.ReadAllText(path).Contains("\"ID\":\"x\""); }))());
 
             Section("TLD Loader 3.0.3's item registry: the places in the beta's item table (TLDLoader.ItemSlots)");
             Registry(loader.Assembly, Path.Combine(here, "TLDLoader.dll"));

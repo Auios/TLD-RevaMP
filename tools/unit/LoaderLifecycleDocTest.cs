@@ -22,7 +22,7 @@ static class LoaderLifecycleDocTest
         string root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
         string Read(string rel) => File.ReadAllText(Path.Combine(root, rel));
 
-        string host = Read("src/TLDRevamp/ModHost.cs");
+        string host = Read("src/TLDRevamp/ModHost.cs") + Read("src/TLDRevamp/ModHost.Settings.cs");   // the settings window has its own file
         string shim = Read("src/TLDLoaderShim/TLDLoader.cs");
         string plugin = Read("src/TLDRevamp/Plugin.cs") + Read("src/TLDRevamp/ModGuiRunner.cs");   // the mods' GUI pass has its own runner
         string docs = Read("docs/MODDING-MULTIPLAYER.md");
@@ -88,11 +88,11 @@ static class LoaderLifecycleDocTest
             !Regex.IsMatch(host, @"bool inGame = .*GetActiveScene"));
         Check("the host unloads the mods when the game quits", host.Contains("public static void Shutdown()"));
         Check("the shutdown path is called", Read("src/TLDRevamp/Plugin.cs").Contains("ModHost.Shutdown()"));
-        // Config: only while a settings screen is open.
-        Check("Config is gated on the settings screen being open",
+        // Config: only while that mod's settings window is open (the mods list's Settings), as TLD Loader's mod list.
+        Check("Config is gated on the settings window being open",
             host.Contains("ConfigScreenOpen") && Regex.IsMatch(host, @"if \(!ConfigScreenOpen\) return;"));
-        Check("the settings screen state is refreshed every frame",
-            plugin.Contains("ModHost.RefreshConfigScreen()"));
+        Check("the settings window closes with the mods list",
+            plugin.Contains("ModHost.CloseConfig()"));
         // Update/FixedUpdate/OnGUI: every frame / every physics step / every gui pass.
         Check("Update runs every tick", host.Contains("Call(l, l.Update, \"Update\")"));
         Check("FixedUpdate runs in the fixed tick", host.Contains("Call(l, l.FixedUpdate, \"FixedUpdate\")"));

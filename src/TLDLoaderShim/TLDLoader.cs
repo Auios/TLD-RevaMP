@@ -61,7 +61,7 @@ namespace TLDLoader
         public virtual bool LoadInDB => false;
         /// The mod has files in Assets/<ID> next to the mods (LoadAssets, GetModAssetsFolder).
         public virtual bool UseAssetsFolder => false;
-        public virtual float ConfigScrollHeight => 0f;
+        public virtual float ConfigScrollHeight => 2000f;   // TLD Loader's: the settings window's scroll area for a mod that sets none
         /// The host patches the mod's own assembly with Harmony (PatchAll) before its first lifecycle call.
         public virtual bool UseHarmony => false;
         /// The mod gets its own log file (Logs/<ID>/<ID>_<date>.log next to the mods) as its Logger.

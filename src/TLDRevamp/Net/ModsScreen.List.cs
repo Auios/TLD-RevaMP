@@ -486,6 +486,9 @@ namespace TLDRevamp.Net
                 states.Add(new KeyValuePair<ModCatalog.Mod, RowState>(m, s));
                 key.Append('|').Append(m.Id).Append(s.Head).Append(s.Primary).Append(s.PrimaryOn).Append(s.Small).Append(s.Remove).Append(s.Note).Append(s.Meta);
             }
+            // the TLD Loader mods (ModsScreen.Loader.cs): installed by hand, so on the Installed tab only
+            var loaders = _installedTab ? LoaderShown(_search != null ? _search.text : "") : new List<ModHost.LoaderModInfo>();
+            foreach (var lm in loaders) key.Append("|loader:").Append(LoaderKey(lm));
             string k = key.ToString();
             if (k != _shown)
             {
@@ -493,16 +496,18 @@ namespace TLDRevamp.Net
                 for (int i = _rows.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_rows.GetChild(i).gameObject);
                 _rows.DetachChildren();
                 foreach (var s in states) Row(s.Key, s.Value);
-                if (states.Count == 0)
+                foreach (var lm in loaders) LoaderRow(lm);
+                if (states.Count == 0 && loaders.Count == 0)
                 {
                     var empty = NewText(_rows, _whiteStyle, 36f, Color.white, TextAlignmentOptions.Center, "Empty");
                     empty.gameObject.AddComponent<LayoutElement>().preferredHeight = 160f;
                     empty.text = _installedTab && string.IsNullOrWhiteSpace(_search?.text) ? "No mods installed yet: they are under All mods." : "No mods match.";
                 }
             }
-            _listCount.text = shown.Count + " of " + all.Count + " mods";
+            int loaderCount = ModHost.LoaderMods().Count;
+            _listCount.text = (shown.Count + loaders.Count) + " of " + (all.Count + loaderCount) + " mods";
             Tab(_tabAll, "All mods", !_installedTab);
-            Tab(_tabInstalled, "Installed (" + installedCount + ")", _installedTab);
+            Tab(_tabInstalled, "Installed (" + (installedCount + loaderCount) + ")", _installedTab);
             ListMessage();
         }
 

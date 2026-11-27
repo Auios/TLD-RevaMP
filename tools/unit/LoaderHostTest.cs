@@ -168,10 +168,10 @@ static class LoaderHostTest
         mainscript.s = null;
         ModHost.Tick();
         Reset();
-        ModHost.ConfigScreenOpen = true;     // a settings screen is open
+        Check("its settings window opens (the mods list's Settings)", ModHost.OpenConfig("recorder.mod"));
         ModHost.DrawConfigs();
         Check("Config is called for the mod's settings window", GetCalls().Contains("Config"));
-        ModHost.ConfigScreenOpen = false;
+        ModHost.CloseConfig();
 
         Section("the game quitting ends the world too");
         mainscript.s = new mainscript { player = new TLDRevamp.Fixtures.Player() };
@@ -185,14 +185,14 @@ static class LoaderHostTest
 
         Section("Config only runs while a settings screen is open");
         Reset();
-        ModHost.ConfigScreenOpen = false;
+        ModHost.CloseConfig();
         ModHost.DrawConfigs();
-        Check("Config is not called while no settings screen is open", !GetCalls().Contains("Config"));
-        ModHost.ConfigScreenOpen = true;
+        Check("Config is not called while no settings window is open", !GetCalls().Contains("Config"));
+        ModHost.OpenConfig("recorder.mod");
         Reset();
         ModHost.DrawConfigs();
-        Check("Config is called while a settings screen is open", GetCalls().Contains("Config"));
-        ModHost.ConfigScreenOpen = false;
+        Check("Config is called while its settings window is open", GetCalls().Contains("Config"));
+        ModHost.CloseConfig();
 
         Section("a mod that throws does not stop the host");
         recorder.GetField("ThrowOn", BindingFlags.Public | BindingFlags.Static).SetValue(null, "Update");

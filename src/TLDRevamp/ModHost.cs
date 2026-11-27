@@ -19,6 +19,8 @@ namespace TLDRevamp
         private sealed class Loaded
         {
             public object Mod; public string Id, Name, Version, File, Hash;   // Hash: SHA-256 of the DLL (the join check)
+            public string Author;   // as the mod says (the mods list shows it)
+            public bool? HasSettings;   // its Config() has code (ModHost.HasSettings; read once)
             public MethodInfo OnMenuLoad, OnLoad, OnUnload, Config, Update, FixedUpdate, OnGUI;   // null: not overridden
             public MethodInfo DbLoad, DbLoadOld;   // with LoadInDB: DbLoad and the older dbLoad, both as TLDLoader calls them
             public bool DbLoadInWorld;   // its DbLoad threw in the menu: again when the world is up
@@ -95,6 +97,7 @@ namespace TLDRevamp
                             l.Id = (string)modBase.GetProperty("ID").GetValue(mod);
                             l.Name = (string)modBase.GetProperty("Name").GetValue(mod);
                             l.Version = (string)modBase.GetProperty("Version").GetValue(mod);
+                            try { l.Author = modBase.GetProperty("Author")?.GetValue(mod) as string; } catch { }   // the list's "by"
                             var log = BepInEx.Logging.Logger.CreateLogSource(l.Id);
                             // UseLogger: the mod's own log file (TLDLoader.Logger, echoed to BepInEx's log); otherwise BepInEx's
                             object logger = null;
@@ -468,51 +471,65 @@ namespace TLDRevamp
         public static void Gui() { bool loaded = ModsLoaded(); foreach (var l in Mods) if (loaded || l.Menu) Call(l, l.OnGUI, "OnGUI"); }
         private static bool ModsLoaded() => _worldUp && _gameLoadedCalled;
 
-        /// Set by the settings screen while it is open: a Loader mod's Config() draws
-        /// its own window, and it must only be called then.  Unity runs the IMGUI
-        /// pass several times per frame, so calling Config() unconditionally would
-        /// run a mod's settings code many times a second for as long as the game is
-        /// open - and for a mod that does one-time work in Config() (creating
-        /// objects, reading files) that is a real bug, not a detail.
-        public static bool ConfigScreenOpen;
+        /// A Loader mod's settings, as TLD Loader's mod list shows them (2026-11-27): the mods list's Settings button opens
+        /// one mod's window, and only then is its Config() called (Unity runs the IMGUI pass several times a frame; a mod
+        /// that does one-time work in Config() must not run it for as long as the game is open). Before, every mod's
+        /// Config() drew at once over the Revamp settings tab, each where it liked.
+        public static bool ConfigScreenOpen => _configId != null;
+        private static string _configId;
 
-        /// The mod's own settings window.  TLDLoader mods draw it with IMGUI
-        /// (GUI.*) inside Config(), so the host calls it in its own IMGUI pass, and
-        /// only while the settings screen is open.  The mod draws where it wants; a
-        /// mod that ignores ConfigScrollHeight still works, because the host does
-        /// not reserve an area for it.
+        /// The open settings window's mod (null: none).
+        public static string ConfigOpenFor => _configId;
+
+        /// Opens a mod's settings window (TLD Loader's: only a mod whose Config() has code). False if it has none.
+        public static bool OpenConfig(string id)
+        {
+            var l = Mods.Find(x => x.Id == id);
+            if (l == null || !HasSettings(l)) return false;
+            _configId = id; ConfigWindowReset();
+            return true;
+        }
+
+        public static void CloseConfig() => _configId = null;
+
+        /// The open mod's settings window (ModGuiRunner's IMGUI pass; ModHost.Settings.cs draws it).
         public static void DrawConfigs()
         {
             if (!ConfigScreenOpen) return;
-            foreach (var l in Mods) Call(l, l.Config, "Config");
+            var l = Mods.Find(x => x.Id == _configId);
+            if (l == null) { _configId = null; return; }
+            DrawConfigWindow(l);
         }
+        static partial void DrawConfigWindow(Loaded l);
+        static partial void ConfigWindowReset();
 
-        /// The settings screen may be closed without a tab press (the back button),
-        /// so the flag is refreshed from the screen's own state every frame instead
-        /// of only when a tab is pressed.  A Loader mod's Config() must not run
-        /// while no settings screen is open.
-        public static void RefreshConfigScreen()
+        /// TLD Loader's test for the Settings button: Config() overridden with more than an empty body (a "ret" alone, or
+        /// "nop; ret", is two bytes of IL).
+        private static bool HasSettings(Loaded l)
         {
-            bool open = false;
-            try
+            if (l.Config == null) return false;
+            if (l.HasSettings == null)
             {
-                var s = settingsscript.s;
-                if (s != null)
-                {
-                    var root = s.transform.Find("NewSettings");
-                    if (root != null)
-                    {
-                        var tab = root.Find("TabRevamp");
-                        open = tab != null && tab.gameObject.activeInHierarchy;
-                    }
-                }
+                try { l.HasSettings = (l.Config.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0) > 2; }
+                catch { l.HasSettings = true; }
             }
-            catch (System.Exception quietError) { Diagnostics.QuietErrors.Once("ModHost.ConfigScreen", quietError); }
-            ConfigScreenOpen = open;
+            return l.HasSettings.Value;
         }
 
-        /// Whether any mod wants a settings window of its own (so the tab can make room).
-        public static bool AnyConfig => Mods.Exists(l => l.Config != null);
+        /// A Loader mod as the mods list shows it.
+        public sealed class LoaderModInfo { public string Id, Name, Author, Version, Error; public bool HasSettings; }
+
+        /// Every Loader mod running here, in load order.
+        public static List<LoaderModInfo> LoaderMods()
+        {
+            var list = new List<LoaderModInfo>();
+            foreach (var l in Mods)
+                list.Add(new LoaderModInfo { Id = l.Id, Name = l.Name, Author = l.Author, Version = l.Version, Error = l.LastError, HasSettings = HasSettings(l) });
+            return list;
+        }
+
+        /// Whether any mod has a settings window of its own.
+        public static bool AnyConfig => Mods.Exists(HasSettings);
 
         /// Whether OnUnload has run since the last OnLoad (the status line reports it).
         public static bool UnloadCalled => _unloadCalled;

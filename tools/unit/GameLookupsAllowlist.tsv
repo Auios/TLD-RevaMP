@@ -187,3 +187,5 @@ src/TLDLoaderShim/LoaderItems.cs	typeof(attachablescript).GetField("C", BindingF
 src/TLDRevamp/Net/ModsScreen.Settings.cs	range.GetType().GetProperty("AcceptableValues")	BepInEx's AcceptableValueList<T> on a mod's setting (the mods list's Settings card); not game code.
 src/TLDRevamp/Net/ModsScreen.Settings.cs	t.GetProperty("MinValue")	BepInEx's AcceptableValueRange<T> on a mod's setting (the mods list's Settings card); not game code.
 src/TLDRevamp/Net/ModsScreen.Settings.cs	t.GetProperty("MaxValue")	BepInEx's AcceptableValueRange<T> on a mod's setting (the mods list's Settings card); not game code.
+src/TLDRevamp/ModHost.cs	modBase.GetProperty("Author")	TLD Loader's Mod.Author on a Loader mod (the mods list shows it); not game code.
+src/TLDRevamp/ModHost.Settings.cs	l.Mod.GetType().GetProperty("ConfigScrollHeight")	TLD Loader's Mod.ConfigScrollHeight on a Loader mod (its settings window's scroll area); not game code.
